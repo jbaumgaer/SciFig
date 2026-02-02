@@ -1,4 +1,4 @@
-# Application Features
+# Backlog
 
 This document tracks the implemented and future features of the Data Analysis GUI.
 
@@ -111,3 +111,118 @@ This section tracks agreed-upon architectural improvements to enhance code quali
 5.  **Refine Dependency Management**
     *   **Goal:** Ensure reproducible builds by locking sub-dependencies.
     *   **Implementation:** Use `pip-tools` to compile a fully-pinned `requirements.txt` from a `requirements.in` file.
+
+    # Backlog
+
+Tasks are broken down by functional Epics → Features → individual Tasks, with priority (P0, P1, P2) and size (S, M, L).
+
+---
+
+## Epic: Canvas & Layout
+
+### Feature: Subplot Management
+- [ ] (P0, M) Implement multi-subplot canvas with default layout
+- [ ] (P0, M) Enable selection of a subplot
+- [ ] (P0, M) Open properties panel on double-click
+- [ ] (P1, M) Zooming and panning support
+- [ ] (P1, S) Magnification indicator display
+- [ ] (P1, M) Alignment and distribution tools
+
+---
+
+## Epic: Object & Layer Management
+
+### Feature: Layer System
+- [ ] (P1, L) Implement Layer model (visibility, lock, z-order)
+- [ ] (P1, M) Render layers in canvas draw order
+- [ ] (P1, M) Layer panel UI: create, delete, reorder
+- [ ] (P2, M) Drag-and-drop reorder in panel
+
+### Feature: Grouping & Selection
+- [ ] (P1, S) Group objects
+- [ ] (P1, S) Ungroup objects
+- [ ] (P1, M) Multi-selection of objects
+- [ ] (P1, M) Object stacking/order adjustments
+
+---
+
+## Epic: Drawing & Annotation Tools
+
+### Feature: Shape & Path Tools
+- [ ] (P0, S) Rectangle, ellipse, line shapes
+- [ ] (P1, L) Path tool (Bezier curves) creation/editing
+
+### Feature: Text Tools
+- [ ] (P1, M) On-canvas text editing
+- [ ] (P2, M) Rich text formatting (bold, italic)
+- [ ] (P2, L) LaTeX integration
+
+### Feature: Image & Style
+- [ ] (P1, M) Drag-and-drop image import (PNG/JPG)
+- [ ] (P1, M) Render image in subplot
+- [ ] (P2, M) Resize and position image on canvas
+- [ ] (P2, M) Eyedropper tool for style copy
+- [ ] (P2, M) Save reusable styles/templates (strokes, fills, gradients)
+
+---
+
+## Epic: Data Management & Interaction
+
+### Feature: Data Import
+- [ ] (P0, M) Load CSV data via drag-and-drop
+- [ ] (P1, L) Excel import support
+- [ ] (P1, L) HDF5/SQL import support
+- [ ] (P2, L) Folder batch import
+
+### Feature: Interactive Data
+- [ ] (P1, M) Interactive data worksheet dockable panel
+- [ ] (P1, S) Display data source path in properties panel
+- [ ] (P1, M) Multi-sheet workbook support
+
+---
+
+## Epic: Plotting & Visualization
+
+### Feature: Plot Types
+- [ ] (P0, M) Line, scatter, bar plots
+- [ ] (P1, M) Multi-axis support
+- [ ] (P1, M) Trellis/facet plots
+- [ ] (P0, M) Automatic default rendering on data load
+
+---
+
+## Epic: Data Analysis & Processing
+
+### Feature: Analysis Gadgets
+- [ ] (P1, M) Region of Interest tool
+- [ ] (P1, M) Basic measurement tools
+
+### Feature: Curve Fitting
+- [ ] (P1, L) Built-in fit functions
+- [ ] (P1, L) User-defined function fitting
+
+### Feature: Signal Processing
+- [ ] (P2, M) Smoothing and filtering
+- [ ] (P2, M) FFT analysis
+
+---
+
+## Epic: Project & File Management
+
+### Feature: Project & Template
+- [ ] (P0, M) Save/load project file
+- [ ] (P2, M) Template project layouts
+
+### Feature: Export
+- [ ] (P1, M) PNG export
+- [ ] (P1, M) Vector export (SVG, PDF, EPS)
+
+### Feature: Configuration & Paths
+- [ ] (P1, S) Path handling via pathlib
+- [ ] (P2, M) Externalized configuration management via Pydantic
+
+---
+
+## Epic: Undo/Redo & Command History
+- [ ] (P0, M) Track all state-changing actions
+- [ ] (P0, M) Implement full undo/redo stack for plots and canvas modifications
