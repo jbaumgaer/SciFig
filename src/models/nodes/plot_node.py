@@ -1,8 +1,9 @@
 from typing import Optional
+
 import pandas as pd
 
-from .scene_node import SceneNode
 from .plot_properties import PlotProperties
+from .scene_node import SceneNode
 
 
 class PlotNode(SceneNode):

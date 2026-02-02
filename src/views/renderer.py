@@ -42,7 +42,6 @@ class Renderer:
                     df = node.data
                     mapping = props.plot_mapping
 
-                    # TODO: Understand what the props are, and where "x" and "y" come from
                     if mapping and mapping.x and mapping.y:
                         x_col, y_cols = mapping.x, mapping.y
                         for y_col in y_cols:

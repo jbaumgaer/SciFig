@@ -27,7 +27,11 @@ class ChangePropertyCommand(BaseCommand):
 
     def execute(self):
         """Applies the property change."""
-        target_object = getattr(self.node, self.property_dict_name) if self.property_dict_name else self.node
+        target_object = (
+            getattr(self.node, self.property_dict_name)
+            if self.property_dict_name
+            else self.node
+        )
         self.old_value = getattr(target_object, self.property_name)
         setattr(target_object, self.property_name, self.new_value)
 
@@ -36,7 +40,11 @@ class ChangePropertyCommand(BaseCommand):
 
     def undo(self):
         """Reverts the property change."""
-        target_object = getattr(self.node, self.property_dict_name) if self.property_dict_name else self.node
+        target_object = (
+            getattr(self.node, self.property_dict_name)
+            if self.property_dict_name
+            else self.node
+        )
         setattr(target_object, self.property_name, self.old_value)
 
         # For now, we rely on the CommandManager to signal the model changed.

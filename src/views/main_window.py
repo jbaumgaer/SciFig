@@ -16,7 +16,8 @@ class MainWindow(QMainWindow):
     """
 
     def __init__(self):  # Removed model and command_manager from signature
-        #TODO: Change the fact that everything can be initialized with None. Assume that these must be set, just not in the initializer."""
+        """TODO: Change the fact that everything can be initialized with None.
+        Assume that these must be set, just not in the initializer."""
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
         self.setGeometry(50, 50, 800, 600)

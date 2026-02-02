@@ -18,7 +18,6 @@ from src.models import ApplicationModel, PlotNode
 from src.models.nodes.plot_properties import (
     AxesLimits,
     PlotMapping,
-    PlotProperties,
 )
 
 Layout = Union[QVBoxLayout, QFormLayout, QHBoxLayout]

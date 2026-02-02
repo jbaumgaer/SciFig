@@ -38,6 +38,5 @@ class MainController:
                 plot_node = PlotNode(name=f"Subplot {r*cols + c + 1}")
                 plot_node.geometry = (left, bottom, plot_width, plot_height)
 
-
                 # model.add_node emits the signal, so no need for an extra emit here
                 self.model.add_node(plot_node)
