@@ -1,0 +1,6 @@
+pytest
+pytest-qt
+black
+ruff
+mypy
+pydantic
