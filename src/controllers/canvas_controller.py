@@ -4,8 +4,8 @@ from src.commands.command_manager import CommandManager
 from src.models import ApplicationModel, PlotNode
 from src.models.nodes.plot_properties import (
     AxesLimits,
+    LinePlotProperties,
     PlotMapping,
-    PlotProperties,
 )
 from src.processing.data_loader import DataLoader
 from src.views.canvas_widget import CanvasWidget
@@ -147,7 +147,7 @@ class CanvasController(QObject):
                 new_mapping = PlotMapping(x=col1, y=[col2])
                 new_limits = AxesLimits(xlim=(None, None), ylim=(None, None))
 
-                node.plot_properties = PlotProperties(
+                node.plot_properties = LinePlotProperties(
                     title=node.name,
                     xlabel=col1,
                     ylabel=col2,

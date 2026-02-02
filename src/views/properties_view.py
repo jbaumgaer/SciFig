@@ -19,6 +19,8 @@ from src.models.nodes.plot_properties import (
     AxesLimits,
     PlotMapping,
 )
+from src.models.nodes.plot_types import PlotType
+from .properties_ui_factory import PropertiesUIFactory
 
 Layout = Union[QVBoxLayout, QFormLayout, QHBoxLayout]
 
@@ -33,21 +35,22 @@ class PropertiesView(QWidget):
         self,
         model: ApplicationModel,
         command_manager: CommandManager,
+        plot_types: list[PlotType],
         parent: QWidget | None = None,
     ):
         super().__init__(parent)
         self.model = model
         self.command_manager = command_manager
+        self.plot_types = plot_types
 
         self._main_layout = QVBoxLayout()
         self._main_layout.setContentsMargins(5, 5, 5, 5)
         self.setLayout(self._main_layout)
 
-        # To store references to the limit line edits
         self._limit_edits: dict[str, QLineEdit] = {}
-        self._current_node: PlotNode | None = None  # Track the node being edited
-
-        # Timer for debouncing limit edits
+        self._current_node: PlotNode | None = None
+        self._x_combo = QComboBox()
+        self._y_combo = QComboBox()
 
         self.model.selectionChanged.connect(self.on_selection_changed)
         self.on_selection_changed()
@@ -67,8 +70,7 @@ class PropertiesView(QWidget):
                     self._clear_layout(sub_layout)
 
     def on_selection_changed(self):
-        print("PropertiesView: Selection changed. Rebuilding UI.")
-        self._current_node = None  # Clear the tracked node
+        self._current_node = None
         self._clear_layout(self._main_layout)
         selection = self.model.selection
 
@@ -79,147 +81,52 @@ class PropertiesView(QWidget):
         else:
             node = selection[0]
             if isinstance(node, PlotNode):
-                self._current_node = node  # Track the new node
-                self._build_plotnode_ui(node)
+                self._current_node = node
+                if not node.plot_properties:
+                    self._main_layout.addWidget(
+                        QLabel(f"Selected: '{node.name}' (No data)")
+                    )
+                    return
+
+                form_layout = QFormLayout()
+                PropertiesUIFactory.create_ui(
+                    node,
+                    form_layout,
+                    self,
+                    self.plot_types,
+                    self._on_plot_type_changed,
+                    self._on_property_changed,
+                    self._on_column_mapping_changed,
+                    self._on_limit_editing_finished,
+                    self._limit_edits,
+                    self._x_combo,
+                    self._y_combo,
+                )
+                self._main_layout.addLayout(form_layout)
+                self._main_layout.addStretch()
+
             else:
                 self._main_layout.addWidget(QLabel(f"Selected: '{node.name}'"))
 
-    def _build_plotnode_ui(self, node: PlotNode):
-        if not node.plot_properties:
-            self._main_layout.addWidget(QLabel(f"Selected: '{node.name}' (No data)"))
+    def _on_plot_type_changed(self, new_plot_type_str: str, node: PlotNode):
+        """Creates and executes a command when the plot type changes."""
+        if not new_plot_type_str:
             return
 
-        form_layout = QFormLayout()
-        props = node.plot_properties
+        new_plot_type = PlotType(new_plot_type_str)
 
-        # --- Title ---
-        title_edit = QLineEdit(props.title)
-        title_edit.setObjectName("title_edit")
-        title_edit.editingFinished.connect(
-            partial(
-                self._on_property_changed,
-                node=node,
-                prop_name="title",
-                widget=title_edit,
-            )
-        )
-        form_layout.addRow("Title:", title_edit)
-
-        # --- X Label ---
-        xlabel_edit = QLineEdit(props.xlabel)
-        xlabel_edit.setObjectName("xlabel_edit")
-        xlabel_edit.editingFinished.connect(
-            partial(
-                self._on_property_changed,
-                node=node,
-                prop_name="xlabel",
-                widget=xlabel_edit,
-            )
-        )
-        form_layout.addRow("X-Axis Label:", xlabel_edit)
-
-        # --- Y Label ---
-        ylabel_edit = QLineEdit(props.ylabel)
-        ylabel_edit.setObjectName("ylabel_edit")
-        ylabel_edit.editingFinished.connect(
-            partial(
-                self._on_property_changed,
-                node=node,
-                prop_name="ylabel",
-                widget=ylabel_edit,
-            )
-        )
-        form_layout.addRow("Y-Axis Label:", ylabel_edit)
-
-        self._main_layout.addLayout(form_layout)
-
-        # --- Column Selectors ---
-        if node.data is not None:
-            self._build_column_selectors(node, form_layout)
-
-        # --- Axes Limits ---
-        self._build_limit_selectors(node, form_layout)
-
-        self._main_layout.addStretch()
-
-    def _build_column_selectors(self, node: PlotNode, layout: QFormLayout):
-        assert node.data is not None
         assert node.plot_properties is not None
-        columns = list(node.data.columns)
-        current_mapping = node.plot_properties.plot_mapping
-        current_x = current_mapping.x
-        current_y_list = current_mapping.y
-        current_y = current_y_list[0] if current_y_list else None
+        old_plot_type = node.plot_properties.plot_type
 
-        # X Column
-        self._x_combo = QComboBox()
-        self._x_combo.addItems(columns)
-        if current_x in columns:
-            self._x_combo.setCurrentText(current_x)
-        self._x_combo.currentTextChanged.connect(
-            partial(self._on_column_mapping_changed, node=node)
-        )
-        layout.addRow("X-Axis Column:", self._x_combo)
-
-        # Y Column (for now, only one is supported by properties view)
-        self._y_combo = QComboBox()
-        self._y_combo.addItems(columns)
-        if current_y in columns:
-            self._y_combo.setCurrentText(current_y)
-        self._y_combo.currentTextChanged.connect(
-            partial(self._on_column_mapping_changed, node=node)
-        )
-        layout.addRow("Y-Axis Column:", self._y_combo)
-
-    def _build_limit_selectors(self, node: PlotNode, layout: QFormLayout):
-        assert node.plot_properties is not None
-        validator = QDoubleValidator()
-        current_limits = node.plot_properties.axes_limits
-
-        # X Limits
-        xlim = current_limits.xlim
-        self._limit_edits["xlim_min"] = QLineEdit(
-            str(xlim[0] if xlim[0] is not None else "")
-        )
-        self._limit_edits["xlim_min"].setObjectName("xlim_min_edit")
-        self._limit_edits["xlim_max"] = QLineEdit(
-            str(xlim[1] if xlim[1] is not None else "")
-        )
-        self._limit_edits["xlim_max"].setObjectName("xlim_max_edit")
-
-        for w in (self._limit_edits["xlim_min"], self._limit_edits["xlim_max"]):
-            w.setValidator(validator)
-            w.editingFinished.connect(
-                partial(self._on_limit_editing_finished, node=node)
+        if new_plot_type != old_plot_type:
+            cmd = ChangePropertyCommand(
+                node=node,
+                property_name="plot_type",
+                new_value=new_plot_type,
+                property_dict_name="plot_properties",
             )
-        lim_layout_x = QHBoxLayout()
-        lim_layout_x.addWidget(self._limit_edits["xlim_min"])
-        lim_layout_x.addWidget(QLabel("to"))
-        lim_layout_x.addWidget(self._limit_edits["xlim_max"])
-        layout.addRow("X-Axis Limits:", lim_layout_x)
-
-        # Y Limits
-        ylim = current_limits.ylim
-        self._limit_edits["ylim_min"] = QLineEdit(
-            str(ylim[0] if ylim[0] is not None else "")
-        )
-        self._limit_edits["ylim_min"].setObjectName("ylim_min_edit")
-        self._limit_edits["ylim_max"] = QLineEdit(
-            str(ylim[1] if ylim[1] is not None else "")
-        )
-        self._limit_edits["ylim_max"].setObjectName("ylim_max_edit")
-
-        for w in (self._limit_edits["ylim_min"], self._limit_edits["ylim_max"]):
-            w.setValidator(validator)
-            w.editingFinished.connect(
-                partial(self._on_limit_editing_finished, node=node)
-            )
-
-        lim_layout_y = QHBoxLayout()
-        lim_layout_y.addWidget(self._limit_edits["ylim_min"])
-        lim_layout_y.addWidget(QLabel("to"))
-        lim_layout_y.addWidget(self._limit_edits["ylim_max"])
-        layout.addRow("Y-Axis Limits:", lim_layout_y)
+            self.command_manager.execute_command(cmd)
+            self.on_selection_changed() # Rebuild UI
 
     def _on_property_changed(self, node: PlotNode, prop_name: str, widget: QLineEdit):
         """Creates and executes a command when a QLineEdit's editing is finished."""
@@ -261,7 +168,6 @@ class PropertiesView(QWidget):
             ylim=(new_ylim_min, new_ylim_max),
         )
 
-        # Only execute a command if the limits have actually changed
         if old_limits != new_limits:
             cmd = ChangePropertyCommand(
                 node=node,
@@ -294,3 +200,4 @@ class PropertiesView(QWidget):
                 property_dict_name="plot_properties",
             )
             self.command_manager.execute_command(cmd)
+

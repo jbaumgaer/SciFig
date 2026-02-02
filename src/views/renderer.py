@@ -3,12 +3,20 @@ import matplotlib.patches as patches
 import pandas as pd
 
 from src.models.nodes import PlotNode, SceneNode
+from src.models.nodes.plot_types import PlotType
+from .plotting_strategies import LinePlotStrategy, ScatterPlotStrategy
 
 
 class Renderer:
     """
     A class responsible for rendering the scene graph onto a Matplotlib figure.
     """
+
+    def __init__(self):
+        self.plotting_strategies = {
+            PlotType.LINE: LinePlotStrategy(),
+            PlotType.SCATTER: ScatterPlotStrategy(),
+        }
 
     def render(
         self,
@@ -39,20 +47,15 @@ class Renderer:
                 props = node.plot_properties
                 # 1. Plot data based on configuration
                 if isinstance(node.data, pd.DataFrame):
-                    df = node.data
+                    strategy = self.plotting_strategies.get(props.plot_type)
                     mapping = props.plot_mapping
-
-                    if mapping and mapping.x and mapping.y:
-                        x_col, y_cols = mapping.x, mapping.y
-                        for y_col in y_cols:
-                            if x_col in df.columns and y_col in df.columns:
-                                ax.plot(df[x_col], df[y_col], label=y_col)
-                        if len(y_cols) > 1:
-                            ax.legend()
-                    elif df.shape[1] >= 2:
-                        # Default plot if no mapping
-                        col1, col2 = df.columns[0], df.columns[1]
-                        ax.plot(df[col1], df[col2])
+                    if strategy and mapping and mapping.x and mapping.y:
+                        strategy.plot(ax, node.data, mapping.x, mapping.y)
+                    # Optional: Could add a default plotting call here if strategy is not found
+                    elif node.data.shape[1] >= 2:
+                        # Default plot if no mapping or strategy
+                        col1, col2 = node.data.columns[0], node.data.columns[1]
+                        ax.plot(node.data[col1], node.data[col2])
 
                 # 2. Apply labels and title
                 ax.set_title(props.title)
@@ -61,9 +64,9 @@ class Renderer:
 
                 # 3. Apply axes limits
                 limits = props.axes_limits
-                if limits.xlim:
+                if limits.xlim[0] is not None or limits.xlim[1] is not None:
                     ax.set_xlim(limits.xlim)
-                if limits.ylim:
+                if limits.ylim[0] is not None or limits.ylim[1] is not None:
                     ax.set_ylim(limits.ylim)
             else:
                 # Draw an empty axes if no data or properties

@@ -1,7 +1,7 @@
 from src.models.nodes.plot_properties import (
     AxesLimits,
+    LinePlotProperties,
     PlotMapping,
-    PlotProperties,
 )
 
 
@@ -9,7 +9,7 @@ def test_plot_properties_creation():
     """Test that a PlotProperties object can be created with valid data."""
     plot_mapping = PlotMapping(x="time", y=["temp"])
     axes_limits = AxesLimits(xlim=(0, 10), ylim=(-5, 5))
-    props = PlotProperties(
+    props = LinePlotProperties(
         title="Test Title",
         xlabel="Time",
         ylabel="Temperature",
@@ -27,7 +27,7 @@ def test_plot_properties_equality():
     """Test that two PlotProperties objects with the same values are equal."""
     plot_mapping1 = PlotMapping(x="time", y=["temp"])
     axes_limits1 = AxesLimits(xlim=(0, 10), ylim=(-5, 5))
-    props1 = PlotProperties(
+    props1 = LinePlotProperties(
         title="Test Title",
         xlabel="Time",
         ylabel="Temperature",
@@ -37,7 +37,7 @@ def test_plot_properties_equality():
 
     plot_mapping2 = PlotMapping(x="time", y=["temp"])
     axes_limits2 = AxesLimits(xlim=(0, 10), ylim=(-5, 5))
-    props2 = PlotProperties(
+    props2 = LinePlotProperties(
         title="Test Title",
         xlabel="Time",
         ylabel="Temperature",
@@ -52,7 +52,7 @@ def test_plot_properties_inequality():
     """Test that two PlotProperties objects with different values are not equal."""
     plot_mapping1 = PlotMapping(x="time", y=["temp"])
     axes_limits1 = AxesLimits(xlim=(0, 10), ylim=(-5, 5))
-    props1 = PlotProperties(
+    props1 = LinePlotProperties(
         title="Test Title",
         xlabel="Time",
         ylabel="Temperature",
@@ -62,7 +62,7 @@ def test_plot_properties_inequality():
 
     plot_mapping2 = PlotMapping(x="time", y=["temp"])
     axes_limits2 = AxesLimits(xlim=(0, 10), ylim=(-5, 5))
-    props2 = PlotProperties(
+    props2 = LinePlotProperties(
         title="Different Title",
         xlabel="Time",
         ylabel="Temperature",

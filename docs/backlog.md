@@ -24,6 +24,7 @@ The application is built on a modern, robust architecture designed for interacti
     -   X-Axis and Y-Axis Labels
     -   X-Axis and Y-Axis data columns (via dropdown selectors)
     -   X-Axis and Y-Axis limits
+    -   Plot Type (e.g., Line, Scatter)
 
 ### Data Handling
 
@@ -39,6 +40,14 @@ This section outlines planned features that are not yet implemented.
 
 ### Architectural Enhancements
 - **Plugin Architecture**: Develop a plugin system to allow new features (tools, plot types, import/export formats) to be added to the application dynamically without modifying the core codebase.
+
+### Feature: Pluggable Plotting Strategy Verification
+- [x] (P0, S) Run application to ensure it still works as before.
+- [x] (P0, M) Add a `ScatterPlotStrategy` and update the renderer's dictionary to prove the system is extensible.
+- [x] (P0, M) Manually test that changing the plot type in the UI works and updates the plot.
+- [x] (P0, L) Write unit tests for plotting strategies and renderer integration.
+
+**Note:** This feature has been implemented and is now superseded by the more general "Pluggable Plot Properties and Dynamic View" feature.
 
 ### Illustrator-Inspired Design & Layout Features
 

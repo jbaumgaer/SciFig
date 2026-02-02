@@ -8,8 +8,8 @@ from main import setup_application
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.plot_properties import (
     AxesLimits,
+    LinePlotProperties,
     PlotMapping,
-    PlotProperties,
 )
 
 
@@ -27,14 +27,14 @@ def app_context_with_plots(qtbot):
     plot_node2 = PlotNode(name="Plot 2")
 
     # Set initial properties for easier testing of updates
-    plot_node1.plot_properties = PlotProperties(
+    plot_node1.plot_properties = LinePlotProperties(
         title="Plot One Title",
         xlabel="",
         ylabel="",
         plot_mapping=PlotMapping(x=None, y=[]),
         axes_limits=AxesLimits(xlim=(None, None), ylim=(None, None)),
     )
-    plot_node2.plot_properties = PlotProperties(
+    plot_node2.plot_properties = LinePlotProperties(
         title="Plot Two Title",
         xlabel="",
         ylabel="",
@@ -162,21 +162,27 @@ def test_panel_shows_data_widgets_after_load(populated_plot_node, qtbot):
 
     # 2. Wait for combo boxes to appear and assert they exist
     def combo_boxes_appeared():
-        return len(view.properties_view.findChildren(QComboBox)) == 2
+        # Expect 3 combo boxes: Plot Type, X-Column, Y-Column
+        return len(view.properties_view.findChildren(QComboBox)) == 3
 
     qtbot.waitUntil(combo_boxes_appeared, timeout=1000)
 
     combo_boxes_after_load = view.properties_view.findChildren(QComboBox)
     assert (
-        len(combo_boxes_after_load) == 2
-    ), "Expected 2 column selectors after data is loaded."
+        len(combo_boxes_after_load) == 3
+    ), "Expected 3 combo boxes (plot type, x-col, y-col) after data is loaded."
 
-    # 3. And check their content
-    x_combo = combo_boxes_after_load[0]
+    # 3. And check their content (the column selectors are the last two)
+    x_combo = combo_boxes_after_load[1]
+    y_combo = combo_boxes_after_load[2]
+    
     assert x_combo.count() == 3
     assert x_combo.itemText(0) == "Time"
     assert x_combo.itemText(1) == "Voltage"
     assert x_combo.itemText(2) == "Current"
+    
+    assert y_combo.count() == 3
+
 
 
 def test_column_selector_updates_plot_mapping(populated_plot_node, qtbot):
@@ -192,14 +198,14 @@ def test_column_selector_updates_plot_mapping(populated_plot_node, qtbot):
     model.set_selection([plot_node])
 
     def combo_boxes_appeared():
-        return len(view.properties_view.findChildren(QComboBox)) == 2
+        return len(view.properties_view.findChildren(QComboBox)) == 3
 
     qtbot.waitUntil(combo_boxes_appeared, timeout=1000)
 
     # 2. Get the combo boxes
     combo_boxes = view.properties_view.findChildren(QComboBox)
-    x_combo = combo_boxes[0]
-    y_combo = combo_boxes[1]
+    x_combo = combo_boxes[1]
+    y_combo = combo_boxes[2]
 
     # 3. Simulate user selecting new columns
     x_combo.setCurrentText("Voltage")

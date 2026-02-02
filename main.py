@@ -28,7 +28,9 @@ def setup_application():
     command_manager = CommandManager(model=model)
 
     # 2. Use the MainWindowBuilder to create the main view
-    builder = MainWindowBuilder(model, command_manager)
+    renderer = Renderer()
+    plot_types = list(renderer.plotting_strategies.keys())
+    builder = MainWindowBuilder(model, command_manager, plot_types)
     view = (builder
             .build_canvas()
             .build_properties_dock()
@@ -36,7 +38,7 @@ def setup_application():
             .get_window())
 
     # 3. Instantiate Renderer
-    renderer = Renderer()
+    
 
     # 4. Instantiate Tools and Manager
     tool_manager = ToolManager()

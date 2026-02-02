@@ -23,7 +23,7 @@ def app_context(qtbot):
     mock_command_manager = MagicMock(spec=CommandManager)
 
     # Use the builder to construct the MainWindow
-    builder = MainWindowBuilder(model, mock_command_manager)
+    builder = MainWindowBuilder(model, mock_command_manager, plot_types=[])
     main_window = (
         builder.build_canvas().build_properties_dock().build_menu().get_window()
     )

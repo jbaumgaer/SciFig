@@ -2,7 +2,7 @@ from typing import Optional
 
 import pandas as pd
 
-from .plot_properties import PlotProperties
+from .plot_properties import BasePlotProperties
 from .scene_node import SceneNode
 
 
@@ -16,7 +16,7 @@ class PlotNode(SceneNode):
 
         # Properties migrated from the old ArtistModel
         self.geometry: tuple[float, float, float, float] = (0.1, 0.1, 0.8, 0.8)
-        self.plot_properties: Optional[PlotProperties] = None
+        self.plot_properties: Optional[BasePlotProperties] = None
         self.data: pd.DataFrame | None = None
 
     def hit_test(self, position: tuple[float, float]) -> SceneNode | None:

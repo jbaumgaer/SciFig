@@ -1,71 +1,99 @@
+import pandas as pd
 import pytest
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QLineEdit  # Correct import for QLineEdit
+from matplotlib.figure import Figure
+from PySide6.QtWidgets import QComboBox, QLineEdit, QVBoxLayout, QWidget
 
-# Import core application components
-from main import setup_application
+from src.commands.command_manager import CommandManager
+from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.plot_properties import (
     AxesLimits,
+    LinePlotProperties,
     PlotMapping,
-    PlotProperties,
+    ScatterPlotProperties,
 )
+from src.models.nodes.plot_types import PlotType
+from src.views.properties_view import PropertiesView
 
 
 @pytest.fixture
-def app_context(qtbot):
-    """
-    A pytest fixture that sets up the entire application stack and provides
-    access to its core components. This is an integration-level fixture.
-    """
-    context = setup_application()
+def app_model():
+    """Provides a mock ApplicationModel."""
+    return ApplicationModel(figure=Figure())
 
-    # The qtbot.addWidget function ensures that the widget is properly closed
-    # at the end of the test, preventing test interference.
-    qtbot.addWidget(context["view"])
 
-    # Add a default plot to the scene for testing
-    default_plot = PlotNode()
-    default_plot.plot_properties = PlotProperties(
-        title="Default Title",
-        xlabel="",
-        ylabel="",
-        plot_mapping=PlotMapping(x=None, y=[]),
-        axes_limits=AxesLimits(xlim=(None, None), ylim=(None, None)),
+@pytest.fixture
+def command_manager(app_model):
+    """Provides a mock CommandManager."""
+    return CommandManager(app_model)
+
+
+@pytest.fixture
+def properties_view(app_model, command_manager):
+    """Provides a PropertiesView instance."""
+    plot_types = [PlotType.LINE, PlotType.SCATTER]
+    view = PropertiesView(app_model, command_manager, plot_types)
+    return view
+
+
+def test_properties_view_rebuilds_ui_on_plot_type_change(
+    qtbot, properties_view, app_model
+):
+    """
+    Tests that PropertiesView correctly rebuilds its UI when the plot type
+    of a selected PlotNode changes from Line to Scatter, and vice-versa.
+    """
+    # 1. Setup: Create a PlotNode with LinePlotProperties and select it
+    plot_node = PlotNode()
+    plot_node.data = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
+    plot_node.plot_properties = LinePlotProperties(
+        title="Initial Plot",
+        xlabel="X",
+        ylabel="Y",
+        plot_mapping=PlotMapping(x="col1", y=["col2"]),
+        axes_limits=AxesLimits(xlim=(0, 1), ylim=(0, 1)),
+        plot_type=PlotType.LINE,
     )
-    context["model"].add_node(default_plot)
+    app_model.set_selection([plot_node])
+    qtbot.addWidget(properties_view)
+    properties_view.show()
 
-    return context
+    # Ensure initial UI is for LinePlot (no marker_size_edit)
+    qtbot.waitUntil(
+        lambda: properties_view.findChild(QLineEdit, "marker_size_edit") is None
+    )
+    assert properties_view.findChild(QLineEdit, "marker_size_edit") is None
+    assert isinstance(plot_node.plot_properties, LinePlotProperties)
+    assert plot_node.plot_properties.plot_type == PlotType.LINE
+
+    # 2. Change plot type to SCATTER using the UI
+    plot_type_combo = properties_view.findChild(QComboBox, "plot_type_combo")
+    assert plot_type_combo is not None
+    plot_type_combo.setCurrentText(PlotType.SCATTER.value)
+    qtbot.waitUntil(
+        lambda: isinstance(plot_node.plot_properties, ScatterPlotProperties)
+    )
+
+    # 3. Assert UI rebuild for ScatterPlot (marker_size_edit exists)
+    qtbot.waitUntil(
+        lambda: properties_view.findChild(QLineEdit, "marker_size_edit") is not None
+    )
+    marker_size_edit = properties_view.findChild(QLineEdit, "marker_size_edit")
+    assert marker_size_edit is not None
+    assert isinstance(plot_node.plot_properties, ScatterPlotProperties)
+    assert plot_node.plot_properties.plot_type == PlotType.SCATTER
 
 
-def test_properties_view_updates_model_on_title_change(app_context, qtbot):
-    """
-    An integration test to verify that changing the 'Title' QLineEdit in the
-    PropertiesView correctly updates the title property in the model.
-    """
-    # Arrange: Get components from the application context
-    model = app_context["model"]
-    view = app_context["view"]
+    # 4. Change plot type back to LINE using the UI
+    plot_type_combo.setCurrentText(PlotType.LINE.value)
+    qtbot.waitUntil(
+        lambda: isinstance(plot_node.plot_properties, LinePlotProperties)
+    )
 
-    # Find the PlotNode we added in the fixture
-    plot_node = model.scene_root.children[0]
-
-    # 1. Select the plot node to trigger the PropertiesView to build its UI
-    model.set_selection([plot_node])
-
-    # 2. Find the 'Title' QLineEdit in the PropertiesView using its object name
-    title_edit = view.properties_view.findChild(
-        QLineEdit, "title_edit"
-    )  # Use QLineEdit directly
-    assert (
-        title_edit is not None
-    ), "Could not find the 'title_edit' QLineEdit in the PropertiesView"
-
-    # 3. Simulate user typing a new title and pressing Enter
-    new_title = "My Test Title"
-    title_edit.clear()
-    qtbot.keyClicks(title_edit, new_title)
-    qtbot.keyPress(title_edit, Qt.Key_Enter)
-
-    # Assert: Check that the model's plot_properties were updated
-    assert plot_node.plot_properties.title == new_title
+    # 5. Assert UI rebuild for LinePlot (no marker_size_edit)
+    qtbot.waitUntil(
+        lambda: properties_view.findChild(QLineEdit, "marker_size_edit") is None
+    )
+    assert properties_view.findChild(QLineEdit, "marker_size_edit") is None
+    assert isinstance(plot_node.plot_properties, LinePlotProperties)
+    assert plot_node.plot_properties.plot_type == PlotType.LINE

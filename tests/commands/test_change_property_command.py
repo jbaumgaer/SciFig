@@ -4,8 +4,8 @@ from src.commands.change_property_command import ChangePropertyCommand
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.plot_properties import (
     AxesLimits,
+    LinePlotProperties,
     PlotMapping,
-    PlotProperties,
 )
 
 
@@ -13,7 +13,7 @@ from src.models.nodes.plot_properties import (
 def mock_plot_node():
     """Provides a mock PlotNode for testing."""
     node = PlotNode()
-    node.plot_properties = PlotProperties(
+    node.plot_properties = LinePlotProperties(
         title="",
         xlabel="",
         ylabel="",

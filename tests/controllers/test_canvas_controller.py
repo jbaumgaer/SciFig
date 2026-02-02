@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pandas as pd
+import pandas as pd
 import pytest
 
 from src.commands.command_manager import CommandManager
@@ -9,8 +10,8 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.plot_properties import (
     AxesLimits,
+    LinePlotProperties,
     PlotMapping,
-    PlotProperties,
 )
 from src.views.canvas_widget import CanvasWidget
 
@@ -81,7 +82,7 @@ def plot_node_empty_props():
 def plot_node_with_mapping():
     """Provides a PlotNode with an existing plot_mapping."""
     node = PlotNode()
-    node.plot_properties = PlotProperties(
+    node.plot_properties = LinePlotProperties(
         title="Existing Title",
         xlabel="Existing X Label",
         ylabel="Existing Y Label",
@@ -116,7 +117,7 @@ def test_on_data_ready_sets_default_properties_for_new_data(
     pd.testing.assert_frame_equal(plot_node_empty_props.data, sample_dataframe)
 
     # Assert plot_properties was created
-    assert plot_node_empty_props.plot_properties is not None
+    assert isinstance(plot_node_empty_props.plot_properties, LinePlotProperties)
     assert plot_node_empty_props.plot_properties.title == "Test Plot"
     assert plot_node_empty_props.plot_properties.xlabel == "Time"
     assert plot_node_empty_props.plot_properties.ylabel == "Voltage"
