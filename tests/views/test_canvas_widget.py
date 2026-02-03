@@ -9,13 +9,6 @@ from PySide6.QtWidgets import QApplication, QGraphicsView, QScrollBar
 from src.views.canvas_widget import CanvasWidget
 
 
-# Fixture for a QApplication instance
-@pytest.fixture(scope="session")
-def qapp():
-    """Provides a QApplication instance for tests."""
-    return QApplication([])
-
-
 @pytest.fixture
 def mock_figure():
     """Provides a real matplotlib Figure for tests."""
@@ -24,9 +17,10 @@ def mock_figure():
 
 
 @pytest.fixture
-def canvas_widget(qapp, mock_figure):
+def canvas_widget(qtbot, mock_figure):
     """Provides a CanvasWidget instance for tests."""
     widget = CanvasWidget(figure=mock_figure)
+    qtbot.addWidget(widget)
     widget.show()  # Ensure widget is shown for event processing
     return widget
 

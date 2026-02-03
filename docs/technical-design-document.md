@@ -6,6 +6,46 @@ A TDD should be created as part of the **"Reason & Plan"** phase for any suffici
 
 ---
 
+## Epic: UI Refactoring
+
+### Feature: MainWindow Construction Refactoring
+**Task:** Refactor the construction of the `MainWindow` to improve type safety, readability, and maintainability. This involves eliminating the monolithic `MainWindowBuilder` and making the `MainWindow` responsible for its own construction.
+
+**Background & Context:** The current approach has several drawbacks:
+- **`MainWindowBuilder` is a monolith:** It is responsible for creating every part of the main window, making it long and difficult to maintain.
+- **Delayed Initialization:** The `MainWindow` is initialized with all its UI components set to `None`. The builder then populates these attributes.
+- **Reduced Type Safety:** Because of the `None` initialization, all component attributes must be typed as `Optional` (e.g., `QWidget | None`). This requires constant `None` checks throughout the code and increases the risk of `NoneType` runtime errors, even though the components should be fully available after the initial setup.
+
+**Proposed Implementation:**
+The core principle of this refactoring is to make the `MainWindow` responsible for its own construction, following the principle of high cohesion.
+
+1.  **Eliminate `MainWindowBuilder`:** The `src/builders/main_window_builder.py` file will be deleted. Its responsibilities will be moved into the `MainWindow` and a new `MenuBarBuilder`.
+
+2.  **Refactor `MainWindow`:**
+    *   The `__init__` method will be updated to accept the `ApplicationModel`, `CommandManager`, and `plot_types` as direct dependencies.
+    *   The long list of `None`-initialized attributes will be removed.
+    *   The `__init__` method will call a series of private factory methods to construct its own UI components (e.g., `_create_canvas`, `_create_properties_dock`).
+    *   Attributes will be assigned directly from the return values of these factory methods, ensuring they are never `None` after initialization.
+
+3.  **Introduce `MenuBarBuilder`:**
+    *   A new file, `src/builders/menu_bar_builder.py`, will be created.
+    *   It will contain a new `MenuBarBuilder` class and a `MainMenuActions` dataclass.
+    *   The `MainMenuActions` dataclass will act as a container for all the menu components (`QMenuBar`, `QMenu`, `QAction`).
+    *   The `MenuBarBuilder` will take the parent `MainWindow` and `CommandManager` as dependencies. It will contain the logic for building the file and edit menus.
+    *   Its public `build()` method will return a fully populated `MainMenuActions` instance.
+
+4.  **Update Application Entry Point:** The `main.py` file will be modified to instantiate `MainWindow` directly, instead of using the `MainWindowBuilder`.
+
+**Test Plan:**
+-   All existing UI-related tests in `tests/views/` and `tests/workflows/` must continue to pass after the refactoring.
+-   A new unit test will be created for the `MenuBarBuilder` to verify that it correctly creates all menus and actions.
+
+**Risks & Mitigations:**
+-   **Risk:** This is a significant refactoring that touches the core of the UI initialization. It could lead to a non-functional UI if not done carefully.
+-   **Mitigation:** The refactoring will be done incrementally. The application will be run after each major step to ensure the UI is still functional. The existing test suite will be crucial for catching regressions.
+
+---
+
 ## Epic: Architectural Refinement
 
 

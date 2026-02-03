@@ -3,13 +3,13 @@ import sys
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import QApplication
 
-from src.builders.main_window_builder import MainWindowBuilder
 from src.commands.command_manager import CommandManager
 from src.controllers.canvas_controller import CanvasController
 from src.controllers.main_controller import MainController
 from src.controllers.tool_manager import ToolManager
 from src.controllers.tools.selection_tool import SelectionTool
 from src.models.application_model import ApplicationModel
+from src.views.main_window import MainWindow
 from src.views.renderer import Renderer
 
 
@@ -27,15 +27,10 @@ def setup_application():
     model = ApplicationModel(figure=figure)
     command_manager = CommandManager(model=model)
 
-    # 2. Use the MainWindowBuilder to create the main view
+    # 2. Use the MainWindow to create the main view
     renderer = Renderer()
     plot_types = list(renderer.plotting_strategies.keys())
-    builder = MainWindowBuilder(model, command_manager, plot_types)
-    view = (builder
-            .build_canvas()
-            .build_properties_dock()
-            .build_menu()
-            .get_window())
+    view = MainWindow(model, command_manager, plot_types)
 
     # 3. Instantiate Renderer
     

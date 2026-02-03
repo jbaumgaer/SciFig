@@ -78,3 +78,5 @@ src/models/nodes/__pycache__/rectangle_node.cpython-313.pyc
 src/models/nodes/__pycache__/text_node.cpython-313.pyc
 tests/views/__pycache__/test_plotting_strategies.cpython-313-pytest-9.0.2.pyc
 tests/views/__pycache__/test_properties_ui_factory.cpython-313-pytest-9.0.2.pyc
+src/builders/__pycache__/menu_bar_builder.cpython-313.pyc
+tests/builders/__pycache__/test_menu_bar_builder.cpython-313-pytest-9.0.2.pyc
