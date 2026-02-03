@@ -144,3 +144,131 @@ def test_reopening_panel_does_not_duplicate(app_context, qtbot):
 
     final_dock_count = len(view.findChildren(QDockWidget))
     assert final_dock_count == 1
+
+
+def test_panel_correctly_updates_on_selection_change(app_context, qtbot):
+    model = app_context["model"]
+    view = app_context["view"]
+
+    plot1 = model.scene_root.children[0]
+    plot2 = model.scene_root.children[1]
+
+    model.set_selection([plot1])
+    qtbot.waitUntil(
+        lambda: view.properties_view.findChild(QLineEdit, "title_edit").text()
+        == "Plot One Title"
+    )
+    assert (
+        view.properties_view.findChild(QLineEdit, "title_edit").text()
+        == "Plot One Title"
+    )
+
+    model.set_selection([plot2])
+    qtbot.waitUntil(
+        lambda: view.properties_view.findChild(QLineEdit, "title_edit").text()
+        == "Plot Two Title"
+    )
+    assert (
+        view.properties_view.findChild(QLineEdit, "title_edit").text()
+        == "Plot Two Title"
+    )
+
+
+def test_panel_shows_data_widgets_after_load(populated_plot_node, qtbot):
+    app_context, plot_node = populated_plot_node
+    model = app_context["model"]
+    view = app_context["view"]
+
+    model.set_selection([plot_node])
+
+    def combo_boxes_appeared():
+        return len(view.properties_view.findChildren(QComboBox)) == 3
+
+    qtbot.waitUntil(combo_boxes_appeared, timeout=1000)
+
+    combo_boxes_after_load = view.properties_view.findChildren(QComboBox)
+    assert len(combo_boxes_after_load) == 3
+
+    x_combo = combo_boxes_after_load[1]
+    y_combo = combo_boxes_after_load[2]
+    
+    assert x_combo.count() == 3
+    assert x_combo.itemText(0) == "Time"
+    assert x_combo.itemText(1) == "Voltage"
+    assert x_combo.itemText(2) == "Current"
+    
+    assert y_combo.count() == 3
+
+
+def test_column_selector_updates_plot_mapping(populated_plot_node, qtbot):
+    app_context, plot_node = populated_plot_node
+    model = app_context["model"]
+    view = app_context["view"]
+
+    model.set_selection([plot_node])
+
+    def combo_boxes_appeared():
+        return len(view.properties_view.findChildren(QComboBox)) == 3
+
+    qtbot.waitUntil(combo_boxes_appeared, timeout=1000)
+
+    combo_boxes = view.properties_view.findChildren(QComboBox)
+    x_combo = combo_boxes[1]
+    y_combo = combo_boxes[2]
+
+    x_combo.setCurrentText("Voltage")
+    y_combo.setCurrentText("Current")
+
+    def mapping_updated():
+        mapping = plot_node.plot_properties.plot_mapping
+        return mapping.x == "Voltage" and mapping.y == ["Current"]
+
+    qtbot.waitUntil(mapping_updated, timeout=1000)
+
+    final_mapping = plot_node.plot_properties.plot_mapping
+    assert final_mapping.x == "Voltage"
+    assert final_mapping.y == ["Current"]
+
+
+def test_axis_limits_updates_model(app_context, qtbot):
+    model = app_context["model"]
+    view = app_context["view"]
+    plot_node = model.scene_root.children[0]
+
+    model.set_selection([plot_node])
+
+    def editors_exist():
+        return all(
+            [
+                view.properties_view.findChild(QLineEdit, "xlim_min_edit"),
+                view.properties_view.findChild(QLineEdit, "xlim_max_edit"),
+                view.properties_view.findChild(QLineEdit, "ylim_min_edit"),
+                view.properties_view.findChild(QLineEdit, "ylim_max_edit"),
+            ]
+        )
+
+    qtbot.waitUntil(editors_exist, timeout=1000)
+
+    xlim_min_edit = view.properties_view.findChild(QLineEdit, "xlim_min_edit")
+    xlim_max_edit = view.properties_view.findChild(QLineEdit, "xlim_max_edit")
+    ylim_min_edit = view.properties_view.findChild(QLineEdit, "ylim_min_edit")
+    ylim_max_edit = view.properties_view.findChild(QLineEdit, "ylim_max_edit")
+
+    xlim_min_edit.setText("10.5")
+    xlim_min_edit.editingFinished.emit()
+    xlim_max_edit.setText("99.5")
+    xlim_max_edit.editingFinished.emit()
+    ylim_min_edit.setText("-5")
+    ylim_min_edit.editingFinished.emit()
+    ylim_max_edit.setText("5")
+    ylim_max_edit.editingFinished.emit()
+
+    def limits_updated():
+        limits = plot_node.plot_properties.axes_limits
+        return limits.xlim == (10.5, 99.5) and limits.ylim == (-5.0, 5.0)
+
+    qtbot.waitUntil(limits_updated, timeout=1000)
+
+    final_limits = plot_node.plot_properties.axes_limits
+    assert final_limits.xlim == (10.5, 99.5)
+    assert final_limits.ylim == (-5.0, 5.0)
