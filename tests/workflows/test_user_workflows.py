@@ -37,7 +37,11 @@ def app_context(qtbot):
 
     renderer = Renderer()
     plot_types = list(renderer.plotting_strategies.keys())
-    view = MainWindow(model, command_manager, plot_types)
+    # Instantiate MainController without a view
+    main_controller = MainController(model=model) 
+
+    # Instantiate MainWindow with the main_controller
+    view = MainWindow(model, main_controller, command_manager, plot_types)
     qtbot.addWidget(view)
     view.show()
     qtbot.waitExposed(view)
@@ -47,7 +51,11 @@ def app_context(qtbot):
     tool_manager.add_tool("selection", selection_tool)
     tool_manager.set_active_tool("selection")
 
-    main_controller = MainController(model=model, view=view)
+    # The connections are now handled in main.py, so we need to simulate them here for the test context
+    view.new_layout_action.triggered.connect(main_controller.create_new_layout)
+    view.save_project_action.triggered.connect(lambda: main_controller.save_project(parent=view))
+    view.open_project_action.triggered.connect(lambda: main_controller.open_project(parent=view))
+    
     canvas_controller = CanvasController(
         model=model,
         canvas_widget=view.canvas_widget,
@@ -331,3 +339,125 @@ def test_save_project_workflow(populated_plot_node, monkeypatch):
             df = pd.read_parquet(f)
             assert df.shape == (3, 3)
             assert "Voltage" in df.columns
+
+
+def test_open_project_workflow(app_context, qtbot, monkeypatch):
+    """
+    Tests the complete open workflow, including loading the model state.
+    """
+    import io
+    import json
+    import zipfile
+    import pandas as pd
+    from unittest.mock import patch
+
+    original_model = app_context["model"]
+    main_controller = app_context["main_controller"]
+
+    # 1. Create a dummy .sci file in memory
+    zip_buffer_out = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer_out, "w", zipfile.ZIP_DEFLATED) as zf:
+        # Create dummy project.json
+        project_data = {
+            "version": "1.0",
+            "scene_root": {
+                "id": "root_id",
+                "class_name": "GroupNode",
+                "name": "root",
+                "visible": True,
+                "children": [
+                    {
+                        "id": "plot_id_open_test",
+                        "class_name": "PlotNode",
+                        "name": "Loaded Plot",
+                        "visible": True,
+                        "geometry": [0.1, 0.1, 0.8, 0.8],
+                        "plot_properties": {
+                            "title": "Loaded Title",
+                            "xlabel": "X",
+                            "ylabel": "Y",
+                            "plot_type": "line",
+                            "plot_mapping": {"x": "colX", "y": ["colY"]},
+                            "axes_limits": {"xlim": [None, None], "ylim": [0.0, 10.0]},
+                        },
+                        "data_path": "data/plot_id_open_test.parquet",
+                        "children": [],
+                    }
+                ],
+            },
+        }
+        zf.writestr("project.json", json.dumps(project_data))
+
+        # Create dummy parquet data
+        dummy_df = pd.DataFrame({"colX": [1, 2], "colY": [3, 4]})
+        with io.BytesIO() as parquet_buffer:
+            dummy_df.to_parquet(parquet_buffer)
+            zf.writestr("data/plot_id_open_test.parquet", parquet_buffer.getvalue())
+
+    # 2. Mock QFileDialog to return the path to the dummy file (which we'll use a temp file for real)
+    with tempfile.NamedTemporaryFile(suffix=".sci", delete=False) as tmp_file:
+        tmp_file.write(zip_buffer_out.getvalue())
+        temp_file_path = tmp_file.name
+    
+    monkeypatch.setattr(
+        "src.controllers.main_controller.QFileDialog.getOpenFileName",
+        lambda *args, **kwargs: (temp_file_path, "SciFig Project (*.sci)"),
+    )
+
+    # 3. Trigger the open action
+    main_controller.open_project()
+
+    # 4. Verify the model state is updated
+    new_model = app_context["model"]
+    assert new_model.scene_root.name == "root"
+    assert len(new_model.scene_root.children) == 1
+    loaded_plot = new_model.scene_root.children[0]
+    assert isinstance(loaded_plot, PlotNode)
+    assert loaded_plot.name == "Loaded Plot"
+    assert loaded_plot.plot_properties.title == "Loaded Title"
+    pd.testing.assert_frame_equal(loaded_plot.data, dummy_df)
+
+    # Clean up the temporary file
+    Path(temp_file_path).unlink()
+
+
+def test_open_recent_projects_workflow(app_context, qtbot, monkeypatch):
+    """
+    Tests the 'Open Recent Projects' menu functionality.
+    """
+    from PySide6.QtCore import QSettings
+    from unittest.mock import Mock, call
+
+    main_controller = app_context["main_controller"]
+    main_window = app_context["view"]
+
+    main_controller = app_context["main_controller"]
+    main_window = app_context["view"]
+
+    # Mock the get_recent_files method of the main_controller
+    with monkeypatch.context() as m:
+        m.setattr(main_controller, "get_recent_files", lambda: ["/path/to/project1.sci", "/path/to/project2.sci"])
+
+        # Move the patch.object block here
+        with patch.object(main_controller, "open_project") as mock_open_project:
+            # Trigger the aboutToShow signal of the recent projects menu
+            main_window.open_recent_projects_menu.aboutToShow.emit()
+            qtbot.wait(10) # Give events a chance to process
+
+            # Verify menu population
+            menu_actions = main_window.open_recent_projects_menu.actions()
+            assert len(menu_actions) == 2
+            assert menu_actions[0].text() == "/path/to/project1.sci"
+            assert menu_actions[1].text() == "/path/to/project2.sci"
+
+            menu_actions[0].trigger()
+            mock_open_project.assert_called_once_with("/path/to/project1.sci", parent=main_window) # Also update parent argument
+
+        # Test 'No Recent Projects' case
+        m.setattr(main_controller, "get_recent_files", lambda: []) # Reset for this specific case
+        main_window.open_recent_projects_menu.aboutToShow.emit()
+        qtbot.wait(10)
+        menu_actions = main_window.open_recent_projects_menu.actions()
+        assert len(menu_actions) == 1
+        assert menu_actions[0].text() == "No Recent Projects"
+        assert not menu_actions[0].isEnabled()

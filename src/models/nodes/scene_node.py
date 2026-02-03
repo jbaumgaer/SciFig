@@ -78,3 +78,39 @@ class SceneNode(QObject):
             "visible": self.visible,
             "children": [child.to_dict() for child in self.children],
         }
+
+    @classmethod
+    def from_dict(cls, data: dict, parent: SceneNode | None = None) -> SceneNode:
+        """Creates a node from a dictionary."""
+        node = cls(parent=parent, name=data["name"], id=data["id"])
+        node.visible = data["visible"]
+        # Children are handled by the factory
+        return node
+
+
+def node_factory(data: dict, parent: SceneNode | None = None, temp_dir: "Path | None" = None) -> SceneNode:
+    """Factory function to create nodes from a dictionary."""
+    from . import GroupNode, PlotNode
+
+    class_name = data.get("class_name")
+    
+    node_class_map = {
+        "GroupNode": GroupNode,
+        "PlotNode": PlotNode,
+        "SceneNode": SceneNode,
+    }
+    
+    cls = node_class_map.get(class_name, SceneNode)
+
+    # Pass temp_dir only if the class method accepts it (i.e., for PlotNode)
+    if class_name == "PlotNode":
+        node = cls.from_dict(data, parent=parent, temp_dir=temp_dir)
+    else:
+        node = cls.from_dict(data, parent=parent)
+    
+    # Recursively create children
+    child_data = data.get("children", [])
+    for child_dict in child_data:
+        node_factory(child_dict, parent=node, temp_dir=temp_dir)
+        
+    return node

@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 
 from src.builders.menu_bar_builder import MenuBarBuilder, MainMenuActions
 from src.commands import CommandManager
+from src.controllers.main_controller import MainController
 from src.models import ApplicationModel
 from src.models.nodes.plot_types import PlotType
 from src.views.canvas_widget import CanvasWidget
@@ -22,7 +23,7 @@ class MainWindow(QMainWindow):
     the application's UI components, including the canvas and properties panel.
     """
 
-    def __init__(self, model: ApplicationModel, command_manager: CommandManager, plot_types: list[PlotType]):
+    def __init__(self, model: ApplicationModel, main_controller: MainController, command_manager: CommandManager, plot_types: list[PlotType]):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
         self.setGeometry(50, 50, 800, 600)
@@ -38,7 +39,7 @@ class MainWindow(QMainWindow):
         self.properties_view, self.properties_dock = self._create_properties_dock()
 
         # Integrate MenuBarBuilder
-        menu_builder = MenuBarBuilder(self, self.command_manager)
+        menu_builder = MenuBarBuilder(self, main_controller, self.command_manager)
         self.main_menu_actions: MainMenuActions = menu_builder.build()
         self.setMenuBar(self.main_menu_actions.menu_bar)
 
@@ -48,8 +49,8 @@ class MainWindow(QMainWindow):
         self.new_layout_action: QAction = self.main_menu_actions.new_layout_action
         self.new_file_action: QAction = self.main_menu_actions.new_file_action
         self.new_file_from_template_action: QAction = self.main_menu_actions.new_file_from_template_action
-        self.open_figure_action: QAction = self.main_menu_actions.open_figure_action
-        self.open_recent_figures_menu: QMenu = self.main_menu_actions.open_recent_figures_menu
+        self.open_project_action: QAction = self.main_menu_actions.open_project_action
+        self.open_recent_projects_menu: QMenu = self.main_menu_actions.open_recent_projects_menu
         self.close_action: QAction = self.main_menu_actions.close_action
         self.save_project_action: QAction = self.main_menu_actions.save_project_action
         self.save_copy_action: QAction = self.main_menu_actions.save_copy_action

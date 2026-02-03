@@ -7,8 +7,8 @@ class GroupNode(SceneNode):
     It has no visual representation itself but is useful for organization.
     """
 
-    def __init__(self, parent: SceneNode | None = None, name: str = "Group"):
-        super().__init__(parent, name)
+    def __init__(self, parent: SceneNode | None = None, name: str = "Group", id: str | None = None):
+        super().__init__(parent, name, id)
 
     # Uses default `hit_test` from SceneNode (checks children).
 
@@ -16,3 +16,9 @@ class GroupNode(SceneNode):
         """Serializes the group node to a dictionary."""
         # For now, GroupNode has no special properties, so we just call the base implementation.
         return super().to_dict()
+
+    @classmethod
+    def from_dict(cls, data: dict, parent: SceneNode | None = None) -> "GroupNode":
+        """Creates a GroupNode from a dictionary."""
+        # For now, GroupNode has no special properties, so we just call the base implementation.
+        return super().from_dict(data, parent)

@@ -1,7 +1,9 @@
 import matplotlib.figure
+from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from .nodes import GroupNode, SceneNode
+from .nodes.scene_node import node_factory
 
 
 class ApplicationModel(QObject):
@@ -47,3 +49,10 @@ class ApplicationModel(QObject):
             "version": "1.0",
             "scene_root": self.scene_root.to_dict(),
         }
+    
+    def load_from_dict(self, data: dict, temp_dir: Path):
+        """Loads the application model from a dictionary."""
+        # Version check can be added here in the future
+        self.clear_scene()
+        self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
+        self.modelChanged.emit()

@@ -27,22 +27,25 @@ def setup_application():
     model = ApplicationModel(figure=figure)
     command_manager = CommandManager(model=model)
 
-    # 2. Use the MainWindow to create the main view
+    # 2. Create the main view and controller
     renderer = Renderer()
     plot_types = list(renderer.plotting_strategies.keys())
-    view = MainWindow(model, command_manager, plot_types)
-
-    # 3. Instantiate Renderer
     
+    main_controller = MainController(model=model)
+    view = MainWindow(model, main_controller, command_manager, plot_types)
+    
+    # Connect main window actions to controller slots
+    view.new_layout_action.triggered.connect(main_controller.create_new_layout)
+    view.save_project_action.triggered.connect(lambda: main_controller.save_project(parent=view))
+    view.open_project_action.triggered.connect(lambda: main_controller.open_project(parent=view))
 
-    # 4. Instantiate Tools and Manager
+    # 3. Instantiate Tools and Manager
     tool_manager = ToolManager()
     selection_tool = SelectionTool(model=model, canvas=view.canvas_widget.figure_canvas)
     tool_manager.add_tool("selection", selection_tool)
     tool_manager.set_active_tool("selection")
 
-    # 5. Create controllers
-    main_controller = MainController(model=model, view=view)
+    # 4. Create other controllers
     canvas_controller = CanvasController(
         model=model,
         canvas_widget=view.canvas_widget,
@@ -50,12 +53,12 @@ def setup_application():
         command_manager=command_manager,
     )
 
-    # 6. Redraw Callback
+    # 5. Redraw Callback
     def redraw_callback():
         renderer.render(view.canvas_widget.figure, model.scene_root, model.selection)
         view.canvas_widget.figure_canvas.draw()
 
-    # 7. Connect signals to slots
+    # 6. Connect signals to slots
     model.modelChanged.connect(redraw_callback)
     model.selectionChanged.connect(redraw_callback)
     canvas_controller.plotDoubleClicked.connect(view.show_properties_panel)

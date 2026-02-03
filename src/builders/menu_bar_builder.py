@@ -1,9 +1,11 @@
+import functools
 from dataclasses import dataclass
 
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QMenu, QMenuBar, QMainWindow
 
 from src.commands import CommandManager
+from src.controllers.main_controller import MainController
 
 
 @dataclass
@@ -14,8 +16,8 @@ class MainMenuActions:
     new_layout_action: QAction
     new_file_action: QAction
     new_file_from_template_action: QAction
-    open_figure_action: QAction
-    open_recent_figures_menu: QMenu
+    open_project_action: QAction
+    open_recent_projects_menu: QMenu
     close_action: QAction
     save_project_action: QAction
     save_copy_action: QAction
@@ -41,9 +43,28 @@ class MainMenuActions:
 
 
 class MenuBarBuilder:
-    def __init__(self, parent_window: QMainWindow, command_manager: CommandManager):
+    def __init__(self, parent_window: QMainWindow, main_controller: MainController, command_manager: CommandManager):
         self._parent_window = parent_window
+        self._main_controller = main_controller
         self._command_manager = command_manager
+
+    def _update_recent_projects_menu(self, menu: QMenu):
+        """Clears and repopulates the recent projects menu."""
+        menu.clear()
+        recent_files = self._main_controller.get_recent_files()
+
+        if not recent_files:
+            action = QAction("No Recent Projects", self._parent_window)
+            action.setEnabled(False)
+            menu.addAction(action)
+            return
+
+        for file_path in recent_files:
+            action = QAction(file_path, self._parent_window)
+            action.triggered.connect(
+                functools.partial(self._main_controller.open_project, file_path, parent=self._parent_window)
+            )
+            menu.addAction(action)
 
     def _build_file_menu(self, menu_bar: QMenuBar) -> tuple[
         QMenu, QAction, QAction, QAction, QAction, QMenu, QAction, QAction, QAction, QMenu, QMenu, QMenu, QAction, QAction, QAction, QAction, QAction, QAction, QAction
@@ -58,14 +79,14 @@ class MenuBarBuilder:
 
         file_menu.addSeparator()
 
-        open_figure_action = file_menu.addAction("&Open Figure...")
-        open_figure_action.setShortcut(QKeySequence.StandardKey.Open)
+        open_project_action = file_menu.addAction("&Open Project...")
+        open_project_action.setShortcut(QKeySequence.StandardKey.Open)
 
-        open_recent_figures_menu = file_menu.addMenu("&Open Recent Figures")
-        open_recent_figures_menu.menuAction().setShortcut(QKeySequence("Ctrl+Shift+O"))
-
-        close_action = file_menu.addAction("&Close")
-        close_action.setShortcut(QKeySequence("Ctrl+W"))
+        open_recent_projects_menu = file_menu.addMenu("Open &Recent Projects")
+        open_recent_projects_menu.aboutToShow.connect(
+            lambda: self._update_recent_projects_menu(open_recent_projects_menu)
+        )
+        open_recent_projects_menu.menuAction().setShortcut(QKeySequence("Ctrl+Shift+O"))
 
         file_menu.addSeparator()
 
@@ -74,6 +95,13 @@ class MenuBarBuilder:
 
         save_copy_action = file_menu.addAction("Save a &Copy...")
         save_copy_action.setShortcut(QKeySequence.StandardKey.SaveAs)
+
+        file_menu.addSeparator()
+        
+        close_action = file_menu.addAction("&Close")
+        close_action.setShortcut(QKeySequence("Ctrl+W"))
+
+        file_menu.addSeparator()
 
         export_figure_menu = file_menu.addMenu("&Export Figure")
         export_figure_menu.menuAction().setShortcut(QKeySequence("Ctrl+E"))
@@ -99,8 +127,8 @@ class MenuBarBuilder:
             new_layout_action,
             new_file_action,
             new_file_from_template_action,
-            open_figure_action,
-            open_recent_figures_menu,
+            open_project_action,
+            open_recent_projects_menu,
             close_action,
             save_project_action,
             save_copy_action,
@@ -167,8 +195,8 @@ class MenuBarBuilder:
             new_layout_action,
             new_file_action,
             new_file_from_template_action,
-            open_figure_action,
-            open_recent_figures_menu,
+            open_project_action,
+            open_recent_projects_menu,
             close_action,
             save_project_action,
             save_copy_action,
@@ -201,8 +229,8 @@ class MenuBarBuilder:
             new_layout_action=new_layout_action,
             new_file_action=new_file_action,
             new_file_from_template_action=new_file_from_template_action,
-            open_figure_action=open_figure_action,
-            open_recent_figures_menu=open_recent_figures_menu,
+            open_project_action=open_project_action,
+            open_recent_projects_menu=open_recent_projects_menu,
             close_action=close_action,
             save_project_action=save_project_action,
             save_copy_action=save_copy_action,

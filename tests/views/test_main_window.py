@@ -9,8 +9,15 @@ from src.models.application_model import ApplicationModel
 from src.views.main_window import MainWindow
 from src.models.nodes.plot_types import PlotType
 
+from src.controllers.main_controller import MainController
+
 @pytest.fixture
-def app_context(qtbot):
+def mock_main_controller():
+    """Fixture for a mock MainController."""
+    return MagicMock(spec=MainController)
+
+@pytest.fixture
+def app_context(qtbot, mock_main_controller):
     """
     A pytest fixture that sets up the main application window with a real
     model and a mocked command manager, instantiating a real MainWindow.
@@ -22,7 +29,8 @@ def app_context(qtbot):
     mock_command_manager = MagicMock(spec=CommandManager)
     plot_types = [PlotType.LINE, PlotType.SCATTER]
 
-    main_window = MainWindow(model, mock_command_manager, plot_types)
+    main_window = MainWindow(model, mock_main_controller, mock_command_manager, plot_types)
+    
     qtbot.addWidget(main_window)
     main_window.show()
     qtbot.waitExposed(main_window)
@@ -31,6 +39,7 @@ def app_context(qtbot):
         "window": main_window,
         "model": model,
         "command_manager": mock_command_manager,
+        "main_controller": mock_main_controller,
     }
 
 

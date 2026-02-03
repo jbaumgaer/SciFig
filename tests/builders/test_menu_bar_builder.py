@@ -6,6 +6,7 @@ from PySide6.QtGui import QKeySequence, QAction
 
 from src.builders.menu_bar_builder import MenuBarBuilder, MainMenuActions
 from src.commands import CommandManager
+from src.controllers.main_controller import MainController
 
 
 @pytest.fixture
@@ -26,9 +27,15 @@ def mock_command_manager():
 
 
 @pytest.fixture
-def menu_bar_builder(mock_mainwindow, mock_command_manager):
+def mock_main_controller():
+    """Fixture for a mock MainController."""
+    return Mock(spec=MainController)
+
+
+@pytest.fixture
+def menu_bar_builder(mock_mainwindow, mock_main_controller, mock_command_manager):
     """Fixture for a MenuBarBuilder instance."""
-    return MenuBarBuilder(mock_mainwindow, mock_command_manager)
+    return MenuBarBuilder(mock_mainwindow, mock_main_controller, mock_command_manager)
 
 
 def test_main_menu_actions_dataclass_structure():
@@ -39,8 +46,8 @@ def test_main_menu_actions_dataclass_structure():
         new_layout_action=Mock(spec=QAction),
         new_file_action=Mock(spec=QAction),
         new_file_from_template_action=Mock(spec=QAction),
-        open_figure_action=Mock(spec=QAction),
-        open_recent_figures_menu=Mock(spec=QMenu),
+        open_project_action=Mock(spec=QAction),
+        open_recent_projects_menu=Mock(spec=QMenu),
         close_action=Mock(spec=QAction),
         save_project_action=Mock(spec=QAction),
         save_copy_action=Mock(spec=QAction),
