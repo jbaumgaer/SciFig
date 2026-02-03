@@ -8,6 +8,93 @@ This document tracks the implemented and future features of the Data Analysis GU
 
 This section describes the functionality currently available in the application.
 
+### Feature: Pluggable Plot Properties and Dynamic View
+**Status:** Completed
+**Task:** Refactor `PlotProperties` into a hierarchical, type-specific structure and make the `PropertiesView` dynamically update its UI based on the selected plot type.
+**Background & Context:** The current `PlotProperties` is a monolithic dataclass, and the plot type is a simple string. This is not scalable for plot types with different property needs (e.g., a 3D plot needing a Z-axis column, or a scatter plot needing a `marker_size` property). To support true pluggability, the properties model and the view that edits it must both be made more dynamic.
+
+**Phase 1: Model Refactoring**
+1.  **Create `PlotType` Enum:**
+    *   In a new file, `src/models/plot_types.py`, define a `PlotType` enum using `enum.Enum`.
+    *   `class PlotType(str, Enum): LINE = "line"; SCATTER = "scatter"` (inheriting from `str` helps with serialization if needed).
+2.  **Refactor `PlotProperties` Hierarchy:**
+    *   In `src/models/nodes/plot_properties.py`:
+        *   Rename the existing `PlotProperties` dataclass to `BasePlotProperties`.
+        *   Change its `plot_type` attribute from `str` to `PlotType`.
+        *   Create new dataclasses `LinePlotProperties` and `ScatterPlotProperties`, both inheriting from `BasePlotProperties`.
+        *   For now, these subclasses will be simple `pass` statements, but this establishes the required structure. For example, `ScatterPlotProperties` could later have `marker_size: int = 10`.
+3.  **Update Core Model and Renderer:**
+    *   In `PlotNode`, change the type hint for `plot_properties` to `Optional[BasePlotProperties]`.
+    *   In the `Renderer`, change the keys of the `plotting_strategies` dictionary from strings to `PlotType` enum members (e.g., `{PlotType.LINE: LinePlotStrategy(), ...}`).
+    *   In `PropertiesView`, update its `__init__` to accept `list[PlotType]` and modify the `QComboBox` to be populated from this list. The `_on_plot_type_changed` signal will now emit a `PlotType` member.
+
+**Phase 2: Dynamic View Implementation**
+1.  **Create `PropertiesUIFactory`:**
+    *   Create a new class `PropertiesUIFactory` in `src/views/properties_ui_factory.py`.
+    *   This class will be responsible for building the specific QWidgets needed for a given `BasePlotProperties` instance.
+    *   It will have a central method, e.g., `build_widgets(props: BasePlotProperties, layout: QFormLayout, command_manager: CommandManager)`.
+    *   Inside `build_widgets`, it will use `isinstance` checks to determine which specific builder method to call (e.g., `if isinstance(props, ScatterPlotProperties): self._build_scatter_widgets(...)`).
+    *   The specific builder methods (`_build_scatter_widgets`) will create the `QSpinBox` for `marker_size`, connect its `valueChanged` signal to a `ChangePropertyCommand`, etc.
+2.  **Refactor `PropertiesView`:**
+    *   In `PropertiesView.__init__`, create an instance of the `PropertiesUIFactory`.
+    *   In `_build_plotnode_ui`, after creating the common widgets (Title, Labels, Plot Type dropdown), it will call `self.ui_factory.build_widgets(props, form_layout, self.command_manager)`. This delegates the creation of type-specific widgets to the factory, keeping the main view clean.
+
+**Test Plan:**
+-   Update existing tests that fail due to the `PlotProperties` and `PlotType` refactoring.
+-   Write a unit test for the `PropertiesUIFactory` to ensure it calls the correct builder method for each property type.
+-   Write an integration test to verify that when the user changes the `plot_type` in the `PropertiesView` dropdown, the old type-specific widgets are removed and the new ones are created correctly. For example, changing from "scatter" to "line" should make the `marker_size` editor disappear.
+
+**Risks & Mitigations:**
+-   **Risk:** The refactoring is significant and will touch many files, potentially breaking existing functionality.
+-   **Mitigation:** The work is broken into two phases. After Phase 1, the application should still be fully functional before proceeding to Phase 2. The comprehensive test suite will be relied upon to catch regressions.
+
+### Feature: Pluggable Node Renderer Strategy
+**Task:** Refactor the main rendering loop to use a Strategy Pattern for rendering different `SceneNode` types.  
+**Background & Context:** The main `_render_node` recursive method uses a large `if isinstance(node, PlotNode):` block. As more node types are added (`RectangleNode`, `TextNode`, etc.), this will become a long and difficult-to-maintain `if/elif/else` chain, violating the Open/Closed Principle.
+
+**Proposed Implementation:**  
+1.  **Isolate Node Rendering Logic:**
+    *   Move the existing logic for rendering a `PlotNode` from `_render_node` into its own dedicated method within the `Renderer` class: `_render_plot_node(self, figure, node)`.
+    *   Create placeholder methods for future node types, e.g., `_render_rectangle_node(self, figure, node)`.
+2.  **Create the Strategy Map:**
+    *   In the `Renderer.__init__`, create a `_render_strategies` dictionary that maps the *class type* of a node to the appropriate rendering function.
+        ```python
+        from src.models.nodes import PlotNode, RectangleNode # etc.
+
+        self._render_strategies = {
+            PlotNode: self._render_plot_node,
+            # RectangleNode: self._render_rectangle_node, # To be added later
+        }
+        ```
+3.  **Refactor the Main Render Loop:**
+    *   Simplify the `_render_node` method dramatically. Its only job now is to find the correct strategy and call it.
+        ```python
+        def _render_node(self, figure, node):
+            if not node.visible:
+                return
+
+            # Find and execute the strategy for the current node
+            render_func = self._render_strategies.get(type(node))
+            if render_func:
+                render_func(figure, node)
+            else:
+                # Optionally log a warning for unhandled node types
+                print(f"Warning: No renderer found for node type {type(node)}")
+
+            # Recursively render children
+            for child in node.children:
+                self._render_node(figure, child)
+        ```
+
+**Test Plan:**  
+-   Verify that `PlotNode` objects continue to render exactly as they did before the refactor.
+-   Create a new, simple `TestNode` class and a corresponding `_render_test_node` function. Write a test to add a `TestNode` to the scene, add its renderer to the strategy map, and confirm that the correct rendering function is called.
+-   Test that the recursive rendering of children is unaffected.
+
+**Risks & Mitigations:**  
+-   **Risk:** A new node type is created, but a developer forgets to add it to the strategy map.
+-   **Mitigation:** The implementation includes a warning for unhandled node types. This can be elevated to an error during debug builds if necessary. A unit test can also be written to check that all non-abstract `SceneNode` subclasses exist as keys in the strategy map.
+
 ### Core Architecture (v2)
 
 The application is built on a modern, robust architecture designed for interactivity and extensibility.
