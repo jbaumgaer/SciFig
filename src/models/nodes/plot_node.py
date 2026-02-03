@@ -1,4 +1,5 @@
 from typing import Optional
+import dataclasses
 
 import pandas as pd
 
@@ -29,3 +30,16 @@ class PlotNode(SceneNode):
         if left <= x <= left + width and bottom <= y <= bottom + height:
             return self
         return None
+
+    def to_dict(self) -> dict:
+        """Serializes the plot node to a dictionary."""
+        node_dict = super().to_dict()
+        
+        data_path = f"data/{self.id}.parquet" if self.data is not None else None
+        
+        node_dict.update({
+            "geometry": self.geometry,
+            "plot_properties": dataclasses.asdict(self.plot_properties) if self.plot_properties else None,
+            "data_path": data_path,
+        })
+        return node_dict

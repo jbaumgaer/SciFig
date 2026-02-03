@@ -8,6 +8,15 @@ This document tracks the implemented and future features of the Data Analysis GU
 
 This section describes the functionality currently available in the application.
 
+### Feature: Single-File Project Save/Load (`.sci` files)
+**Status:** Implemented
+**Task:** Implemented the ability to save the entire application state into a single `.sci` project file.
+**Architectural Decision:** A hybrid archive format was chosen. The `.sci` file is a zip archive containing a `project.json` for all metadata (scene graph, node properties, etc.) and a `data/` directory containing high-performance Parquet files for each plot's DataFrame. This provides a balance of human-readable metadata and efficient binary storage for large datasets, while avoiding the security risks of formats like `pickle`.
+
+### Feature: MainWindow Construction Refactoring
+**Status:** Implemented
+**Task:** Refactor the construction of the `MainWindow` to improve type safety, readability, and maintainability. This involved eliminating the monolithic `MainWindowBuilder` and making the `MainWindow` responsible for its own construction.
+
 ### Feature: Pluggable Plot Properties and Dynamic View
 **Status:** Completed
 **Task:** Refactor `PlotProperties` into a hierarchical, type-specific structure and make the `PropertiesView` dynamically update its UI based on the selected plot type.

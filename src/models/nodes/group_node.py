@@ -11,3 +11,8 @@ class GroupNode(SceneNode):
         super().__init__(parent, name)
 
     # Uses default `hit_test` from SceneNode (checks children).
+
+    def to_dict(self) -> dict:
+        """Serializes the group node to a dictionary."""
+        # For now, GroupNode has no special properties, so we just call the base implementation.
+        return super().to_dict()

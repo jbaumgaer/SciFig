@@ -40,3 +40,10 @@ class ApplicationModel(QObject):
     def get_node_at(self, position: tuple[float, float]) -> SceneNode | None:
         """Finds the topmost node at the given figure coordinates."""
         return self.scene_root.hit_test(position)
+
+    def to_dict(self) -> dict:
+        """Serializes the application model to a dictionary."""
+        return {
+            "version": "1.0",
+            "scene_root": self.scene_root.to_dict(),
+        }

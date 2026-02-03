@@ -1,4 +1,5 @@
 from __future__ import annotations
+import uuid
 
 from PySide6.QtCore import QObject
 
@@ -9,8 +10,9 @@ class SceneNode(QObject):
     Inherits from QObject to support Qt's signal/slot mechanism in the future.
     """
 
-    def __init__(self, parent: SceneNode | None = None, name: str = ""):
+    def __init__(self, parent: SceneNode | None = None, name: str = "", id: str | None = None):
         super().__init__()
+        self.id = id or uuid.uuid4().hex
         self._parent = parent
         self._children: list[SceneNode] = []
         self.name = name
@@ -60,3 +62,19 @@ class SceneNode(QObject):
                 if hit:
                     return hit
         return None
+
+    def all_descendants(self) -> "Generator[SceneNode, None, None]":
+        """A generator that yields all nodes in the subtree, including this node."""
+        yield self
+        for child in self.children:
+            yield from child.all_descendants()
+
+    def to_dict(self) -> dict:
+        """Serializes the node to a dictionary."""
+        return {
+            "id": self.id,
+            "class_name": self.__class__.__name__,
+            "name": self.name,
+            "visible": self.visible,
+            "children": [child.to_dict() for child in self.children],
+        }

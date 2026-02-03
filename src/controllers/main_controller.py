@@ -1,3 +1,10 @@
+import json
+import tempfile
+import zipfile
+from pathlib import Path
+
+from PySide6.QtWidgets import QFileDialog
+
 from src.models import ApplicationModel
 from src.models.nodes import PlotNode
 
@@ -14,6 +21,7 @@ class MainController:
 
         # Connect UI element signals to controller slots
         self.view.new_layout_action.triggered.connect(self.create_new_layout)
+        self.view.save_project_action.triggered.connect(self.save_project)
 
     def create_new_layout(self):
         """
@@ -40,3 +48,41 @@ class MainController:
 
                 # model.add_node emits the signal, so no need for an extra emit here
                 self.model.add_node(plot_node)
+
+    def save_project(self):
+        """Saves the current project to a .sci file."""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self.view,
+            "Save Project",
+            "",
+            "SciFig Project (*.sci)",
+        )
+
+        if not file_path:
+            return
+
+        with tempfile.TemporaryDirectory() as temp_dir_str:
+            temp_dir = Path(temp_dir_str)
+            data_dir = temp_dir / "data"
+            data_dir.mkdir()
+
+            # 1. Save all dataframes to parquet files
+            for node in self.model.scene_root.all_descendants():
+                if isinstance(node, PlotNode) and node.data is not None:
+                    parquet_path = data_dir / f"{node.id}.parquet"
+                    node.data.to_parquet(parquet_path)
+            
+            # 2. Get the model dictionary (which now contains data_path)
+            project_dict = self.model.to_dict()
+
+            # 3. Save the project dictionary to project.json
+            json_path = temp_dir / "project.json"
+            with open(json_path, "w") as f:
+                json.dump(project_dict, f, indent=4)
+            
+            # 4. Zip the contents of the temporary directory
+            with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for file_to_zip in temp_dir.rglob("*"):
+                    zf.write(file_to_zip, file_to_zip.relative_to(temp_dir))
+            
+            print(f"Project saved to {file_path}")

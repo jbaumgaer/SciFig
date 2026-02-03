@@ -231,12 +231,18 @@ def test_column_selector_updates_plot_mapping(populated_plot_node, qtbot):
 
 
 def test_axis_limits_updates_model(app_context, qtbot):
+    """
+    Tests that changing the axis limit fields in the properties view correctly
+    updates the axes_limits property in the model using the debounced timer.
+    """
     model = app_context["model"]
     view = app_context["view"]
     plot_node = model.scene_root.children[0]
 
+    # 1. Select the plot node to build its UI
     model.set_selection([plot_node])
 
+    # 2. Wait for the UI to build and find the QLineEdit widgets
     def editors_exist():
         return all(
             [
@@ -254,8 +260,9 @@ def test_axis_limits_updates_model(app_context, qtbot):
     ylim_min_edit = view.properties_view.findChild(QLineEdit, "ylim_min_edit")
     ylim_max_edit = view.properties_view.findChild(QLineEdit, "ylim_max_edit")
 
+    # 3. Simulate user input and trigger editingFinished
     xlim_min_edit.setText("10.5")
-    xlim_min_edit.editingFinished.emit()
+    xlim_min_edit.editingFinished.emit()  # Simulate user pressing Enter or moving focus
     xlim_max_edit.setText("99.5")
     xlim_max_edit.editingFinished.emit()
     ylim_min_edit.setText("-5")
@@ -263,12 +270,64 @@ def test_axis_limits_updates_model(app_context, qtbot):
     ylim_max_edit.setText("5")
     ylim_max_edit.editingFinished.emit()
 
+    # 4. Wait for the model update to complete
     def limits_updated():
         limits = plot_node.plot_properties.axes_limits
         return limits.xlim == (10.5, 99.5) and limits.ylim == (-5.0, 5.0)
 
     qtbot.waitUntil(limits_updated, timeout=1000)
 
+    # 5. Assert the final state
     final_limits = plot_node.plot_properties.axes_limits
     assert final_limits.xlim == (10.5, 99.5)
     assert final_limits.ylim == (-5.0, 5.0)
+
+
+from unittest.mock import patch
+
+def test_save_project_workflow(populated_plot_node, monkeypatch):
+    """
+    Tests the complete save workflow from UI trigger to file creation.
+    """
+    import io
+    import json
+    import zipfile
+    import pandas as pd
+
+    app_context, plot_node_with_data = populated_plot_node
+    main_controller = app_context["main_controller"]
+    
+    # Use an in-memory buffer for the zip file
+    zip_buffer = io.BytesIO()
+
+    # 1. Mock the file dialog to return a dummy path
+    monkeypatch.setattr(
+        "src.controllers.main_controller.QFileDialog.getSaveFileName",
+        lambda *args, **kwargs: ("test_project.sci", "SciFig Project (*.sci)"),
+    )
+
+    # 2. Patch zipfile.ZipFile to use our in-memory buffer
+    with patch("zipfile.ZipFile", return_value=zipfile.ZipFile(zip_buffer, "w")) as mock_zip:
+        # 3. Trigger the save action
+        main_controller.save_project()
+
+    # 4. Verify the contents of the in-memory zip file
+    zip_buffer.seek(0)
+    with zipfile.ZipFile(zip_buffer, "r") as zf:
+        # Check that the project.json file exists and is valid
+        assert "project.json" in zf.namelist()
+        with zf.open("project.json") as f:
+            project_data = json.load(f)
+        
+        assert project_data["version"] == "1.0"
+        assert "scene_root" in project_data
+
+        # Check that the parquet file for the populated node exists
+        data_path = f"data/{plot_node_with_data.id}.parquet"
+        assert data_path in zf.namelist()
+
+        # Check that the data in the parquet file is correct
+        with zf.open(data_path) as f:
+            df = pd.read_parquet(f)
+            assert df.shape == (3, 3)
+            assert "Voltage" in df.columns
