@@ -13,8 +13,10 @@ from src.controllers.tools import MockTool
 from src.controllers.tools.selection_tool import SelectionTool
 from src.constants import IconPath, ToolName
 from src.models.application_model import ApplicationModel
+from src.models.nodes.plot_types import PlotType
 from src.views.main_window import MainWindow
 from src.views.renderer import Renderer
+from src.views.properties_ui_factory import PropertiesUIFactory, _build_line_plot_ui_widgets, _build_scatter_plot_ui_widgets
 
 
 class ApplicationAssembler:
@@ -38,6 +40,7 @@ class ApplicationAssembler:
         self._tool_bar: QToolBar | None = None
         self._tool_bar_actions: ToolBarActions | None = None
         self._view: MainWindow | None = None
+        self._properties_ui_factory: PropertiesUIFactory | None = None
 
         # Tooling components
         self._tool_manager: ToolManager | None = None
@@ -54,6 +57,15 @@ class ApplicationAssembler:
         self._main_controller = MainController(model=self._model)
         self._renderer = Renderer()
         self._plot_types = list(self._renderer.plotting_strategies.keys())
+        self._properties_ui_factory = PropertiesUIFactory()
+        
+        # Register plot-specific UI builders
+        self._properties_ui_factory.register_builder(
+            PlotType.LINE, _build_line_plot_ui_widgets
+        )
+        self._properties_ui_factory.register_builder(
+            PlotType.SCATTER, _build_scatter_plot_ui_widgets
+        )
 
     def _assemble_menus(self):
         """Assemble the menu bar and its actions."""
@@ -142,6 +154,7 @@ class ApplicationAssembler:
             main_menu_actions=self._main_menu_actions,
             tool_bar=self._tool_bar,
             tool_bar_actions=self._tool_bar_actions,
+            properties_ui_factory=self._properties_ui_factory,
         )
 
         # Now that MainWindow exists, set its canvas_widget for tools

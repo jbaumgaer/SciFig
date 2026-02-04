@@ -21,6 +21,7 @@ from src.models.nodes.plot_types import PlotType
 
 from .properties_ui_factory import PropertiesUIFactory
 
+
 Layout = Union[QVBoxLayout, QFormLayout, QHBoxLayout]
 
 
@@ -35,12 +36,14 @@ class PropertiesView(QWidget):
         model: ApplicationModel,
         command_manager: CommandManager,
         plot_types: list[PlotType],
+        properties_ui_factory: PropertiesUIFactory, # New argument
         parent: QWidget | None = None,
     ):
         super().__init__(parent)
         self.model = model
         self.command_manager = command_manager
         self.plot_types = plot_types
+        self.properties_ui_factory = properties_ui_factory # Store the instance
 
         self._main_layout = QVBoxLayout()
         self._main_layout.setContentsMargins(5, 5, 5, 5)
@@ -88,12 +91,10 @@ class PropertiesView(QWidget):
                     return
 
                 form_layout = QFormLayout()
-                PropertiesUIFactory.create_ui(
+                self.properties_ui_factory.build_widgets( # Changed from PropertiesUIFactory.create_ui
                     node,
                     form_layout,
                     self,
-                    self.plot_types,
-                    self._on_plot_type_changed,
                     self._on_property_changed,
                     self._on_column_mapping_changed,
                     self._on_limit_editing_finished,

@@ -298,6 +298,21 @@ A TDD should be created as part of the **"Reason & Plan"** phase for any suffici
         *   Call `assembler.assemble()` and return its result.
     *   Ensure the `main()` function correctly uses the `ApplicationComponents` dataclass.
 
+### Refactoring Task: Clean Application Composition
+
+**Task:** Refactor the application startup and component wiring to use a clean composition root, eliminating circular dependencies and `None` initializations for UI components, and reducing the bloat in `setup_application`.
+
+**Background & Context:** The current `setup_application` function in `main.py` has become a "God function," handling too many responsibilities including core component instantiation, builder execution, tool registration, view instantiation, post-instantiation wiring, and signal/slot connections. This leads to a fragile, hard-to-read, and difficult-to-maintain codebase, as evidenced by recent `AttributeError`s and the re-introduction of `None` initializations in `MainWindow`'s constructor. The original intention of decoupling `MainWindow` initialization was compromised by circular dependencies where builders needed a `MainWindow` parent before `MainWindow` itself could be fully constructed with the components built by those builders.
+
+**Proposed Solution:** Implement a robust dependency injection pattern using dedicated builder/assembler classes to delegate construction responsibilities.
+
+1.  **`ApplicationComponents` Dataclass:** Introduce a `dataclass` to provide a clear, type-hinted structure for the application's core components returned by the composition root.
+2.  **Refactored `MenuBarBuilder`:** Modify `MenuBarBuilder` to *create and return* a `QMenuBar` and `MainMenuActions` without requiring a `QMainWindow` parent during its `build()` method. The responsibility of attaching the `QMenuBar` to the `MainWindow` will be handled by the composition root.
+3.  **Refactored `ToolBarBuilder`:** Modify `ToolBarBuilder` to *create and return* a `QToolBar` and `ToolBarActions` without requiring a `QMainWindow` parent during its `build()` method. The responsibility of attaching the `QToolBar` to the `MainWindow` will be handled by the composition root.
+4.  **Clean `MainWindow` Constructor:** The `MainWindow` constructor will be refactored to accept all its UI dependencies (`QMenuBar`, `MainMenuActions`, `QToolBar`, `ToolBarActions`, etc.) directly as arguments. This ensures `MainWindow` is always in a fully valid and initialized state after construction, eliminating the need for `None` initializations and post-construction setup methods.
+5.  **`ApplicationAssembler` Class:** Introduce a new class, `ApplicationAssembler`, that will serve as the primary composition root. Its `assemble()` method will orchestrate the entire application setup process, delegating to other builders and creating all components in the correct order.
+6.  **Simplified `main.py`:** The `setup_application` function in `main.py` will be significantly simplified, primarily responsible for instantiating the `ApplicationAssembler` and calling its `assemble()` method, then returning the `ApplicationComponents`.
+
 **Test Plan:**
 *   **Unit Tests for Builders:**
     *   `test_menu_bar_builder.py`: Update tests to verify `build()` returns `QMenuBar` and `MainMenuActions` correctly, and doesn't rely on an external parent.
@@ -311,3 +326,52 @@ A TDD should be created as part of the **"Reason & Plan"** phase for any suffici
 *   **Mitigation:** Proceed in small, atomic steps, running tests after each significant change. Focus on modifying one builder or class at a time. The detailed implementation plan helps ensure a systematic approach. Thorough unit tests for the builders and `ApplicationAssembler` will be crucial.
 *   **Risk:** Potential for temporary breaking changes during the refactoring process.
 *   **Mitigation:** Use feature branches for this refactoring. Ensure robust CI/CD if available.
+
+---
+
+## Epic: UI Extensibility
+
+### Refactoring Task: Formalize Properties UI Factory with Registration Pattern
+
+**Background & Context:** The `PropertiesUIFactory.create_ui` static method currently uses `isinstance` checks to conditionally render UI elements based on the `PlotProperties` type. This approach violates the Open/Closed Principle, making it difficult to extend the UI for new plot types without modifying the factory itself.
+
+**Proposed Solution:** Refactor `PropertiesUIFactory` to use a registration pattern. It will become an instance-based class that maintains a mapping of `PlotType` to builder functions. The `ApplicationAssembler` will be responsible for registering these builder functions during application startup.
+
+**Implementation Plan (Detailed Steps):**
+
+1.  **Refactor `src/views/properties_ui_factory.py`:**
+    *   Change `PropertiesUIFactory` from a static class to an instance-based class.
+    *   Add `__init__(self)` method to initialize `self._builders = {}`.
+    *   Implement `register_builder(self, plot_type: PlotType, builder_func: Callable)` to store builder functions in `self._builders`.
+    *   Modify `create_ui` (rename to `build_widgets` for clarity and consistency) to accept `self` and use `self._builders.get(props.plot_type)` to retrieve and call the appropriate builder function. The builder function will receive all necessary UI parameters (layout, parent, callbacks, etc.).
+    *   Extract the common UI building logic (plot type combo, title, labels, column selectors, limit selectors) into a default builder function or helper methods that can be composed by specific plot type builders.
+    *   Ensure the existing static methods like `_build_column_selectors` and `_build_limit_selectors` are adapted or moved as appropriate.
+
+2.  **Create Plot-Specific UI Builder Functions:**
+    *   For each `PlotType` (e.g., `PlotType.LINE`, `PlotType.SCATTER`), create a dedicated function (e.g., `build_line_plot_ui`, `build_scatter_plot_ui`) that encapsulates the logic for building the specific UI elements for that plot type. These functions will take the same arguments as `build_widgets` (or a subset) and be responsible for adding rows to the `QFormLayout`.
+
+3.  **Update `src/application_assembler.py`:**
+    *   Instantiate `PropertiesUIFactory` within `ApplicationAssembler`.
+    *   In a new or existing assembly method (e.g., `_assemble_ui_factories` or within `_assemble_main_window`), register the plot-specific UI builder functions with the `PropertiesUIFactory` instance.
+
+4.  **Update `src/views/main_window.py` (and related calls):**
+    *   Modify the `MainWindow`'s constructor or setup method to accept the `PropertiesUIFactory` instance.
+    *   Ensure that wherever `PropertiesUIFactory.create_ui` was previously called, it now calls `factory_instance.build_widgets`.
+
+**Test Plan:**
+*   **Unit Tests for `PropertiesUIFactory` (new or updated `test_properties_ui_factory_refactor.py`):**
+    *   Verify factory instantiation (`__init__`).
+    *   Test `register_builder`: Ensure builder functions are correctly stored for specific `PlotType`s.
+    *   Test `build_widgets` with registered builders: Mock `PlotNode`, `PlotProperties`, and UI components; assert that the correct registered builder function is called with the expected arguments.
+    *   Test `build_widgets` with unregistered builders: Ensure graceful handling (e.g., no error, no UI elements added) when a `PlotType` has no registered builder.
+    *   Test plot-specific builder functions directly to ensure they create the correct widgets.
+*   **Integration Tests for `ApplicationAssembler` (update `tests/test_application_assembler.py`):**
+    *   Verify that `ApplicationAssembler` correctly instantiates `PropertiesUIFactory` and registers all expected plot type builders.
+*   **End-to-End Tests (`tests/workflows/test_user_workflows.py`):
+    *   Run existing user workflow tests to ensure that the properties panel still functions correctly for all existing plot types after the refactoring.
+
+**Risks & Mitigations:**
+*   **Risk:** Breaking existing UI generation logic due to the significant structural change from a static method to an instance with registration.
+*   **Mitigation:** Develop the refactored factory and its tests in parallel. Use the new test file (`test_properties_ui_factory_refactor.py`) to confirm the new logic before integrating it into the main application flow. Ensure comprehensive mocking for unit tests.
+*   **Risk:** The arguments to `create_ui` (now `build_widgets`) are numerous and tightly coupled with specific UI elements and callbacks. Passing these through builder functions could be cumbersome.
+*   **Mitigation:** The builder functions will receive these arguments. If common arguments are always needed, they can be passed directly. If some are only needed for specific plot types, they might be passed as `**kwargs` or the builder signature can be specialized. The use of `partial` for callbacks is already present and should continue to work effectively. Consider if some arguments could be encapsulated within a `BuildContext` object to simplify signatures.

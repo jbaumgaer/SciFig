@@ -12,6 +12,7 @@ from src.controllers.main_controller import MainController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_types import PlotType
 from src.views.main_window import MainWindow
+from src.views.properties_ui_factory import PropertiesUIFactory
 
 
 @pytest.fixture
@@ -70,6 +71,8 @@ def app_context(qtbot, mock_main_controller):
     mock_main_menu_actions.settings_action = MagicMock(spec=QAction)
     mock_tool_bar = QToolBar()
     mock_tool_bar_actions = MagicMock(spec=ToolBarActions)
+    
+    mock_properties_ui_factory = MagicMock(spec_set=PropertiesUIFactory)
 
     main_window = MainWindow(
         model,
@@ -80,6 +83,7 @@ def app_context(qtbot, mock_main_controller):
         main_menu_actions=mock_main_menu_actions,
         tool_bar=mock_tool_bar,
         tool_bar_actions=mock_tool_bar_actions,
+        properties_ui_factory=mock_properties_ui_factory,
     )
 
     qtbot.addWidget(main_window)
@@ -91,6 +95,7 @@ def app_context(qtbot, mock_main_controller):
         "model": model,
         "command_manager": mock_command_manager,
         "main_controller": mock_main_controller,
+        "properties_ui_factory": mock_properties_ui_factory,
     }
 
 

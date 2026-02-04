@@ -22,6 +22,7 @@ from src.models.nodes.plot_properties import (
     PlotMapping,
 )
 from src.views.main_window import MainWindow
+from src.views.properties_ui_factory import PropertiesUIFactory
 from src.views.renderer import Renderer
 
 
@@ -79,6 +80,92 @@ def app_context(qtbot):
     mock_tool_bar = QToolBar()
     mock_tool_bar_actions = MagicMock(spec=ToolBarActions)
 
+    mock_properties_ui_factory = MagicMock(spec=PropertiesUIFactory)
+
+    # Configure the mock build_widgets method to simulate UI creation
+    def mock_build_widgets(
+        node,
+        layout,
+        parent,
+        on_property_changed,
+        on_column_mapping_changed,
+        on_limit_editing_finished,
+        limit_edits,
+        x_combo,
+        y_combo,
+    ):
+        # Simulate adding a QComboBox for plot type selection
+        plot_type_combo = QComboBox(parent)
+        plot_type_combo.setObjectName("plot_type_combo")
+        plot_type_combo.addItems([pt.value for pt in plot_types]) # Use plot_types from fixture
+        plot_type_combo.setCurrentText(node.plot_properties.plot_type.value)
+        # Connect to a mock of the actual handler in PropertiesView
+        plot_type_combo.currentTextChanged.connect(
+            lambda text: view._on_plot_type_changed(text, node) # Directly call the view's method
+        )
+        layout.addRow("Plot Type:", plot_type_combo)
+
+        # Simulate Title, XLabel, YLabel edits
+        title_edit = QLineEdit(node.plot_properties.title, parent)
+        title_edit.setObjectName("title_edit")
+        title_edit.editingFinished.connect(lambda: on_property_changed(node, "title", title_edit))
+        layout.addRow("Title:", title_edit)
+
+        xlabel_edit = QLineEdit(node.plot_properties.xlabel, parent)
+        xlabel_edit.setObjectName("xlabel_edit")
+        xlabel_edit.editingFinished.connect(lambda: on_property_changed(node, "xlabel", xlabel_edit))
+        layout.addRow("X-Axis Label:", xlabel_edit)
+
+        ylabel_edit = QLineEdit(node.plot_properties.ylabel, parent)
+        ylabel_edit.setObjectName("ylabel_edit")
+        ylabel_edit.editingFinished.connect(lambda: on_property_changed(node, "ylabel", ylabel_edit))
+        layout.addRow("Y-Axis Label:", ylabel_edit)
+
+        # Simulate Axis Limits edits
+        # The test expects specific object names for these
+        xlim_min_edit = QLineEdit(str(node.plot_properties.axes_limits.xlim[0] or ""), parent)
+        xlim_min_edit.setObjectName("xlim_min_edit")
+        xlim_min_edit.editingFinished.connect(lambda: on_limit_editing_finished(node))
+        xlim_max_edit = QLineEdit(str(node.plot_properties.axes_limits.xlim[1] or ""), parent)
+        xlim_max_edit.setObjectName("xlim_max_edit")
+        xlim_max_edit.editingFinished.connect(lambda: on_limit_editing_finished(node))
+        ylim_min_edit = QLineEdit(str(node.plot_properties.axes_limits.ylim[0] or ""), parent)
+        ylim_min_edit.setObjectName("ylim_min_edit")
+        ylim_min_edit.editingFinished.connect(lambda: on_limit_editing_finished(node))
+        ylim_max_edit = QLineEdit(str(node.plot_properties.axes_limits.ylim[1] or ""), parent)
+        ylim_max_edit.setObjectName("ylim_max_edit")
+        ylim_max_edit.editingFinished.connect(lambda: on_limit_editing_finished(node))
+        
+        # Add to the layout (simplified, as the actual _build_limit_selectors creates QHBoxLayouts)
+        # For mock, we just need them findable
+        layout.addRow("X-Limits:", xlim_min_edit)
+        layout.addRow("X-Limits:", xlim_max_edit)
+        layout.addRow("Y-Limits:", ylim_min_edit)
+        layout.addRow("Y-Limits:", ylim_max_edit)
+
+        # Assign to limit_edits dictionary for access by tests
+        limit_edits["xlim_min"] = xlim_min_edit
+        limit_edits["xlim_max"] = xlim_max_edit
+        limit_edits["ylim_min"] = ylim_min_edit
+        limit_edits["ylim_max"] = ylim_max_edit
+
+        # Simulate column selectors if node.data exists
+        if node.data is not None:
+            # Re-use the provided x_combo and y_combo mocks
+            x_combo.clear()
+            x_combo.addItems(list(node.data.columns))
+            x_combo.setCurrentText(node.plot_properties.plot_mapping.x or "")
+            x_combo.currentTextChanged.connect(lambda text: on_column_mapping_changed(text, node))
+            layout.addRow("X-Axis Column:", x_combo)
+
+            y_combo.clear()
+            y_combo.addItems(list(node.data.columns))
+            y_combo.setCurrentText(node.plot_properties.plot_mapping.y[0] or "")
+            y_combo.currentTextChanged.connect(lambda text: on_column_mapping_changed(text, node))
+            layout.addRow("Y-Axis Column:", y_combo)
+
+    mock_properties_ui_factory.build_widgets.side_effect = mock_build_widgets
+
     view = MainWindow(
         model,
         main_controller,
@@ -88,6 +175,7 @@ def app_context(qtbot):
         main_menu_actions=mock_main_menu_actions,
         tool_bar=mock_tool_bar,
         tool_bar_actions=mock_tool_bar_actions,
+        properties_ui_factory=mock_properties_ui_factory,
     )
     qtbot.addWidget(view)
     view.show()
@@ -129,14 +217,14 @@ def app_context(qtbot):
         title="Plot One Title",
         xlabel="",
         ylabel="",
-        plot_mapping=PlotMapping(x=None, y=[]),
+        plot_mapping=PlotMapping(x=None, y=[""]), # Changed to include an empty string
         axes_limits=AxesLimits(xlim=(None, None), ylim=(None, None)),
     )
     plot_node2.plot_properties = LinePlotProperties(
         title="Plot Two Title",
         xlabel="",
         ylabel="",
-        plot_mapping=PlotMapping(x=None, y=[]),
+        plot_mapping=PlotMapping(x=None, y=[""]), # Changed to include an empty string
         axes_limits=AxesLimits(xlim=(None, None), ylim=(None, None)),
     )
 
@@ -151,6 +239,7 @@ def app_context(qtbot):
         "main_controller": main_controller,
         "canvas_controller": canvas_controller,
         "selection_tool": selection_tool,
+        "properties_ui_factory": mock_properties_ui_factory,  # Return the mock factory
     }
 
 

@@ -1,6 +1,7 @@
 import matplotlib.figure
 import matplotlib.patches as patches
 import pandas as pd
+import matplotlib.axes # Import matplotlib.axes
 
 from src.models.nodes import PlotNode, RectangleNode, SceneNode, TextNode
 from src.models.nodes.plot_types import PlotType
@@ -61,6 +62,7 @@ class Renderer:
         Renders a single PlotNode.
         """
         ax = figure.add_axes(node.geometry)
+        node.axes = ax # Assign the created Axes object to the node
 
         if node.plot_properties:
             props = node.plot_properties

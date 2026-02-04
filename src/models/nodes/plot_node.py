@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+import matplotlib.axes # Import matplotlib.axes
 
 from .plot_properties import (
     AxesLimits,
@@ -27,15 +28,23 @@ class PlotNode(SceneNode):
         self.geometry: tuple[float, float, float, float] = (0.1, 0.1, 0.8, 0.8)
         self.plot_properties: Optional[BasePlotProperties] = None
         self.data: pd.DataFrame | None = None
+        self.axes: matplotlib.axes.Axes | None = None # Store the Matplotlib Axes object
 
     def hit_test(self, position: tuple[float, float]) -> SceneNode | None:
         """
         Checks if the given position (in figure coordinates, 0-1) is within
-        the bounds of this plot's geometry.
+        the bounds of this plot's *rendered* axes.
         """
+        if self.axes is None:
+            return None # No axes to hit test against yet
+
         x, y = position
-        left, bottom, width, height = self.geometry
-        if left <= x <= left + width and bottom <= y <= bottom + height:
+        
+        # Get the bounding box of the axes in figure coordinates
+        # Bbox is in display coordinates, so transform it to figure coordinates
+        bbox = self.axes.get_window_extent().transformed(self.axes.figure.transFigure.inverted())
+        
+        if bbox.x0 <= x <= bbox.x1 and bbox.y0 <= y <= bbox.y1:
             return self
         return None
 

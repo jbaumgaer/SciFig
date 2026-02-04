@@ -1,13 +1,38 @@
+from unittest.mock import MagicMock
 import pandas as pd
 import pytest
 
 from src.models.nodes.plot_node import PlotNode
 
 
+def _setup_mock_axes(node: PlotNode):
+    """Helper function to set up mock axes for a PlotNode."""
+    mock_axes = MagicMock()
+    mock_figure = MagicMock()
+    mock_trans_figure = MagicMock()
+
+    mock_axes.figure = mock_figure
+    mock_figure.transFigure = mock_trans_figure
+    mock_trans_figure.inverted.return_value = MagicMock()
+
+    def mock_transformed(transform_obj):
+        mock_bbox = MagicMock()
+        mock_bbox.x0 = node.geometry[0]
+        mock_bbox.y0 = node.geometry[1]
+        mock_bbox.x1 = node.geometry[0] + node.geometry[2]
+        mock_bbox.y1 = node.geometry[1] + node.geometry[3]
+        return mock_bbox
+
+    mock_axes.get_window_extent.return_value.transformed.side_effect = mock_transformed
+    node.axes = mock_axes
+
+
 @pytest.fixture
 def sample_plot_node():
-    """Fixture for a PlotNode with default geometry."""
-    return PlotNode()
+    """Fixture for a PlotNode with default geometry and mocked axes."""
+    node = PlotNode()
+    _setup_mock_axes(node)
+    return node
 
 
 def test_plot_node_init(sample_plot_node):
@@ -69,6 +94,7 @@ def test_hit_test_with_custom_geometry():
     """Test hit_test with non-default geometry."""
     plot_node = PlotNode()
     plot_node.geometry = [0.25, 0.25, 0.5, 0.5]  # A centered 0.5x0.5 square
+    _setup_mock_axes(plot_node) # Set up mock axes for this new plot_node
 
     # Hit
     assert plot_node.hit_test((0.5, 0.5)) is plot_node

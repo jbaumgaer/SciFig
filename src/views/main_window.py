@@ -18,6 +18,9 @@ from src.views.canvas_widget import CanvasWidget
 from src.views.properties_view import PropertiesView
 
 
+from src.views.properties_ui_factory import PropertiesUIFactory
+
+
 class MainWindow(QMainWindow):
     """
     The main application window (View). It acts as the primary container for
@@ -34,6 +37,7 @@ class MainWindow(QMainWindow):
         main_menu_actions: MainMenuActions,
         tool_bar: QToolBar,
         tool_bar_actions: ToolBarActions,
+        properties_ui_factory: PropertiesUIFactory, # New argument
     ):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
@@ -42,6 +46,7 @@ class MainWindow(QMainWindow):
         self.model = model
         self.command_manager = command_manager
         self.plot_types = plot_types
+        self.properties_ui_factory = properties_ui_factory # Store the instance
 
         # Now create the UI components
         self.canvas_widget = self._create_canvas()
@@ -101,6 +106,7 @@ class MainWindow(QMainWindow):
             model=self.model,
             command_manager=self.command_manager,
             plot_types=self.plot_types,
+            properties_ui_factory=self.properties_ui_factory, # Pass the factory
         )
         dock = QDockWidget("Properties", self)
         dock.setObjectName("Properties")

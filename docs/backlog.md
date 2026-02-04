@@ -426,3 +426,25 @@ Your concern about a "not fully initialized state" is valid if the `ApplicationA
 *   The `ApplicationAssembler` instance itself is primarily an internal build mechanism. After `assemble()` completes, it returns a fully formed `ApplicationComponents` object. It's this `ApplicationComponents` object, containing all the fully initialized and wired parts of the application, that is then used by the rest of the application. This ensures that any code interacting with the application's components will always receive fully initialized objects.
 
 In summary, for an application like this, which has multiple interconnected components, this pattern provides a robust and organized way to manage complexity and ensure that the application starts in a consistent, fully configured state. The initial `None` assignments are merely placeholders that are guaranteed to be populated by the time the `assemble()` method finishes and the `ApplicationComponents` object is returned.
+
+ ✓ Refactor src/views/properties_ui_factory.py: Change PropertiesUIFactory from a static class to an instance-based class.
+ ✓ Refactor src/views/properties_ui_factory.py: Add __init__(self) method to initialize self._builders = {}.
+ ✓ Refactor src/views/properties_ui_factory.py: Implement register_builder(self, plot_type: PlotType, builder_func: Callable) to store builder 
+   functions in self._builders.
+ ✓ Refactor src/views/properties_ui_factory.py: Modify create_ui (rename to build_widgets) to accept self and use
+   self._builders.get(props.plot_type) to retrieve and call the appropriate builder function.
+ ☐ Refactor src/views/properties_ui_factory.py: Extract common UI building logic into a default builder function or helper methods.
+ ☐ Create Plot-Specific UI Builder Functions: For each PlotType (e.g., PlotType.LINE, PlotType.SCATTER), create a dedicated function
+   encapsulating UI logic.
+ ☐ Update src/application_assembler.py: Instantiate PropertiesUIFactory within ApplicationAssembler.
+ ☐ Update src/application_assembler.py: Register the plot-specific UI builder functions with the PropertiesUIFactory instance.
+ ☐ Update src/views/main_window.py: Modify the MainWindow's constructor or setup method to accept the PropertiesUIFactory instance.
+ ☐ Update src/views/main_window.py: Ensure that wherever PropertiesUIFactory.create_ui was previously called, it now calls
+   factory_instance.build_widgets.
+ ☐ Unit Test PropertiesUIFactory instantiation (__init__).
+ ☐ Unit Test PropertiesUIFactory.register_builder: Ensure builder functions are correctly stored.
+ ☐ Unit Test PropertiesUIFactory.build_widgets with registered builders: Assert correct builder function is called.
+ ☐ Unit Test PropertiesUIFactory.build_widgets with unregistered builders: Ensure graceful handling.
+ ☐ Unit Test plot-specific builder functions directly.
+ ☐ Integration Test ApplicationAssembler: Verify correct instantiation and registration of PropertiesUIFactory and builders.
+ ☐ End-to-End Test: Run existing user workflow tests to ensure no regressions.
