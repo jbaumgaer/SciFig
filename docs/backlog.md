@@ -78,7 +78,7 @@ my_project.sci (zip archive)
 3.  **Update Core Model and Renderer:**
     *   In `PlotNode`, change the type hint for `plot_properties` to `Optional[BasePlotProperties]`.
     *   In the `Renderer`, change the keys of the `plotting_strategies` dictionary from strings to `PlotType` enum members (e.g., `{PlotType.LINE: LinePlotStrategy(), ...}`).
-    *   In `PropertiesView`, update its `__init__` to accept `list[PlotType]` and modify the `QComboBox` to be populated from this list. The `_on_plot_type_changed` signal will now emit a `PlotType` member.
+    *   In `PropertiesView`, update its `__init__` to accept `list[PlotType` and modify the `QComboBox` to be populated from this list. The `_on_plot_type_changed` signal will now emit a `PlotType` member.
 
 **Phase 2: Dynamic View Implementation**
 1.  **Create `PropertiesUIFactory`:**
@@ -170,23 +170,259 @@ This section outlines planned features that are not yet implemented.
 
 This section tracks agreed-upon architectural improvements to enhance code quality and maintainability.
 
-1.  **Introduce a Comprehensive Testing Framework (Highest Priority)**
-    *   **Goal:** Ensure code correctness and prevent regressions.
-    *   **Implementation:** Integrate `pytest` and `pytest-qt`, create a `tests/` directory, and begin writing unit tests for models/commands and integration tests for UI workflows.
+### Refactoring Task: Enhance Tool Management Architecture
+**Status:** Implemented
+**Task:** Refactor the core tool management and event dispatching mechanism to support a pluggable and extensible tool system.
 
-2.  **Implement Strict Code Style and Linting**
-    *   **Goal:** Improve code readability and catch common errors.
-    *   **Implementation:** Adopt `Ruff` for all-in-one linting and formatting, configured via `pyproject.toml`.
-    *   **Status Update (01.02.2026):** `black` and `ruff` installed and fully functional. `pyproject.toml` configured. Codebase has been formatted with `black` and linted with `ruff`.
+**Background & Context:** The current `CanvasController` directly handles canvas events, which will lead to unmaintainable `if/elif/else` chains as more interactive tools are introduced. The `ToolManager` is currently a basic container. To support a rich toolbar and interactive tools, a more robust, decoupled architecture is required.
 
-3.  **Enforce Static Type Checking**
-    *   **Goal:** Find type-related bugs before runtime.
-    *   **Implementation:** Integrate `MyPy`, configured via `pyproject.toml`, and incrementally add missing type hints.
+**Proposed Solution:** Implement a Strategy-like pattern where the `ToolManager` acts as the context, and individual tools are strategies that handle specific user interactions. The UI will trigger state changes in the `ToolManager`, and the UI will react to signals from the `ToolManager`.
 
-4.  **Externalize Configuration**
-    *   **Goal:** Make the application more flexible by removing hard-coded values.
-    *   **Implementation:** Use `Pydantic` to manage settings from a central configuration source.
+**Implementation Plan:**
 
-5.  **Refine Dependency Management**
-    *   **Goal:** Ensure reproducible builds by locking sub-dependencies.
-    *   **Implementation:** Use `pip-tools` to compile a fully-pinned `requirements.txt` from a `requirements.in` file.
+1.  **Create `src/controllers/tools/base_tool.py`:**
+    *   Define an abstract base class `BaseTool` (inheriting from `ABC` from `abc` module and `QObject` from `PySide6.QtCore`).
+    *   It will have an `__init__` method accepting `model: ApplicationModel`, `command_manager: CommandManager`, and `canvas_widget: CanvasWidget`.
+    *   Define abstract methods that all tools must implement. These include:
+        *   `name(self) -> str` (property: unique name of the tool, e.g., "selection")
+        *   `icon_path(self) -> str` (property: path to the tool's icon)
+        *   `on_activated(self)`: Called when the tool becomes active.
+        *   `on_deactivated(self)`: Called when the tool becomes inactive.
+        *   `mouse_press_event(self, event: QMouseEvent)`
+        *   `mouse_move_event(self, event: QMouseEvent)`
+        *   `mouse_release_event(self, event: QMouseEvent)`
+        *   `key_press_event(self, event: QKeyEvent)` (Optional, with a default no-op implementation)
+        *   `paint_event(self, painter: QPainter)` (Optional, for tools that need to draw temporary overlays on the canvas)
+
+2.  **Refactor `src/controllers/tool_manager.py`:**
+    *   Add a `_tools: Dict[str, BaseTool]` attribute to store registered tools.
+    *   Add a `_active_tool_name: str | None` attribute to track the currently active tool.
+    *   Add a `activeToolChanged = Signal(str)` to emit when the active tool changes.
+    *   Modify `add_tool(self, name: str, tool: BaseTool)` to store the tool.
+    *   Modify `set_active_tool(self, tool_name: str)`:
+        *   If an old tool was active, call `old_tool.on_deactivated()`.
+        *   Set the new active tool.
+        *   Call `new_tool.on_activated()`.
+        *   Emit `self.activeToolChanged.emit(tool_name)`.
+    *   Add methods to dispatch canvas events to the active tool:
+        *   `dispatch_mouse_press_event(self, event: QMouseEvent)` -> `self.active_tool.mouse_press_event(event)`
+        *   `dispatch_mouse_move_event(self, event: QMouseEvent)` -> `self.active_tool.mouse_move_event(event)`
+        *   `dispatch_mouse_release_event(self, event: QMouseEvent)` -> `self.active_tool.mouse_release_event(event)`
+        *   `dispatch_key_press_event(self, event: QKeyEvent)` -> `self.active_tool.key_press_event(event)`
+
+3.  **Refactor `src/controllers/canvas_controller.py`:** EDIT: This is where we left off last time
+    *   Remove all event handling logic (mouse presses, moves, releases) from `CanvasController` itself.
+    *   Its `__init__` will now take `tool_manager: ToolManager` as an argument.
+    *   Connect the `canvas_widget`'s event signals directly to the `tool_manager`'s dispatch methods (e.g., `canvas_widget.mousePress.connect(tool_manager.dispatch_mouse_press_event)`).
+    *   The `CanvasController` effectively becomes a pure event *forwarder* to the `ToolManager`.
+
+4.  **Refactor `src/controllers/tools/selection_tool.py`:**
+    *   Make `SelectionTool` inherit from `BaseTool`.
+    *   Implement all abstract methods defined in `BaseTool`.
+    *   Move its current event handling logic into the corresponding `BaseTool` methods.
+    *   Ensure `SelectionTool.name` property returns "selection".
+
+**Test Plan:**
+-   Unit tests for `BaseTool` (ensure abstract methods are enforced).
+-   Unit tests for `ToolManager`:
+    *   `add_tool` correctly registers tools.
+    *   `set_active_tool` correctly activates/deactivates tools and emits `activeToolChanged` signal.
+    *   Event dispatch methods correctly call the active tool's methods.
+-   Unit tests for `CanvasController`: Ensure it correctly forwards events to `ToolManager`.
+-   Unit tests for `SelectionTool`: Ensure it correctly implements `BaseTool` and its existing logic still functions.
+-   Integration tests: Verify that activating a tool in `ToolManager` changes the application's behavior on the canvas as expected.
+
+**Risks & Mitigations:**
+-   **Risk:** Extensive changes to core event handling might introduce regressions.
+-   **Mitigation:** A phased refactoring approach will be used, starting with `BaseTool`, then `ToolManager`, then `CanvasController`, and finally existing tools. Comprehensive unit and integration tests will be crucial at each step.
+-   **Risk:** The `paint_event` method for `BaseTool` might be complex for overlay drawing.
+-   **Mitigation:** Start with a simple implementation, providing the `QPainter` directly. Refine as needed for complex overlays or integrate with a dedicated overlay manager later.
+
+
+
+1.  **Create Placeholder Icons:**
+    *   Create a new directory: `src/assets/icons`.
+    *   Programmatically generate simple SVG icons for each tool:
+        *   `selection_tool.svg` (e.g., an arrow)
+        *   `direct_selection_tool.svg` (e.g., white arrow)
+        *   `shape_tool.svg` (e.g., a square)
+        *   `path_tool.svg` (e.g., pen nib)
+        *   `text_tool.svg` (e.g., "T")
+        *   `eyedropper_tool.svg` (e.g., eyedropper)
+        *   `plot_tool.svg` (e.g., simple line graph)
+        *   `zoom_tool.svg` (e.g., magnifying glass)
+        *   `rotate_tool.svg` (e.g., circular arrow)
+        *   `figure_tool.svg` (e.g., small window icon)
+
+2.  **Create `src/builders/tool_bar_builder.py`:**
+    *   Define a `ToolBarBuilder` class.
+    *   `__init__(self, parent_window: QMainWindow, tool_manager: ToolManager)`
+    *   Define a `ToolBarActions` dataclass to hold references to the created `QAction`s.
+    *   `build(self) -> Tuple[QToolBar, ToolBarActions]`:
+        *   Create `tool_bar = QToolBar("Tools", self._parent_window)`.
+        *   Set `tool_bar.setMovable(False)`, `tool_bar.setFloatable(False)`.
+        *   Add `tool_bar` to `parent_window` using `self._parent_window.addToolBar(Qt.LeftToolBarArea, tool_bar)`.
+        *   For each tool, create a `QAction`:
+            *   Load the SVG icon (`QIcon(tool_icon_path)`).
+            *   Set a tooltip (`action.setToolTip("Selection Tool")`).
+            *   Set the action to be checkable (`action.setCheckable(True)`).
+            *   Connect `action.triggered.connect(lambda checked, tool_name=tool_name: self._tool_manager.set_active_tool(tool_name))`.
+            *   Add the action to the toolbar.
+        *   Connect `self._tool_manager.activeToolChanged.connect(self._update_tool_bar_state)`.
+        *   Return the `QToolBar` and the `ToolBarActions` dataclass.
+    *   `_update_tool_bar_state(self, active_tool_name: str)`:
+        *   Iterate through all tool actions in `ToolBarActions`.
+        *   Set `action.setChecked(action.tool_name == active_tool_name)`.
+
+3.  **Integrate with `main.py` (`setup_application` function):**
+    *   Instantiate `ToolManager`.
+    *   Instantiate `ToolBarBuilder`, passing it the `MainWindow` and `ToolManager`.
+    *   Call `tool_bar_builder.build()` and store the returned toolbar and actions.
+    *   Register all tools (e.g., `tool_manager.add_tool("selection", SelectionTool(...))`) after `MainWindow` is created, as the tools will need the `canvas_widget`.
+    *   Ensure the `ToolManager` is passed to the `CanvasController` and any other components that need it.
+
+4.  **Integrate with `src/views/main_window.py`:**
+    *   Import `ToolBarBuilder`.
+    *   Store the created `QToolBar` and `ToolBarActions` as attributes (e.g., `self.tool_bar`, `self.tool_actions`).
+    *   **Crucially:** `MainWindow` itself should not instantiate the `ToolBarBuilder` directly but receive the built `QToolBar` and `ToolBarActions` from `setup_application` (similar to how `MenuBarBuilder` is handled in `MainWindow`).
+
+**Test Plan:**
+-   Unit tests for `ToolBarBuilder`:
+    *   Ensure it correctly creates a `QToolBar` and all `QAction`s.
+    *   Verify icons, tooltips, and checkable states are set.
+    *   Test that `_update_tool_bar_state` correctly sets the checked state of actions.
+-   Integration tests:
+    *   Run the application, click toolbar buttons, and verify that the `ToolManager`'s active tool changes.
+    *   Verify that when the active tool changes (e.g., programmatically via `tool_manager.set_active_tool()`), the correct toolbar button becomes checked.
+    *   Verify that placeholder icons are correctly displayed.
+
+**Risks & Mitigations:**
+-   **Risk:** Managing SVG icons might require `PySide6.QtSvgWidgets` or similar, adding a dependency.
+-   **Mitigation:** Verify if `QIcon` can load SVGs directly. If not, consider a simpler icon format or add `QtSvgWidgets`.
+-   **Risk:** The `setup_application` function in `main.py` is becoming quite large due to all the wiring.
+-   **Mitigation:** This is acceptable for a "composition root." If it becomes unwieldy, a dedicated `ApplicationBuilder` class could be introduced later to encapsulate `setup_application`'s logic.
+
+1. The "God Function" Composition Root (`setup_application`): As we've discussed, this function in main.py is doing far too much. It's not  
+      just a composition root; it's the entire factory, assembler, and wiring diagram in one monolithic, fragile block of code. This is a major
+      violation of the Single Responsibility Principle.
+
+
+   2. Prevalence of "Magic Strings": The code relies heavily on hard-coded strings to identify key entities:
+       * Tool Names: "selection", "direct_selection", etc., are used in builders, the tool manager, and for setting the active tool. A typo in 
+         any of these strings would introduce a silent failure or a difficult-to-debug KeyError.
+       * Icon Paths: Paths like "src/assets/icons/toolbar/Select.svg" are hard-coded. If the asset structure changes, these strings must be    
+         hunted down and changed individually.
+       * Object Names: Qt objects are sometimes identified with strings (e.g., dock.setObjectName("Properties")).
+
+
+   3. Scattered Configuration and "Magic Numbers": Configuration values are spread throughout the codebase. For example, the default figure    
+      properties (figsize=(8.5, 6), dpi=150) are hard-coded directly in main.py. This makes it difficult to manage or change application-wide  
+      settings consistently.
+
+
+   4. Implicit Contracts between Components: The relationship between a PlotNode's properties (like LinePlotProperties) and the UI that can    
+      edit them (PropertiesView and PropertiesUIFactory) is implicit. The PropertiesUIFactory uses isinstance checks to decide which widgets to
+      build. While functional, this approach violates the Open/Closed Principle: to add a new plot type, you must modify the factory class     
+      itself. As the number of plot types grows, this will become a large, complex if/elif/else block.
+
+
+   5. Business Logic in Controllers: The MainController currently handles the logic for saving and loading projects, including file dialogs and
+      potentially, in the future, the details of zipping/unzipping and JSON serialization. While simple now, this mixes UI-coordination logic  
+      (handling a menu click) with data persistence logic (the details of the .sci file format).
+
+  Anticipating Future Expansion: A Strategy for Scalability
+
+
+  To ensure the codebase is prepared for significant future expansion, I will integrate the following strategic principles into the "Clean     
+  Application Composition" refactoring. This isn't about adding more work now, but about doing the current refactoring the right way to        
+  establish robust patterns.
+
+  Strategy 1: Eradicate Magic Strings with Enums and Constants
+
+  As we refactor, we will stop using raw strings for identification.
+
+
+   * Proposal: Introduce a new file, src/constants.py (or a src/config/ package), to house application-wide constants and enumerations.        
+   * Implementation Example:
+
+
+    1     # src/constants.py
+    2     from enum import Enum
+    3
+    4     class ToolName(str, Enum):
+    5         SELECTION = "selection"
+    6         DIRECT_SELECTION = "direct_selection"
+    7         EYEDROPPER = "eyedropper"
+    8         # ... etc.
+    9
+   10     class IconPath:
+   11         SELECT_TOOL = "src/assets/icons/toolbar/Select.svg"
+   12         # ... etc.
+   * How it will be used: The ToolBarBuilder and ToolManager will now use ToolName.SELECTION instead of "selection". This provides a single    
+     source of truth, enables static analysis and auto-complete, and makes refactoring safe and trivial.
+
+
+  Strategy 2: Establish a Centralized Configuration Service (Dependency Injection)
+
+  We will lay the groundwork for the Pydantic configuration system mentioned in the TDD.
+
+   * Proposal: Create a simple, dedicated configuration service that is responsible for providing all system-wide settings.
+   * Implementation Example:
+
+
+   1     # src/services/config_service.py (New File)
+   2     class ConfigService:
+   3         DEFAULT_FIGURE_SIZE = (8.5, 6)
+   4         DEFAULT_DPI = 150
+   * How it will be used: The new ApplicationAssembler will be the only place that instantiates ConfigService. It will then inject this service
+     (or specific values from it) into any component that needs them. The Figure creation will become
+     Figure(figsize=config.DEFAULT_FIGURE_SIZE, dpi=config.DEFAULT_DPI). This removes magic numbers and establishes the correct dependency     
+     injection pattern for all future configuration needs.
+
+  Strategy 3: Formalize the UI Factory with a Registration Pattern
+
+  We will improve the PropertiesUIFactory to make it truly extensible, adhering to the Open/Closed Principle.
+
+
+   * Proposal: Instead of a large isinstance block, the factory will have a registration mechanism. It will maintain a dictionary that maps a  
+     PlotType enum to a function responsible for building the corresponding UI widgets.
+   * Implementation Example:
+
+
+    1     # src/views/properties_ui_factory.py (Refactored)
+    2     class PropertiesUIFactory:
+    3         def __init__(self):
+    4             self._builders = {}
+    5
+    6         def register_builder(self, plot_type: PlotType, builder_func: Callable):
+    7             self._builders[plot_type] = builder_func
+    8
+    9         def build_widgets(self, props: BasePlotProperties, ...):
+   10             builder = self._builders.get(props.plot_type)
+   11             if builder:
+   12                 builder(props, ...) # Call the registered function
+   * How it will be used: The ApplicationAssembler will be responsible for this registration. It will import the specific widget-building      
+     functions and register them with the factory instance. To add UI for a new plot type, a developer will only need to create a new builder  
+     function and add a single registration line in the ApplicationAssembler, without ever modifying the factory itself.
+
+     The `ApplicationAssembler` uses an initialization pattern where many attributes are set to `None` initially, and then populated sequentially by various `_assemble_` methods within its `assemble()` method. While this might initially seem to lead to an uninitialized state, it's a common and effective design pattern for a "composition root" or "dependency injector" in applications of this nature.
+
+Here's a breakdown of why this approach is used and how it mitigates potential issues:
+
+**Purpose of the ApplicationAssembler:**
+The `ApplicationAssembler`'s primary role is to orchestrate the creation and wiring of all the application's components (models, controllers, views, tools). It acts as a central hub where dependencies are resolved, and the entire application graph is constructed in a controlled manner.
+
+**Advantages of this Initialization Pattern:**
+1.  **Clear Separation of Concerns:** Each `_assemble_` method (e.g., `_assemble_core_components`, `_assemble_menus`, `_assemble_tooling`) is responsible for building a specific, logical part of the application. This makes the code easier to understand, maintain, and reason about.
+2.  **Controlled Initialization Order:** The `assemble()` method explicitly defines the sequence in which components are built. This is crucial for managing dependencies; for instance, the `ApplicationModel` (which is a core component) must be assembled before the `MenuBarBuilder` can be instantiated if it depends on the model.
+3.  **Reduced Circular Dependencies:** By centralizing the creation and wiring of components, this pattern helps prevent scenarios where components might try to instantiate each other directly, potentially leading to circular dependencies.
+4.  **Single Point of Configuration:** All major application components are instantiated and connected in one place. This simplifies understanding the application's overall structure and how its various parts interact.
+5.  **Facilitates Testing:** While the assembler itself might be complex, individual `_assemble_` methods and the components they create can often be tested more easily in isolation.
+
+**Mitigation of "Not Fully Initialized State" Concern:**
+Your concern about a "not fully initialized state" is valid if the `ApplicationAssembler`'s attributes were accessed before the `assemble()` method completes or if `assemble()` were not guaranteed to run to completion. However, in the current design:
+*   The `assemble()` method is designed to be called once, at the application's startup (`main.py` calls `setup_application()`, which in turn calls `assembler.assemble()`).
+*   The `assemble()` method ensures that all necessary `_assemble_` sub-methods are called sequentially.
+*   The `ApplicationAssembler` instance itself is primarily an internal build mechanism. After `assemble()` completes, it returns a fully formed `ApplicationComponents` object. It's this `ApplicationComponents` object, containing all the fully initialized and wired parts of the application, that is then used by the rest of the application. This ensures that any code interacting with the application's components will always receive fully initialized objects.
+
+In summary, for an application like this, which has multiple interconnected components, this pattern provides a robust and organized way to manage complexity and ensure that the application starts in a consistent, fully configured state. The initial `None` assignments are merely placeholders that are guaranteed to be populated by the time the `assemble()` method finishes and the `ApplicationComponents` object is returned.

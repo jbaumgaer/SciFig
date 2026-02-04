@@ -32,7 +32,7 @@ class SelectionTool(BaseTool):
 
     @property
     def icon_path(self) -> str:
-        return "src/assets/icons/tools/selection_tool.svg"
+        return "src/assets/icons/toolbar/Select.svg"
 
     def on_activated(self):
         print("SelectionTool activated")

@@ -1,8 +1,9 @@
 import functools
 from dataclasses import dataclass
+from typing import Tuple
 
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QMainWindow, QMenu, QMenuBar
+from PySide6.QtWidgets import QMenu, QMenuBar
 
 from src.commands import CommandManager
 from src.controllers.main_controller import MainController
@@ -45,37 +46,35 @@ class MainMenuActions:
 class MenuBarBuilder:
     def __init__(
         self,
-        parent_window: QMainWindow,
         main_controller: MainController,
         command_manager: CommandManager,
     ):
-        self._parent_window = parent_window
         self._main_controller = main_controller
         self._command_manager = command_manager
 
-    def _update_recent_projects_menu(self, menu: QMenu):
+    def _update_recent_projects_menu(self, menu: QMenu): # Removed parent_window argument
         """Clears and repopulates the recent projects menu."""
         menu.clear()
         recent_files = self._main_controller.get_recent_files()
 
         if not recent_files:
-            action = QAction("No Recent Projects", self._parent_window)
+            action = QAction("No Recent Projects", menu) # Parent is the menu itself
             action.setEnabled(False)
             menu.addAction(action)
             return
 
         for file_path in recent_files:
-            action = QAction(file_path, self._parent_window)
+            action = QAction(file_path, menu) # Parent is the menu itself
             action.triggered.connect(
                 functools.partial(
                     self._main_controller.open_project,
                     file_path,
-                    parent=self._parent_window,
+                    # Removed parent=self._parent_window
                 )
             )
             menu.addAction(action)
 
-    def _build_file_menu(self, menu_bar: QMenuBar) -> tuple[
+    def _build_file_menu(self, menu_bar: QMenuBar) -> Tuple[ # Changed to Tuple
         QMenu,
         QAction,
         QAction,
@@ -175,7 +174,7 @@ class MenuBarBuilder:
 
     def _build_edit_menu(
         self, menu_bar: QMenuBar
-    ) -> tuple[QMenu, QAction, QAction, QAction, QAction, QAction, QAction, QAction]:
+    ) -> Tuple[QMenu, QAction, QAction, QAction, QAction, QAction, QAction, QAction]: # Changed to Tuple
         edit_menu = menu_bar.addMenu("&Edit")
 
         undo_action = edit_menu.addAction("&Undo")
@@ -217,7 +216,7 @@ class MenuBarBuilder:
         )
 
     def build(self) -> MainMenuActions:
-        menu_bar = self._parent_window.menuBar()
+        menu_bar = QMenuBar() # Create QMenuBar explicitly here
 
         (
             file_menu,

@@ -5,9 +5,11 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMenuBar,
+    QToolBar,
 )
 
-from src.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
+from src.builders.menu_bar_builder import MainMenuActions
+from src.builders.tool_bar_builder import ToolBarActions
 from src.commands import CommandManager
 from src.controllers.main_controller import MainController
 from src.models import ApplicationModel
@@ -28,6 +30,10 @@ class MainWindow(QMainWindow):
         main_controller: MainController,
         command_manager: CommandManager,
         plot_types: list[PlotType],
+        menu_bar: QMenuBar,
+        main_menu_actions: MainMenuActions,
+        tool_bar: QToolBar,
+        tool_bar_actions: ToolBarActions,
     ):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
@@ -43,13 +49,17 @@ class MainWindow(QMainWindow):
 
         self.properties_view, self.properties_dock = self._create_properties_dock()
 
-        # Integrate MenuBarBuilder
-        menu_builder = MenuBarBuilder(self, main_controller, self.command_manager)
-        self.main_menu_actions: MainMenuActions = menu_builder.build()
-        self.setMenuBar(self.main_menu_actions.menu_bar)
+        # Store pre-built menu bar and actions
+        self.menu_bar = menu_bar
+        self.main_menu_actions = main_menu_actions
+        self.setMenuBar(self.menu_bar)
+
+        # Store pre-built toolbar and actions
+        self.tool_bar = tool_bar
+        self.tool_bar_actions = tool_bar_actions
+        self.addToolBar(self.tool_bar)
 
         # Assign menu components as direct attributes for easier access
-        self.menu_bar: QMenuBar = self.main_menu_actions.menu_bar
         self.file_menu: QMenu = self.main_menu_actions.file_menu
         self.new_layout_action: QAction = self.main_menu_actions.new_layout_action
         self.new_file_action: QAction = self.main_menu_actions.new_file_action
