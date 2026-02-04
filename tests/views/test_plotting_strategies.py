@@ -1,6 +1,7 @@
+from unittest.mock import Mock
+
 import pandas as pd
 import pytest
-from unittest.mock import Mock, patch
 
 from src.views.plotting_strategies import (
     LinePlotStrategy,
@@ -42,7 +43,7 @@ def test_line_plot_strategy(sample_data):
     pd.testing.assert_series_equal(call_args_2[0][0], sample_data[x_col], check_names=False)
     pd.testing.assert_series_equal(call_args_2[0][1], sample_data[y_cols[1]], check_names=False)
     assert call_args_2[1]['label'] == y_cols[1]
-    
+
     mock_ax.legend.assert_called_once()
 
 
@@ -70,7 +71,7 @@ def test_scatter_plot_strategy(sample_data):
     pd.testing.assert_series_equal(call_args_2[0][0], sample_data[x_col], check_names=False)
     pd.testing.assert_series_equal(call_args_2[0][1], sample_data[y_cols[1]], check_names=False)
     assert call_args_2[1]['label'] == y_cols[1]
-    
+
     mock_ax.legend.assert_called_once()
 
 def test_line_plot_strategy_single_y(sample_data):

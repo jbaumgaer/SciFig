@@ -1,10 +1,10 @@
-import pytest
 from unittest.mock import Mock
 
-from PySide6.QtWidgets import QMainWindow, QMenuBar, QMenu
-from PySide6.QtGui import QKeySequence, QAction
+import pytest
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMainWindow, QMenu, QMenuBar
 
-from src.builders.menu_bar_builder import MenuBarBuilder, MainMenuActions
+from src.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
 from src.commands import CommandManager
 from src.controllers.main_controller import MainController
 

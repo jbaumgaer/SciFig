@@ -7,7 +7,12 @@ class GroupNode(SceneNode):
     It has no visual representation itself but is useful for organization.
     """
 
-    def __init__(self, parent: SceneNode | None = None, name: str = "Group", id: str | None = None):
+    def __init__(
+        self,
+        parent: SceneNode | None = None,
+        name: str = "Group",
+        id: str | None = None,
+    ):
         super().__init__(parent, name, id)
 
     # Uses default `hit_test` from SceneNode (checks children).

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import uuid
 
 from PySide6.QtCore import QObject
@@ -10,7 +11,9 @@ class SceneNode(QObject):
     Inherits from QObject to support Qt's signal/slot mechanism in the future.
     """
 
-    def __init__(self, parent: SceneNode | None = None, name: str = "", id: str | None = None):
+    def __init__(
+        self, parent: SceneNode | None = None, name: str = "", id: str | None = None
+    ):
         super().__init__()
         self.id = id or uuid.uuid4().hex
         self._parent = parent
@@ -88,18 +91,20 @@ class SceneNode(QObject):
         return node
 
 
-def node_factory(data: dict, parent: SceneNode | None = None, temp_dir: "Path | None" = None) -> SceneNode:
+def node_factory(
+    data: dict, parent: SceneNode | None = None, temp_dir: "Path | None" = None
+) -> SceneNode:
     """Factory function to create nodes from a dictionary."""
     from . import GroupNode, PlotNode
 
     class_name = data.get("class_name")
-    
+
     node_class_map = {
         "GroupNode": GroupNode,
         "PlotNode": PlotNode,
         "SceneNode": SceneNode,
     }
-    
+
     cls = node_class_map.get(class_name, SceneNode)
 
     # Pass temp_dir only if the class method accepts it (i.e., for PlotNode)
@@ -107,10 +112,10 @@ def node_factory(data: dict, parent: SceneNode | None = None, temp_dir: "Path | 
         node = cls.from_dict(data, parent=parent, temp_dir=temp_dir)
     else:
         node = cls.from_dict(data, parent=parent)
-    
+
     # Recursively create children
     child_data = data.get("children", [])
     for child_dict in child_data:
         node_factory(child_dict, parent=node, temp_dir=temp_dir)
-        
+
     return node

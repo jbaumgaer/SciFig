@@ -21,7 +21,7 @@ class CommandManager:
         command.execute()
         self._undo_stack.append(command)
         self._redo_stack.clear()
-        self.model.modelChanged.emit()  # Trigger redraw
+        self.model.modelChanged.emit()
         print(
             f"Executed {type(command).__name__}, "
             f"Undo stack size: {len(self._undo_stack)}"
@@ -38,7 +38,7 @@ class CommandManager:
         command = self._undo_stack.pop()
         command.undo()
         self._redo_stack.append(command)
-        self.model.modelChanged.emit()  # Trigger redraw
+        self.model.modelChanged.emit()
         print(
             f"Undid {type(command).__name__}, Redo stack size: {len(self._redo_stack)}"
         )
@@ -54,7 +54,7 @@ class CommandManager:
         command = self._redo_stack.pop()
         command.execute()
         self._undo_stack.append(command)
-        self.model.modelChanged.emit()  # Trigger redraw
+        self.model.modelChanged.emit()
         print(
             f"Redid {type(command).__name__}, Undo stack size: {len(self._undo_stack)}"
         )

@@ -2,7 +2,7 @@ import functools
 from dataclasses import dataclass
 
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QMenu, QMenuBar, QMainWindow
+from PySide6.QtWidgets import QMainWindow, QMenu, QMenuBar
 
 from src.commands import CommandManager
 from src.controllers.main_controller import MainController
@@ -43,7 +43,12 @@ class MainMenuActions:
 
 
 class MenuBarBuilder:
-    def __init__(self, parent_window: QMainWindow, main_controller: MainController, command_manager: CommandManager):
+    def __init__(
+        self,
+        parent_window: QMainWindow,
+        main_controller: MainController,
+        command_manager: CommandManager,
+    ):
         self._parent_window = parent_window
         self._main_controller = main_controller
         self._command_manager = command_manager
@@ -62,19 +67,43 @@ class MenuBarBuilder:
         for file_path in recent_files:
             action = QAction(file_path, self._parent_window)
             action.triggered.connect(
-                functools.partial(self._main_controller.open_project, file_path, parent=self._parent_window)
+                functools.partial(
+                    self._main_controller.open_project,
+                    file_path,
+                    parent=self._parent_window,
+                )
             )
             menu.addAction(action)
 
     def _build_file_menu(self, menu_bar: QMenuBar) -> tuple[
-        QMenu, QAction, QAction, QAction, QAction, QMenu, QAction, QAction, QAction, QMenu, QMenu, QMenu, QAction, QAction, QAction, QAction, QAction, QAction, QAction
+        QMenu,
+        QAction,
+        QAction,
+        QAction,
+        QAction,
+        QMenu,
+        QAction,
+        QAction,
+        QAction,
+        QMenu,
+        QMenu,
+        QMenu,
+        QAction,
+        QAction,
+        QAction,
+        QAction,
+        QAction,
+        QAction,
+        QAction,
     ]:
         file_menu = menu_bar.addMenu("&File")
 
         new_layout_action = file_menu.addAction("&New Layout...")
         new_file_action = file_menu.addAction("&New File...")
         new_file_action.setShortcut(QKeySequence.StandardKey.New)
-        new_file_from_template_action = file_menu.addAction("New File from &Template...")
+        new_file_from_template_action = file_menu.addAction(
+            "New File from &Template..."
+        )
         new_file_from_template_action.setShortcut(QKeySequence("Shift+Ctrl+N"))
 
         file_menu.addSeparator()
@@ -97,7 +126,7 @@ class MenuBarBuilder:
         save_copy_action.setShortcut(QKeySequence.StandardKey.SaveAs)
 
         file_menu.addSeparator()
-        
+
         close_action = file_menu.addAction("&Close")
         close_action.setShortcut(QKeySequence("Ctrl+W"))
 
@@ -144,9 +173,9 @@ class MenuBarBuilder:
             exit_action,
         )
 
-    def _build_edit_menu(self, menu_bar: QMenuBar) -> tuple[
-        QMenu, QAction, QAction, QAction, QAction, QAction, QAction, QAction
-    ]:
+    def _build_edit_menu(
+        self, menu_bar: QMenuBar
+    ) -> tuple[QMenu, QAction, QAction, QAction, QAction, QAction, QAction, QAction]:
         edit_menu = menu_bar.addMenu("&Edit")
 
         undo_action = edit_menu.addAction("&Undo")
@@ -175,7 +204,7 @@ class MenuBarBuilder:
 
         settings_action = edit_menu.addAction("&Settings...")
         settings_action.setShortcut(QKeySequence("Ctrl+,"))
-        
+
         return (
             edit_menu,
             undo_action,

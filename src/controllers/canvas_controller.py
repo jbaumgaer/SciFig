@@ -19,8 +19,6 @@ class CanvasController(QObject):
     Also handles drag-and-drop data loading.
     """
 
-    plotDoubleClicked = Signal()
-
     def __init__(
         self,
         model: ApplicationModel,
@@ -32,54 +30,33 @@ class CanvasController(QObject):
         super().__init__(parent)
         self.model = model
         self.view = canvas_widget
-        self.canvas = self.view.figure_canvas
         self.tool_manager = tool_manager
         self.command_manager = command_manager
+        self.canvas = self.view.figure_canvas
 
         self.thread = None
         self.worker = None
 
-        self.connect_events()
+        self._connect_events()
 
-    def connect_events(self):
-        """Connect to Matplotlib and Qt signals."""
-        self.canvas.mpl_connect("button_press_event", self.on_press)
-        self.canvas.mpl_connect("motion_notify_event", self.on_move)
-        self.canvas.mpl_connect("button_release_event", self.on_release)
+    def _connect_events(self):
+        """
+        Connects canvas signals to the appropriate handlers or dispatchers.
+        Tool-related events are dispatched directly to the ToolManager.
+        """
+        # Connect tool events to the ToolManager
+        self.canvas.mpl_connect(
+            "button_press_event", self.tool_manager.dispatch_mouse_press_event
+        )
+        self.canvas.mpl_connect(
+            "motion_notify_event", self.tool_manager.dispatch_mouse_move_event
+        )
+        self.canvas.mpl_connect(
+            "button_release_event", self.tool_manager.dispatch_mouse_release_event
+        )
+
+        # Connect data-related events
         self.view.fileDropped.connect(self.on_file_dropped)
-
-    # --- Event Delegation to Tools ---
-
-    def on_press(self, event):
-        if event.dblclick:
-            # Convert Matplotlib event coords to figure fraction
-            fig_width, fig_height = (
-                self.canvas.figure.get_size_inches() * self.canvas.figure.get_dpi()
-            )
-            if fig_width == 0 or fig_height == 0:
-                return
-
-            fig_coords = (event.x / fig_width, event.y / fig_height)
-            node = self.model.get_node_at(fig_coords)
-
-            if isinstance(node, PlotNode):
-                self.plotDoubleClicked.emit()
-                # Don't pass the double-click down to the selection tool
-                return
-
-        active_tool = self.tool_manager.get_active_tool()
-        if active_tool:
-            active_tool.on_mouse_press(event)
-
-    def on_move(self, event):
-        active_tool = self.tool_manager.get_active_tool()
-        if active_tool:
-            active_tool.on_mouse_move(event)
-
-    def on_release(self, event):
-        active_tool = self.tool_manager.get_active_tool()
-        if active_tool:
-            active_tool.on_mouse_release(event)
 
     # --- Data Loading ---
 

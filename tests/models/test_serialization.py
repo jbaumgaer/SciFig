@@ -1,15 +1,12 @@
-import json
 import tempfile
 from pathlib import Path
 
 import pandas as pd
-import pytest
 from matplotlib.figure import Figure
 
 from src.models.application_model import ApplicationModel
-from src.models.nodes import SceneNode, GroupNode, PlotNode
-from src.models.nodes.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
-from src.models.nodes.scene_node import node_factory
+from src.models.nodes import GroupNode, PlotNode, SceneNode
+from src.models.nodes.plot_properties import LinePlotProperties
 
 
 def test_scene_node_to_dict():
@@ -77,7 +74,7 @@ def test_plot_node_to_dict_without_data():
     node = PlotNode(name="My Plot")
     node.geometry = (0.1, 0.1, 0.8, 0.8)
     node.plot_properties = LinePlotProperties(title="My Title")
-    
+
     node_dict = node.to_dict()
 
     assert node_dict["class_name"] == "PlotNode"
@@ -161,20 +158,20 @@ def test_application_model_to_dict():
     """Tests the serialization of the entire ApplicationModel."""
     fig = Figure()
     model = ApplicationModel(figure=fig)
-    
+
     # Add some nodes to the model
     group = GroupNode(parent=model.scene_root, name="My Group")
     plot = PlotNode(parent=group, name="My Plot")
-    
+
     model_dict = model.to_dict()
 
     assert model_dict["version"] == "1.0"
     assert "scene_root" in model_dict
-    
+
     root_dict = model_dict["scene_root"]
     assert root_dict["name"] == "root"
     assert len(root_dict["children"]) == 1
-    
+
     group_dict = root_dict["children"][0]
     assert group_dict["name"] == "My Group"
     assert len(group_dict["children"]) == 1
@@ -234,7 +231,7 @@ def test_application_model_load_from_dict():
 
         assert model.scene_root.name == "root"
         assert len(model.scene_root.children) == 1
-        
+
         loaded_group = model.scene_root.children[0]
         assert isinstance(loaded_group, GroupNode)
         assert loaded_group.name == "Loaded Group"

@@ -71,7 +71,7 @@ class MainController:
                 if isinstance(node, PlotNode) and node.data is not None:
                     parquet_path = data_dir / f"{node.id}.parquet"
                     node.data.to_parquet(parquet_path)
-            
+
             # 2. Get the model dictionary (which now contains data_path)
             project_dict = self.model.to_dict()
 
@@ -79,12 +79,12 @@ class MainController:
             json_path = temp_dir / "project.json"
             with open(json_path, "w") as f:
                 json.dump(project_dict, f, indent=4)
-            
+
             # 4. Zip the contents of the temporary directory
             with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
                 for file_to_zip in temp_dir.rglob("*"):
                     zf.write(file_to_zip, file_to_zip.relative_to(temp_dir))
-            
+
             self._add_to_recent_files(file_path)
             print(f"Project saved to {file_path}")
 
@@ -97,7 +97,7 @@ class MainController:
                 "",
                 "SciFig Project (*.sci)",
             )
-        
+
         if not file_path:
             return
 
@@ -108,7 +108,7 @@ class MainController:
                 # Unzip the file
                 with zipfile.ZipFile(file_path, "r") as zf:
                     zf.extractall(temp_dir)
-                
+
                 # Load the project.json
                 json_path = temp_dir / "project.json"
                 with open(json_path, "r") as f:
@@ -116,11 +116,16 @@ class MainController:
 
                 # Load the model from the dictionary
                 self.model.load_from_dict(project_dict, temp_dir)
-            
+
             self._add_to_recent_files(file_path)
             print(f"Project loaded from {file_path}")
 
-        except (zipfile.BadZipFile, FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        except (
+            zipfile.BadZipFile,
+            FileNotFoundError,
+            json.JSONDecodeError,
+            KeyError,
+        ) as e:
             # In a real application, show an error dialog to the user
             print(f"Error opening project file: {e}")
 
@@ -131,15 +136,15 @@ class MainController:
     def _add_to_recent_files(self, file_path: str):
         """Adds a file path to the top of the recent files list."""
         recent_files = self.get_recent_files()
-        
+
         # Remove if it already exists to avoid duplicates and move to top
         if file_path in recent_files:
             recent_files.remove(file_path)
-        
+
         # Add to the top
         recent_files.insert(0, file_path)
-        
+
         # Trim the list
         del recent_files[MAX_RECENT_FILES:]
-        
+
         self.settings.setValue(RECENT_FILES_KEY, recent_files)

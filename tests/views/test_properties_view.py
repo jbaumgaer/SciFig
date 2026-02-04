@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from matplotlib.figure import Figure
-from PySide6.QtWidgets import QComboBox, QLineEdit, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QComboBox, QLineEdit
 
 from src.commands.command_manager import CommandManager
 from src.models.application_model import ApplicationModel

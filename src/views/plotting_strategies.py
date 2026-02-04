@@ -36,7 +36,7 @@ class LinePlotStrategy(BasePlottingStrategy):
         for y_col in y_columns:
             if x_column in data.columns and y_col in data.columns:
                 ax.plot(data[x_column], data[y_col], label=y_col)
-        
+
         if len(y_columns) > 1:
             ax.legend()
 

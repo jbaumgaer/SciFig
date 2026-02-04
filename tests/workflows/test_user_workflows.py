@@ -1,26 +1,25 @@
-import tempfile
 import sys
+import tempfile
 from pathlib import Path
-import matplotlib.figure
 
+import matplotlib.figure
 import pytest
 from PySide6.QtWidgets import QApplication, QComboBox, QDockWidget, QLineEdit
 
-from src.models.application_model import ApplicationModel
 from src.commands.command_manager import CommandManager
-from src.views.main_window import MainWindow
-from src.controllers.main_controller import MainController
 from src.controllers.canvas_controller import CanvasController
+from src.controllers.main_controller import MainController
 from src.controllers.tool_manager import ToolManager
 from src.controllers.tools.selection_tool import SelectionTool
-from src.views.renderer import Renderer
+from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.plot_properties import (
     AxesLimits,
     LinePlotProperties,
     PlotMapping,
 )
-from src.models.nodes.plot_types import PlotType
+from src.views.main_window import MainWindow
+from src.views.renderer import Renderer
 
 
 @pytest.fixture
@@ -38,7 +37,7 @@ def app_context(qtbot):
     renderer = Renderer()
     plot_types = list(renderer.plotting_strategies.keys())
     # Instantiate MainController without a view
-    main_controller = MainController(model=model) 
+    main_controller = MainController(model=model)
 
     # Instantiate MainWindow with the main_controller
     view = MainWindow(model, main_controller, command_manager, plot_types)
@@ -46,16 +45,20 @@ def app_context(qtbot):
     view.show()
     qtbot.waitExposed(view)
 
-    tool_manager = ToolManager()
-    selection_tool = SelectionTool(model=model, canvas=view.canvas_widget.figure_canvas)
-    tool_manager.add_tool("selection", selection_tool)
+    tool_manager = ToolManager(model=model, command_manager=command_manager)
+    selection_tool = SelectionTool(
+        model=model,
+        command_manager=command_manager,
+        canvas_widget=view.canvas_widget,
+    )
+    tool_manager.add_tool(selection_tool)
     tool_manager.set_active_tool("selection")
 
     # The connections are now handled in main.py, so we need to simulate them here for the test context
     view.new_layout_action.triggered.connect(main_controller.create_new_layout)
     view.save_project_action.triggered.connect(lambda: main_controller.save_project(parent=view))
     view.open_project_action.triggered.connect(lambda: main_controller.open_project(parent=view))
-    
+
     canvas_controller = CanvasController(
         model=model,
         canvas_widget=view.canvas_widget,
@@ -69,7 +72,7 @@ def app_context(qtbot):
 
     model.modelChanged.connect(redraw_callback)
     model.selectionChanged.connect(redraw_callback)
-    canvas_controller.plotDoubleClicked.connect(view.show_properties_panel)
+    selection_tool.plot_double_clicked.connect(view.show_properties_panel)
 
     plot_node1 = PlotNode(name="Plot 1")
     plot_node2 = PlotNode(name="Plot 2")
@@ -98,7 +101,8 @@ def app_context(qtbot):
         "view": view,
         "command_manager": command_manager,
         "main_controller": main_controller,
-        "canvas_controller": canvas_controller
+        "canvas_controller": canvas_controller,
+        "selection_tool": selection_tool,
     }
 
 
@@ -132,14 +136,14 @@ def populated_plot_node(app_context, qtbot):
 def test_reopening_panel_does_not_duplicate(app_context, qtbot):
     model = app_context["model"]
     view = app_context["view"]
-    canvas_controller = app_context["canvas_controller"]
+    selection_tool = app_context["selection_tool"]
 
     initial_dock_count = len(view.findChildren(QDockWidget))
     assert initial_dock_count == 1
 
     plot1 = model.scene_root.children[0]
     model.set_selection([plot1])
-    canvas_controller.plotDoubleClicked.emit()
+    selection_tool.plot_double_clicked.emit(plot1)
     qtbot.waitUntil(lambda: view.properties_dock.isVisible(), timeout=1000)
 
     view.properties_dock.close()
@@ -147,7 +151,7 @@ def test_reopening_panel_does_not_duplicate(app_context, qtbot):
 
     plot2 = model.scene_root.children[1]
     model.set_selection([plot2])
-    canvas_controller.plotDoubleClicked.emit()
+    selection_tool.plot_double_clicked.emit(plot2)
     qtbot.waitUntil(lambda: view.properties_dock.isVisible(), timeout=1000)
 
     final_dock_count = len(view.findChildren(QDockWidget))
@@ -199,12 +203,12 @@ def test_panel_shows_data_widgets_after_load(populated_plot_node, qtbot):
 
     x_combo = combo_boxes_after_load[1]
     y_combo = combo_boxes_after_load[2]
-    
+
     assert x_combo.count() == 3
     assert x_combo.itemText(0) == "Time"
     assert x_combo.itemText(1) == "Voltage"
     assert x_combo.itemText(2) == "Current"
-    
+
     assert y_combo.count() == 3
 
 
@@ -293,6 +297,7 @@ def test_axis_limits_updates_model(app_context, qtbot):
 
 from unittest.mock import patch
 
+
 def test_save_project_workflow(populated_plot_node, monkeypatch):
     """
     Tests the complete save workflow from UI trigger to file creation.
@@ -300,11 +305,12 @@ def test_save_project_workflow(populated_plot_node, monkeypatch):
     import io
     import json
     import zipfile
+
     import pandas as pd
 
     app_context, plot_node_with_data = populated_plot_node
     main_controller = app_context["main_controller"]
-    
+
     # Use an in-memory buffer for the zip file
     zip_buffer = io.BytesIO()
 
@@ -326,7 +332,7 @@ def test_save_project_workflow(populated_plot_node, monkeypatch):
         assert "project.json" in zf.namelist()
         with zf.open("project.json") as f:
             project_data = json.load(f)
-        
+
         assert project_data["version"] == "1.0"
         assert "scene_root" in project_data
 
@@ -348,8 +354,8 @@ def test_open_project_workflow(app_context, qtbot, monkeypatch):
     import io
     import json
     import zipfile
+
     import pandas as pd
-    from unittest.mock import patch
 
     original_model = app_context["model"]
     main_controller = app_context["main_controller"]
@@ -398,7 +404,7 @@ def test_open_project_workflow(app_context, qtbot, monkeypatch):
     with tempfile.NamedTemporaryFile(suffix=".sci", delete=False) as tmp_file:
         tmp_file.write(zip_buffer_out.getvalue())
         temp_file_path = tmp_file.name
-    
+
     monkeypatch.setattr(
         "src.controllers.main_controller.QFileDialog.getOpenFileName",
         lambda *args, **kwargs: (temp_file_path, "SciFig Project (*.sci)"),
@@ -425,8 +431,6 @@ def test_open_recent_projects_workflow(app_context, qtbot, monkeypatch):
     """
     Tests the 'Open Recent Projects' menu functionality.
     """
-    from PySide6.QtCore import QSettings
-    from unittest.mock import Mock, call
 
     main_controller = app_context["main_controller"]
     main_window = app_context["view"]

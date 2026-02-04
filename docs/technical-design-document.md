@@ -212,49 +212,6 @@ A TDD should be created as part of the **"Reason & Plan"** phase for any suffici
 
 ---
 
-## Epic: Project File Management
-
-### Feature: Project File Management (`.sci` files)
-**Task:** Implement a complete workflow for saving, loading, and accessing recent projects using a custom `.sci` file format.
-
-**Background & Context:** A robust file management system is critical for a good user experience. The chosen format must handle a complex scene graph, various metadata, and potentially large datasets efficiently and safely. A single-file format is strongly preferred.
-
-**Architectural Decisions:**
-*   **Hybrid Archive Format (`.sci`):** The `.sci` file will be a zip archive containing a `project.json` for metadata and a `data/` directory for high-performance data serialization. This provides the readability of JSON for the project structure and the performance/efficiency of Parquet for the data, while avoiding the security risks of formats like `pickle`.
-*   **Deserialization Strategy (Factory Pattern):** A factory function will be used to reconstruct nodes from the `project.json`. This function will read a `class_name` key from each node's dictionary and instantiate the corresponding Python class (e.g., `PlotNode`, `GroupNode`), making the process extensible.
-*   **Recent Files Persistence (`QSettings`):** The `QSettings` class will be used to store a persistent, platform-agnostic list of recently opened files, providing a much more robust solution than a manual text or JSON file.
-
-**`.sci` File Structure:**
-```
-my_project.sci (zip archive)
-├── project.json
-└── data/
-    ├── {node_id_1}.parquet
-    ├── {node_id_2}.parquet
-    └── ...
-```
-
-**Implementation - Save Workflow:**
-1.  **Controller (`save_project`):** Opens a `QFileDialog`, creates a temporary directory to stage files, iterates through the model's nodes to save data, creates `project.json` from the model's dictionary, zips the temp directory into the final `.sci` file, and cleans up.
-2.  **Model (`to_dict`):** Nodes serialize their metadata. `PlotNode`s reference their data via a `data_path` (e.g., `data/node_id.parquet`) instead of embedding the data itself.
-
-**Implementation - Open Workflow:**
-1.  **Controller (`open_project`):** Opens a `QFileDialog` to select a `.sci` file. Unzips the file to a temporary directory, reads the `project.json`, and passes the resulting dictionary to the model for reconstruction. It will also handle adding the path to the recent files list.
-2.  **Model (`load_from_dict`):** A new method in `ApplicationModel` will clear the current scene and then use a factory to recursively reconstruct the entire scene graph from the dictionary.
-3.  **Node Deserialization (`from_dict`):** Each `SceneNode` subclass will have a `from_dict` class method. `PlotNode.from_dict` will be responsible for reading the `data_path` key and loading the corresponding Parquet file from the temporary directory into its `.data` attribute.
-
-**Implementation - Open Recent Workflow:**
-1.  **`QSettings` Management:** On successful save or open, the file path will be added to the top of a list stored in `QSettings`. The list will be capped at a reasonable number (e.g., 10).
-2.  **Dynamic Menu:** The `MenuBarBuilder` will connect to the `aboutToShow` signal of the "Open Recent Projects" menu. The connected slot will clear the menu and repopulate it with `QAction`s for each path stored in `QSettings`. Clicking an action will call `open_project` with the corresponding path.
-
-**Test Plan:**
-- Unit tests for `to_dict` and `from_dict` methods on all node classes.
-- Integration test for the full save workflow.
-- Integration test for the full open workflow (save a file, then open it and assert the model state is identical).
-- Integration test for the "Open Recent" menu logic, using a mocked `QSettings`.
-
----
-
 ## Epic: Export & Configuration
 
 ### Feature: Export Engine
@@ -286,53 +243,148 @@ my_project.sci (zip archive)
 
 **Risks & Mitigations:**  
 - Invalid configs should not crash the app → fallback to defaults.
-
 ---
 
-## Refactoring Task: Decouple Controller-View Initialization
+## Epic: Tool System
 
-**Task:** Refactor the application startup sequence in `main.py` to remove the circular dependency between `MainController` and `MainWindow`.
+### Refactoring Task: Enhance Tool Management Architecture
 
-**Background & Context:** The current implementation in `setup_application` creates an awkward "chicken-and-egg" problem.
-1. `MainController` is created with `view=None`.
-2. `MainWindow` is created and requires the `MainController` instance.
-3. The `MainWindow` instance is then assigned back to `main_controller.view`.
-4. `main_controller.setup_connections()` is called to finalize the wiring.
+**Task:** Refactor the core tool management and event dispatching mechanism to support a pluggable and extensible tool system.
 
-This multi-step initialization is confusing, error-prone, and makes the components tightly coupled during instantiation. The goal is to refactor this into a linear, unidirectional setup process.
+**Background & Context:** The current `CanvasController` directly handles canvas events, which will lead to unmaintainable `if/elif/else` chains as more interactive tools are introduced. The `ToolManager` is currently a basic container. To support a rich toolbar and interactive tools, a more robust, decoupled architecture is required.
 
-**Proposed Solution: Centralized Connection**
-The `setup_application` function will act as the "composition root," exclusively responsible for creating and wiring components together. The `MainController` will no longer be responsible for connecting itself to the view's signals.
+**Proposed Solution:** Implement a Strategy-like pattern where the `ToolManager` acts as the context, and individual tools are strategies that handle specific user interactions. The UI will trigger state changes in the `ToolManager`, and the UI will react to signals from the `ToolManager`.
 
 **Implementation Plan:**
 
-1.  **Modify `src/controllers/main_controller.py`:**
-    *   **`__init__`:** Remove the `view` parameter. The controller will no longer store a reference to the main window.
-    *   **Remove `setup_connections`:** This method's logic will be moved into `setup_application`.
-    *   **Update `save_project` and `open_project`:** These methods require a parent widget for `QFileDialog`. Modify their signatures to accept a `parent: QWidget | None = None` argument. The call inside will be `QFileDialog.getSaveFileName(parent, ...)` and `QFileDialog.getOpenFileName(parent, ...)`.
+1.  **Create `src/controllers/tools/base_tool.py`:**
+    *   Define an abstract base class `BaseTool` (inheriting from `ABC` from `abc` module and `QObject` from `PySide6.QtCore`).
+    *   It will have an `__init__` method accepting `model: ApplicationModel`, `command_manager: CommandManager`, and `canvas_widget: CanvasWidget`.
+    *   Define abstract methods that all tools must implement. These include:
+        *   `name(self) -> str` (property: unique name of the tool, e.g., "selection")
+        *   `icon_path(self) -> str` (property: path to the tool's icon)
+        *   `on_activated(self)`: Called when the tool becomes active.
+        *   `on_deactivated(self)`: Called when the tool becomes inactive.
+        *   `mouse_press_event(self, event: QMouseEvent)`
+        *   `mouse_move_event(self, event: QMouseEvent)`
+        *   `mouse_release_event(self, event: QMouseEvent)`
+        *   `key_press_event(self, event: QKeyEvent)` (Optional, with a default no-op implementation)
+        *   `paint_event(self, painter: QPainter)` (Optional, for tools that need to draw temporary overlays on the canvas)
 
-2.  **Modify `src/views/main_window.py`:**
-    *   No significant changes are needed here. The `__init__` method will still receive the `main_controller` instance and pass it to the `MenuBarBuilder`. This is acceptable because the builder only connects `QAction` signals to the controller's methods, which (after the refactoring) will no longer depend on a `view` attribute being present on the controller.
+2.  **Refactor `src/controllers/tool_manager.py`:**
+    *   Add a `_tools: Dict[str, BaseTool]` attribute to store registered tools.
+    *   Add a `_active_tool_name: str | None` attribute to track the currently active tool.
+    *   Add a `activeToolChanged = Signal(str)` to emit when the active tool changes.
+    *   Modify `add_tool(self, name: str, tool: BaseTool)` to store the tool.
+    *   Modify `set_active_tool(self, tool_name: str)`:
+        *   If an old tool was active, call `old_tool.on_deactivated()`.
+        *   Set the new active tool.
+        *   Call `new_tool.on_activated()`.
+        *   Emit `self.activeToolChanged.emit(tool_name)`.
+    *   Add methods to dispatch canvas events to the active tool:
+        *   `dispatch_mouse_press_event(self, event: QMouseEvent)` -> `self.active_tool.mouse_press_event(event)`
+        *   `dispatch_mouse_move_event(self, event: QMouseEvent)` -> `self.active_tool.mouse_move_event(event)`
+        *   `dispatch_mouse_release_event(self, event: QMouseEvent)` -> `self.active_tool.mouse_release_event(event)`
+        *   `dispatch_key_press_event(self, event: QKeyEvent)` -> `self.active_tool.key_press_event(event)`
 
-3.  **Modify `main.py` (the `setup_application` function):**
-    *   **Instantiation:**
-        *   Create `model`.
-        *   Create `main_controller = MainController(model=model)`.
-        *   Create `view = MainWindow(...)`, passing the `main_controller` as before.
-    *   **Centralized Wiring:** After the `view` is created, add the following logic to explicitly connect the view's signals to the controller's slots:
-        ```python
-        # Connect main window actions to controller slots
-        view.new_layout_action.triggered.connect(main_controller.create_new_layout)
-        # Use a lambda to pass the view as the parent for the dialog
-        view.save_project_action.triggered.connect(lambda: main_controller.save_project(parent=view))
-        view.open_project_action.triggered.connect(lambda: main_controller.open_project(parent=view))
-        ```
-    *   **Remove Old Code:** Delete the lines that previously assigned `main_controller.view = view` and called `main_controller.setup_connections()`.
-    *   **Update Controller Calls:** Ensure any other direct calls to `save/open_project` (e.g., from a future "open recent" menu) also pass the `view` as the parent.
+3.  **Refactor `src/controllers/canvas_controller.py`:** EDIT: This is where we left off last time
+    *   Remove all event handling logic (mouse presses, moves, releases) from `CanvasController` itself.
+    *   Its `__init__` will now take `tool_manager: ToolManager` as an argument.
+    *   Connect the `canvas_widget`'s event signals directly to the `tool_manager`'s dispatch methods (e.g., `canvas_widget.mousePress.connect(tool_manager.dispatch_mouse_press_event)`).
+    *   The `CanvasController` effectively becomes a pure event *forwarder* to the `ToolManager`.
+
+4.  **Refactor `src/controllers/tools/selection_tool.py`:**
+    *   Make `SelectionTool` inherit from `BaseTool`.
+    *   Implement all abstract methods defined in `BaseTool`.
+    *   Move its current event handling logic into the corresponding `BaseTool` methods.
+    *   Ensure `SelectionTool.name` property returns "selection".
 
 **Test Plan:**
--   After refactoring, manually test the "New Layout", "Save Project", and "Open Project" menu actions to ensure they work as before.
--   Run the existing test suite to confirm that no regressions have been introduced. The `setup_application` function is used by tests, so they will benefit from this cleaner setup.
+-   Unit tests for `BaseTool` (ensure abstract methods are enforced).
+-   Unit tests for `ToolManager`:
+    *   `add_tool` correctly registers tools.
+    *   `set_active_tool` correctly activates/deactivates tools and emits `activeToolChanged` signal.
+    *   Event dispatch methods correctly call the active tool's methods.
+-   Unit tests for `CanvasController`: Ensure it correctly forwards events to `ToolManager`.
+-   Unit tests for `SelectionTool`: Ensure it correctly implements `BaseTool` and its existing logic still functions.
+-   Integration tests: Verify that activating a tool in `ToolManager` changes the application's behavior on the canvas as expected.
 
-**Expected Outcome:**
-The instantiation of core components will be linear and easier to follow. The `MainController` will be a more independent and reusable component, and the tight coupling at initialization will be broken.
+**Risks & Mitigations:**
+-   **Risk:** Extensive changes to core event handling might introduce regressions.
+-   **Mitigation:** A phased refactoring approach will be used, starting with `BaseTool`, then `ToolManager`, then `CanvasController`, and finally existing tools. Comprehensive unit and integration tests will be crucial at each step.
+-   **Risk:** The `paint_event` method for `BaseTool` might be complex for overlay drawing.
+-   **Mitigation:** Start with a simple implementation, providing the `QPainter` directly. Refine as needed for complex overlays or integrate with a dedicated overlay manager later.
+
+---
+
+### Feature: Interactive Toolbar
+
+**Task:** Implement the main application toolbar, populated with placeholder icons for all planned tools, integrated with the new tool management architecture.
+
+**Background & Context:** The application needs a dedicated toolbar for quick access to various interactive tools. This toolbar should visually reflect the currently active tool.
+
+**Proposed Implementation:** Create a `ToolBarBuilder` class, similar to `MenuBarBuilder`, to construct and populate the toolbar. The toolbar will be integrated into the `MainWindow` and will respond to `ToolManager` signals to update its visual state.
+
+**Implementation Plan:**
+
+1.  **Create Placeholder Icons:**
+    *   Create a new directory: `src/assets/icons`.
+    *   Programmatically generate simple SVG icons for each tool:
+        *   `selection_tool.svg` (e.g., an arrow)
+        *   `direct_selection_tool.svg` (e.g., white arrow)
+        *   `shape_tool.svg` (e.g., a square)
+        *   `path_tool.svg` (e.g., pen nib)
+        *   `text_tool.svg` (e.g., "T")
+        *   `eyedropper_tool.svg` (e.g., eyedropper)
+        *   `plot_tool.svg` (e.g., simple line graph)
+        *   `zoom_tool.svg` (e.g., magnifying glass)
+        *   `rotate_tool.svg` (e.g., circular arrow)
+        *   `figure_tool.svg` (e.g., small window icon)
+
+2.  **Create `src/builders/tool_bar_builder.py`:**
+    *   Define a `ToolBarBuilder` class.
+    *   `__init__(self, parent_window: QMainWindow, tool_manager: ToolManager)`
+    *   Define a `ToolBarActions` dataclass to hold references to the created `QAction`s.
+    *   `build(self) -> Tuple[QToolBar, ToolBarActions]`:
+        *   Create `tool_bar = QToolBar("Tools", self._parent_window)`.
+        *   Set `tool_bar.setMovable(False)`, `tool_bar.setFloatable(False)`.
+        *   Add `tool_bar` to `parent_window` using `self._parent_window.addToolBar(Qt.LeftToolBarArea, tool_bar)`.
+        *   For each tool, create a `QAction`:
+            *   Load the SVG icon (`QIcon(tool_icon_path)`).
+            *   Set a tooltip (`action.setToolTip("Selection Tool")`).
+            *   Set the action to be checkable (`action.setCheckable(True)`).
+            *   Connect `action.triggered.connect(lambda checked, tool_name=tool_name: self._tool_manager.set_active_tool(tool_name))`.
+            *   Add the action to the toolbar.
+        *   Connect `self._tool_manager.activeToolChanged.connect(self._update_tool_bar_state)`.
+        *   Return the `QToolBar` and the `ToolBarActions` dataclass.
+    *   `_update_tool_bar_state(self, active_tool_name: str)`:
+        *   Iterate through all tool actions in `ToolBarActions`.
+        *   Set `action.setChecked(action.tool_name == active_tool_name)`.
+
+3.  **Integrate with `main.py` (`setup_application` function):**
+    *   Instantiate `ToolManager`.
+    *   Instantiate `ToolBarBuilder`, passing it the `MainWindow` and `ToolManager`.
+    *   Call `tool_bar_builder.build()` and store the returned toolbar and actions.
+    *   Register all tools (e.g., `tool_manager.add_tool("selection", SelectionTool(...))`) after `MainWindow` is created, as the tools will need the `canvas_widget`.
+    *   Ensure the `ToolManager` is passed to the `CanvasController` and any other components that need it.
+
+4.  **Integrate with `src/views/main_window.py`:**
+    *   Import `ToolBarBuilder`.
+    *   Store the created `QToolBar` and `ToolBarActions` as attributes (e.g., `self.tool_bar`, `self.tool_actions`).
+    *   **Crucially:** `MainWindow` itself should not instantiate the `ToolBarBuilder` directly but receive the built `QToolBar` and `ToolBarActions` from `setup_application` (similar to how `MenuBarBuilder` is handled in `MainWindow`).
+
+**Test Plan:**
+-   Unit tests for `ToolBarBuilder`:
+    *   Ensure it correctly creates a `QToolBar` and all `QAction`s.
+    *   Verify icons, tooltips, and checkable states are set.
+    *   Test that `_update_tool_bar_state` correctly sets the checked state of actions.
+-   Integration tests:
+    *   Run the application, click toolbar buttons, and verify that the `ToolManager`'s active tool changes.
+    *   Verify that when the active tool changes (e.g., programmatically via `tool_manager.set_active_tool()`), the correct toolbar button becomes checked.
+    *   Verify that placeholder icons are correctly displayed.
+
+**Risks & Mitigations:**
+-   **Risk:** Managing SVG icons might require `PySide6.QtSvgWidgets` or similar, adding a dependency.
+-   **Mitigation:** Verify if `QIcon` can load SVGs directly. If not, consider a simpler icon format or add `QtSvgWidgets`.
+-   **Risk:** The `setup_application` function in `main.py` is becoming quite large due to all the wiring.
+-   **Mitigation:** This is acceptable for a "composition root." If it becomes unwieldy, a dedicated `ApplicationBuilder` class could be introduced later to encapsulate `setup_application`'s logic.

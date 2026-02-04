@@ -81,3 +81,4 @@ tests/views/__pycache__/test_properties_ui_factory.cpython-313-pytest-9.0.2.pyc
 src/builders/__pycache__/menu_bar_builder.cpython-313.pyc
 tests/builders/__pycache__/test_menu_bar_builder.cpython-313-pytest-9.0.2.pyc
 tests/models/__pycache__/test_serialization.cpython-313-pytest-9.0.2.pyc
+tests/controllers/__pycache__/test_tool_manager.cpython-313-pytest-9.0.2.pyc

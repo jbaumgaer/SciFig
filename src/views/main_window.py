@@ -5,10 +5,9 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMenuBar,
-    QWidget,
 )
 
-from src.builders.menu_bar_builder import MenuBarBuilder, MainMenuActions
+from src.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
 from src.commands import CommandManager
 from src.controllers.main_controller import MainController
 from src.models import ApplicationModel
@@ -23,7 +22,13 @@ class MainWindow(QMainWindow):
     the application's UI components, including the canvas and properties panel.
     """
 
-    def __init__(self, model: ApplicationModel, main_controller: MainController, command_manager: CommandManager, plot_types: list[PlotType]):
+    def __init__(
+        self,
+        model: ApplicationModel,
+        main_controller: MainController,
+        command_manager: CommandManager,
+        plot_types: list[PlotType],
+    ):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
         self.setGeometry(50, 50, 800, 600)
@@ -48,9 +53,13 @@ class MainWindow(QMainWindow):
         self.file_menu: QMenu = self.main_menu_actions.file_menu
         self.new_layout_action: QAction = self.main_menu_actions.new_layout_action
         self.new_file_action: QAction = self.main_menu_actions.new_file_action
-        self.new_file_from_template_action: QAction = self.main_menu_actions.new_file_from_template_action
+        self.new_file_from_template_action: QAction = (
+            self.main_menu_actions.new_file_from_template_action
+        )
         self.open_project_action: QAction = self.main_menu_actions.open_project_action
-        self.open_recent_projects_menu: QMenu = self.main_menu_actions.open_recent_projects_menu
+        self.open_recent_projects_menu: QMenu = (
+            self.main_menu_actions.open_recent_projects_menu
+        )
         self.close_action: QAction = self.main_menu_actions.close_action
         self.save_project_action: QAction = self.main_menu_actions.save_project_action
         self.save_copy_action: QAction = self.main_menu_actions.save_copy_action

@@ -1,10 +1,15 @@
-from typing import Optional
 import dataclasses
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
-from .plot_properties import BasePlotProperties, LinePlotProperties, ScatterPlotProperties, PlotMapping, AxesLimits
+from .plot_properties import (
+    AxesLimits,
+    BasePlotProperties,
+    LinePlotProperties,
+    PlotMapping,
+)
 from .scene_node import SceneNode
 
 
@@ -13,7 +18,9 @@ class PlotNode(SceneNode):
     A scene node representing a single Matplotlib Axes (a subplot).
     """
 
-    def __init__(self, parent: SceneNode | None = None, name: str = "Plot", id: str | None = None):
+    def __init__(
+        self, parent: SceneNode | None = None, name: str = "Plot", id: str | None = None
+    ):
         super().__init__(parent, name, id)
 
         # Properties migrated from the old ArtistModel
@@ -35,34 +42,42 @@ class PlotNode(SceneNode):
     def to_dict(self) -> dict:
         """Serializes the plot node to a dictionary."""
         node_dict = super().to_dict()
-        
+
         data_path = f"data/{self.id}.parquet" if self.data is not None else None
-        
-        node_dict.update({
-            "geometry": self.geometry,
-            "plot_properties": dataclasses.asdict(self.plot_properties) if self.plot_properties else None,
-            "data_path": data_path,
-        })
+
+        node_dict.update(
+            {
+                "geometry": self.geometry,
+                "plot_properties": (
+                    dataclasses.asdict(self.plot_properties)
+                    if self.plot_properties
+                    else None
+                ),
+                "data_path": data_path,
+            }
+        )
         return node_dict
 
     @classmethod
-    def from_dict(cls, data: dict, parent: SceneNode | None = None, temp_dir: Path | None = None) -> "PlotNode":
+    def from_dict(
+        cls, data: dict, parent: SceneNode | None = None, temp_dir: Path | None = None
+    ) -> "PlotNode":
         """Creates a PlotNode from a dictionary."""
         node = super().from_dict(data, parent)
         node.geometry = tuple(data["geometry"])
-        
+
         props_data = data.get("plot_properties")
         if props_data:
             # Here we would need a way to know which properties class to use.
             # For now, we assume LinePlotProperties, but this should be improved.
             # A 'plot_type' key in the props_data could drive this.
-            prop_class = LinePlotProperties # Simple assumption for now
+            prop_class = LinePlotProperties  # Simple assumption for now
             # We need to reconstruct nested dataclasses manually
             mapping_data = props_data.get("plot_mapping", {})
             limits_data = props_data.get("axes_limits", {})
             props_data["plot_mapping"] = PlotMapping(**mapping_data)
             props_data["axes_limits"] = AxesLimits(**limits_data)
-            
+
             node.plot_properties = prop_class(**props_data)
 
         data_path = data.get("data_path")

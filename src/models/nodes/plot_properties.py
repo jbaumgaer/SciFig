@@ -22,6 +22,7 @@ class BasePlotProperties:
     Base class for plot properties. It contains properties that are common
     to all plot types.
     """
+
     title: str = ""
     xlabel: str = ""
     ylabel: str = ""
@@ -52,9 +53,11 @@ class BasePlotProperties:
                 "plot_type": new_plot_type,
             }
             # Add specific properties if they exist in current_properties and target_class
-            if new_plot_type == PlotType.SCATTER and isinstance(current_properties, ScatterPlotProperties):
+            if new_plot_type == PlotType.SCATTER and isinstance(
+                current_properties, ScatterPlotProperties
+            ):
                 common_kwargs["marker_size"] = current_properties.marker_size
-            
+
             return target_class(**common_kwargs)
         else:
             return target_class(plot_type=new_plot_type)
@@ -63,12 +66,14 @@ class BasePlotProperties:
 @dataclass
 class LinePlotProperties(BasePlotProperties):
     """Properties specific to a line plot."""
+
     pass
 
 
 @dataclass
 class ScatterPlotProperties(BasePlotProperties):
     """Properties specific to a scatter plot."""
+
     marker_size: int = 10
 
 

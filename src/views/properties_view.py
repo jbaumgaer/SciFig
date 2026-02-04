@@ -1,7 +1,5 @@
-from functools import partial
 from typing import Union
 
-from PySide6.QtGui import QDoubleValidator
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -20,6 +18,7 @@ from src.models.nodes.plot_properties import (
     PlotMapping,
 )
 from src.models.nodes.plot_types import PlotType
+
 from .properties_ui_factory import PropertiesUIFactory
 
 Layout = Union[QVBoxLayout, QFormLayout, QHBoxLayout]
@@ -126,7 +125,7 @@ class PropertiesView(QWidget):
                 property_dict_name="plot_properties",
             )
             self.command_manager.execute_command(cmd)
-            self.on_selection_changed() # Rebuild UI
+            self.on_selection_changed()  # Rebuild UI
 
     def _on_property_changed(self, node: PlotNode, prop_name: str, widget: QLineEdit):
         """Creates and executes a command when a QLineEdit's editing is finished."""
@@ -200,4 +199,3 @@ class PropertiesView(QWidget):
                 property_dict_name="plot_properties",
             )
             self.command_manager.execute_command(cmd)
-

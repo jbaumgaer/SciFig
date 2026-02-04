@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock
 
 import pandas as pd
-import pandas as pd
 import pytest
 
 from src.commands.command_manager import CommandManager

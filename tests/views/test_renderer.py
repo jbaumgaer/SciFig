@@ -1,11 +1,12 @@
-import pandas as pd
-import pytest
 from unittest.mock import Mock, patch
 
-from src.views.renderer import Renderer
+import pandas as pd
+import pytest
+
 from src.models.nodes import PlotNode, SceneNode
-from src.models.nodes.plot_properties import LinePlotProperties, PlotMapping, AxesLimits
+from src.models.nodes.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
 from src.models.nodes.plot_types import PlotType
+from src.views.renderer import Renderer
 
 
 class TestNode(SceneNode):
@@ -47,7 +48,7 @@ def test_renderer_switches_strategy(mock_scatter_class, mock_line_class, plot_no
     mock_scatter_strategy = mock_scatter_class.return_value
 
     renderer = Renderer()
-    
+
     # We need to manually replace the instances in the renderer's dictionary
     # with our mocks to track calls.
     renderer.plotting_strategies[PlotType.LINE] = mock_line_strategy

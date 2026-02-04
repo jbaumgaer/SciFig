@@ -60,7 +60,7 @@ This document lists the planned and implemented capabilities of the scientific g
 ---
 
 ### 1.4. Toolbar
--The toolbar contains tools for creating and editing artwork, and for navigation on the canvas. It is docked to the left of the document window by default.
+-The toolbar contains tools for creating and editing artwork, and for navigation on the canvas. It is docked to the left of the document window by default. All tools have a little icon
 - Shape tools: rectangles, ellipses, lines
 - Path tool (Bezier curves)
 - Text tools: on-canvas text, rich text (bold, italic), LaTeX support

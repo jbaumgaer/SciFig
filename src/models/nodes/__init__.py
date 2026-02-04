@@ -6,7 +6,6 @@ from .rectangle_node import RectangleNode
 from .scene_node import SceneNode
 from .text_node import TextNode
 
-
 __all__ = [
     "SceneNode",
     "GroupNode",

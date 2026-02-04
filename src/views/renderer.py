@@ -2,8 +2,9 @@ import matplotlib.figure
 import matplotlib.patches as patches
 import pandas as pd
 
-from src.models.nodes import PlotNode, SceneNode, RectangleNode, TextNode
+from src.models.nodes import PlotNode, RectangleNode, SceneNode, TextNode
 from src.models.nodes.plot_types import PlotType
+
 from .plotting_strategies import LinePlotStrategy, ScatterPlotStrategy
 
 

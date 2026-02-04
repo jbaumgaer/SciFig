@@ -25,7 +25,7 @@ class ChangePropertyCommand(BaseCommand):
         self.property_name = property_name
         self.new_value = new_value
         self.property_dict_name = property_dict_name
-        self.old_value = None  # Will be stored on execute
+        self.old_value = None  # Will be stored on execute #TODO: What is this for?
 
         # Special handling for plot_type changes, which alter the type of plot_properties
         self._is_plot_type_change = (
@@ -38,9 +38,11 @@ class ChangePropertyCommand(BaseCommand):
         if self._is_plot_type_change:
             assert isinstance(self.new_value, PlotType)
             self.old_value = self.node.plot_properties
-            self.node.plot_properties = BasePlotProperties.create_properties_from_plot_type(
-                new_plot_type=self.new_value,
-                current_properties=self.old_value,
+            self.node.plot_properties = (
+                BasePlotProperties.create_properties_from_plot_type(
+                    new_plot_type=self.new_value,
+                    current_properties=self.old_value,
+                )
             )
         else:
             target_object = (

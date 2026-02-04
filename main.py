@@ -30,19 +30,27 @@ def setup_application():
     # 2. Create the main view and controller
     renderer = Renderer()
     plot_types = list(renderer.plotting_strategies.keys())
-    
+    """TODO: This is a bit of a hack to get the available plot types from the renderer. 
+    We should probably have a more explicit way to manage this list in the model
+    or a dedicated registry class."""
+
     main_controller = MainController(model=model)
     view = MainWindow(model, main_controller, command_manager, plot_types)
-    
+
     # Connect main window actions to controller slots
+    #TODO: Does this scale for more actions?
     view.new_layout_action.triggered.connect(main_controller.create_new_layout)
     view.save_project_action.triggered.connect(lambda: main_controller.save_project(parent=view))
     view.open_project_action.triggered.connect(lambda: main_controller.open_project(parent=view))
 
     # 3. Instantiate Tools and Manager
-    tool_manager = ToolManager()
-    selection_tool = SelectionTool(model=model, canvas=view.canvas_widget.figure_canvas)
-    tool_manager.add_tool("selection", selection_tool)
+    tool_manager = ToolManager(model=model, command_manager=command_manager)
+    selection_tool = SelectionTool(
+        model=model,
+        command_manager=command_manager,
+        canvas_widget=view.canvas_widget,
+    )
+    tool_manager.add_tool(selection_tool)
     tool_manager.set_active_tool("selection")
 
     # 4. Create other controllers
@@ -61,7 +69,7 @@ def setup_application():
     # 6. Connect signals to slots
     model.modelChanged.connect(redraw_callback)
     model.selectionChanged.connect(redraw_callback)
-    canvas_controller.plotDoubleClicked.connect(view.show_properties_panel)
+    selection_tool.plot_double_clicked.connect(view.show_properties_panel)
 
     # Return a dictionary of the core components for tests to use
     return {

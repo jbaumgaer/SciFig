@@ -1,15 +1,15 @@
-import pytest
 from unittest.mock import MagicMock
 
 import matplotlib.figure
+import pytest
 from PySide6.QtWidgets import QApplication
 
 from src.commands.command_manager import CommandManager
-from src.models.application_model import ApplicationModel
-from src.views.main_window import MainWindow
-from src.models.nodes.plot_types import PlotType
-
 from src.controllers.main_controller import MainController
+from src.models.application_model import ApplicationModel
+from src.models.nodes.plot_types import PlotType
+from src.views.main_window import MainWindow
+
 
 @pytest.fixture
 def mock_main_controller():
@@ -23,18 +23,18 @@ def app_context(qtbot, mock_main_controller):
     model and a mocked command manager, instantiating a real MainWindow.
     """
     app = QApplication.instance() or QApplication([])
-    
+
     figure = matplotlib.figure.Figure()
     model = ApplicationModel(figure=figure)
     mock_command_manager = MagicMock(spec=CommandManager)
     plot_types = [PlotType.LINE, PlotType.SCATTER]
 
     main_window = MainWindow(model, mock_main_controller, mock_command_manager, plot_types)
-    
+
     qtbot.addWidget(main_window)
     main_window.show()
     qtbot.waitExposed(main_window)
-    
+
     return {
         "window": main_window,
         "model": model,

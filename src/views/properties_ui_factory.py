@@ -13,9 +13,6 @@ from PySide6.QtWidgets import (
 
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.plot_properties import (
-    AxesLimits,
-    LinePlotProperties,
-    PlotMapping,
     ScatterPlotProperties,
 )
 from src.models.nodes.plot_types import PlotType
@@ -61,7 +58,9 @@ class PropertiesUIFactory:
         title_edit = QLineEdit(props.title, parent)
         title_edit.setObjectName("title_edit")
         title_edit.editingFinished.connect(
-            partial(on_property_changed, node=node, prop_name="title", widget=title_edit)
+            partial(
+                on_property_changed, node=node, prop_name="title", widget=title_edit
+            )
         )
         layout.addRow("Title:", title_edit)
 
@@ -128,14 +127,18 @@ class PropertiesUIFactory:
         x_combo.addItems(columns)
         if current_x in columns:
             x_combo.setCurrentText(current_x)
-        x_combo.currentTextChanged.connect(partial(on_column_mapping_changed, node=node))
+        x_combo.currentTextChanged.connect(
+            partial(on_column_mapping_changed, node=node)
+        )
         layout.addRow("X-Axis Column:", x_combo)
 
         y_combo.clear()
         y_combo.addItems(columns)
         if current_y in columns:
             y_combo.setCurrentText(current_y)
-        y_combo.currentTextChanged.connect(partial(on_column_mapping_changed, node=node))
+        y_combo.currentTextChanged.connect(
+            partial(on_column_mapping_changed, node=node)
+        )
         layout.addRow("Y-Axis Column:", y_combo)
 
     @staticmethod

@@ -8,6 +8,49 @@ This document tracks the implemented and future features of the Data Analysis GU
 
 This section describes the functionality currently available in the application.
 
+
+## Epic: Project File Management
+
+### Feature: Project File Management (`.sci` files)
+**Task:** Implement a complete workflow for saving, loading, and accessing recent projects using a custom `.sci` file format.
+
+**Background & Context:** A robust file management system is critical for a good user experience. The chosen format must handle a complex scene graph, various metadata, and potentially large datasets efficiently and safely. A single-file format is strongly preferred.
+
+**Architectural Decisions:**
+*   **Hybrid Archive Format (`.sci`):** The `.sci` file will be a zip archive containing a `project.json` for metadata and a `data/` directory for high-performance data serialization. This provides the readability of JSON for the project structure and the performance/efficiency of Parquet for the data, while avoiding the security risks of formats like `pickle`.
+*   **Deserialization Strategy (Factory Pattern):** A factory function will be used to reconstruct nodes from the `project.json`. This function will read a `class_name` key from each node's dictionary and instantiate the corresponding Python class (e.g., `PlotNode`, `GroupNode`), making the process extensible.
+*   **Recent Files Persistence (`QSettings`):** The `QSettings` class will be used to store a persistent, platform-agnostic list of recently opened files, providing a much more robust solution than a manual text or JSON file.
+
+**`.sci` File Structure:**
+```
+my_project.sci (zip archive)
+├── project.json
+└── data/
+    ├── {node_id_1}.parquet
+    ├── {node_id_2}.parquet
+    └── ...
+```
+
+**Implementation - Save Workflow:**
+1.  **Controller (`save_project`):** Opens a `QFileDialog`, creates a temporary directory to stage files, iterates through the model's nodes to save data, creates `project.json` from the model's dictionary, zips the temp directory into the final `.sci` file, and cleans up.
+2.  **Model (`to_dict`):** Nodes serialize their metadata. `PlotNode`s reference their data via a `data_path` (e.g., `data/node_id.parquet`) instead of embedding the data itself.
+
+**Implementation - Open Workflow:**
+1.  **Controller (`open_project`):** Opens a `QFileDialog` to select a `.sci` file. Unzips the file to a temporary directory, reads the `project.json`, and passes the resulting dictionary to the model for reconstruction. It will also handle adding the path to the recent files list.
+2.  **Model (`load_from_dict`):** A new method in `ApplicationModel` will clear the current scene and then use a factory to recursively reconstruct the entire scene graph from the dictionary.
+3.  **Node Deserialization (`from_dict`):** Each `SceneNode` subclass will have a `from_dict` class method. `PlotNode.from_dict` will be responsible for reading the `data_path` key and loading the corresponding Parquet file from the temporary directory into its `.data` attribute.
+
+**Implementation - Open Recent Workflow:**
+1.  **`QSettings` Management:** On successful save or open, the file path will be added to the top of a list stored in `QSettings`. The list will be capped at a reasonable number (e.g., 10).
+2.  **Dynamic Menu:** The `MenuBarBuilder` will connect to the `aboutToShow` signal of the "Open Recent Projects" menu. The connected slot will clear the menu and repopulate it with `QAction`s for each path stored in `QSettings`. Clicking an action will call `open_project` with the corresponding path.
+
+**Test Plan:**
+- Unit tests for `to_dict` and `from_dict` methods on all node classes.
+- Integration test for the full save workflow.
+- Integration test for the full open workflow (save a file, then open it and assert the model state is identical).
+- Integration test for the "Open Recent" menu logic, using a mocked `QSettings`.
+
+
 ### Feature: Single-File Project Save/Load (`.sci` files)
 **Status:** Implemented
 **Task:** Implemented the ability to save the entire application state into a single `.sci` project file.
@@ -20,7 +63,7 @@ This section describes the functionality currently available in the application.
 ### Feature: Pluggable Plot Properties and Dynamic View
 **Status:** Completed
 **Task:** Refactor `PlotProperties` into a hierarchical, type-specific structure and make the `PropertiesView` dynamically update its UI based on the selected plot type.
-**Background & Context:** The current `PlotProperties` is a monolithic dataclass, and the plot type is a simple string. This is not scalable for plot types with different property needs (e.g., a 3D plot needing a Z-axis column, or a scatter plot needing a `marker_size` property). To support true pluggability, the properties model and the view that edits it must both be made more dynamic.
+**Background & Context:** The current `PlotProperties` is a monolithic dataclass, and the plot type is a simple string. As more node types are added, this becomes difficult to maintain.
 
 **Phase 1: Model Refactoring**
 1.  **Create `PlotType` Enum:**
@@ -58,75 +101,14 @@ This section describes the functionality currently available in the application.
 -   **Mitigation:** The work is broken into two phases. After Phase 1, the application should still be fully functional before proceeding to Phase 2. The comprehensive test suite will be relied upon to catch regressions.
 
 ### Feature: Pluggable Node Renderer Strategy
-**Task:** Refactor the main rendering loop to use a Strategy Pattern for rendering different `SceneNode` types.  
-**Background & Context:** The main `_render_node` recursive method uses a large `if isinstance(node, PlotNode):` block. As more node types are added (`RectangleNode`, `TextNode`, etc.), this will become a long and difficult-to-maintain `if/elif/else` chain, violating the Open/Closed Principle.
+**Status:** Implemented
+**Task:** Refactored the main rendering loop to use a Strategy Pattern for rendering different `SceneNode` types.
+**Outcome:** Simplified the `_render_node` method, making it more extensible and maintainable by delegating node-specific rendering logic to a strategy map. This adheres to the Open/Closed Principle, allowing new node types to be added without modifying existing rendering logic.
 
-**Proposed Implementation:**  
-1.  **Isolate Node Rendering Logic:**
-    *   Move the existing logic for rendering a `PlotNode` from `_render_node` into its own dedicated method within the `Renderer` class: `_render_plot_node(self, figure, node)`.
-    *   Create placeholder methods for future node types, e.g., `_render_rectangle_node(self, figure, node)`.
-2.  **Create the Strategy Map:**
-    *   In the `Renderer.__init__`, create a `_render_strategies` dictionary that maps the *class type* of a node to the appropriate rendering function.
-        ```python
-        from src.models.nodes import PlotNode, RectangleNode # etc.
-
-        self._render_strategies = {
-            PlotNode: self._render_plot_node,
-            # RectangleNode: self._render_rectangle_node, # To be added later
-        }
-        ```
-3.  **Refactor the Main Render Loop:**
-    *   Simplify the `_render_node` method dramatically. Its only job now is to find the correct strategy and call it.
-        ```python
-        def _render_node(self, figure, node):
-            if not node.visible:
-                return
-
-            # Find and execute the strategy for the current node
-            render_func = self._render_strategies.get(type(node))
-            if render_func:
-                render_func(figure, node)
-            else:
-                # Optionally log a warning for unhandled node types
-                print(f"Warning: No renderer found for node type {type(node)}")
-
-            # Recursively render children
-            for child in node.children:
-                self._render_node(figure, child)
-        ```
-
-**Test Plan:**  
--   Verify that `PlotNode` objects continue to render exactly as they did before the refactor.
--   Create a new, simple `TestNode` class and a corresponding `_render_test_node` function. Write a test to add a `TestNode` to the scene, add its renderer to the strategy map, and confirm that the correct rendering function is called.
--   Test that the recursive rendering of children is unaffected.
-
-**Risks & Mitigations:**  
--   **Risk:** A new node type is created, but a developer forgets to add it to the strategy map.
--   **Mitigation:** The implementation includes a warning for unhandled node types. This can be elevated to an error during debug builds if necessary. A unit test can also be written to check that all non-abstract `SceneNode` subclasses exist as keys in the strategy map.
-
-### Core Architecture (v2)
-
-The application is built on a modern, robust architecture designed for interactivity and extensibility.
-
--   **Scene Graph Model**: The application state is managed by a hierarchical scene graph (`SceneNode`, `PlotNode`, `GroupNode`), allowing for complex object relationships.
--   **Tool-Based Controller**: A `ToolManager` delegates canvas events to the active tool. A `SelectionTool` for selecting, moving, and interacting with objects is implemented.
--   **Command & History System**: All actions that modify the application state are managed by a `CommandManager`, providing full Undo/Redo support (`Ctrl+Z` / `Ctrl+Y`).
-
-### Figure & Plot Customization
-
--   **Unified Properties Inspector**: A non-modal sidebar allows for live, immediate editing of selected object properties. Double-clicking a plot will open the panel.
--   **Plot Properties**: The following properties of a selected plot can be modified:
-    -   Title
-    -   X-Axis and Y-Axis Labels
-    -   X-Axis and Y-Axis data columns (via dropdown selectors)
-    -   X-Axis and Y-Axis limits
-    -   Plot Type (e.g., Line, Scatter)
-
-### Data Handling
-
--   **CSV Data Import**: Users can drag and drop `.csv` files directly onto a subplot to load data.
--   **Default Layout**: The application starts with a default 2x2 grid of empty plots.
--   **Basic Data Plotting**: Loaded data is rendered as a simple line plot. If no columns are specified, the first two columns in the dataset are used by default.
+### Refactoring Task: Decouple Controller-View Initialization
+**Status:** Implemented
+**Task:** Refactored the application startup sequence to remove the circular dependency between `MainController` and `MainWindow`. This involved centralizing the wiring of signals and slots in `main.py`'s `setup_application` function and modifying `MainController` methods to accept a `parent` widget for `QFileDialog` calls.
+**Outcome:** Achieved a linear, unidirectional, and clearer initialization process for core application components, improving maintainability and reducing the potential for bugs. All automated tests were updated and pass, confirming no regressions.
 
 ---
 
@@ -136,14 +118,6 @@ This section outlines planned features that are not yet implemented.
 
 ### Architectural Enhancements
 - **Plugin Architecture**: Develop a plugin system to allow new features (tools, plot types, import/export formats) to be added to the application dynamically without modifying the core codebase.
-
-### Feature: Pluggable Plotting Strategy Verification
-- [x] (P0, S) Run application to ensure it still works as before.
-- [x] (P0, M) Add a `ScatterPlotStrategy` and update the renderer's dictionary to prove the system is extensible.
-- [x] (P0, M) Manually test that changing the plot type in the UI works and updates the plot.
-- [x] (P0, L) Write unit tests for plotting strategies and renderer integration.
-
-**Note:** This feature has been implemented and is now superseded by the more general "Pluggable Plot Properties and Dynamic View" feature.
 
 ### Illustrator-Inspired Design & Layout Features
 
@@ -216,118 +190,3 @@ This section tracks agreed-upon architectural improvements to enhance code quali
 5.  **Refine Dependency Management**
     *   **Goal:** Ensure reproducible builds by locking sub-dependencies.
     *   **Implementation:** Use `pip-tools` to compile a fully-pinned `requirements.txt` from a `requirements.in` file.
-
-    # Backlog
-
-Tasks are broken down by functional Epics → Features → individual Tasks, with priority (P0, P1, P2) and size (S, M, L).
-
----
-
-## Epic: Canvas & Layout
-
-### Feature: Subplot Management
-- [ ] (P0, M) Implement multi-subplot canvas with default layout
-- [ ] (P0, M) Enable selection of a subplot
-- [ ] (P0, M) Open properties panel on double-click
-- [ ] (P1, M) Zooming and panning support
-- [ ] (P1, S) Magnification indicator display
-- [ ] (P1, M) Alignment and distribution tools
-
----
-
-## Epic: Object & Layer Management
-
-### Feature: Layer System
-- [ ] (P1, L) Implement Layer model (visibility, lock, z-order)
-- [ ] (P1, M) Render layers in canvas draw order
-- [ ] (P1, M) Layer panel UI: create, delete, reorder
-- [ ] (P2, M) Drag-and-drop reorder in panel
-
-### Feature: Grouping & Selection
-- [ ] (P1, S) Group objects
-- [ ] (P1, S) Ungroup objects
-- [ ] (P1, M) Multi-selection of objects
-- [ ] (P1, M) Object stacking/order adjustments
-
----
-
-## Epic: Drawing & Annotation Tools
-
-### Feature: Shape & Path Tools
-- [ ] (P0, S) Rectangle, ellipse, line shapes
-- [ ] (P1, L) Path tool (Bezier curves) creation/editing
-
-### Feature: Text Tools
-- [ ] (P1, M) On-canvas text editing
-- [ ] (P2, M) Rich text formatting (bold, italic)
-- [ ] (P2, L) LaTeX integration
-
-### Feature: Image & Style
-- [ ] (P1, M) Drag-and-drop image import (PNG/JPG)
-- [ ] (P1, M) Render image in subplot
-- [ ] (P2, M) Resize and position image on canvas
-- [ ] (P2, M) Eyedropper tool for style copy
-- [ ] (P2, M) Save reusable styles/templates (strokes, fills, gradients)
-
----
-
-## Epic: Data Management & Interaction
-
-### Feature: Data Import
-- [ ] (P0, M) Load CSV data via drag-and-drop
-- [ ] (P1, L) Excel import support
-- [ ] (P1, L) HDF5/SQL import support
-- [ ] (P2, L) Folder batch import
-
-### Feature: Interactive Data
-- [ ] (P1, M) Interactive data worksheet dockable panel
-- [ ] (P1, S) Display data source path in properties panel
-- [ ] (P1, M) Multi-sheet workbook support
-
----
-
-## Epic: Plotting & Visualization
-
-### Feature: Plot Types
-- [ ] (P0, M) Line, scatter, bar plots
-- [ ] (P1, M) Multi-axis support
-- [ ] (P1, M) Trellis/facet plots
-- [ ] (P0, M) Automatic default rendering on data load
-
----
-
-## Epic: Data Analysis & Processing
-
-### Feature: Analysis Gadgets
-- [ ] (P1, M) Region of Interest tool
-- [ ] (P1, M) Basic measurement tools
-
-### Feature: Curve Fitting
-- [ ] (P1, L) Built-in fit functions
-- [ ] (P1, L) User-defined function fitting
-
-### Feature: Signal Processing
-- [ ] (P2, M) Smoothing and filtering
-- [ ] (P2, M) FFT analysis
-
----
-
-## Epic: Project & File Management
-
-### Feature: Project & Template
-- [ ] (P0, M) Save/load project file
-- [ ] (P2, M) Template project layouts
-
-### Feature: Export
-- [ ] (P1, M) PNG export
-- [ ] (P1, M) Vector export (SVG, PDF, EPS)
-
-### Feature: Configuration & Paths
-- [ ] (P1, S) Path handling via pathlib
-- [ ] (P2, M) Externalized configuration management via Pydantic
-
----
-
-## Epic: Undo/Redo & Command History
-- [ ] (P0, M) Track all state-changing actions
-- [ ] (P0, M) Implement full undo/redo stack for plots and canvas modifications
