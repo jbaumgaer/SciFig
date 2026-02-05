@@ -41,17 +41,17 @@ class ToolBarBuilder(QObject):
         # Removed self._parent_window.addToolBar(Qt.LeftToolBarArea, tool_bar)
 
         tool_definitions = {
-            ToolName.SELECTION: {"icon": IconPath.SELECT_TOOL, "tooltip": "Selection Tool"},
-            ToolName.DIRECT_SELECTION: {"icon": IconPath.DIRECT_SELECT_TOOL, "tooltip": "Direct Selection Tool"},
-            ToolName.EYEDROPPER: {"icon": IconPath.EYEDROPPER_TOOL, "tooltip": "Eyedropper Tool"},
-            ToolName.PLOT: {"icon": IconPath.PLOT_TOOL, "tooltip": "Plot Tool"},
-            ToolName.TEXT: {"icon": IconPath.TEXT_TOOL, "tooltip": "Text Tool"},
-            ToolName.ZOOM: {"icon": IconPath.ZOOM_TOOL, "tooltip": "Zoom Tool"},
+            ToolName.SELECTION: {"icon": IconPath.get_path("tool_icons.select"), "tooltip": "Selection Tool"},
+            ToolName.DIRECT_SELECTION: {"icon": IconPath.get_path("tool_icons.direct_select"), "tooltip": "Direct Selection Tool"},
+            ToolName.EYEDROPPER: {"icon": IconPath.get_path("tool_icons.eyedropper"), "tooltip": "Eyedropper Tool"},
+            ToolName.PLOT: {"icon": IconPath.get_path("tool_icons.plot"), "tooltip": "Plot Tool"},
+            ToolName.TEXT: {"icon": IconPath.get_path("tool_icons.text"), "tooltip": "Text Tool"},
+            ToolName.ZOOM: {"icon": IconPath.get_path("tool_icons.zoom"), "tooltip": "Zoom Tool"},
         }
 
         # Dynamically create actions for each tool
         for tool_name, props in tool_definitions.items():
-            icon_path = Path(props["icon"]) # IconPath constants are already str
+            icon_path = props["icon"] 
             action = QAction(QIcon(str(icon_path)), props["tooltip"], tool_bar) # Parent QAction to tool_bar
             action.setCheckable(True)
             action.triggered.connect(

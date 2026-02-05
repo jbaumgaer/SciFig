@@ -8,9 +8,10 @@ from PySide6.QtWidgets import QFileDialog
 
 from src.models import ApplicationModel
 from src.models.nodes import PlotNode
+from src.config_service import ConfigService
 
-MAX_RECENT_FILES = 10
-RECENT_FILES_KEY = "recentFiles"
+# MAX_RECENT_FILES = 10 
+RECENT_FILES_KEY = "recentFiles" 
 
 
 class MainController:
@@ -19,9 +20,13 @@ class MainController:
     Connects main window UI actions to model-updating logic.
     """
 
-    def __init__(self, model: ApplicationModel):  # view is a MainWindow
+    def __init__(self, model: ApplicationModel, config_service: ConfigService): 
         self.model = model
-        self.settings = QSettings("SciFig", "DataAnalysisGUI")
+        self._config_service = config_service 
+        self.settings = QSettings(
+            self._config_service.get("organization", "SciFig"),
+            self._config_service.get("app_name", "DataAnalysisGUI")
+        )
 
     def create_new_layout(self):
         """
@@ -34,7 +39,11 @@ class MainController:
 
         self.model.clear_scene()
 
-        margin, gutter = 0.1, 0.08
+        # Get margin and gutter from config
+        margin = self._config_service.get("layout.default_margin", 0.1)
+        gutter = self._config_service.get("layout.default_gutter", 0.08)
+        
+        # Original logic using the retrieved values
         plot_width = (1 - 2 * margin - (cols - 1) * gutter) / cols
         plot_height = (1 - 2 * margin - (rows - 1) * gutter) / rows
 
@@ -144,7 +153,8 @@ class MainController:
         # Add to the top
         recent_files.insert(0, file_path)
 
-        # Trim the list
-        del recent_files[MAX_RECENT_FILES:]
+        # Trim the list using config value
+        max_recent_files = self._config_service.get("layout.max_recent_files", 10)
+        del recent_files[max_recent_files:]
 
         self.settings.setValue(RECENT_FILES_KEY, recent_files)

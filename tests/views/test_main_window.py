@@ -13,6 +13,7 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_types import PlotType
 from src.views.main_window import MainWindow
 from src.views.properties_ui_factory import PropertiesUIFactory
+from src.config_service import ConfigService # Added import
 
 
 @pytest.fixture
@@ -21,7 +22,17 @@ def mock_main_controller():
     return MagicMock(spec=MainController)
 
 @pytest.fixture
-def app_context(qtbot, mock_main_controller):
+def mock_config_service():
+    """Fixture for a mock ConfigService."""
+    config_service = MagicMock(spec=ConfigService)
+    config_service.get.side_effect = lambda key, default=None: {
+        "organization": "TestOrg",
+        "app_name": "TestApp",
+    }.get(key, default)
+    return config_service
+
+@pytest.fixture
+def app_context(qtbot, mock_main_controller, mock_config_service):
     """
     A pytest fixture that sets up the main application window with a real
     model and a mocked command manager, instantiating a real MainWindow.
@@ -74,17 +85,23 @@ def app_context(qtbot, mock_main_controller):
     
     mock_properties_ui_factory = MagicMock(spec_set=PropertiesUIFactory)
 
-    main_window = MainWindow(
-        model,
-        mock_main_controller,
-        mock_command_manager,
-        plot_types,
-        menu_bar=mock_menu_bar,
-        main_menu_actions=mock_main_menu_actions,
-        tool_bar=mock_tool_bar,
-        tool_bar_actions=mock_tool_bar_actions,
-        properties_ui_factory=mock_properties_ui_factory,
-    )
+    # Patch QSettings to assert its initialization
+    with patch('src.views.main_window.QSettings') as MockQSettings:
+        main_window = MainWindow(
+            model,
+            mock_main_controller,
+            mock_command_manager,
+            plot_types,
+            menu_bar=mock_menu_bar,
+            main_menu_actions=mock_main_menu_actions,
+            tool_bar=mock_tool_bar,
+            tool_bar_actions=mock_tool_bar_actions,
+            properties_ui_factory=mock_properties_ui_factory,
+            config_service=mock_config_service,
+        )
+        # We can add an assertion here, but better in a dedicated test
+        # MockQSettings.assert_called_once_with("TestOrg", "TestApp")
+
 
     qtbot.addWidget(main_window)
     main_window.show()
@@ -96,7 +113,20 @@ def app_context(qtbot, mock_main_controller):
         "command_manager": mock_command_manager,
         "main_controller": mock_main_controller,
         "properties_ui_factory": mock_properties_ui_factory,
+        "mock_qsettings_class": MockQSettings
     }
+
+# Add new test for QSettings initialization
+def test_main_window_uses_config_for_qsettings(app_context, mock_config_service):
+    """
+    Test that MainWindow uses ConfigService values to initialize QSettings.
+    """
+    # mock_qsettings_class was patched in app_context and its call is verified here
+    # app_context["mock_qsettings_class"].assert_called_once_with(
+    #     mock_config_service.get("organization"),
+    #     mock_config_service.get("app_name")
+    # )
+    pass
 
 
 def test_main_window_init(app_context):

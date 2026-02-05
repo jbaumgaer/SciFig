@@ -1,0 +1,84 @@
+# Application Metadata
+app_name: "SciFig"
+version: "1.0.0"
+organization: "YourOrganization" # Used for QSettings
+website: "https://www.scifig.org"
+authors:
+  - "Your Name"
+license: "MIT"
+
+# UI/Window Defaults
+window_title_prefix: "SciFig - "
+default_window_geometry:
+  x: 50
+  y: 50
+  width: 800
+  height: 600
+default_toolbar_area: "LeftToolBarArea" # Corresponds to Qt.ToolBarArea.LeftToolBarArea
+default_dock_widget_area_properties: "RightDockWidgetArea" # Corresponds to Qt.DockWidgetArea.RightDockWidgetArea
+default_dock_widget_area_history: "LeftDockWidgetArea" # Example for future
+splash_screen_path: "src/assets/images/splash.png" # Example for future
+theme: "dark" # "dark", "light", etc.
+
+# Matplotlib Figure Defaults
+figure:
+  default_width: 8.5
+  default_height: 6
+  default_dpi: 150
+  default_facecolor: "white"
+  default_edgecolor: "black" # Example for future
+  subplot_left: 0.125 # Example for future
+  subplot_right: 0.9 # Example for future
+  subplot_bottom: 0.11 # Example for future
+  subplot_top: 0.88 # Example for future
+  subplot_wspace: 0.2 # Example for future
+  subplot_hspace: 0.2 # Example for future
+  axes_facecolor: "white" # Example for future
+  axes_edgecolor: "black" # Example for future
+  font_family: "sans-serif" # Example for future
+  font_size: 10 # Example for future
+  line_width: 1.0 # Example for future
+  marker_size: 6.0 # Example for future
+
+# Layout & Grid Defaults
+layout:
+  default_margin: 0.1
+  default_gutter: 0.08
+  max_recent_files: 10
+  default_template: "2x2_default.json" # Points to a file in configs/layouts
+
+# Paths & Resources
+paths:
+  icon_base_dir: "src/assets/icons"
+  layout_templates_dir: "configs/layouts"
+  project_extension: ".sci"
+  default_save_location: "~Documents/SciFig Projects" # Default for user, can be overridden by QSettings
+  tool_icons: 
+    select: "toolbar/Select.svg"
+    direct_select: "toolbar/Direct_Select.svg"
+    eyedropper: "toolbar/Eyedropper.svg"
+    plot: "toolbar/Plot.svg"
+    text: "toolbar/Text.svg"
+    zoom: "toolbar/Zoom.svg"
+
+# Processing Defaults
+processing:
+  default_delimiter: "	"
+  default_comment_char: "#"
+  max_file_size_mb: 100
+  max_lines_preview: 1000
+
+# Tool Defaults
+tool:
+  default_active_tool: "selection" # Name of the tool
+  selection:
+    default_color: "red"
+  zoom:
+    zoom_factor: 1.15
+    scroll_factor: 1 # In units of notches
+
+# Debugging/Developer Options
+debug:
+  log_level: "INFO" # "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+  enable_dev_tools: false
+  show_perf_metrics: false

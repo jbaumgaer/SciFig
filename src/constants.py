@@ -1,11 +1,15 @@
 from enum import Enum
 from pathlib import Path
+from typing import TYPE_CHECKING 
+
+if TYPE_CHECKING:
+    from src.config_service import ConfigService
 
 
 class ToolName(str, Enum):
     """
-    Defines the unique names for all interactive tools in the application.
-    Using an Enum prevents magic strings and ensures consistency.
+    Defines the unique internal names for all interactive tools in the application.
+    These are used as keys for configuration and internal identification.
     """
     SELECTION = "selection"
     DIRECT_SELECTION = "direct_selection"
@@ -14,22 +18,31 @@ class ToolName(str, Enum):
     TEXT = "text"
     ZOOM = "zoom"
     # Add other tools as they are implemented
-    # e.g., SHAPE = "shape"
-    # e.g., PATH = "path"
 
 
 class IconPath:
     """
-    Provides a centralized and type-safe way to reference icon file paths.
-    This prevents magic strings for icon paths and makes refactoring easier.
+    Provides a centralized way to access icon file paths,
+    retrieving them from the ConfigService.
     """
-    _BASE_TOOLBAR_PATH = Path("src/assets/icons/toolbar")
+    _config_service: 'ConfigService' = None
 
-    # Toolbar icons
-    SELECT_TOOL = str(_BASE_TOOLBAR_PATH / "Select.svg")
-    DIRECT_SELECT_TOOL = str(_BASE_TOOLBAR_PATH / "Direct_Select.svg")
-    EYEDROPPER_TOOL = str(_BASE_TOOLBAR_PATH / "Eyedropper.svg")
-    PLOT_TOOL = str(_BASE_TOOLBAR_PATH / "Plot.svg")
-    TEXT_TOOL = str(_BASE_TOOLBAR_PATH / "Text.svg")
-    ZOOM_TOOL = str(_BASE_TOOLBAR_PATH / "Zoom.svg")
-    # Add other icons as needed
+    @classmethod
+    def set_config_service(cls, config_service: 'ConfigService'):
+        """Sets the ConfigService instance to be used for retrieving icon paths."""
+        cls._config_service = config_service
+
+    @classmethod
+    def get_path(cls, icon_key: str) -> str:
+        """
+        Retrieves the full path for a given icon key from the ConfigService.
+        e.g., IconPath.get_path("tool_icons.select") -> "src/assets/icons/toolbar/Select.svg"
+        """
+        if cls._config_service is None:
+            raise RuntimeError("ConfigService not set for IconPath. Call IconPath.set_config_service() first.")
+        
+        base_dir = Path(cls._config_service.get("paths.icon_base_dir", "src/assets/icons"))
+        icon_file = cls._config_service.get(f"paths.{icon_key}")
+        if icon_file:
+            return str(base_dir / icon_file)
+        return "" # Or raise an error, depending on desired behavior

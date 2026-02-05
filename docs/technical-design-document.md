@@ -1,377 +1,313 @@
-# Technical Design Document (TDD)
-
-This document is intended to provide detailed, technical implementation plans for specific new features or refactoring tasks. It serves as a blueprint for the developer (human or AI) executing the task.
-
-A TDD should be created as part of the **"Reason & Plan"** phase for any sufficiently complex task.
-
----
-
-## Epic: Canvas & Layout
-
-### Feature: Zoom Feature
-**Backlog Task:** Display zoom level in the corner  
-**Background & Context:** Users need to know the current magnification of the canvas.
-
-**Proposed Implementation:**  
-1. **Model:** Add `zoom_level: float` property to `CanvasModel`.  
-2. **View:** Add small widget in the lower corner to display `zoom_level`.  
-3. **Controller:** Update `zoom_level` on mouse wheel events or zoom commands.  
-4. **Renderer:** Trigger redraw when zoom changes.  
-
-**Test Plan:**  
-- Unit test zoom property updates correctly.  
-- Verify corner widget updates on zoom events.  
-- Ensure canvas redraw occurs.  
-
-**Risks & Mitigations:**  
-- Widget may overlap objects → place in reserved corner area.
-
----
-
-## Epic: Object & Layer Management
-
-### Feature: Layer Panel
-**Backlog Task:** Manage layers (create, delete, rename, reorder, lock, toggle visibility)  
-**Background & Context:** Users need structured access to objects; follows scene graph pattern.
-
-**Proposed Implementation:**  
-1. **Model:** Extend `SceneNode` hierarchy with `LayerNode`; maintain `layer_list` in `ApplicationModel`.  
-2. **View:** Dockable `LayerPanel` widget with tree view, icons for visibility/lock, drag-and-drop reordering.  
-3. **Controller:** Connect panel actions to `CommandManager` (`AddLayerCommand`, `DeleteLayerCommand`, `ReorderLayerCommand`).  
-4. **Renderer:** Render layers in scene graph order; update when visibility or z-order changes.
-
-**Test Plan:**  
-- Unit tests for panel actions (add/delete/reorder).  
-- Verify scene graph updates correctly.  
-- Test undo/redo functionality.  
-
-**Risks & Mitigations:**  
-- Reordering may affect grouped nodes → encapsulate in commands to ensure atomic updates.
-
----
-
-### Feature: Grouping & Ungrouping UI
-**Backlog Task:** Group and ungroup multiple objects.
-
-**Proposed Implementation:**  
-1. **Model:** `GroupNode` to contain multiple `SceneNode`s.  
-2. **View:** Enable multi-selection; right-click menu or button for group/ungroup.  
-3. **Controller:** `GroupCommand` / `UngroupCommand` in `CommandManager`.  
-4. **Renderer:** Render grouped nodes as a single selectable unit; individual nodes remain editable.
-
-**Test Plan:**  
-- Verify grouping/ungrouping operations.  
-- Confirm undo/redo works correctly.  
-
-**Risks & Mitigations:**  
-- Grouped nodes must maintain relative positions; verify with unit tests.
-
----
-
-## Epic: Drawing & Annotation
-
-### Feature: Shape Tools
-**Backlog Task:** Rectangle, ellipse, line shapes.
-
-**Proposed Implementation:**  
-1. **Model:** `ShapeNode` subclasses: `RectangleNode`, `EllipseNode`, `LineNode`.  
-2. **View:** Canvas draws shapes; properties panel allows stroke/fill editing.  
-3. **Controller:** ToolManager handles shape creation and manipulation.  
-4. **Renderer:** Use PySide6/QPainter or Matplotlib backend for drawing shapes.
-
-**Test Plan:**  
-- Create, resize, move, and delete shapes.  
-- Verify undo/redo functionality.  
-
-**Risks & Mitigations:**  
-- None significant.
-
----
-
-### Feature: Path Tool (Pen Tool)
-**Backlog Task:** Bezier curve drawing.
-
-**Proposed Implementation:**  
-1. **Model:** `PathNode` with list of control points.  
-2. **View:** Canvas allows mouse clicks to define points; curves drawn interactively.  
-3. **Controller:** ToolManager handles point creation, curve editing, moving points.  
-4. **Renderer:** Draw path with QPainter or Matplotlib.
-
-**Test Plan:**  
-- Verify creation of curves, editing points, undo/redo functionality.
-
-**Risks & Mitigations:**  
-- Complex curves may require snapping or smoothing later.
-
----
-
-### Feature: Advanced Text Tool
-**Backlog Task:** On-canvas text editing, rich text, LaTeX support.
-
-**Proposed Implementation:**  
-1. **Model:** `TextNode` with properties `content`, `font`, `style`, `latex_enabled`.  
-2. **View:** Editable canvas text; rich text toolbar; LaTeX rendering via Matplotlib/MathTex.  
-3. **Controller:** ToolManager handles text creation and editing.  
-4. **Renderer:** Render text using Qt text or Matplotlib `Text` objects.
-
-**Test Plan:**  
-- Edit, move, resize text.  
-- Verify LaTeX formulas render correctly.  
-
-**Risks & Mitigations:**  
-- Large LaTeX expressions may affect performance; provide optional rendering optimization.
-
----
-
-### Feature: Image Import (Drag & Drop)
-**Backlog Task:** Allow drag-and-drop of PNG/JPG into subplot.
-
-**Proposed Implementation:**  
-1. **Model:** `ImageNode` containing `np.ndarray` image data.  
-2. **View:** Handle drag-and-drop; show placeholder while loading.  
-3. **Controller:** Read file via Pillow → NumPy array → assign to `ImageNode`; trigger `ChangePropertyCommand`.  
-4. **Renderer:** Draw image in subplot using Matplotlib `imshow`.
-
-**Test Plan:**  
-- Load images of various formats/sizes.  
-- Verify placement, resizing, undo/redo functionality.  
-
-**Risks & Mitigations:**  
-- Large images may require downsampling to maintain UI performance.
-
----
-
-### Feature: Strokes, Fills, Gradients
-**Backlog Task:** Detailed controls for object appearance.
-
-**Proposed Implementation:**  
-1. **Model:** Extend `ShapeNode` and `TextNode` with `stroke_color`, `fill_color`, `gradient`.  
-2. **View:** Properties inspector widgets for editing.  
-3. **Controller:** Trigger `ChangePropertyCommand` on edits.  
-4. **Renderer:** Apply styles during node rendering.
-
-**Test Plan:**  
-- Verify color and gradient updates are correctly applied.  
-- Test undo/redo functionality.
-
-**Risks & Mitigations:**  
-- Gradients may affect rendering performance; optimize drawing pipeline.
-
----
-
-### Feature: Reusable Styles/Templates
-**Backlog Task:** Save named styles for reuse.
-
-**Proposed Implementation:**  
-1. **Model:** `StyleTemplate` registry storing style properties.  
-2. **View:** Dropdown in properties panel for applying styles.  
-3. **Controller:** Apply style via command to selected nodes.
-
-**Test Plan:**  
-- Create, apply, delete style templates.  
-- Verify undo/redo works.  
-
-**Risks & Mitigations:**  
-- Conflicts with existing node styles; ensure proper merge logic.
-
----
-
-## Epic: Data Management & Interaction
-
-### Feature: Interactive Data Worksheet
-**Backlog Task:** Dockable panel to view/edit plot data.
-
-**Proposed Implementation:**  
-1. **Model:** `DataFrame` stored in `PlotNode`.  
-2. **View:** Table widget for editing/sorting; updates reflected in canvas plot.  
-3. **Controller:** Connect edits to `ChangeDataCommand`.
-
-**Test Plan:**  
-- Modify data in table; verify canvas updates.  
-- Test undo/redo functionality.
-
-**Risks & Mitigations:**  
-- Large datasets may require virtualized table to maintain performance.
-
----
-
-### Feature: Curve Fitting Panel
-**Backlog Task:** Advanced curve fitting with built-in and user-defined functions.
-
-**Proposed Implementation:**  
-1. **Model:** Fit parameters stored in `PlotNode`.  
-2. **View:** Dockable panel for selecting parameters/functions.  
-3. **Controller:** Compute fit via SciPy/NumPy; update plot on changes.
-
-**Test Plan:**  
-- Fit sample datasets; verify results.  
-- Test undo/redo functionality.  
-
-**Risks & Mitigations:**  
-- Non-convergent fits → handle errors gracefully.
-
----
-
-## Epic: Export & Configuration
-
-### Feature: Export Engine
-**Backlog Task:** Vector and raster export (SVG, PDF, EPS, PNG, TIFF).
-
-**Proposed Implementation:**  
-1. **Renderer:** Use Matplotlib backends for raster/vector output.  
-2. **View:** Export dialog with format selection.  
-3. **Controller:** Validate export params; trigger render and save.
-
-**Test Plan:**  
-- Export plots of various types/sizes; verify quality and content.  
-
-**Risks & Mitigations:**  
-- Complex plots may require layout adjustments for vector export.
-
----
-
-### Feature: Externalize Configurations
-**Backlog Task:** Use Pydantic to manage central configuration.
-
-**Proposed Implementation:**  
-1. **Model:** `ConfigModel` using Pydantic for validation.  
-2. **View:** Optional settings panel for editing.  
-3. **Controller:** Changes update live settings or persist to file.
-
-**Test Plan:**  
-- Verify defaults, edits, and validation errors.  
-
-**Risks & Mitigations:**  
-- Invalid configs should not crash the app → fallback to defaults.
-
-### Refactoring Task: Clean Application Composition
-
-**Task:** Refactor the application startup and component wiring to use a clean composition root, eliminating circular dependencies and `None` initializations for UI components, and reducing the bloat in `setup_application`.
-
-**Background & Context:** The current `setup_application` function in `main.py` has become a "God function," handling too many responsibilities including core component instantiation, builder execution, tool registration, view instantiation, post-instantiation wiring, and signal/slot connections. This leads to a fragile, hard-to-read, and difficult-to-maintain codebase, as evidenced by recent `AttributeError`s and the re-introduction of `None` initializers in `MainWindow`'s constructor. The original intention of decoupling `MainWindow` initialization was compromised by circular dependencies where builders needed a `MainWindow` parent before `MainWindow` itself could be fully constructed with the components built by those builders.
-
-**Proposed Solution:** Implement a robust dependency injection pattern using dedicated builder/assembler classes to delegate construction responsibilities.
-
-1.  **`ApplicationComponents` Dataclass:** Introduce a `dataclass` to provide a clear, type-hinted structure for the application's core components returned by the composition root.
-2.  **Refactored `MenuBarBuilder`:** Modify `MenuBarBuilder` to *create and return* a `QMenuBar` and `MainMenuActions` without requiring a `QMainWindow` parent during its `build()` method. The responsibility of attaching the `QMenuBar` to the `MainWindow` will be handled by the composition root.
-3.  **Refactored `ToolBarBuilder`:** Modify `ToolBarBuilder` to *create and return* a `QToolBar` and `ToolBarActions` without requiring a `QMainWindow` parent during its `build()` method. The responsibility of attaching the `QToolBar` to the `MainWindow` will be handled by the composition root.
-4.  **Clean `MainWindow` Constructor:** The `MainWindow` constructor will be refactored to accept all its UI dependencies (`QMenuBar`, `MainMenuActions`, `QToolBar`, `ToolBarActions`, etc.) directly as arguments. This ensures `MainWindow` is always in a fully valid and initialized state after construction, eliminating the need for `None` initializations and post-construction setup methods.
-5.  **`ApplicationAssembler` Class:** Introduce a new class, `ApplicationAssembler`, that will serve as the primary composition root. Its `assemble()` method will orchestrate the entire application setup process, delegating to other builders and creating all components in the correct order.
-6.  **Simplified `main.py`:** The `setup_application` function in `main.py` will be significantly simplified, primarily responsible for instantiating the `ApplicationAssembler` and calling its `assemble()` method, then returning the `ApplicationComponents`.
-
-**Implementation Plan (Detailed Steps):**
-
-1.  **Create `src/application_components.py`:**
-    *   Define the `ApplicationComponents` dataclass, listing all core application components.
-
-2.  **Refactor `src/builders/menu_bar_builder.py`:**
-    *   Change `__init__(self, parent_window: QMainWindow, main_controller: MainController, command_manager: CommandManager)` to `__init__(self, main_controller: MainController, command_manager: CommandManager)`.
-    *   Modify `build() -> Tuple[QMenuBar, MainMenuActions]`:
-        *   Create `menu_bar = QMenuBar()` (instead of `self._parent_window.menuBar()`).
-        *   Remove any calls to `self._parent_window.setMenuBar()`. The `menu_bar` object is returned, and attachment is external.
-        *   Ensure all `QAction`s are correctly parented to `menu_bar` or its sub-menus (or `None` if `QAction`s can exist without a parent until added to a menu, which is usually fine).
-
-3.  **Refactor `src/builders/tool_bar_builder.py`:**
-    *   Change `__init__(self, parent_window: QMainWindow, tool_manager: ToolManager)` to `__init__(self, tool_manager: ToolManager)`.
-    *   Modify `build() -> Tuple[QToolBar, ToolBarActions]`:
-        *   Create `tool_bar = QToolBar("Tools")` (instead of `QToolBar("Tools", self._parent_window)`).
-        *   Remove any calls to `self._parent_window.addToolBar()`. The `tool_bar` object is returned, and attachment is external.
-        *   Ensure all `QAction`s are correctly parented to `tool_bar` (or `None` if they can exist without a parent until added).
-
-4.  **Refactor `src/views/main_window.py`:**
-    *   Modify `__init__` signature to accept `menu_bar: QMenuBar`, `main_menu_actions: MainMenuActions`, `tool_bar: QToolBar`, `tool_bar_actions: ToolBarActions` (and other core components) as arguments.
-    *   Remove `setup_menu_bar` and `setup_tool_bar` methods.
-    *   Inside `__init__`, directly set `self.setMenuBar(menu_bar)` and `self.addToolBar(tool_bar)`.
-    *   Remove all `| None` optional type hints and `None` initializations related to these UI components. All UI-related attributes will be assigned directly from constructor arguments.
-
-5.  **Create `src/application_assembler.py`:**
-    *   Define the `ApplicationAssembler` class.
-    *   It will have an `__init__` that takes the `QApplication` instance.
-    *   It will have private methods (`_assemble_core_components`, `_assemble_menus`, `_assemble_tooling`, `_assemble_main_window`, `_assemble_canvas_controller`, `_connect_signals`) to encapsulate specific parts of the assembly process.
-    *   The public `assemble() -> ApplicationComponents` method will orchestrate these private methods in the correct order. This ensures the `canvas_widget` is available for tools when they are created, and `MainWindow` receives fully built components.
-
-6.  **Modify `main.py`:**
-    *   Import `ApplicationAssembler` and `ApplicationComponents`.
-    *   Simplify `setup_application` to:
-        *   Get `QApplication` instance.
-        *   Instantiate `ApplicationAssembler(app)`.
-        *   Call `assembler.assemble()` and return its result.
-    *   Ensure the `main()` function correctly uses the `ApplicationComponents` dataclass.
-
-### Refactoring Task: Clean Application Composition
-
-**Task:** Refactor the application startup and component wiring to use a clean composition root, eliminating circular dependencies and `None` initializations for UI components, and reducing the bloat in `setup_application`.
-
-**Background & Context:** The current `setup_application` function in `main.py` has become a "God function," handling too many responsibilities including core component instantiation, builder execution, tool registration, view instantiation, post-instantiation wiring, and signal/slot connections. This leads to a fragile, hard-to-read, and difficult-to-maintain codebase, as evidenced by recent `AttributeError`s and the re-introduction of `None` initializations in `MainWindow`'s constructor. The original intention of decoupling `MainWindow` initialization was compromised by circular dependencies where builders needed a `MainWindow` parent before `MainWindow` itself could be fully constructed with the components built by those builders.
-
-**Proposed Solution:** Implement a robust dependency injection pattern using dedicated builder/assembler classes to delegate construction responsibilities.
-
-1.  **`ApplicationComponents` Dataclass:** Introduce a `dataclass` to provide a clear, type-hinted structure for the application's core components returned by the composition root.
-2.  **Refactored `MenuBarBuilder`:** Modify `MenuBarBuilder` to *create and return* a `QMenuBar` and `MainMenuActions` without requiring a `QMainWindow` parent during its `build()` method. The responsibility of attaching the `QMenuBar` to the `MainWindow` will be handled by the composition root.
-3.  **Refactored `ToolBarBuilder`:** Modify `ToolBarBuilder` to *create and return* a `QToolBar` and `ToolBarActions` without requiring a `QMainWindow` parent during its `build()` method. The responsibility of attaching the `QToolBar` to the `MainWindow` will be handled by the composition root.
-4.  **Clean `MainWindow` Constructor:** The `MainWindow` constructor will be refactored to accept all its UI dependencies (`QMenuBar`, `MainMenuActions`, `QToolBar`, `ToolBarActions`, etc.) directly as arguments. This ensures `MainWindow` is always in a fully valid and initialized state after construction, eliminating the need for `None` initializations and post-construction setup methods.
-5.  **`ApplicationAssembler` Class:** Introduce a new class, `ApplicationAssembler`, that will serve as the primary composition root. Its `assemble()` method will orchestrate the entire application setup process, delegating to other builders and creating all components in the correct order.
-6.  **Simplified `main.py`:** The `setup_application` function in `main.py` will be significantly simplified, primarily responsible for instantiating the `ApplicationAssembler` and calling its `assemble()` method, then returning the `ApplicationComponents`.
-
-**Test Plan:**
-*   **Unit Tests for Builders:**
-    *   `test_menu_bar_builder.py`: Update tests to verify `build()` returns `QMenuBar` and `MainMenuActions` correctly, and doesn't rely on an external parent.
-    *   `test_tool_bar_builder.py` (new or existing): Create/update tests to verify `build()` returns `QToolBar` and `ToolBarActions` correctly, and doesn't rely on an external parent.
-*   **Integration Tests for `ApplicationAssembler`:**
-    *   Create `tests/test_application_assembler.py` to verify that `assemble()` correctly builds and connects all major application components.
-*   **Existing Integration Tests:** Run all existing integration tests (especially `test_user_workflows.py` and `test_main_window.py`) to ensure no regressions are introduced by the structural changes.
+## Epic: Configuration Management
+
+This epic focuses on externalizing various application settings, user preferences, and content layouts into configurable files, moving away from hardcoded values. This enhances flexibility, maintainability, and user customizability, ensuring the application scales gracefully for future features.
+
+### Feature: Application-Level Defaults (Base Configuration)
+**Description:** Externalize application-wide default settings, "magic strings", and initial values into a `configs/default_config.yaml` file. This provides a stable, easily modifiable baseline for the application's core behavior, independent of code changes.
+
+**Planned Implementation:**
+
+1.  **Create `configs/default_config.yaml`:**
+    *   **Task:** Create a new directory `configs/` in the project root.
+    *   **Task:** Create the `default_config.yaml` file within `configs/`.
+    *   **Task:** Populate `default_config.yaml` with the following initial structure and example values. This structure includes application metadata, UI/window defaults, Matplotlib figure defaults, layout/grid defaults, paths/resources, processing defaults, tool defaults, and debugging options.
+        ```yaml
+        # Application Metadata
+        app_name: "SciFig"
+        version: "1.0.0"
+        organization: "YourOrganization" # Used for QSettings
+        website: "https://www.scifig.org"
+        authors:
+          - "Your Name"
+        license: "MIT"
+
+        # UI/Window Defaults
+        window_title_prefix: "SciFig - "
+        default_window_geometry:
+          x: 50
+          y: 50
+          width: 800
+          height: 600
+        default_toolbar_area: "LeftToolBarArea" # Corresponds to Qt.ToolBarArea.LeftToolBarArea
+        default_dock_widget_area_properties: "RightDockWidgetArea" # Corresponds to Qt.DockWidgetArea.RightDockWidgetArea
+        default_dock_widget_area_history: "LeftDockWidgetArea" # Example for future
+        splash_screen_path: "src/assets/images/splash.png" # Example for future
+        theme: "dark" # "dark", "light", etc.
+
+        # Matplotlib Figure Defaults
+        figure:
+          default_width: 8.5
+          default_height: 6
+          default_dpi: 150
+          default_facecolor: "white"
+          default_edgecolor: "black" # Example for future
+          subplot_left: 0.125 # Example for future
+          subplot_right: 0.9 # Example for future
+          subplot_bottom: 0.11 # Example for future
+          subplot_top: 0.88 # Example for future
+          subplot_wspace: 0.2 # Example for future
+          subplot_hspace: 0.2 # Example for future
+          axes_facecolor: "white" # Example for future
+          axes_edgecolor: "black" # Example for future
+          font_family: "sans-serif" # Example for future
+          font_size: 10 # Example for future
+          line_width: 1.0 # Example for future
+          marker_size: 6.0 # Example for future
+
+        # Layout & Grid Defaults
+        layout:
+          default_margin: 10
+          default_gutter: 5
+          max_recent_files: 10
+          default_template: "2x2_default.json" # Points to a file in configs/layouts
+
+        # Paths & Resources
+        paths:
+          icon_base_dir: "src/assets/icons"
+          layout_templates_dir: "configs/layouts"
+          project_extension: ".sci"
+          default_save_location: "~Documents/SciFig Projects" # Default for user, can be overridden by QSettings
+
+        # Processing Defaults
+        processing:
+          default_delimiter: "\t"
+          default_comment_char: "#"
+          max_file_size_mb: 100
+          max_lines_preview: 1000
+
+        # Tool Defaults
+        tool:
+          default_active_tool: "Selection" # Name of the tool
+          selection:
+            default_color: "red"
+          zoom:
+            zoom_factor: 1.15
+            scroll_factor: 1 # In units of notches
+
+        # Debugging/Developer Options
+        debug:
+          log_level: "INFO" # "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+          enable_dev_tools: false
+          show_perf_metrics: false
+        ```
+
+2.  **Add `PyYAML` to Dependencies:**
+    *   **Task:** Add `pyyaml` to `requirements.txt`.
+    *   **Task:** Add `PyYAML` to `pyproject.toml` (if using Poetry/Flit).
+
+3.  **Create `src/config_service.py`:**
+    *   **Task:** Create a new file `src/config_service.py`.
+    *   **Task:** Implement a `ConfigService` class in this file.
+        *   It should be responsible for loading the `default_config.yaml` at initialization.
+        *   Implement a method `get(key_path: str, default=None)` that allows accessing nested configuration values using a dot-separated string (e.g., `config.get("figure.default_width")`).
+        *   Consider making it a singleton or a module-level instance for easy access, or passing it via dependency injection.
+        *   Handle file not found or parsing errors gracefully, falling back to hardcoded defaults or raising specific exceptions.
+    *   **Task:** Create basic unit tests for `ConfigService` (e.g., `tests/test_config_service.py`) to ensure it loads and retrieves values correctly.
+
+4.  **Modify `src/application_assembler.py`:**
+    *   **Task:** Import `ConfigService`.
+    *   **Task:** In `ApplicationAssembler.__init__`, instantiate `ConfigService`.
+    *   **Task:** In `_assemble_core_components`, modify the `figure` creation to use values from `ConfigService`:
+        ```python
+        # old: figure = Figure(figsize=(8.5, 6), dpi=150, facecolor='white')
+        # new:
+        figure_width = self._config_service.get("figure.default_width", 8.5)
+        figure_height = self._config_service.get("figure.default_height", 6)
+        figure_dpi = self._config_service.get("figure.default_dpi", 150)
+        figure_facecolor = self._config_service.get("figure.default_facecolor", "white")
+        figure = Figure(figsize=(figure_width, figure_height), dpi=figure_dpi, facecolor=figure_facecolor)
+        ```
+    *   **Task:** Pass the `ConfigService` instance to other components (e.g., `ApplicationModel`, `MainController`) that will need access to application defaults during their construction.
+
+5.  **Refactor `src/constants.py`:**
+    *   **Task:** Modify `IconPath` and `ToolName` (and any other constants) to retrieve their values from the `ConfigService` instance (passed in or accessed globally if singleton). This might involve changing their implementation to be more dynamic (e.g., functions that return paths based on config).
+    *   **Task:** Remove hardcoded values that are now in `default_config.yaml`.
+
+6.  **Modify `src/controllers/main_controller.py`:**
+    *   **Task:** Update `__init__` to accept the `ConfigService` instance.
+    *   **Task:** Store `ConfigService` as a member variable `self._config_service`.
+    *   **Task:** Replace hardcoded values for `default_margin`, `default_gutter`, and `MAX_RECENT_FILES` with values retrieved from `ConfigService`.
+
+**Testing Plan:**
+*   **Unit Tests (`tests/test_config_service.py`):**
+    *   Verify `ConfigService` loads valid YAML.
+    *   Test `get()` method for various key paths (nested, non-existent, default values).
+    *   Test error handling for invalid YAML or non-existent files.
+*   **Integration Tests (`tests/test_application_assembler.py`, `tests/test_main_window.py`):**
+    *   Verify `ApplicationAssembler` successfully initializes `ConfigService` and uses its values for `Figure` creation (e.g., check `figure.get_figwidth()` after assembly).
+    *   Verify `main_controller` uses config values for layout defaults.
+    *   Ensure the application starts up correctly and the UI elements (e.g., toolbars) are initialized with paths/names derived from the config.
+*   **Manual Verification:**
+    *   Change values in `default_config.yaml` (e.g., default window size, figure facecolor) and verify that the application reflects these changes on startup.
 
 **Risks & Mitigations:**
-*   **Risk:** Extensive refactoring across multiple core files (`main.py`, `MainWindow`, `MenuBarBuilder`, `ToolBarBuilder`, new `ApplicationAssembler`) might introduce new bugs or break existing functionality.
-*   **Mitigation:** Proceed in small, atomic steps, running tests after each significant change. Focus on modifying one builder or class at a time. The detailed implementation plan helps ensure a systematic approach. Thorough unit tests for the builders and `ApplicationAssembler` will be crucial.
-*   **Risk:** Potential for temporary breaking changes during the refactoring process.
-*   **Mitigation:** Use feature branches for this refactoring. Ensure robust CI/CD if available.
+*   **Risk:** Circular dependencies if `ConfigService` tries to access components that depend on it during its own initialization.
+*   **Mitigation:** `ConfigService` should only load and provide data; it should not depend on other application components. Its instantiation should happen very early in `ApplicationAssembler`.
+*   **Risk:** Performance overhead if config values are re-read excessively.
+*   **Mitigation:** Load the config once at startup and pass around the `ConfigService` instance. Cache values internally if necessary.
+*   **Risk:** Errors due to incorrect key paths or missing values.
+*   **Mitigation:** `ConfigService.get()` should provide robust default value handling. Consider a validation layer (e.g., Pydantic model for the config itself) for the `default_config.yaml` to ensure it always conforms to an expected schema.
 
----
+### Feature: Customizable UI Layout (User-Level Preferences)
+**Description:** Enable the application to save and restore the user's preferred main window geometry, toolbar positions, and dock widget states using Qt's `QSettings` mechanism. This ensures a persistent and personalized workspace.
 
-## Epic: UI Extensibility
+**Planned Implementation:**
 
-### Refactoring Task: Formalize Properties UI Factory with Registration Pattern
+1.  **Modify `src/views/main_window.py`:**
+    *   **Task:** Import `QSettings` from `PySide6.QtCore` and `QCloseEvent` from `PySide6.QtGui`.
+    *   **Task:** In `MainWindow.__init__`:
+        *   Instantiate `self.settings = QSettings(self._config_service.get("organization"), self._config_service.get("app_name"))`. The organization and app name should come from `ConfigService`.
+        *   **Task:** After all dock widgets and toolbars have been added to the `QMainWindow` (this is crucial for `restoreState()` to work correctly), attempt to restore the state:
+            ```python
+            # ... after self.setCentralWidget, self.addToolBar, self.addDockWidget calls ...
 
-**Background & Context:** The `PropertiesUIFactory.create_ui` static method currently uses `isinstance` checks to conditionally render UI elements based on the `PlotProperties` type. This approach violates the Open/Closed Principle, making it difficult to extend the UI for new plot types without modifying the factory itself.
+            # Restore geometry and state
+            geometry = self.settings.value("mainWindowGeometry")
+            if geometry:
+                self.restoreGeometry(geometry)
+            else: # Apply default geometry if no saved state
+                default_geom = self._config_service.get("default_window_geometry")
+                if default_geom:
+                    self.setGeometry(default_geom["x"], default_geom["y"], default_geom["width"], default_geom["height"])
 
-**Proposed Solution:** Refactor `PropertiesUIFactory` to use a registration pattern. It will become an instance-based class that maintains a mapping of `PlotType` to builder functions. The `ApplicationAssembler` will be responsible for registering these builder functions during application startup.
+            state = self.settings.value("mainWindowState")
+            if state:
+                self.restoreState(state)
+            else: # Apply default toolbar/dock areas if no saved state
+                # This would involve explicitly setting default toolbar and dock widget areas
+                # if they were not set during their initial creation.
+                # Since toolbars and dock widgets are already added with default positions,
+                # this 'else' block might be primarily for future complex default layouts.
+                pass # For now, relying on initial placement from Assembler
+            ```
+    *   **Task:** Override `MainWindow.closeEvent(self, event: QCloseEvent)`:
+        ```python
+        class MainWindow(QMainWindow):
+            # ...
+            def closeEvent(self, event: QCloseEvent):
+                self.settings.setValue("mainWindowGeometry", self.saveGeometry())
+                self.settings.setValue("mainWindowState", self.saveState())
+                super().closeEvent(event)
+        ```
+    *   **Task:** Update `MainWindow.__init__` signature to accept `config_service: ConfigService`.
+    *   **Task:** Store `config_service` as a member variable `self._config_service`.
 
-**Implementation Plan (Detailed Steps):**
+2.  **Modify `src/application_assembler.py`:**
+    *   **Task:** Pass the `ConfigService` instance to the `MainWindow` constructor.
 
-1.  **Refactor `src/views/properties_ui_factory.py`:**
-    *   Change `PropertiesUIFactory` from a static class to an instance-based class.
-    *   Add `__init__(self)` method to initialize `self._builders = {}`.
-    *   Implement `register_builder(self, plot_type: PlotType, builder_func: Callable)` to store builder functions in `self._builders`.
-    *   Modify `create_ui` (rename to `build_widgets` for clarity and consistency) to accept `self` and use `self._builders.get(props.plot_type)` to retrieve and call the appropriate builder function. The builder function will receive all necessary UI parameters (layout, parent, callbacks, etc.).
-    *   Extract the common UI building logic (plot type combo, title, labels, column selectors, limit selectors) into a default builder function or helper methods that can be composed by specific plot type builders.
-    *   Ensure the existing static methods like `_build_column_selectors` and `_build_limit_selectors` are adapted or moved as appropriate.
-
-2.  **Create Plot-Specific UI Builder Functions:**
-    *   For each `PlotType` (e.g., `PlotType.LINE`, `PlotType.SCATTER`), create a dedicated function (e.g., `build_line_plot_ui`, `build_scatter_plot_ui`) that encapsulates the logic for building the specific UI elements for that plot type. These functions will take the same arguments as `build_widgets` (or a subset) and be responsible for adding rows to the `QFormLayout`.
-
-3.  **Update `src/application_assembler.py`:**
-    *   Instantiate `PropertiesUIFactory` within `ApplicationAssembler`.
-    *   In a new or existing assembly method (e.g., `_assemble_ui_factories` or within `_assemble_main_window`), register the plot-specific UI builder functions with the `PropertiesUIFactory` instance.
-
-4.  **Update `src/views/main_window.py` (and related calls):**
-    *   Modify the `MainWindow`'s constructor or setup method to accept the `PropertiesUIFactory` instance.
-    *   Ensure that wherever `PropertiesUIFactory.create_ui` was previously called, it now calls `factory_instance.build_widgets`.
-
-**Test Plan:**
-*   **Unit Tests for `PropertiesUIFactory` (new or updated `test_properties_ui_factory_refactor.py`):**
-    *   Verify factory instantiation (`__init__`).
-    *   Test `register_builder`: Ensure builder functions are correctly stored for specific `PlotType`s.
-    *   Test `build_widgets` with registered builders: Mock `PlotNode`, `PlotProperties`, and UI components; assert that the correct registered builder function is called with the expected arguments.
-    *   Test `build_widgets` with unregistered builders: Ensure graceful handling (e.g., no error, no UI elements added) when a `PlotType` has no registered builder.
-    *   Test plot-specific builder functions directly to ensure they create the correct widgets.
-*   **Integration Tests for `ApplicationAssembler` (update `tests/test_application_assembler.py`):**
-    *   Verify that `ApplicationAssembler` correctly instantiates `PropertiesUIFactory` and registers all expected plot type builders.
-*   **End-to-End Tests (`tests/workflows/test_user_workflows.py`):
-    *   Run existing user workflow tests to ensure that the properties panel still functions correctly for all existing plot types after the refactoring.
+**Testing Plan:**
+*   **Manual Verification:**
+    *   Run the application. Resize and reposition the main window. Move and resize dock widgets. Close the application. Re-open and verify that the window and dock widget layout are restored to their previous state.
+    *   (Optional) Delete the `QSettings` file/registry entry for SciFig to verify that default geometry is applied on first run.
+*   **Integration Tests:**
+    *   A simple integration test could launch the application, programmatically move/resize elements, simulate close, and then relaunch to assert the state is restored. This might be complex for initial implementation.
 
 **Risks & Mitigations:**
-*   **Risk:** Breaking existing UI generation logic due to the significant structural change from a static method to an instance with registration.
-*   **Mitigation:** Develop the refactored factory and its tests in parallel. Use the new test file (`test_properties_ui_factory_refactor.py`) to confirm the new logic before integrating it into the main application flow. Ensure comprehensive mocking for unit tests.
-*   **Risk:** The arguments to `create_ui` (now `build_widgets`) are numerous and tightly coupled with specific UI elements and callbacks. Passing these through builder functions could be cumbersome.
-*   **Mitigation:** The builder functions will receive these arguments. If common arguments are always needed, they can be passed directly. If some are only needed for specific plot types, they might be passed as `**kwargs` or the builder signature can be specialized. The use of `partial` for callbacks is already present and should continue to work effectively. Consider if some arguments could be encapsulated within a `BuildContext` object to simplify signatures.
+*   **Risk:** `restoreState()` might not work correctly if dock widgets or toolbars are not yet created when it's called.
+*   **Mitigation:** Ensure `restoreState()` is called *after* all relevant UI elements have been added to the `QMainWindow` in `MainWindow.__init__`.
+*   **Risk:** Conflicts between application defaults and user settings.
+*   **Mitigation:** `QSettings` values should always take precedence over application defaults. The `ConfigService` provides the fallback if `QSettings` has no value.
+
+### Feature: Externalized Content Layouts (Project-Level Templates)
+**Description:** Replace the hardcoded logic for creating layouts (e.g., the "2x2 layout") with a system that loads predefined layout templates from external JSON files. This allows for flexible and extensible canvas content arrangements.
+
+**Planned Implementation:**
+
+1.  **Create `configs/layouts` Directory and Layout Templates:**
+    *   **Task:** Create a new directory `configs/layouts` in the project root.
+    *   **Task:** Create `2x2_default.json` (and potentially other layout files like `vertical_split.json`) within `configs/layouts`.
+    *   **Task:** Populate `2x2_default.json` with a serialized `GroupNode` structure, similar to the `.sci` file content but only containing the layout definition.
+        ```json
+        {
+          "type": "GroupNode",
+          "name": "2x2 Layout",
+          "geometry": {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0}, # Full canvas
+          "children": [
+            {
+              "type": "PlotNode",
+              "name": "Plot 1",
+              "geometry": { "x": 0.0, "y": 0.0, "width": 0.5, "height": 0.5 },
+              "plot_properties": { /* default properties, e.g., line color, style */ }
+            },
+            {
+              "type": "PlotNode",
+              "name": "Plot 2",
+              "geometry": { "x": 0.5, "y": 0.0, "width": 0.5, "height": 0.5 },
+              "plot_properties": { /* default properties */ }
+            },
+            {
+              "type": "PlotNode",
+              "name": "Plot 3",
+              "geometry": { "x": 0.0, "y": 0.5, "width": 0.5, "height": 0.5 },
+              "plot_properties": { /* default properties */ }
+            },
+            {
+              "type": "PlotNode",
+              "name": "Plot 4",
+              "geometry": { "x": 0.5, "y": 0.5, "width": 0.5, "height": 0.5 },
+              "plot_properties": { /* default properties */ }
+            }
+          ]
+        }
+        ```
+    *   **Task:** Ensure the `plot_properties` within the template are suitable defaults or placeholders.
+
+2.  **Modify `src/controllers/main_controller.py`:**
+    *   **Task:** Update `__init__` to accept the `ConfigService` instance.
+    *   **Task:** Store `ConfigService` as a member variable `self._config_service`.
+    *   **Task:** Refactor `create_new_layout()`:
+        *   Get the `default_template` path from `self._config_service.get("layout.default_template")`.
+        *   Construct the full path to the template file using `pathlib` and `self._config_service.get("paths.layout_templates_dir")`.
+        *   Load and parse the JSON file.
+        *   Use `scene_node.node_factory(template_data)` (from `src/models/nodes/scene_node.py`) to deserialize the JSON into a `GroupNode`.
+        *   Clear the existing `self._model.scene_root` and replace it with the loaded `GroupNode` (or append the children of the loaded `GroupNode` to the existing root).
+        *   Emit `self._model.modelChanged.emit()`.
+    *   **Task:** (Future consideration) Add a method `create_layout_from_template(template_name: str)` that takes a template name, loads the corresponding file, and applies it. This would be called from the "New figure from template" menu item.
+
+3.  **Modify `src/application_assembler.py`:**
+    *   **Task:** Pass the `ConfigService` instance to the `MainController` constructor.
+
+**Testing Plan:**
+*   **Unit Tests for `main_controller` (`tests/controllers/test_main_controller.py`):**
+    *   Mock `ConfigService` to return specific template paths and data.
+    *   Test `create_new_layout` to ensure it loads the correct template, deserializes it into `SceneNode` objects, and updates the `ApplicationModel`'s `scene_root` correctly.
+    *   Verify `modelChanged` signal is emitted.
+*   **Integration Tests:**
+    *   Launch the application, create a new layout, and visually verify that the 2x2 layout (or whatever is in `2x2_default.json`) is correctly displayed.
+    *   Modify `2x2_default.json` and verify the changes are reflected when a new layout is created.
+
+**Risks & Mitigations:**
+*   **Risk:** Errors in parsing JSON layout files or schema mismatches with `node_factory`.
+*   **Mitigation:** Add robust error handling during JSON loading and deserialization. Use schema validation for layout JSONs if they become complex.
+*   **Risk:** `plot_properties` within the template might be incomplete or conflict with application defaults.
+*   **Mitigation:** Ensure `plot_properties` in templates define clear base states. The `PlotNode` constructor should merge these with its own defaults.
+
+### Feature: Clean up "Magic Strings" (Refactor `src/constants.py`)
+**Description:** Systematically replace hardcoded literal values (e.g., icon paths, tool names) across the codebase with references to configuration values provided by the `ConfigService`.
+
+**Planned Implementation:**
+
+1.  **Modify `src/constants.py`:**
+    *   **Task:** Update `IconPath` and `ToolName` to dynamically fetch values from the `ConfigService`. This might involve changing them from simple enums to classes or functions that query the config.
+    *   **Task:** Ensure `ConfigService` is accessible (e.g., passed to `constants.py` via a setter function or globally accessible if `ConfigService` is a singleton).
+    *   **Task:** Remove any hardcoded strings or values that are now in `default_config.yaml`.
+
+2.  **Iterate and Replace:**
+    *   **Task:** Perform a project-wide search for hardcoded strings and values (e.g., "Selection", "Direct_Select", various paths).
+    *   **Task:** Replace these with calls to `ConfigService.get()` where appropriate.
+    *   **Task:** Focus initially on constants identified in the `default_config.yaml` example (e.g., `default_margin`, `default_gutter`, tool names, icon paths).
+
+3.  **Modify other files as necessary:**
+    *   **Task:** Update any file that directly uses the removed constants from `src/constants.py` to now access values via `ConfigService`.
+
+**Testing Plan:**
+*   **Regression Tests:**
+    *   Run all existing unit and integration tests after each set of "magic string" replacements to ensure no functionality is broken.
+*   **Manual Verification:**
+    *   Visually inspect the UI to ensure icons are loading correctly, tool names are displayed as expected, and default layout behaviors match the config.
+
+**Risks & Mitigations:**
+*   **Risk:** Missing some "magic strings" or introducing typos in key paths.
+*   **Mitigation:** A systematic search (e.g., using `grep` or IDE search) for literals and careful review. Unit tests for `ConfigService` will catch key path errors.
+*   **Risk:** Refactoring `src/constants.py` might break many existing references.
+*   **Mitigation:** Change `constants.py` incrementally, or provide backward compatibility (e.g., old constants redirect to `ConfigService` values) if the migration is too disruptive.

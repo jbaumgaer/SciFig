@@ -51,8 +51,9 @@ class PropertiesView(QWidget):
 
         self._limit_edits: dict[str, QLineEdit] = {}
         self._current_node: PlotNode | None = None
-        self._x_combo = QComboBox()
-        self._y_combo = QComboBox()
+        self._x_combo: QComboBox | None = None # Added type hint for clarity
+        self._y_combo: QComboBox | None = None # Added type hint for clarity
+
 
         self.model.selectionChanged.connect(self.on_selection_changed)
         self.on_selection_changed()
@@ -70,6 +71,9 @@ class PropertiesView(QWidget):
                 sub_layout = item.layout()
                 if sub_layout is not None:
                     self._clear_layout(sub_layout)
+        # Clear references to combo boxes after they are potentially deleted by deleteLater
+        self._x_combo = None 
+        self._y_combo = None
 
     def on_selection_changed(self):
         self._current_node = None
@@ -91,7 +95,12 @@ class PropertiesView(QWidget):
                     return
 
                 form_layout = QFormLayout()
-                self.properties_ui_factory.build_widgets( # Changed from PropertiesUIFactory.create_ui
+                
+                # Recreate combo boxes here before passing them
+                self._x_combo = QComboBox() 
+                self._y_combo = QComboBox()
+
+                self.properties_ui_factory.build_widgets(
                     node,
                     form_layout,
                     self,

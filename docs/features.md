@@ -99,6 +99,7 @@ This document lists the planned and implemented capabilities of the scientific g
 ---
 
 ## 2. Workflow Project & File Management
+- Externalized Configuration: Externalizes application defaults, user preferences, and content layouts.
 - Path handling via pathlib
 - Externalized configuration management via Pydantic
 

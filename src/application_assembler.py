@@ -1,4 +1,5 @@
 from matplotlib.figure import Figure
+from pathlib import Path 
 
 from PySide6.QtWidgets import QApplication, QToolBar, QMenuBar
 
@@ -17,6 +18,7 @@ from src.models.nodes.plot_types import PlotType
 from src.views.main_window import MainWindow
 from src.views.renderer import Renderer
 from src.views.properties_ui_factory import PropertiesUIFactory, _build_line_plot_ui_widgets, _build_scatter_plot_ui_widgets
+from src.config_service import ConfigService
 
 
 class ApplicationAssembler:
@@ -27,6 +29,10 @@ class ApplicationAssembler:
 
     def __init__(self, app: QApplication):
         self._app = app
+        # Initialize ConfigService
+        self._config_service = ConfigService(Path("configs/default_config.yaml"))
+        IconPath.set_config_service(self._config_service)
+
         # Core components
         self._model: ApplicationModel | None = None
         self._command_manager: CommandManager | None = None
@@ -51,10 +57,16 @@ class ApplicationAssembler:
 
     def _assemble_core_components(self):
         """Assemble core models, managers, and controllers."""
-        figure = Figure(figsize=(8.5, 6), dpi=150, facecolor='white') # TODO: Use ConfigService here later
+        figure_width = self._config_service.get("figure.default_width", 8.5)
+        figure_height = self._config_service.get("figure.default_height", 6)
+        figure_dpi = self._config_service.get("figure.default_dpi", 150)
+        figure_facecolor = self._config_service.get("figure.default_facecolor", "white")
+        figure = Figure(figsize=(figure_width, figure_height), dpi=figure_dpi, facecolor=figure_facecolor)
+
         self._model = ApplicationModel(figure=figure)
         self._command_manager = CommandManager(model=self._model)
-        self._main_controller = MainController(model=self._model)
+        # Pass ConfigService to MainController
+        self._main_controller = MainController(model=self._model, config_service=self._config_service)
         self._renderer = Renderer()
         self._plot_types = list(self._renderer.plotting_strategies.keys())
         self._properties_ui_factory = PropertiesUIFactory()
@@ -72,6 +84,7 @@ class ApplicationAssembler:
         menu_builder = MenuBarBuilder(
             main_controller=self._main_controller,
             command_manager=self._command_manager,
+            # ConfigService might be needed here if menu items are configurable
         )
         assembled_menu_actions = menu_builder.build()
         self._menu_bar = assembled_menu_actions.menu_bar
@@ -88,15 +101,19 @@ class ApplicationAssembler:
             model=self._model,
             command_manager=self._command_manager,
             canvas_widget=None,  # Will be set after MainWindow is available
+            # ConfigService might be needed here if tool defaults are loaded from config
         )
         self._tool_manager.add_tool(self._selection_tool)
-        self._tool_manager.set_active_tool(ToolName.SELECTION.value)
+        
+        # Use config for default active tool
+        default_active_tool_name = self._config_service.get("tool.default_active_tool", ToolName.SELECTION.value)
+        self._tool_manager.set_active_tool(default_active_tool_name)
 
         # Placeholder tools for toolbar (not yet implemented)
         self._tool_manager.add_tool(
             MockTool(
-                ToolName.DIRECT_SELECTION.value,
-                IconPath.DIRECT_SELECT_TOOL,
+                self._config_service.get("tool.direct_selection.name", ToolName.DIRECT_SELECTION.value),
+                IconPath.get_path("tool_icons.direct_select"),
                 self._model,
                 self._command_manager,
                 None,
@@ -104,8 +121,8 @@ class ApplicationAssembler:
         )
         self._tool_manager.add_tool(
             MockTool(
-                ToolName.EYEDROPPER.value,
-                IconPath.EYEDROPPER_TOOL,
+                self._config_service.get("tool.eyedropper.name", ToolName.EYEDROPPER.value),
+                IconPath.get_path("tool_icons.eyedropper"),
                 self._model,
                 self._command_manager,
                 None,
@@ -113,8 +130,8 @@ class ApplicationAssembler:
         )
         self._tool_manager.add_tool(
             MockTool(
-                ToolName.PLOT.value,
-                IconPath.PLOT_TOOL,
+                self._config_service.get("tool.plot.name", ToolName.PLOT.value),
+                IconPath.get_path("tool_icons.plot"),
                 self._model,
                 self._command_manager,
                 None,
@@ -122,8 +139,8 @@ class ApplicationAssembler:
         )
         self._tool_manager.add_tool(
             MockTool(
-                ToolName.TEXT.value,
-                IconPath.TEXT_TOOL,
+                self._config_service.get("tool.text.name", ToolName.TEXT.value),
+                IconPath.get_path("tool_icons.text"),
                 self._model,
                 self._command_manager,
                 None,
@@ -131,8 +148,8 @@ class ApplicationAssembler:
         )
         self._tool_manager.add_tool(
             MockTool(
-                ToolName.ZOOM.value,
-                IconPath.ZOOM_TOOL,
+                self._config_service.get("tool.zoom.name", ToolName.ZOOM.value),
+                IconPath.get_path("tool_icons.zoom"),
                 self._model,
                 self._command_manager,
                 None,
@@ -155,6 +172,7 @@ class ApplicationAssembler:
             tool_bar=self._tool_bar,
             tool_bar_actions=self._tool_bar_actions,
             properties_ui_factory=self._properties_ui_factory,
+            config_service=self._config_service,
         )
 
         # Now that MainWindow exists, set its canvas_widget for tools

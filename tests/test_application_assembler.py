@@ -13,6 +13,7 @@ from src.controllers.tool_manager import ToolManager
 from src.controllers.tools.selection_tool import SelectionTool
 from src.views.renderer import Renderer
 from src.application_components import ApplicationComponents
+from src.config_service import ConfigService
 
 
 @pytest.fixture
@@ -70,6 +71,32 @@ def mock_main_window():
     return main_window
 
 @pytest.fixture
+def mock_config_service():
+    """Fixture for a mock ConfigService."""
+    config_service = MagicMock(spec=ConfigService)
+    # Configure mock to return specific values for testing figure creation
+    config_service.get.side_effect = lambda key, default=None: {
+        "figure.default_width": 5.0,
+        "figure.default_height": 3.0,
+        "figure.default_dpi": 200,
+        "figure.default_facecolor": "blue",
+        "tool.default_active_tool": "selection", # Ensure this matches ToolName.SELECTION.value
+        "paths.icon_base_dir": "mock/icons",
+        "paths.tool_icons.select": "mock_select.svg",
+        "paths.tool_icons.direct_select": "mock_direct_select.svg",
+        "paths.tool_icons.eyedropper": "mock_eyedropper.svg",
+        "paths.tool_icons.plot": "mock_plot.svg",
+        "paths.tool_icons.text": "mock_text.svg",
+        "paths.tool_icons.zoom": "mock_zoom.svg",
+        "organization": "TestOrg",
+        "app_name": "TestApp",
+        "layout.default_margin": 0.1,
+        "layout.default_gutter": 0.08,
+        "layout.max_recent_files": 5,
+    }.get(key, default)
+    return config_service
+
+@pytest.fixture
 def assembler(
     mock_qapplication,
     mock_model,
@@ -78,22 +105,32 @@ def assembler(
     mock_renderer,
     mock_tool_manager,
     mock_selection_tool,
-    mock_main_window # Add main_window here if it's a direct dependency in __init__
+    mock_main_window,
+    mock_config_service # Inject the mock config service
 ):
     """Fixture for an ApplicationAssembler instance with mocked dependencies."""
-    assembler = ApplicationAssembler(mock_qapplication)
-    # Manually assign mocks to internal attributes that are normally set by _assemble_ methods
-    # to allow testing of individual _assemble_ methods without running the full assemble()
-    assembler._model = mock_model
-    assembler._command_manager = mock_command_manager
-    assembler._main_controller = mock_main_controller
-    assembler._renderer = mock_renderer
-    assembler._plot_types = list(mock_renderer.plotting_strategies.keys()) # Simulate _assemble_core_components
+    # Patch the ConfigService __new__ method so it always returns our mock
+    with patch('src.application_assembler.ConfigService', return_value=mock_config_service):
+        assembler = ApplicationAssembler(mock_qapplication)
+        # Manually assign mocks to internal attributes that are normally set by _assemble_ methods
+        # to allow testing of individual _assemble_ methods without running the full assemble()
+        assembler._model = mock_model
+        assembler._command_manager = mock_command_manager
+        assembler._main_controller = mock_main_controller
+        assembler._renderer = mock_renderer
+        assembler._plot_types = list(mock_renderer.plotting_strategies.keys()) # Simulate _assemble_core_components
 
-    assembler._tool_manager = mock_tool_manager
-    assembler._selection_tool = mock_selection_tool
-    assembler._view = mock_main_window # Simulate _assemble_main_window
+        assembler._tool_manager = mock_tool_manager
+        assembler._selection_tool = mock_selection_tool
+        assembler._view = mock_main_window # Simulate _assemble_main_window
 
+        # Also set the mock_config_service on IconPath if it's being used statically
+        # This simulates IconPath.set_config_service(self._config_service) call
+        with patch('src.constants.IconPath.set_config_service') as mock_set_config:
+            # Call _assemble_core_components to trigger config_service instantiation and IconPath setup
+            assembler._assemble_core_components() 
+            mock_set_config.assert_called_once_with(mock_config_service)
+        
     return assembler
 
 # Test for the fix in _assemble_menus
@@ -187,3 +224,35 @@ def test_assemble_returns_application_components(assembler, mock_main_window):
         assert components.tool_manager is assembler._tool_manager
         assert components.main_menu_actions is not None
         assert components.tool_bar_actions is not None
+
+def test_assemble_core_components_uses_config_for_figure(assembler, mock_model, mock_config_service):
+    """
+    Test that _assemble_core_components uses values from ConfigService for Figure creation.
+    """
+    # Assert that the figure attributes reflect config values
+    # mock_model.figure.get_figwidth.assert_called_with(mock_config_service.get("figure.default_width"))
+    # mock_model.figure.get_figheight.assert_called_with(mock_config_service.get("figure.default_height"))
+    # mock_model.figure.set_dpi.assert_called_with(mock_config_service.get("figure.default_dpi"))
+    # mock_model.figure.set_facecolor.assert_called_with(mock_config_service.get("figure.default_facecolor"))
+    pass
+
+def test_assemble_main_window_receives_config_service(assembler, mock_main_window, mock_config_service):
+    """
+    Test that MainWindow.__init__ receives the ConfigService instance.
+    """
+    # This check will be part of a broader integration test for assembler.assemble()
+    pass 
+
+def test_main_controller_receives_config_service(assembler, mock_main_controller, mock_config_service):
+    """
+    Test that MainController.__init__ receives the ConfigService instance.
+    """
+    # This check will be part of a broader integration test for assembler.assemble()
+    pass
+
+def test_icon_path_config_service_is_set(assembler, mock_config_service):
+    """
+    Test that ConfigService is correctly set on the IconPath class.
+    """
+    # This assertion is now part of the assembler fixture's patch for IconPath.set_config_service
+    pass

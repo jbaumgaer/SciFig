@@ -19,6 +19,7 @@ from src.views.properties_view import PropertiesView
 
 
 from src.views.properties_ui_factory import PropertiesUIFactory
+from src.config_service import ConfigService
 
 
 class MainWindow(QMainWindow):
@@ -38,6 +39,7 @@ class MainWindow(QMainWindow):
         tool_bar: QToolBar,
         tool_bar_actions: ToolBarActions,
         properties_ui_factory: PropertiesUIFactory, # New argument
+        config_service: ConfigService, # Added argument
     ):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
@@ -47,6 +49,7 @@ class MainWindow(QMainWindow):
         self.command_manager = command_manager
         self.plot_types = plot_types
         self.properties_ui_factory = properties_ui_factory # Store the instance
+        self._config_service = config_service # Stored ConfigService
 
         # Now create the UI components
         self.canvas_widget = self._create_canvas()
