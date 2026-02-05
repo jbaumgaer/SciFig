@@ -51,7 +51,7 @@ class ApplicationAssembler:
 
     def _assemble_core_components(self):
         """Assemble core models, managers, and controllers."""
-        figure = Figure(figsize=(8.5, 6), dpi=150) # TODO: Use ConfigService here later
+        figure = Figure(figsize=(8.5, 6), dpi=150, facecolor='white') # TODO: Use ConfigService here later
         self._model = ApplicationModel(figure=figure)
         self._command_manager = CommandManager(model=self._model)
         self._main_controller = MainController(model=self._model)

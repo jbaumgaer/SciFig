@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
         # Store pre-built toolbar and actions
         self.tool_bar = tool_bar
         self.tool_bar_actions = tool_bar_actions
-        self.addToolBar(self.tool_bar)
+        self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.tool_bar)
 
         # Assign menu components as direct attributes for easier access
         self.file_menu: QMenu = self.main_menu_actions.file_menu
