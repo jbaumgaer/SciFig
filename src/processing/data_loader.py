@@ -1,3 +1,4 @@
+import logging 
 import pandas as pd
 from PySide6.QtCore import QObject, Signal
 
@@ -18,6 +19,9 @@ class DataLoader(QObject):
 
     def __init__(self):
         super().__init__()
+        self.logger = logging.getLogger(self.__class__.__name__) # Added logger
+        self.logger.info("DataLoader initialized.") # Added log
+
 
     def process_data(self, file_path: str, node):  # node is a PlotNode
         """
@@ -25,16 +29,17 @@ class DataLoader(QObject):
         run in the background thread.
         """
         try:
-            print(f"Data loader started for file: {file_path}")
+            self.logger.info(f"Data loader started for file: {file_path}") # Changed print to log
             # This is the "mock pipeline". In the future, complex processing
             # can be added here.
             dataframe = pd.read_csv(file_path, sep=";")
 
             # Emit the signal with the result and the target node
             self.dataReady.emit(dataframe, node)
-            print("Data loader finished successfully.")
+            self.logger.info("Data loader finished successfully.") # Changed print to log
+
 
         except Exception as e:
             # Emit an error signal if something goes wrong
             self.errorOccurred.emit(str(e))
-            print(f"Data loader error: {e}")
+            self.logger.error(f"Data loader error: {e}", exc_info=True) # Changed print to log

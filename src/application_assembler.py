@@ -1,3 +1,4 @@
+import logging 
 from matplotlib.figure import Figure
 from pathlib import Path 
 
@@ -29,9 +30,13 @@ class ApplicationAssembler:
 
     def __init__(self, app: QApplication):
         self._app = app
+        self.logger = logging.getLogger(self.__class__.__name__) 
+        self.logger.info("ApplicationAssembler initialized.") 
+
         # Initialize ConfigService
         self._config_service = ConfigService(Path("configs/default_config.yaml"))
         IconPath.set_config_service(self._config_service)
+        self.logger.debug(f"ConfigService initialized with path: configs/default_config.yaml") 
 
         # Core components
         self._model: ApplicationModel | None = None
@@ -57,11 +62,13 @@ class ApplicationAssembler:
 
     def _assemble_core_components(self):
         """Assemble core models, managers, and controllers."""
+        self.logger.info("Assembling core components: Model, CommandManager, MainController, Renderer.") 
         figure_width = self._config_service.get("figure.default_width", 8.5)
         figure_height = self._config_service.get("figure.default_height", 6)
         figure_dpi = self._config_service.get("figure.default_dpi", 150)
         figure_facecolor = self._config_service.get("figure.default_facecolor", "white")
         figure = Figure(figsize=(figure_width, figure_height), dpi=figure_dpi, facecolor=figure_facecolor)
+        self.logger.debug(f"Figure created with dimensions: {figure_width}x{figure_height} @ {figure_dpi}dpi, Facecolor: {figure_facecolor}") 
 
         self._model = ApplicationModel(figure=figure)
         self._command_manager = CommandManager(model=self._model)
@@ -81,6 +88,7 @@ class ApplicationAssembler:
 
     def _assemble_menus(self):
         """Assemble the menu bar and its actions."""
+        self.logger.info("Assembling menus.") 
         menu_builder = MenuBarBuilder(
             main_controller=self._main_controller,
             command_manager=self._command_manager,
@@ -92,6 +100,8 @@ class ApplicationAssembler:
 
     def _assemble_tooling(self):
         """Assemble the tool manager, individual tools, and the toolbar."""
+        self.logger.info("Assembling tooling: ToolManager, SelectionTool, MockTools.") 
+
         self._tool_manager = ToolManager(
             model=self._model, command_manager=self._command_manager
         )
@@ -108,6 +118,7 @@ class ApplicationAssembler:
         # Use config for default active tool
         default_active_tool_name = self._config_service.get("tool.default_active_tool", ToolName.SELECTION.value)
         self._tool_manager.set_active_tool(default_active_tool_name)
+        self.logger.debug(f"Default active tool set to: {default_active_tool_name}") 
 
         # Placeholder tools for toolbar (not yet implemented)
         self._tool_manager.add_tool(
@@ -162,6 +173,7 @@ class ApplicationAssembler:
 
     def _assemble_main_window(self):
         """Assemble the main application window."""
+        self.logger.info("Assembling main window.") 
         self._view = MainWindow(
             model=self._model,
             main_controller=self._main_controller,
@@ -192,6 +204,7 @@ class ApplicationAssembler:
 
     def _connect_signals(self):
         """Connect all application-wide signals to their slots."""
+        self.logger.debug("Connecting signals.") 
         # Main Window actions to Main Controller
         self._view.new_layout_action.triggered.connect(
             self._main_controller.create_new_layout
@@ -212,6 +225,7 @@ class ApplicationAssembler:
 
     def _redraw_canvas_callback(self):
         """Callback to trigger canvas redraw."""
+        self.logger.debug("ApplicationAssembler._redraw_canvas_callback called") 
         self._renderer.render(
             self._view.canvas_widget.figure,
             self._model.scene_root,
@@ -229,6 +243,7 @@ class ApplicationAssembler:
         self._assemble_main_window()
         self._assemble_canvas_controller()
         self._connect_signals()
+        self.logger.info("Application assembly complete.") 
 
         return ApplicationComponents(
             app=self._app,

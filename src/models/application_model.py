@@ -40,6 +40,12 @@ class ApplicationModel(QObject):
         self.selection = nodes
         self.selectionChanged.emit()
 
+    def set_scene_root(self, new_root: SceneNode):
+        """Sets a new root for the scene graph."""
+        self.scene_root = new_root
+        self.set_selection([]) # Clear selection when root changes
+        self.modelChanged.emit()
+
     def get_node_at(self, position: tuple[float, float]) -> SceneNode | None:
         """Finds the topmost node at the given figure coordinates."""
         return self.scene_root.hit_test(position)

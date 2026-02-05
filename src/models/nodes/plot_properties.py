@@ -9,11 +9,21 @@ class PlotMapping:
     x: Optional[str]
     y: List[str]
 
+    def update_from_dict(self, data: dict):
+        for key, value in data.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
 
 @dataclass
 class AxesLimits:
     xlim: tuple[Optional[float], Optional[float]]
     ylim: tuple[Optional[float], Optional[float]]
+
+    def update_from_dict(self, data: dict):
+        for key, value in data.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
 
 @dataclass
@@ -31,6 +41,22 @@ class BasePlotProperties:
         default_factory=lambda: AxesLimits(xlim=(None, None), ylim=(None, None))
     )
     plot_type: PlotType = PlotType.LINE
+
+    def update_from_dict(self, data: dict, exclude_geometry: bool = False):
+        """
+        Updates the properties of this object from a dictionary,
+        optionally excluding geometry-related properties (if any exist in subclasses).
+        """
+        for key, value in data.items():
+            # geometry is not part of BasePlotProperties
+            if hasattr(self, key):
+                current_attr = getattr(self, key)
+                if isinstance(current_attr, (PlotMapping, AxesLimits)) and isinstance(value, dict):
+                    current_attr.update_from_dict(value)
+                elif key == "plot_type":
+                    setattr(self, key, PlotType(value))
+                else:
+                    setattr(self, key, value)
 
     @staticmethod
     def create_properties_from_plot_type(

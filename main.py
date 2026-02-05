@@ -1,10 +1,14 @@
 import sys
+import logging 
+from pathlib import Path 
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QColor, QPalette 
 
 from src.application_assembler import ApplicationAssembler
 from src.application_components import ApplicationComponents
+from src.config_service import ConfigService 
+from src.logger_config import setup_logging 
 
 
 def setup_application() -> ApplicationComponents:
@@ -18,6 +22,13 @@ def setup_application() -> ApplicationComponents:
 
 def main():
     """The main entry point for the application."""
+    # Configure logging first
+    config_service_for_logging = ConfigService(Path("configs/default_config.yaml"))
+    setup_logging(config_service_for_logging)
+    
+    logger = logging.getLogger(__name__) 
+    logger.info("Application starting...")
+
     context = setup_application()
     view = context.view
     app = context.app
@@ -42,6 +53,7 @@ def main():
 
 
     view.show()
+    logger.info("Application stopping...")
     sys.exit(app.exec())
 
 

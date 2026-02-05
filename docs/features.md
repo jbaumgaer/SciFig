@@ -100,6 +100,17 @@ This document lists the planned and implemented capabilities of the scientific g
 
 ## 2. Workflow Project & File Management
 - Externalized Configuration: Externalizes application defaults, user preferences, and content layouts.
+- Customizable UI Layout (User-Level Preferences): Saves and restores main window geometry, toolbar, and dock widget states.
+- Externalized Content Layouts (Project-Level Templates): Replaces hardcoded layout logic with template files.
+    - Layout Template Selection UI and Previews: Presents users with a list of layout templates and small SVG previews on hover.
 - Path handling via pathlib
 - Externalized configuration management via Pydantic
+
+---
+
+## 3. Plotting & Layout Management
+- Integrating Matplotlib's Layout Engines (Togglable Auto-Layout): Dynamically adjusts plot scaling (e.g., for axis labels) with a toggle to save fixed margins.
+- Advanced Plot Redistribution: Intelligently redistributes existing plots onto new layout slots, preserving data and adjusting plot sizes.
+- Adding New Plot with Redistribution Options: Allows users to add new plots with choices for intelligent redistribution or free-form placement.
+- Drag-and-Drop Plot Reassignment: Enables interactive reassignment of plots by dragging and dropping them onto new positions or slots.
 

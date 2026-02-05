@@ -1,0 +1,65 @@
+{
+  "type": "GroupNode",
+  "name": "2x2 Layout",
+  "id": "layout_root_001",
+  "visible": true,
+  "geometry": {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0},
+  "children": [
+    {
+      "type": "PlotNode",
+      "name": "Top-Left Plot",
+      "id": "plot_001",
+      "visible": true,
+      "geometry": { "x": 0.02, "y": 0.52, "width": 0.46, "height": 0.46 },
+      "plot_properties": {
+        "plot_type": "line",
+        "title": "Default Top-Left",
+        "xlabel": "X-Axis",
+        "ylabel": "Y-Axis",
+        "line_color": "#FF0000"
+      }
+    },
+    {
+      "type": "PlotNode",
+      "name": "Top-Right Plot",
+      "id": "plot_002",
+      "visible": true,
+      "geometry": { "x": 0.52, "y": 0.52, "width": 0.46, "height": 0.46 },
+      "plot_properties": {
+        "plot_type": "line",
+        "title": "Default Top-Right",
+        "xlabel": "X-Axis",
+        "ylabel": "Y-Axis",
+        "line_color": "#00FF00"
+      }
+    },
+    {
+      "type": "PlotNode",
+      "name": "Bottom-Left Plot",
+      "id": "plot_003",
+      "visible": true,
+      "geometry": { "x": 0.02, "y": 0.02, "width": 0.46, "height": 0.46 },
+      "plot_properties": {
+        "plot_type": "scatter",
+        "title": "Default Bottom-Left",
+        "xlabel": "X-Axis",
+        "ylabel": "Y-Axis",
+        "marker_color": "#0000FF"
+      }
+    },
+    {
+      "type": "PlotNode",
+      "name": "Bottom-Right Plot",
+      "id": "plot_004",
+      "visible": true,
+      "geometry": { "x": 0.52, "y": 0.02, "width": 0.46, "height": 0.46 },
+      "plot_properties": {
+        "plot_type": "line",
+        "title": "Default Bottom-Right",
+        "xlabel": "X-Axis",
+        "ylabel": "Y-Axis",
+        "line_color": "#FFFF00"
+      }
+    }
+  ]
+}
