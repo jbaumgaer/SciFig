@@ -28,15 +28,14 @@ class ApplicationAssembler:
     acting as the composition root.
     """
 
-    def __init__(self, app: QApplication):
+    def __init__(self, app: QApplication, config_service: ConfigService):
         self._app = app
+        self._config_service = config_service # Stored config_service
         self.logger = logging.getLogger(self.__class__.__name__) 
         self.logger.info("ApplicationAssembler initialized.") 
+        self.logger.debug(f"ConfigService provided with path: configs/default_config.yaml") 
 
-        # Initialize ConfigService
-        self._config_service = ConfigService(Path("configs/default_config.yaml"))
         IconPath.set_config_service(self._config_service)
-        self.logger.debug(f"ConfigService initialized with path: configs/default_config.yaml") 
 
         # Core components
         self._model: ApplicationModel | None = None
@@ -256,4 +255,5 @@ class ApplicationAssembler:
             tool_manager=self._tool_manager,
             main_menu_actions=self._main_menu_actions,
             tool_bar_actions=self._tool_bar_actions,
+            config_service=self._config_service,
         )

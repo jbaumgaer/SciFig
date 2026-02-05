@@ -3,55 +3,42 @@ import logging
 from pathlib import Path 
 
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QColor, QPalette 
 
 from src.application_assembler import ApplicationAssembler
 from src.application_components import ApplicationComponents
 from src.config_service import ConfigService 
 from src.logger_config import setup_logging 
+from src.theme_manager import ThemeManager 
 
 
-def setup_application() -> ApplicationComponents:
+def setup_application(app: QApplication, config_service: ConfigService) -> ApplicationComponents:
     """
     Creates and wires up all the core components of the application using ApplicationAssembler.
     """
-    app = QApplication.instance() or QApplication(sys.argv)
-    assembler = ApplicationAssembler(app)
+    assembler = ApplicationAssembler(app, config_service) 
     return assembler.assemble()
 
 
 def main():
     """The main entry point for the application."""
     # Configure logging first
-    config_service_for_logging = ConfigService(Path("configs/default_config.yaml"))
-    setup_logging(config_service_for_logging)
+    config_service = ConfigService(Path("configs/default_config.yaml"))
+    setup_logging(config_service)
     
     logger = logging.getLogger(__name__) 
     logger.info("Application starting...")
 
-    context = setup_application()
+    app = QApplication.instance() or QApplication(sys.argv) # QApplication is needed earlier for ThemeManager
+
+    context = setup_application(app, config_service) 
     view = context.view
-    app = context.app
+    # app = context.app # Already defined above
 
-    # Set up dark theme
-    app.setStyle("Fusion") 
-    dark_palette = QPalette()
-    dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
-    dark_palette.setColor(QPalette.WindowText, QColor(255, 255, 255))
-    dark_palette.setColor(QPalette.Base, QColor(25, 25, 25))
-    dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-    dark_palette.setColor(QPalette.ToolTipBase, QColor(255, 255, 255))
-    dark_palette.setColor(QPalette.ToolTipText, QColor(255, 255, 255))
-    dark_palette.setColor(QPalette.Text, QColor(255, 255, 255))
-    dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
-    dark_palette.setColor(QPalette.ButtonText, QColor(255, 255, 255))
-    dark_palette.setColor(QPalette.BrightText, QColor(255, 0, 0))
-    dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
-    dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-    dark_palette.setColor(QPalette.HighlightedText, QColor(0, 0, 0))
-    app.setPalette(dark_palette)
-
-
+    # Set up theme using ThemeManager
+    theme_manager = ThemeManager(app, config_service) 
+    default_theme_name = config_service.get("ui.default_theme", "dark")
+    theme_manager.apply_theme(default_theme_name) 
+    
     view.show()
     logger.info("Application stopping...")
     sys.exit(app.exec())

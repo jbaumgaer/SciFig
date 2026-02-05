@@ -18,7 +18,9 @@ default_toolbar_area: "LeftToolBarArea" # Corresponds to Qt.ToolBarArea.LeftTool
 default_dock_widget_area_properties: "RightDockWidgetArea" # Corresponds to Qt.DockWidgetArea.RightDockWidgetArea
 default_dock_widget_area_history: "LeftDockWidgetArea" # Example for future
 splash_screen_path: "src/assets/images/splash.png" # Example for future
-theme: "dark" # "dark", "light", etc.
+
+ui:
+  default_theme: "dark" # "dark", "light", etc.
 
 # Matplotlib Figure Defaults
 figure:
@@ -93,3 +95,38 @@ logging:
   console_output: true # Enable/disable logging to console
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   date_format: "%Y-%m-%d %H:%M:%S"
+
+# Theme Definitions
+themes:
+  dark:
+    style: "Fusion"
+    palette:
+      Window: [53, 53, 53]
+      WindowText: [255, 255, 255]
+      Base: [25, 25, 25]
+      AlternateBase: [53, 53, 53]
+      ToolTipBase: [255, 255, 255]
+      ToolTipText: [255, 255, 255]
+      Text: [255, 255, 255]
+      Button: [53, 53, 53]
+      ButtonText: [255, 255, 255]
+      BrightText: [255, 0, 0]
+      Link: [42, 130, 218]
+      Highlight: [42, 130, 218]
+      HighlightedText: [0, 0, 0]
+  light:
+    style: "Fusion"
+    palette:
+      Window: [240, 240, 240]
+      WindowText: [0, 0, 0]
+      Base: [255, 255, 255]
+      AlternateBase: [220, 220, 220]
+      ToolTipBase: [255, 255, 220]
+      ToolTipText: [0, 0, 0]
+      Text: [0, 0, 0]
+      Button: [240, 240, 240]
+      ButtonText: [0, 0, 0]
+      BrightText: [255, 0, 0]
+      Link: [0, 0, 238]
+      Highlight: [51, 153, 255]
+      HighlightedText: [255, 255, 255]

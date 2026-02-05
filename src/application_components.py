@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from src.views.main_window import MainWindow
     from src.builders.menu_bar_builder import MainMenuActions
     from src.builders.tool_bar_builder import ToolBarActions
+    from src.config_service import ConfigService # Added import
 
 
 @dataclass
@@ -32,3 +33,4 @@ class ApplicationComponents:
     tool_manager: "ToolManager"
     main_menu_actions: "MainMenuActions"
     tool_bar_actions: "ToolBarActions"
+    config_service: "ConfigService"
