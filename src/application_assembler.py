@@ -69,11 +69,11 @@ class ApplicationAssembler:
         figure = Figure(figsize=(figure_width, figure_height), dpi=figure_dpi, facecolor=figure_facecolor)
         self.logger.debug(f"Figure created with dimensions: {figure_width}x{figure_height} @ {figure_dpi}dpi, Facecolor: {figure_facecolor}") 
 
-        self._model = ApplicationModel(figure=figure)
+        self._model = ApplicationModel(figure=figure, config_service=self._config_service) # Pass config_service
         self._command_manager = CommandManager(model=self._model)
         # Pass ConfigService to MainController
         self._main_controller = MainController(model=self._model, config_service=self._config_service)
-        self._renderer = Renderer()
+        self._renderer = Renderer(config_service=self._config_service, application_model=self._model) # Pass config_service and application_model
         self._plot_types = list(self._renderer.plotting_strategies.keys())
         self._properties_ui_factory = PropertiesUIFactory()
         
@@ -218,6 +218,7 @@ class ApplicationAssembler:
         # Model changes to redraw
         self._model.modelChanged.connect(self._redraw_canvas_callback)
         self._model.selectionChanged.connect(self._redraw_canvas_callback)
+        self._model.autoLayoutChanged.connect(self._redraw_canvas_callback) # Added connection
 
         # Tool-specific signals
         self._selection_tool.plot_double_clicked.connect(self._view.show_properties_panel)

@@ -100,6 +100,13 @@ class MainWindow(QMainWindow):
         self.colors_action: QAction = self.main_menu_actions.colors_action
         self.settings_action: QAction = self.main_menu_actions.settings_action
 
+        # Add "Enable Auto Layout" action
+        self.auto_layout_action = QAction("Enable Auto Layout", self)
+        self.auto_layout_action.setCheckable(True)
+        self.auto_layout_action.setChecked(self.model.auto_layout_enabled) # Initialize state
+        self.auto_layout_action.toggled.connect(self.model.set_auto_layout_enabled) # Connect signal
+        self.edit_menu.addAction(self.auto_layout_action) # Add to Edit menu
+
     def _create_canvas(self) -> CanvasWidget:
         canvas = CanvasWidget(figure=self.model.figure, parent=self)
         return canvas

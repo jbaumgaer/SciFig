@@ -28,6 +28,7 @@ figure:
   default_height: 6
   default_dpi: 150
   default_facecolor: "white"
+  auto_layout_enabled_default: true # Added
   default_edgecolor: "black" # Example for future
   subplot_left: 0.125 # Example for future
   subplot_right: 0.9 # Example for future

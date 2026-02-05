@@ -6,6 +6,8 @@ import matplotlib.axes # Import matplotlib.axes
 
 from src.models.nodes import PlotNode, RectangleNode, SceneNode, TextNode, GroupNode
 from src.models.nodes.plot_types import PlotType
+from src.config_service import ConfigService 
+from src.models.application_model import ApplicationModel 
 
 from .plotting_strategies import LinePlotStrategy, ScatterPlotStrategy
 
@@ -15,22 +17,24 @@ class Renderer:
     A class responsible for rendering the scene graph onto a Matplotlib figure.
     """
 
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__) # Added logger
-        self.logger.info("Renderer initialized.") # Added log
+    def __init__(self, config_service: ConfigService, application_model: ApplicationModel): 
+        self._config_service = config_service 
+        self._application_model = application_model 
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info("Renderer initialized.")
 
         self.plotting_strategies = {
             PlotType.LINE: LinePlotStrategy(),
             PlotType.SCATTER: ScatterPlotStrategy(),
         }
-        self.logger.debug(f"Plotting strategies: {list(self.plotting_strategies.keys())}") # Added log
+        self.logger.debug(f"Plotting strategies: {list(self.plotting_strategies.keys())}")
 
         self._render_strategies = {
             GroupNode: self._render_group_node,
             PlotNode: self._render_plot_node,
             # RectangleNode: self._render_rectangle_node, # To be added later
         }
-        self.logger.debug(f"Render strategies: {list(self._render_strategies.keys())}") # Added log
+        self.logger.debug(f"Render strategies: {list(self._render_strategies.keys())}")
 
 
     def render(
@@ -43,11 +47,22 @@ class Renderer:
         Renders the entire scene graph, starting from the root node.
         Also draws highlights for the currently selected nodes.
         """
-        self.logger.info("Rendering scene graph.") # Added log
+        self.logger.info("Rendering scene graph.")
         figure.clear()
+
+        if self._application_model.auto_layout_enabled:
+            self.logger.debug("Auto-layout is enabled. Applying constrained_layout.")
+            figure.set_constrained_layout(True)
+        elif self._application_model.figure_subplot_params:
+            self.logger.debug(f"Auto-layout is disabled. Applying captured subplot parameters: {self._application_model.figure_subplot_params}")
+            figure.subplots_adjust(**self._application_model.figure_subplot_params)
+        else:
+            self.logger.debug("Auto-layout is disabled and no subplot parameters captured. Skipping layout adjustment.")
+
+
         self._render_node(figure, root_node)
         self._render_highlights(figure, selection)
-        self.logger.info("Scene graph rendering complete.") # Added log
+        self.logger.info("Scene graph rendering complete.")
 
 
     def _render_node(self, figure: matplotlib.figure.Figure, node: SceneNode):

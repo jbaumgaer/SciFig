@@ -1,3 +1,4 @@
+import logging 
 from pathlib import Path
 
 import matplotlib.figure
@@ -5,6 +6,7 @@ from PySide6.QtCore import QObject, Signal
 
 from .nodes import GroupNode, SceneNode
 from .nodes.scene_node import node_factory
+from src.config_service import ConfigService
 
 
 class ApplicationModel(QObject):
@@ -15,12 +17,62 @@ class ApplicationModel(QObject):
 
     modelChanged = Signal()
     selectionChanged = Signal()
+    autoLayoutChanged = Signal(bool) # Added signal
 
-    def __init__(self, figure: matplotlib.figure.Figure):
+    def __init__(self, figure: matplotlib.figure.Figure, config_service: ConfigService): # Modified signature
         super().__init__()
+        self.logger = logging.getLogger(self.__class__.__name__) # Added logger
         self.figure = figure
+        self._config_service = config_service # Stored config service
         self.scene_root = GroupNode(name="root")
         self.selection: list[SceneNode] = []
+
+        # Auto-layout properties
+        self._auto_layout_enabled: bool = self._config_service.get("figure.auto_layout_enabled_default", False) # Initialized from config
+        self._figure_subplot_params: dict | None = None # Stores explicit layout when auto-layout is off
+
+    @property
+    def auto_layout_enabled(self) -> bool:
+        return self._auto_layout_enabled
+
+    def set_auto_layout_enabled(self, enabled: bool):
+        """
+        Sets whether automatic layout adjustment is enabled for the figure.
+        If disabling auto-layout, captures the current layout parameters.
+        If enabling auto-layout, clears captured parameters.
+        """
+        if self._auto_layout_enabled == enabled:
+            return # No change
+
+        self.logger.info(f"Setting auto-layout enabled: {enabled}. Previous: {self._auto_layout_enabled}")
+
+        if not enabled and self._auto_layout_enabled:
+            # Transitioning from enabled to disabled, capture current layout
+            self.figure.tight_layout() # Apply one last auto-layout
+            
+            # Capture subplot parameters (left, right, bottom, top, wspace, hspace)
+            # Iterate through axes to get their positions
+            subplot_params = self.figure.subplotpars
+            self._figure_subplot_params = {
+                "left": subplot_params.left,
+                "right": subplot_params.right,
+                "bottom": subplot_params.bottom,
+                "top": subplot_params.top,
+                "wspace": subplot_params.wspace,
+                "hspace": subplot_params.hspace,
+            }
+            self.logger.debug(f"Captured subplot parameters: {self._figure_subplot_params}")
+        elif enabled and not self._auto_layout_enabled:
+            # Transitioning from disabled to enabled, clear captured layout
+            self._figure_subplot_params = None
+            self.logger.debug("Cleared captured subplot parameters.")
+
+        self._auto_layout_enabled = enabled
+        self.autoLayoutChanged.emit(enabled) # Emit signal
+
+    @property
+    def figure_subplot_params(self) -> dict | None:
+        return self._figure_subplot_params
 
     def add_node(self, node: SceneNode, parent: SceneNode | None = None):
         """Adds a node to the scene graph."""

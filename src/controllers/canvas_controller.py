@@ -133,40 +133,38 @@ class CanvasController(QObject):
     def on_data_ready(self, dataframe, node: PlotNode):
         """
         Slot to receive the loaded data and update the model.
-        Also sets a default plot mapping.
+        Also sets a default plot mapping, updating existing properties if necessary.
         """
-        self.logger.info(f"Data ready for PlotNode '{node.name}' (ID: {node.id}). DataFrame shape: {dataframe.shape}.") # Added log
+        self.logger.info(f"Data ready for PlotNode '{node.name}' (ID: {node.id}). DataFrame shape: {dataframe.shape}.")
         if node in self.model.scene_root.children:
             node.data = dataframe
-            self.logger.debug(f"Data assigned to PlotNode '{node.name}'.") # Added log
+            self.logger.debug(f"Data assigned to PlotNode '{node.name}'.")
 
-
-            # Set a default plot mapping if one doesn't exist
-            if not node.plot_properties and dataframe.shape[1] >= 2:
+            # Ensure plot_properties exist, creating defaults if necessary
+            if not node.plot_properties:
+                node.plot_properties = LinePlotProperties(title=node.name) # Create a basic one if not existing
+                self.logger.debug(f"Created basic PlotProperties for '{node.name}' as none existed.")
+            
+            # Now, update plot_properties with default column mappings if the dataframe has enough columns
+            if dataframe.shape[1] >= 2:
                 col1 = dataframe.columns[0]
                 col2 = dataframe.columns[1]
-
-                new_mapping = PlotMapping(x=col1, y=[col2])
-                new_limits = AxesLimits(xlim=(None, None), ylim=(None, None))
-
-                node.plot_properties = LinePlotProperties(
-                    title=node.name,
-                    xlabel=col1,
-                    ylabel=col2,
-                    plot_mapping=new_mapping,
-                    axes_limits=new_limits,
-                )
-                self.logger.info(f"Default plot properties created for '{node.name}'.") # Added log
-            elif node.plot_properties:
-                self.logger.debug(f"PlotNode '{node.name}' already has plot properties. Skipping default creation.") # Added log
+                
+                # Check if plot_mapping is already set or if it's the default empty one
+                if node.plot_properties.plot_mapping.x is None and not node.plot_properties.plot_mapping.y:
+                    node.plot_properties.plot_mapping = PlotMapping(x=col1, y=[col2])
+                    node.plot_properties.xlabel = col1
+                    node.plot_properties.ylabel = col2
+                    self.logger.info(f"Default plot mapping set for '{col1}' and '{col2}' on '{node.name}'.")
+                else:
+                    self.logger.debug(f"PlotNode '{node.name}' already has a custom plot mapping. Skipping default mapping.")
             else:
-                self.logger.debug(f"PlotNode '{node.name}' has insufficient columns for default properties. Columns: {dataframe.shape[1]}") # Added log
-
+                self.logger.warning(f"PlotNode '{node.name}' has insufficient columns ({dataframe.shape[1]}) for default plot mapping.")
 
             self.model.modelChanged.emit()
-            self.logger.debug(f"modelChanged signal emitted after data load for '{node.name}'.") # Added log
+            self.logger.debug(f"modelChanged signal emitted after data load for '{node.name}'.")
         else:
-            self.logger.warning(f"Data ready for node '{node.name}' (ID: {node.id}) but it's no longer in the scene_root's children. Data not assigned.") # Added log
+            self.logger.warning(f"Data ready for node '{node.name}' (ID: {node.id}) but it's no longer in the scene_root's children. Data not assigned.")
 
 
     def on_data_load_error(self, error_message):
