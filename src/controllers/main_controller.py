@@ -1,28 +1,27 @@
 import json
+import logging
 import tempfile
 import zipfile
 from pathlib import Path
-import logging
 
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QFileDialog
 
-from src.models import ApplicationModel
-from src.models.nodes import PlotNode
-from src.models.nodes import scene_node 
-from src.models.nodes.plot_properties import BasePlotProperties, PlotType 
-from src.config_service import ConfigService
-from src.layout_manager import LayoutManager
-from src.constants import LayoutMode
-from src.layout_engine import Rect
-from typing import Dict, List
-from src.commands.batch_change_plot_geometry_command import BatchChangePlotGeometryCommand
-from src.commands.command_manager import CommandManager # New import
-from src.models.layout_config import GridConfig # Needed for apply_grid_layout_from_ui
-
+from src.services.commands.batch_change_plot_geometry_command import (
+    BatchChangePlotGeometryCommand,
+)
+from src.services.commands.command_manager import CommandManager
+from src.services.config_service import ConfigService
+from src.shared.constants import LayoutMode
+from src.services.layout_manager import LayoutManager
+from src.models.application_model import ApplicationModel
+from src.models.layout.layout_config import GridConfig
+from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.scene_node import node_factory
+from src.models.plots.plot_properties import BasePlotProperties, PlotType
 
 # MAX_RECENT_FILES is removed from here as it comes from config_service
-RECENT_FILES_KEY = "recentFiles" 
+RECENT_FILES_KEY = "recentFiles"
 
 
 class MainController:
@@ -31,12 +30,12 @@ class MainController:
     Connects main window UI actions to model-updating logic.
     """
 
-    def __init__(self, model: ApplicationModel, config_service: ConfigService, layout_manager: LayoutManager, command_manager: CommandManager): 
+    def __init__(self, model: ApplicationModel, config_service: ConfigService, layout_manager: LayoutManager, command_manager: CommandManager):
         self.model = model
         self._config_service = config_service
         self._layout_manager = layout_manager
         self.command_manager = command_manager # Store command manager for commands
-        
+
         self.settings = QSettings(
             self._config_service.get("organization", "SciFig"),
             self._config_service.get("app_name", "DataAnalysisGUI")
@@ -111,7 +110,7 @@ class MainController:
         self.logger.info(f"MainController received request to apply grid layout from UI: {rows}x{cols}, Margin: {margin}, Gutter: {gutter}")
         # The actual logic for applying the layout is now in update_grid_parameters
         new_geometries = self._layout_manager.update_grid_layout_parameters(rows=rows, cols=cols, margin=margin, gutter=gutter)
-        
+
         if new_geometries:
             command = BatchChangePlotGeometryCommand(self.model, new_geometries, f"Apply {rows}x{cols} Grid Layout")
             self.command_manager.execute_command(command)
@@ -135,14 +134,14 @@ class MainController:
         This method is designed to be called by debounced UI signals.
         """
         self.logger.info(f"Updating grid parameters: Rows={rows}, Cols={cols}, Margin={margin}, Gutter={gutter}")
-        
+
         # Call the layout manager's method directly with individual parameters
         new_geometries = self._layout_manager.update_grid_layout_parameters(rows=rows, cols=cols, margin=margin, gutter=gutter)
-        
+
         if new_geometries:
             command = BatchChangePlotGeometryCommand(self.model, new_geometries, f"Update Grid Layout ({rows}x{cols})")
             self.command_manager.execute_command(command)
-            self.logger.debug(f"Executed BatchChangePlotGeometryCommand for updating grid layout with new parameters.")
+            self.logger.debug("Executed BatchChangePlotGeometryCommand for updating grid layout with new parameters.")
         else:
             self.logger.info("No geometry changes after updating grid parameters.")
 
@@ -163,7 +162,7 @@ class MainController:
         # This implicitly uses the defaults from _create_default_grid_config
         # and infers rows/cols if needed.
         new_geometries = self._layout_manager.update_grid_layout_parameters(rows=None, cols=None)
-        
+
         if new_geometries:
             # The description for the command should reflect that it's a default application
             current_grid_config = self._layout_manager.current_layout_config # Get the config after update
@@ -174,7 +173,7 @@ class MainController:
 
             command = BatchChangePlotGeometryCommand(self.model, new_geometries, description)
             self.command_manager.execute_command(command)
-            self.logger.debug(f"Executed BatchChangePlotGeometryCommand for default grid layout.")
+            self.logger.debug("Executed BatchChangePlotGeometryCommand for default grid layout.")
         else:
             self.logger.info("No geometry changes after applying default grid layout.")
 
@@ -223,7 +222,7 @@ class MainController:
             return
 
         # 4. Use scene_node.node_factory to deserialize JSON into new_layout_root_node
-        new_layout_root_node = scene_node.node_factory(template_data)
+        new_layout_root_node = node_factory(template_data)
         self.logger.debug(f"Layout template deserialized. Root node: {new_layout_root_node.name} ({type(new_layout_root_node).__name__})")
 
 
@@ -233,10 +232,10 @@ class MainController:
             if isinstance(new_slot_node, PlotNode):
                 if old_plot_index < len(existing_plot_states):
                     old_plot_state = existing_plot_states[old_plot_index]
-                    
+
                     # Assign old data
                     new_slot_node.data = old_plot_state["data"]
-                    
+
                     # Update plot properties, preserving new slot's geometry
                     if new_slot_node.plot_properties: # Ensure it has plot_properties
                         new_slot_node.plot_properties.update_from_dict(old_plot_state["plot_properties_dict"])
@@ -271,7 +270,7 @@ class MainController:
         if not file_path:
             self.logger.info("Project save cancelled by user.")
             return
-        
+
         self.logger.info(f"Saving project to: {file_path}")
 
 
@@ -322,7 +321,7 @@ class MainController:
         if not file_path:
             self.logger.info("Project open cancelled by user.")
             return
-        
+
         self.logger.info(f"Opening project from: {file_path}")
 
 
@@ -424,7 +423,7 @@ class MainController:
             return
 
         # 4. Use scene_node.node_factory to deserialize JSON into new_layout_root_node
-        new_layout_root_node = scene_node.node_factory(template_data)
+        new_layout_root_node = node_factory(template_data)
         self.logger.debug(f"Layout template deserialized. Root node: {new_layout_root_node.name} ({type(new_layout_root_node).__name__})") # Added log
 
 
@@ -434,10 +433,10 @@ class MainController:
             if isinstance(new_slot_node, PlotNode):
                 if old_plot_index < len(existing_plot_states):
                     old_plot_state = existing_plot_states[old_plot_index]
-                    
+
                     # Assign old data
                     new_slot_node.data = old_plot_state["data"]
-                    
+
                     # Update plot properties, preserving new slot's geometry
                     if new_slot_node.plot_properties: # Ensure it has plot_properties
                         new_slot_node.plot_properties.update_from_dict(old_plot_state["plot_properties_dict"])
@@ -472,7 +471,7 @@ class MainController:
         if not file_path:
             self.logger.info("Project save cancelled by user.") # Added log
             return
-        
+
         self.logger.info(f"Saving project to: {file_path}") # Added log
 
 
@@ -523,7 +522,7 @@ class MainController:
         if not file_path:
             self.logger.info("Project open cancelled by user.") # Added log
             return
-        
+
         self.logger.info(f"Opening project from: {file_path}") # Added log
 
 

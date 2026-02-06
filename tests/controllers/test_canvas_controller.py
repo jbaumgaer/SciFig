@@ -3,19 +3,18 @@ from unittest.mock import MagicMock
 import pandas as pd
 import pytest
 
-from src.commands.command_manager import CommandManager
+from src.services.commands.command_manager import CommandManager
+from src.shared.constants import LayoutMode
 from src.controllers.canvas_controller import CanvasController
+from src.controllers.main_controller import MainController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
-from src.models.nodes.plot_properties import (
+from src.models.plots.plot_properties import (
     AxesLimits,
     LinePlotProperties,
     PlotMapping,
 )
-from src.views.canvas_widget import CanvasWidget
-from src.layout_manager import LayoutManager # New import
-from src.constants import LayoutMode # New import
-from src.controllers.main_controller import MainController # New import
+from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 @pytest.fixture

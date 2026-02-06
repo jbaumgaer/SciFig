@@ -1,10 +1,9 @@
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from PySide6.QtCore import QObject
 
-from src.controllers.tool_manager import ToolManager
-from src.controllers.tools.base_tool import BaseTool
+from src.services.tool_service import ToolService
+from src.services.tools.base_tool import BaseTool
 
 
 class MockTool(BaseTool):
@@ -36,7 +35,7 @@ def tool_manager():
     """Fixture to create a ToolManager with mock dependencies."""
     model = Mock()
     command_manager = Mock()
-    return ToolManager(model, command_manager)
+    return ToolService(model, command_manager)
 
 
 def test_add_tool(tool_manager):

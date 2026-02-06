@@ -1,4 +1,4 @@
-from .scene_node import SceneNode
+from src.models.nodes.scene_node import SceneNode
 
 
 class TextNode(SceneNode):

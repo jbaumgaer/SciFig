@@ -1,20 +1,21 @@
-import logging 
-from PySide6.QtCore import QObject, QPointF, QThread, Signal
+import logging
 
-from src.commands.command_manager import CommandManager
-from src.models import ApplicationModel, PlotNode
-from src.models.nodes.plot_properties import (
-    AxesLimits,
+from PySide6.QtCore import QObject, QPointF, QThread
+
+from src.services.commands.command_manager import CommandManager
+from src.shared.constants import LayoutMode
+from src.controllers.main_controller import MainController
+from src.services.layout_manager import LayoutManager
+from src.models.application_model import ApplicationModel
+from src.models.nodes.plot_node import PlotNode
+from src.models.plots.plot_properties import (
     LinePlotProperties,
     PlotMapping,
 )
 from src.processing.data_loader import DataLoader
-from src.views.canvas_widget import CanvasWidget
+from src.ui.widgets.canvas_widget import CanvasWidget
 
-from .tool_manager import ToolManager
-from src.layout_manager import LayoutManager
-from src.constants import LayoutMode
-from src.controllers.main_controller import MainController
+from src.services.tool_service import ToolService
 
 
 class CanvasController(QObject):
@@ -27,7 +28,7 @@ class CanvasController(QObject):
         self,
         model: ApplicationModel,
         canvas_widget: CanvasWidget,
-        tool_manager: ToolManager,
+        tool_manager: ToolService,
         command_manager: CommandManager,
         layout_manager: LayoutManager, # New parameter
         main_controller: MainController, # New parameter
@@ -151,12 +152,12 @@ class CanvasController(QObject):
             if not node.plot_properties:
                 node.plot_properties = LinePlotProperties(title=node.name) # Create a basic one if not existing
                 self.logger.debug(f"Created basic PlotProperties for '{node.name}' as none existed.")
-            
+
             # Now, update plot_properties with default column mappings if the dataframe has enough columns
             if dataframe.shape[1] >= 2:
                 col1 = dataframe.columns[0]
                 col2 = dataframe.columns[1]
-                
+
                 # Check if plot_mapping is already set or if it's the default empty one
                 if node.plot_properties.plot_mapping.x is None and not node.plot_properties.plot_mapping.y:
                     node.plot_properties.plot_mapping = PlotMapping(x=col1, y=[col2])

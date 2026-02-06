@@ -1,19 +1,18 @@
 import dataclasses
+import logging
 from pathlib import Path
 from typing import Optional
-import logging
 
+import matplotlib.axes
 import pandas as pd
-import matplotlib.axes # Import matplotlib.axes
 
-from .plot_properties import (
+from src.models.plots.plot_properties import (
     AxesLimits,
     BasePlotProperties,
-    LinePlotProperties,
     PlotMapping,
     PlotType,
 )
-from .scene_node import SceneNode
+from src.models.nodes.scene_node import SceneNode
 
 
 class PlotNode(SceneNode):
@@ -45,11 +44,11 @@ class PlotNode(SceneNode):
             return None # No axes to hit test against yet
 
         x, y = position
-        
+
         # Get the bounding box of the axes in figure coordinates
         # Bbox is in display coordinates, so transform it to figure coordinates
         bbox = self.axes.get_window_extent().transformed(self.axes.figure.transFigure.inverted())
-        
+
         if bbox.x0 <= x <= bbox.x1 and bbox.y0 <= y <= bbox.y1:
             self.logger.debug(f"Hit test for {self.name} (ID: {self.id}): Hit at position ({x}, {y}).")
             return self
@@ -65,7 +64,7 @@ class PlotNode(SceneNode):
         # Exclude geometry if requested
         if not exclude_geometry:
             node_dict["geometry"] = self.geometry
-        
+
         node_dict.update(
             {
                 "plot_properties": (

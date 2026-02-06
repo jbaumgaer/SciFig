@@ -1,15 +1,13 @@
-import logging 
+import logging
 from pathlib import Path
-from typing import Optional
 
 import matplotlib.figure
 from PySide6.QtCore import QObject, Signal
 
-from .nodes import GroupNode, SceneNode
-from .nodes.scene_node import node_factory
-from src.config_service import ConfigService
-from src.constants import LayoutMode
-from src.models.layout_config import LayoutConfig, FreeConfig, GridConfig
+from src.services.config_service import ConfigService
+from src.models.layout.layout_config import FreeConfig, LayoutConfig
+from src.models.nodes.group_node import GroupNode
+from src.models.nodes.scene_node import SceneNode, node_factory
 
 
 class ApplicationModel(QObject):
@@ -87,12 +85,12 @@ class ApplicationModel(QObject):
         # Version check can be added here in the future
         self.clear_scene()
         self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
-        
+
         # Deserialize layout config
         layout_config_data = data.get("layout_config")
         if layout_config_data:
             self.current_layout_config = LayoutConfig.from_dict(layout_config_data) # Use LayoutConfig.from_dict
         else:
             self.current_layout_config = FreeConfig() # Default if not found
-        
+
         self.modelChanged.emit()

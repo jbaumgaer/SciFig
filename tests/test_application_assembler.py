@@ -1,24 +1,25 @@
-import pytest
-from unittest.mock import Mock, MagicMock, patch
-from PySide6.QtWidgets import QApplication, QMenuBar
+from unittest.mock import MagicMock, Mock, patch
 
-from src.application_assembler import ApplicationAssembler
-from src.builders.menu_bar_builder import MainMenuActions
-from src.builders.tool_bar_builder import ToolBarActions # Assuming ToolBarActions is also a dataclass
-from src.models.application_model import ApplicationModel
-from src.controllers.canvas_controller import CanvasController # New import
+import pytest
+from PySide6.QtWidgets import QApplication, QMenuBar
+from src.services.commands.command_manager import CommandManager
+
+from src.ui.builders.menu_bar_builder import MainMenuActions
+from src.ui.builders.tool_bar_builder import (
+    ToolBarActions,  # Assuming ToolBarActions is also a dataclass
+)
+from src.services.config_service import ConfigService
+from src.controllers.canvas_controller import CanvasController  # New import
 from src.controllers.main_controller import MainController
-from src.commands.command_manager import CommandManager
-from src.views.main_window import MainWindow
-from src.controllers.tool_manager import ToolManager
-from src.controllers.tools.selection_tool import SelectionTool
-from src.views.renderer import Renderer
-from src.application_components import ApplicationComponents
-from src.config_service import ConfigService
-from src.layout_manager import LayoutManager
-from src.layout_engine import FreeLayoutEngine, GridLayoutEngine
-from src.models.layout_config import FreeConfig, GridConfig
-from src.constants import LayoutMode
+from src.services.tool_service import ToolService
+from src.services.tools.selection_tool import SelectionTool
+from src.core.application_components import ApplicationComponents
+from src.models.layout.layout_engine import FreeLayoutEngine, GridLayoutEngine
+from src.services.layout_manager import LayoutManager
+from src.models.application_model import ApplicationModel
+from src.models.layout.layout_config import FreeConfig
+from src.ui.windows.main_window import MainWindow
+from src.ui.renderers.renderer import Renderer
 
 
 @pytest.fixture
@@ -62,7 +63,7 @@ def mock_selection_tool():
 @pytest.fixture
 def mock_tool_manager(mock_selection_tool):
     """Fixture for a mock ToolManager."""
-    tool_manager = MagicMock(spec=ToolManager)
+    tool_manager = MagicMock(spec=ToolService)
     # Mock add_tool to avoid errors when MockTool is added
     tool_manager.add_tool.return_value = None
     tool_manager._tools = {'selection': mock_selection_tool} # Mock internal state used by assembler
@@ -185,7 +186,7 @@ def assembler(
         assembler_instance._canvas_controller = mock_canvas_controller # New assignment
 
         mock_set_icon_config.assert_called_once_with(mock_config_service)
-        
+
     return assembler_instance
 
 # Test for the fix in _assemble_menus
@@ -296,7 +297,7 @@ def test_assemble_main_window_receives_config_service(assembler, mock_main_windo
     Test that MainWindow.__init__ receives the ConfigService instance.
     """
     # This check will be part of a broader integration test for assembler.assemble()
-    pass 
+    pass
 
 def test_main_controller_receives_config_service(assembler, mock_main_controller, mock_config_service):
     """
@@ -332,7 +333,7 @@ def test_application_assembler_layout_component_wiring(assembler, mock_model, mo
     LayoutManager.reset_mock()
     LayoutUIFactory.reset_mock()
     Renderer.reset_mock()
-    ToolManager.reset_mock()
+    ToolService.reset_mock()
     SelectionTool.reset_mock()
     MainWindow.reset_mock()
     CanvasController.reset_mock()

@@ -1,16 +1,16 @@
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
 import pytest
 
-from src.models.nodes import PlotNode, SceneNode
-from src.models.nodes.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
-from src.models.nodes.plot_types import PlotType
-from src.views.renderer import Renderer
+from src.services.layout_manager import LayoutManager
 from src.models.application_model import ApplicationModel
-from src.layout_manager import LayoutManager
-from src.models.layout_config import FreeConfig, GridConfig
-from src.constants import LayoutMode
+from src.models.layout.layout_config import FreeConfig
+from src.models.nodes.scene_node import SceneNode
+from src.models.nodes.plot_node import PlotNode
+from src.models.plots.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
+from src.models.plots.plot_types import PlotType
+from src.ui.renderers.renderer import Renderer
 
 
 class TestNode(SceneNode):
@@ -157,7 +157,7 @@ def test_renderer_calls_correct_render_function_for_node_type(mock_layout_manage
     renderer._render_strategies[TestNode] = mock_render_test_node
 
     test_node = TestNode(name="MyTestNode")
-    
+
     # Configure mock_application_model to return an empty list for plot nodes
     # so _render_plots doesn't interfere, and pass the root node with our test_node
     mock_application_model.scene_root.all_descendants.return_value = [test_node] # Include test_node for _render_other_nodes

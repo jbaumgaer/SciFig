@@ -1,31 +1,43 @@
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import matplotlib.figure
 import pytest
-from PySide6.QtWidgets import QApplication, QComboBox, QDockWidget, QLineEdit, QMenuBar, QToolBar, QMenu
 from PySide6.QtGui import QAction
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QDockWidget,
+    QLineEdit,
+    QMenu,
+    QMenuBar,
+    QToolBar,
+)
 
-from src.builders.menu_bar_builder import MainMenuActions
-from src.builders.tool_bar_builder import ToolBarActions
-from src.commands.command_manager import CommandManager
+from src.services.commands.command_manager import CommandManager
+from src.ui.builders.menu_bar_builder import MainMenuActions
+from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.controllers.canvas_controller import CanvasController
 from src.controllers.main_controller import MainController
-from src.controllers.tool_manager import ToolManager
-from src.controllers.tools.selection_tool import SelectionTool
+from src.services.tool_service import ToolService
+from src.services.tools.selection_tool import SelectionTool
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
-from src.models.nodes.plot_properties import (
+from src.models.plots.plot_properties import (
     AxesLimits,
     LinePlotProperties,
     PlotMapping,
 )
-from unittest.mock import MagicMock
-from src.views.main_window import MainWindow
-from src.views.properties_ui_factory import PropertiesUIFactory, _build_line_plot_ui_widgets, _build_scatter_plot_ui_widgets
-from src.models.nodes.plot_types import PlotType
-from src.views.renderer import Renderer
+from src.models.plots.plot_types import PlotType
+from src.ui.windows.main_window import MainWindow
+from src.ui.factories.properties_ui_factory import (
+    PropertiesUIFactory,
+    _build_line_plot_ui_widgets,
+    _build_scatter_plot_ui_widgets,
+)
+from src.ui.renderers.renderer import Renderer
 
 
 @pytest.fixture
@@ -101,7 +113,7 @@ def app_context(qtbot):
     view.show()
     qtbot.waitExposed(view)
 
-    tool_manager = ToolManager(model=model, command_manager=command_manager)
+    tool_manager = ToolService(model=model, command_manager=command_manager)
     selection_tool = SelectionTool(
         model=model,
         command_manager=command_manager,
@@ -353,7 +365,7 @@ def test_axis_limits_updates_model(app_context, qtbot):
     assert final_limits.ylim == (-5.0, 5.0)
 
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 def test_save_project_workflow(populated_plot_node, monkeypatch):

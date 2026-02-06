@@ -1,13 +1,13 @@
-import pytest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
-from src.models import ApplicationModel
-from src.config_service import ConfigService
-from src.layout_manager import LayoutManager
-from src.layout_engine import FreeLayoutEngine, GridLayoutEngine, Rect, LayoutMode
-from src.models.nodes import PlotNode, GroupNode
-from src.models.layout_config import GridConfig
-from src.types import PlotID
+import pytest
+
+from src.services.config_service import ConfigService
+from src.models.layout.layout_engine import FreeLayoutEngine, GridLayoutEngine, LayoutMode
+from src.services.layout_manager import LayoutManager
+from src.models.application_model import ApplicationModel
+from src.models.layout.layout_config import GridConfig
+from src.models.nodes import GroupNode, PlotNode
 
 
 @pytest.fixture
@@ -183,7 +183,7 @@ def test_update_grid_layout_parameters_simple_update(layout_manager, mock_applic
     """
     mock_application_model.current_layout_config = GridConfig(rows=1, cols=1, margin=0.01, gutter=0.01)
     mock_application_model.scene_root.all_descendants.return_value = [PlotNode(id="p1"), PlotNode(id="p2")]
-    
+
     expected_geometries = {"p1": (0,0,0.5,0.5), "p2": (0.5,0,0.5,0.5)}
     mock_grid_engine.calculate_geometries.return_value = {
         mock_application_model.scene_root.all_descendants.return_value[0]: expected_geometries["p1"],
@@ -210,7 +210,7 @@ def test_update_grid_layout_parameters_infer_from_plots(layout_manager, mock_app
     mock_application_model.scene_root.all_descendants.return_value = [
         PlotNode(id="p1"), PlotNode(id="p2"), PlotNode(id="p3"), PlotNode(id="p4")
     ] # 4 plots
-    
+
     expected_geometries = {"p1": (0,0,0.5,0.5), "p2": (0.5,0,0.5,0.5), "p3": (0,0.5,0.5,0.5), "p4": (0.5,0.5,0.5,0.5)}
     mock_grid_engine.calculate_geometries.return_value = {
         mock_application_model.scene_root.all_descendants.return_value[0]: expected_geometries["p1"],
@@ -237,7 +237,7 @@ def test_update_grid_layout_parameters_from_free_mode_with_explicit_params(layou
     """
     mock_application_model.current_layout_config = FreeConfig() # Start in free mode
     mock_application_model.scene_root.all_descendants.return_value = [PlotNode(id="p1")]
-    
+
     expected_geometries = {"p1": (0,0,1,1)}
     mock_grid_engine.calculate_geometries.return_value = {
         mock_application_model.scene_root.all_descendants.return_value[0]: expected_geometries["p1"]
@@ -263,7 +263,7 @@ def test_update_grid_layout_parameters_preserve_current_config_values(layout_man
     initial_grid_config = GridConfig(rows=3, cols=3, margin=0.1, gutter=0.08)
     mock_application_model.current_layout_config = initial_grid_config
     mock_application_model.scene_root.all_descendants.return_value = [PlotNode(id="p1")]
-    
+
     expected_geometries = {"p1": (0,0,1,1)}
     mock_grid_engine.calculate_geometries.return_value = {
         mock_application_model.scene_root.all_descendants.return_value[0]: expected_geometries["p1"]

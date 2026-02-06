@@ -1,4 +1,5 @@
-import logging 
+import logging
+
 import pandas as pd
 from PySide6.QtCore import QObject, Signal
 

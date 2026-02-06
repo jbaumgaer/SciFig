@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import uuid
 import logging
+import uuid
 from pathlib import Path
-from typing import Generator, Type # Add Type import
+from typing import Generator, Type
 
 from PySide6.QtCore import QObject
 
@@ -84,11 +84,11 @@ class SceneNode(QObject):
         If 'of_type' is provided, only nodes of that type (or subclasses) are yielded.
         """
         self.logger.debug(f"Getting all descendants starting from {self.name} (ID: {self.id}).")
-        
+
         # Yield self if it matches the type or no type is specified
         if of_type is None or isinstance(self, of_type):
             yield self
-        
+
         for child in self.children:
             yield from child.all_descendants(of_type) # Pass of_type recursively
 
@@ -134,7 +134,7 @@ def node_factory(
 
     # Use "type" from the JSON data
     node_type_str = data.get("type")
-    
+
     # Create a temporary logger for this function, as ConfigService isn't available yet
     logger = logging.getLogger(__name__)
     logger.debug(f"node_factory: Attempting to create node of type: '{node_type_str}'")
@@ -156,7 +156,7 @@ def node_factory(
         node = cls.from_dict(data, parent=parent, temp_dir=temp_dir)
     else:
         node = cls.from_dict(data, parent=parent)
-    
+
     logger.debug(f"node_factory: Created node {node.name} (ID: {node.id}) of type {type(node).__name__}.")
 
 

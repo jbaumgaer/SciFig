@@ -1,18 +1,14 @@
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-from PySide6.QtCore import QSettings
+from src.services.commands.command_manager import CommandManager
 
-from src.commands.command_manager import CommandManager
-from src.config_service import ConfigService
+from src.services.config_service import ConfigService
 from src.controllers.main_controller import MainController
+from src.services.layout_manager import LayoutManager
 from src.models import ApplicationModel
-from src.models.nodes import GroupNode, PlotNode, SceneNode
-from src.models.nodes.plot_properties import BasePlotProperties, PlotType
-from src.layout_manager import LayoutManager
-from src.layout_engine import LayoutMode
+from src.models.nodes import GroupNode
 
 
 @pytest.fixture
@@ -202,7 +198,7 @@ def test_create_new_layout_redistributes_existing_plots_fewer_slots(main_control
     # existing_plot3 = PlotNode(name="Old Plot 3", id="old_id_3") # This one will be 'discarded'
     # existing_plot3.data = pd.DataFrame({"x":[5], "y":[6]})
     # existing_plot3.plot_properties = BasePlotProperties(title="Old Title 3", plot_type=PlotType.LINE)
-    
+
     # mock_model.scene_root.children.extend([existing_plot1, existing_plot2, existing_plot3])
     # mock_model.scene_root.all_descendants.return_value = [mock_model.scene_root, existing_plot1, existing_plot2, existing_plot3]
 
@@ -228,7 +224,7 @@ def test_create_new_layout_redistributes_existing_plots_more_slots(main_controll
     # existing_plot1 = PlotNode(name="Old Plot 1", id="old_id_1")
     # existing_plot1.data = pd.DataFrame({"x":[1], "y":[2]})
     # existing_plot1.plot_properties = BasePlotProperties(title="Old Title 1", plot_type=PlotType.LINE)
-    
+
     # mock_model.scene_root.children.append(existing_plot1)
     # mock_model.scene_root.all_descendants.return_value = [mock_model.scene_root, existing_plot1]
 
@@ -330,7 +326,7 @@ def test_update_grid_parameters_default_values(main_controller, mock_layout_mana
     mock_layout_manager.update_grid_layout_parameters.return_value = {"plot_id_1": (0, 0, 100, 100)}
     # When called without arguments, it should pass None for rows, cols, margin, gutter
     # assuming that is the expected behavior based on the method signature in main_controller
-    main_controller.update_grid_parameters() 
+    main_controller.update_grid_parameters()
     mock_layout_manager.update_grid_layout_parameters.assert_called_once_with(rows=None, cols=None, margin=None, gutter=None)
     mock_command_manager.execute_command.assert_called_once()
     assert isinstance(mock_command_manager.execute_command.call_args[0][0], BatchChangePlotGeometryCommand)

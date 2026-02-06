@@ -1,9 +1,6 @@
-from pathlib import Path
 import pytest
-import yaml
 
 # Assuming ConfigService is importable from src.config_service
-from src.config_service import ConfigService 
 
 # Helper function to create a temporary config file for testing
 @pytest.fixture

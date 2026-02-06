@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import MagicMock
-from PySide6.QtCore import QObject, QTimer
 
-from src.utils import Debouncer, RateLimiter
+import pytest
+from PySide6.QtCore import QObject
+
+from src.shared.utils import Debouncer
+
 
 # Fixture for a simple QObject to use as parent, if needed
 @pytest.fixture

@@ -5,8 +5,10 @@ import pandas as pd
 from matplotlib.figure import Figure
 
 from src.models.application_model import ApplicationModel
-from src.models.nodes import GroupNode, PlotNode, SceneNode
-from src.models.nodes.plot_properties import LinePlotProperties
+from src.models.nodes.group_node import GroupNode
+from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.scene_node import SceneNode
+from src.models.plots.plot_properties import LinePlotProperties
 
 
 def test_scene_node_to_dict():

@@ -2,21 +2,20 @@ from unittest.mock import MagicMock
 
 import matplotlib.figure
 import pytest
-from PySide6.QtWidgets import QApplication, QMenuBar, QToolBar, QMenu
-from PySide6.QtGui import QAction # Corrected import for QAction # Added QMenuBar, QToolBar
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QApplication, QMenu, QMenuBar, QToolBar
+from src.services.commands.command_manager import CommandManager
 
-from src.builders.menu_bar_builder import MainMenuActions # Added MainMenuActions
-from src.builders.tool_bar_builder import ToolBarActions # Added ToolBarActions
-from src.commands.command_manager import CommandManager
+from src.ui.builders.menu_bar_builder import MainMenuActions
+from src.ui.builders.tool_bar_builder import ToolBarActions
+from src.services.config_service import ConfigService
 from src.controllers.main_controller import MainController
+from src.services.layout_manager import LayoutManager
 from src.models.application_model import ApplicationModel
-from src.models.nodes.plot_types import PlotType
-from src.views.main_window import MainWindow
-from src.views.properties_ui_factory import PropertiesUIFactory
-from src.config_service import ConfigService # Added import
-from src.layout_manager import LayoutManager # Added import
-from src.views.layout_ui_factory import LayoutUIFactory # Added import
-from src.layout_engine import LayoutMode # Added import
+from src.models.plots.plot_types import PlotType
+from src.ui.factories.layout_ui_factory import LayoutUIFactory
+from src.ui.windows.main_window import MainWindow
+from src.ui.factories.properties_ui_factory import PropertiesUIFactory
 
 
 @pytest.fixture
@@ -99,7 +98,7 @@ def app_context(qtbot, mock_main_controller, mock_config_service, mock_layout_ma
     mock_main_menu_actions.settings_action = MagicMock(spec=QAction)
     mock_tool_bar = QToolBar()
     mock_tool_bar_actions = MagicMock(spec=ToolBarActions)
-    
+
     mock_properties_ui_factory = MagicMock(spec_set=PropertiesUIFactory)
 
     # Patch QSettings to assert its initialization

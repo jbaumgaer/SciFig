@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 
-from src.views.plotting_strategies import (
+from src.ui.renderers.plotting_strategies import (
     LinePlotStrategy,
     ScatterPlotStrategy,
 )

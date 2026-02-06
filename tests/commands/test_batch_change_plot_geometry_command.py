@@ -2,10 +2,11 @@
 Test suite for the BatchChangePlotGeometryCommand.
 """
 from unittest.mock import MagicMock
+
 import pytest
-from src.commands.batch_change_plot_geometry_command import BatchChangePlotGeometryCommand
-from src.models.nodes import PlotNode, SceneNode
 from src.models.geometry import Rect
+
+from src.models.nodes import PlotNode, SceneNode
 
 
 @pytest.fixture

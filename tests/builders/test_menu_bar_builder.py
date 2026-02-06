@@ -2,12 +2,11 @@ from unittest.mock import Mock
 
 import pytest
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QMenu, QMenuBar # Removed QMainWindow import
-
-from src.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
+from PySide6.QtWidgets import QMenu, QMenuBar  # Removed QMainWindow import
 from src.commands import CommandManager
-from src.controllers.main_controller import MainController
 
+from src.ui.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
+from src.controllers.main_controller import MainController
 
 # Removed mock_mainwindow fixture as it's no longer needed for MenuBarBuilder
 

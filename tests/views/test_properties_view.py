@@ -1,25 +1,26 @@
+from unittest.mock import MagicMock, Mock
+
 import pandas as pd
 import pytest
-from unittest.mock import MagicMock, Mock
 from matplotlib.figure import Figure
-from PySide6.QtWidgets import QComboBox, QLineEdit, QWidget # Added QWidget
+from PySide6.QtWidgets import QComboBox, QLineEdit, QWidget
 
-from src.commands.command_manager import CommandManager
+from src.services.commands.command_manager import CommandManager
+from src.shared.constants import LayoutMode
+from src.controllers.main_controller import MainController
+from src.services.layout_manager import LayoutManager
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
-from src.models.nodes.plot_properties import (
+from src.models.plots.plot_properties import (
     AxesLimits,
     LinePlotProperties,
     PlotMapping,
     ScatterPlotProperties,
 )
-from src.models.nodes.plot_types import PlotType
-from src.views.properties_ui_factory import PropertiesUIFactory
-from src.views.properties_view import PropertiesView
-from src.views.layout_ui_factory import LayoutUIFactory # New import
-from src.layout_manager import LayoutManager # New import
-from src.constants import LayoutMode # New import
-from src.controllers.main_controller import MainController # New import
+from src.models.plots.plot_types import PlotType
+from src.ui.factories.layout_ui_factory import LayoutUIFactory
+from src.ui.factories.properties_ui_factory import PropertiesUIFactory
+from src.ui.panels.properties_panel import PropertiesPanel
 
 
 @pytest.fixture
@@ -65,13 +66,13 @@ def properties_ui_factory_mock():
         title_edit = QLineEdit(node.plot_properties.title, parent)
         title_edit.setObjectName("title_edit")
         layout.addRow("Title:", title_edit)
-        
+
         # Simulate specific widgets based on plot type, for testing findChild behavior
         if node.plot_properties.plot_type == PlotType.SCATTER:
             marker_size_edit = QLineEdit(str(node.plot_properties.marker_size), parent)
             marker_size_edit.setObjectName("marker_size_edit")
             layout.addRow("Marker Size:", marker_size_edit)
-        
+
     mock_factory.build_widgets.side_effect = mock_build_widgets
     return mock_factory
 
@@ -81,7 +82,7 @@ def layout_ui_factory_mock():
     """Provides a mock LayoutUIFactory."""
     mock_factory = MagicMock(spec=LayoutUIFactory)
     # Configure mock to return a dummy QWidget, as the real factory now returns QWidget
-    mock_factory.build_layout_controls.return_value = QWidget() 
+    mock_factory.build_layout_controls.return_value = QWidget()
     return mock_factory
 
 @pytest.fixture
@@ -106,17 +107,17 @@ def main_controller_mock(app_model, command_manager, layout_manager_mock):
 def properties_view(app_model, command_manager, properties_ui_factory_mock):
     """Provides a PropertiesView instance."""
     plot_types = [PlotType.LINE, PlotType.SCATTER]
-    view = PropertiesView(app_model, command_manager, plot_types, properties_ui_factory_mock)
+    view = PropertiesPanel(app_model, command_manager, plot_types, properties_ui_factory_mock)
     return view
 
 @pytest.fixture
 def properties_view_with_layout_mocks(app_model, command_manager, properties_ui_factory_mock, layout_ui_factory_mock, layout_manager_mock, main_controller_mock):
     """Provides a PropertiesView instance with new layout-related dependencies."""
     plot_types = [PlotType.LINE, PlotType.SCATTER]
-    view = PropertiesView(
-        app_model, 
-        command_manager, 
-        plot_types, 
+    view = PropertiesPanel(
+        app_model,
+        command_manager,
+        plot_types,
         properties_ui_factory_mock,
         layout_ui_factory_mock, # New
         layout_manager_mock,    # New

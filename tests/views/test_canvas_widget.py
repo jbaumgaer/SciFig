@@ -6,7 +6,7 @@ from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
 from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QWheelEvent
 from PySide6.QtWidgets import QGraphicsView, QScrollBar
 
-from src.views.canvas_widget import CanvasWidget
+from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 @pytest.fixture

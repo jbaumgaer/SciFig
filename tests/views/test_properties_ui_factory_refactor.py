@@ -1,19 +1,30 @@
+from unittest.mock import MagicMock, Mock, patch
+
+import pandas as pd
 import pytest
-from unittest.mock import Mock, MagicMock, patch
-from PySide6.QtWidgets import QFormLayout, QWidget, QComboBox, QLineEdit, QLabel, QHBoxLayout
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFormLayout,
+    QLineEdit,
+    QWidget,
+)
 
 from src.models.nodes.plot_node import PlotNode
-from src.models.nodes.plot_properties import BasePlotProperties, ScatterPlotProperties, LinePlotProperties, PlotMapping, AxesLimits
-from src.models.nodes.plot_types import PlotType
-from src.views.properties_ui_factory import (
+from src.models.plots.plot_properties import (
+    AxesLimits,
+    LinePlotProperties,
+    PlotMapping,
+    ScatterPlotProperties,
+)
+from src.models.plots.plot_types import PlotType
+from src.ui.factories.properties_ui_factory import (
     PropertiesUIFactory,
+    _build_base_plot_properties_ui,
     _build_column_selectors,
     _build_limit_selectors,
-    _build_base_plot_properties_ui,
     _build_line_plot_ui_widgets,
-    _build_scatter_plot_ui_widgets
+    _build_scatter_plot_ui_widgets,
 )
-import pandas as pd
 
 
 @pytest.fixture
@@ -133,12 +144,12 @@ class TestPropertiesUIFactoryRefactor:
         """Verify build_widgets handles an unregistered builder gracefully (no error, and calls fallback)."""
         factory = mock_properties_ui_factory_instance
         # LINE PlotType is not registered by default in this test setup
-        
+
         # Ensure no builder was registered for LINE
         assert PlotType.LINE not in factory._builders
-        
+
         factory.build_widgets(node=mock_line_node, **common_ui_args)
-        
+
         # The fallback _build_base_plot_properties_ui should be called
         mock_base_builder.assert_called_once_with(
             node=mock_line_node,
@@ -169,9 +180,9 @@ class TestPropertiesUIFactoryRefactor:
         mock_node = Mock(spec=PlotNode)
         mock_node.plot_properties = Mock(spec=LinePlotProperties)
         mock_node.plot_properties.plot_type = PlotType.LINE
-        
+
         factory.build_widgets(node=mock_node, **common_ui_args)
-        
+
         mock_builder_v2.assert_called_once()
         mock_builder_v1.assert_not_called()
 
@@ -292,7 +303,7 @@ class TestStandaloneBuilders:
         node = mock_plot_node_with_data
         node.data = pd.DataFrame({'col1': [1], 'col2': [2], 'col3': [3]})
         node.plot_properties.plot_mapping = PlotMapping(x='col1', y=['col2'])
-        
+
         _build_column_selectors(
             node=node,
             layout=mock_form_layout,
@@ -307,19 +318,19 @@ class TestStandaloneBuilders:
         mock_qcombobox.setCurrentText.assert_any_call('col1')
         mock_qcombobox.setCurrentText.assert_any_call('col2')
         mock_qcombobox.currentTextChanged.connect.call_count == 2
-    
+
     def test_build_limit_selectors(self, qtbot, mock_plot_node_with_data, mock_form_layout, mock_limit_edits,
                                    mock_on_change_callback):
         node = mock_plot_node_with_data
         node.plot_properties.axes_limits = AxesLimits(xlim=(1.0, 5.0), ylim=(2.0, 6.0))
-        
+
         _build_limit_selectors(
             node=node,
             layout=mock_form_layout,
             limit_edits=mock_limit_edits,
             on_limit_editing_finished=mock_on_change_callback
         )
-        
+
         assert mock_form_layout.addRow.call_count == 2
         # Verify that setValidator and connect are called on the mock QLineEdits
         for key in ["xlim_min", "xlim_max", "ylim_min", "ylim_max"]:
@@ -367,7 +378,7 @@ class TestStandaloneBuilders:
 
         # Check for title
         assert any(args[0][0] == "Title:" and isinstance(args[0][1], QLineEdit) for args in mock_form_layout.addRow.call_args_list)
-        
+
         # Check for xlabel
         assert any(args[0][0] == "X-Axis Label:" and isinstance(args[0][1], QLineEdit) for args in mock_form_layout.addRow.call_args_list)
 
@@ -428,6 +439,6 @@ class TestStandaloneBuilders:
         # Assuming the QLineEdit text is set to the property value
         # This part requires a deeper inspection of the mock_form_layout or the widget itself
         # For now, we'll check that a line edit was added for "Marker Size"
-        
+
         # Further tests will be added once the common UI building logic is extracted
         # and the specific plot-type builder functions are created.

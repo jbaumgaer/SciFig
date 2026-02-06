@@ -1,9 +1,9 @@
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, MagicMock
-from PySide6.QtCore import Signal
+
 from src.models.application_model import ApplicationModel
-from src.models.layout_config import FreeConfig, GridConfig
-from src.constants import LayoutMode
+
 
 # Mock the Signal class as it's a Qt object and can't be instantiated outside a QApplication
 class MockSignal:

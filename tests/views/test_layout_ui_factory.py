@@ -1,20 +1,18 @@
-import logging
 from unittest.mock import MagicMock
 
 import pytest
-from PySide6.QtCore import QObject
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QPushButton,
-    QWidget,
-    QSpinBox,
     QLabel,
+    QPushButton,
+    QSpinBox,
+    QWidget,
 )
 
-from src.config_service import ConfigService
+from src.services.config_service import ConfigService
 from src.controllers.main_controller import MainController
-from src.layout_engine import LayoutMode
-from src.views.layout_ui_factory import LayoutUIFactory
+from src.models.layout.layout_engine import LayoutMode
+from src.ui.factories.layout_ui_factory import LayoutUIFactory
 
 
 @pytest.fixture
@@ -61,10 +59,10 @@ def layout_ui_factory(mock_config_service):
     # Temporarily set the _config_service on the class for testing get_path
     original_config_service = LayoutUIFactory._config_service
     LayoutUIFactory._config_service = mock_config_service
-    
+
     factory = LayoutUIFactory(mock_config_service)
     yield factory
-    
+
     # Restore original _config_service after test
     LayoutUIFactory._config_service = original_config_service
 
@@ -80,7 +78,7 @@ class TestLayoutUIFactory:
         """
         parent_widget = QWidget()
         free_form_controls = layout_ui_factory._build_free_form_controls(mock_main_controller, parent_widget)
-        
+
         # Check for presence of QPushButtons with icons
         buttons = free_form_controls.findChildren(QPushButton)
         assert len(buttons) > 0 # At least one button should be present
@@ -95,13 +93,13 @@ class TestLayoutUIFactory:
         """
         parent_widget = QWidget()
         free_form_controls = layout_ui_factory._build_free_form_controls(mock_main_controller, parent_widget)
-        
+
         snap_button: QPushButton = None
         for button in free_form_controls.findChildren(QPushButton):
             if button.text() == "Snap Selected to Grid":
                 snap_button = button
                 break
-        
+
         assert snap_button is not None
         assert isinstance(snap_button.icon(), QIcon)
         assert not snap_button.icon().isNull()
@@ -181,7 +179,7 @@ class TestLayoutUIFactory:
         """
         parent_widget = QWidget()
         controls = layout_ui_factory._build_grid_layout_controls(mock_main_controller, parent_widget)
-        
+
         # Find all relevant spin boxes
         rows_spinbox = controls.findChild(QSpinBox, "grid_rows_spinbox")
         cols_spinbox = controls.findChild(QSpinBox, "grid_cols_spinbox")
@@ -210,7 +208,7 @@ class TestLayoutUIFactory:
         mock_main_controller.update_grid_parameters.assert_called_once_with(
             rows=3, cols=4, margin=0.15, gutter=0.08
         )
-    
+
     def test_build_grid_layout_controls_no_apply_button(self, layout_ui_factory, mock_main_controller):
         """
         Test that the "Apply Grid Layout" button is no longer present in
