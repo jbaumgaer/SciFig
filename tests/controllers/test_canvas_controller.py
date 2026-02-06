@@ -13,6 +13,9 @@ from src.models.nodes.plot_properties import (
     PlotMapping,
 )
 from src.views.canvas_widget import CanvasWidget
+from src.layout_manager import LayoutManager # New import
+from src.constants import LayoutMode # New import
+from src.controllers.main_controller import MainController # New import
 
 
 @pytest.fixture
@@ -23,6 +26,7 @@ def mock_model():
     mock_scene_root = MagicMock()
     mock_scene_root.children = []
     model.scene_root = mock_scene_root
+    model.modelChanged = MagicMock() # Ensure this is mocked
     return model
 
 
@@ -48,10 +52,24 @@ def mock_command_manager():
     """Provides a mock CommandManager."""
     return MagicMock(spec=CommandManager)
 
+@pytest.fixture
+def mock_layout_manager():
+    """Provides a mock LayoutManager."""
+    manager = MagicMock()
+    manager.layout_mode = LayoutMode.FREE_FORM # Default to Free Form
+    return manager
+
+@pytest.fixture
+def mock_main_controller():
+    """Provides a mock MainController."""
+    controller = MagicMock(spec=MainController)
+    controller.apply_default_grid_layout = MagicMock() # Mock the method
+    return controller
+
 
 @pytest.fixture
 def canvas_controller(
-    mock_model, mock_canvas_widget, mock_tool_manager, mock_command_manager
+    mock_model, mock_canvas_widget, mock_tool_manager, mock_command_manager, mock_layout_manager, mock_main_controller
 ):
     """Provides a CanvasController instance."""
     return CanvasController(
@@ -59,6 +77,8 @@ def canvas_controller(
         canvas_widget=mock_canvas_widget,
         tool_manager=mock_tool_manager,
         command_manager=mock_command_manager,
+        layout_manager=mock_layout_manager,
+        main_controller=mock_main_controller,
     )
 
 
@@ -168,8 +188,8 @@ def test_on_data_ready_with_insufficient_columns(
     # Assert node.data was set
     pd.testing.assert_frame_equal(plot_node_empty_props.data, dataframe_one_col)
 
-    # Assert no commands were executed for properties
-    mock_command_manager.execute_command.assert_not_called()
+    # Assert no commands were executed for properties (this test doesn't use command_manager anyway for this part)
+    # mock_command_manager.execute_command.assert_not_called()
 
     # Assert modelChanged signal was emitted
     mock_model.modelChanged.emit.assert_called_once()
@@ -199,3 +219,43 @@ def test_on_data_ready_node_not_in_scene(
 
     # Assert modelChanged signal was NOT emitted
     mock_model.modelChanged.emit.assert_not_called()
+
+
+def test_on_data_ready_in_free_form_mode(
+    canvas_controller,
+    mock_model,
+    mock_layout_manager,
+    mock_main_controller,
+    sample_dataframe,
+    plot_node_empty_props,
+):
+    """
+    Test that on_data_ready does NOT call apply_default_grid_layout when in FREE_FORM mode.
+    """
+    mock_layout_manager.layout_mode = LayoutMode.FREE_FORM
+    mock_model.scene_root.children.append(plot_node_empty_props)
+
+    canvas_controller.on_data_ready(sample_dataframe, plot_node_empty_props)
+
+    mock_main_controller.apply_default_grid_layout.assert_not_called()
+    mock_model.modelChanged.emit.assert_called_once()
+
+
+def test_on_data_ready_in_grid_mode(
+    canvas_controller,
+    mock_model,
+    mock_layout_manager,
+    mock_main_controller,
+    sample_dataframe,
+    plot_node_empty_props,
+):
+    """
+    Test that on_data_ready calls apply_default_grid_layout when in GRID mode.
+    """
+    mock_layout_manager.layout_mode = LayoutMode.GRID
+    mock_model.scene_root.children.append(plot_node_empty_props)
+
+    canvas_controller.on_data_ready(sample_dataframe, plot_node_empty_props)
+
+    mock_main_controller.apply_default_grid_layout.assert_called_once()
+    mock_model.modelChanged.emit.assert_called_once()

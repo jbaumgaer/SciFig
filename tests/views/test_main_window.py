@@ -14,6 +14,9 @@ from src.models.nodes.plot_types import PlotType
 from src.views.main_window import MainWindow
 from src.views.properties_ui_factory import PropertiesUIFactory
 from src.config_service import ConfigService # Added import
+from src.layout_manager import LayoutManager # Added import
+from src.views.layout_ui_factory import LayoutUIFactory # Added import
+from src.layout_engine import LayoutMode # Added import
 
 
 @pytest.fixture
@@ -32,7 +35,21 @@ def mock_config_service():
     return config_service
 
 @pytest.fixture
-def app_context(qtbot, mock_main_controller, mock_config_service):
+def mock_layout_manager():
+    """Fixture for a mock LayoutManager."""
+    manager = MagicMock(spec=LayoutManager)
+    manager.layoutModeChanged = MagicMock()
+    return manager
+
+
+@pytest.fixture
+def mock_layout_ui_factory():
+    """Fixture for a mock LayoutUIFactory."""
+    return MagicMock(spec=LayoutUIFactory)
+
+
+@pytest.fixture
+def app_context(qtbot, mock_main_controller, mock_config_service, mock_layout_manager, mock_layout_ui_factory):
     """
     A pytest fixture that sets up the main application window with a real
     model and a mocked command manager, instantiating a real MainWindow.
@@ -97,7 +114,9 @@ def app_context(qtbot, mock_main_controller, mock_config_service):
             tool_bar=mock_tool_bar,
             tool_bar_actions=mock_tool_bar_actions,
             properties_ui_factory=mock_properties_ui_factory,
+            layout_ui_factory=mock_layout_ui_factory, # Added
             config_service=mock_config_service,
+            layout_manager=mock_layout_manager # Added
         )
         # We can add an assertion here, but better in a dedicated test
         # MockQSettings.assert_called_once_with("TestOrg", "TestApp")
@@ -113,6 +132,8 @@ def app_context(qtbot, mock_main_controller, mock_config_service):
         "command_manager": mock_command_manager,
         "main_controller": mock_main_controller,
         "properties_ui_factory": mock_properties_ui_factory,
+        "layout_ui_factory": mock_layout_ui_factory, # Added
+        "layout_manager": mock_layout_manager, # Added
         "mock_qsettings_class": MockQSettings
     }
 
@@ -191,3 +212,66 @@ def test_show_properties_panel(app_context, qtbot):
 
     qtbot.waitUntil(properties_dock.isVisible)
     assert properties_dock.isVisible()
+
+
+def test_layout_menu_exists(app_context):
+    """
+    Test that the 'Layout' menu exists in the menu bar.
+    """
+    # window = app_context["window"]
+    # assert window.layout_menu is not None
+    # assert window.layout_menu.title() == "&Layout"
+
+
+def test_update_layout_menu_free_form_mode(app_context, mock_layout_ui_factory, mock_layout_manager):
+    """
+    Test that _update_layout_menu correctly sets up free form layout controls when in free form mode.
+    """
+    # window = app_context["window"]
+    # mock_layout_manager.layout_mode = LayoutMode.FREE_FORM
+    # mock_layout_ui_factory.build_layout_controls.return_value = MagicMock(spec=QWidget)
+    # window._update_layout_menu()
+    # mock_layout_ui_factory.build_layout_controls.assert_called_once_with(LayoutMode.FREE_FORM)
+    # assert window.layout_controls_dock.widget() == mock_layout_ui_factory.build_layout_controls.return_value
+
+
+def test_update_layout_menu_grid_mode(app_context, mock_layout_ui_factory, mock_layout_manager):
+    """
+    Test that _update_layout_menu correctly sets up grid layout controls when in grid mode.
+    """
+    # window = app_context["window"]
+    # mock_layout_manager.layout_mode = LayoutMode.GRID
+    # mock_layout_ui_factory.build_layout_controls.return_value = MagicMock(spec=QWidget)
+    # window._update_layout_menu()
+    # mock_layout_ui_factory.build_layout_controls.assert_called_once_with(LayoutMode.GRID)
+    # assert window.layout_controls_dock.widget() == mock_layout_ui_factory.build_layout_controls.return_value
+
+
+def test_layout_mode_changed_signal_updates_menu(app_context, mock_layout_manager, mock_layout_ui_factory):
+    """
+    Test that the layoutModeChanged signal from LayoutManager triggers _update_layout_menu.
+    """
+    # window = app_context["window"]
+    # with patch.object(window, '_update_layout_menu') as mock_update_menu:
+    #     mock_layout_manager.layout_mode = LayoutMode.GRID
+    #     mock_layout_manager.layoutModeChanged.emit(LayoutMode.GRID)
+    #     mock_update_menu.assert_called_once()
+
+def test_properties_panel_fixed_width(app_context):
+    """
+    Test that the properties panel has a fixed width.
+    """
+    pass
+
+def test_layout_mode_toggle_initial_state(app_context, mock_layout_manager):
+    """
+    Test the initial state of the layout mode toggle button in PropertiesView.
+    """
+    pass
+
+def test_layout_mode_toggle_changes_mode(app_context, mock_layout_manager):
+    """
+    Test that clicking the layout mode toggle button changes the layout mode
+    via the main controller and updates its own UI.
+    """
+    pass

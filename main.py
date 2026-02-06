@@ -32,9 +32,7 @@ def main():
 
     context = setup_application(app, config_service) 
     view = context.view
-    # app = context.app # Already defined above
 
-    # Set up theme using ThemeManager
     theme_manager = ThemeManager(app, config_service) 
     default_theme_name = config_service.get("ui.default_theme", "dark")
     theme_manager.apply_theme(default_theme_name) 

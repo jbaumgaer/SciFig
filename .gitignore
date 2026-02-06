@@ -93,3 +93,10 @@ src/__pycache__/logger_config.cpython-313.pyc
 src/__pycache__/theme_manager.cpython-313.pyc
 app.log
 app.log
+src/__pycache__/layout_engine.cpython-313.pyc
+src/__pycache__/layout_manager.cpython-313.pyc
+src/__pycache__/types.cpython-313.pyc
+src/__pycache__/utils.cpython-313.pyc
+src/commands/__pycache__/batch_change_plot_geometry_command.cpython-313.pyc
+src/models/__pycache__/layout_config.cpython-313.pyc
+src/views/__pycache__/layout_ui_factory.cpython-313.pyc

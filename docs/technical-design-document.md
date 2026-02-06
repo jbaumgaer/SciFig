@@ -2,312 +2,314 @@
 
 This epic focuses on externalizing various application settings, user preferences, and content layouts into configurable files, moving away from hardcoded values. This enhances flexibility, maintainability, and user customizability, ensuring the application scales gracefully for future features.
 
-### Feature: Application-Level Defaults (Base Configuration)
-**Description:** Externalize application-wide default settings, "magic strings", and initial values into a `configs/default_config.yaml` file. This provides a stable, easily modifiable baseline for the application's core behavior, independent of code changes.
+### Feature: Integrating Matplotlib's Layout Engines (Togglable Auto-Layout)
+**Description:** Provide a togglable option to enable Matplotlib's automatic layout adjustment (`constrained_layout`) for figures, allowing plots to intelligently resize and reposition to prevent overlapping elements. When disabled, the last calculated layout parameters will be saved and used as fixed values.
 
 **Planned Implementation:**
 
-1.  **Create `configs/default_config.yaml`:**
-    *   **Task:** Create a new directory `configs/` in the project root.
-    *   **Task:** Create the `default_config.yaml` file within `configs/`.
-    *   **Task:** Populate `default_config.yaml` with the following initial structure and example values. This structure includes application metadata, UI/window defaults, Matplotlib figure defaults, layout/grid defaults, paths/resources, processing defaults, tool defaults, and debugging options.
-        ```yaml
-        # Application Metadata
-        app_name: "SciFig"
-        version: "1.0.0"
-        organization: "YourOrganization" # Used for QSettings
-        website: "https://www.scifig.org"
-        authors:
-          - "Your Name"
-        license: "MIT"
+1.  **Modify `default_config.yaml`:**
+    *   **Task:** Add `figure.auto_layout_enabled_default: true` to define the default state.
 
-        # UI/Window Defaults
-        window_title_prefix: "SciFig - "
-        default_window_geometry:
-          x: 50
-          y: 50
-          width: 800
-          height: 600
-        default_toolbar_area: "LeftToolBarArea" # Corresponds to Qt.ToolBarArea.LeftToolBarArea
-        default_dock_widget_area_properties: "RightDockWidgetArea" # Corresponds to Qt.DockWidgetArea.RightDockWidgetArea
-        default_dock_widget_area_history: "LeftDockWidgetArea" # Example for future
-        splash_screen_path: "src/assets/images/splash.png" # Example for future
-        theme: "dark" # "dark", "light", etc.
+2.  **Modify `ApplicationModel` (`src/models/application_model.py`):**
+    *   **Task:** Add a property `self.auto_layout_enabled: bool` initialized from `ConfigService.get("figure.auto_layout_enabled_default")` or a user setting from `QSettings` (if F2 is already done).
+    *   **Task:** Add a signal `autoLayoutChanged = Signal(bool)` that emits when `auto_layout_enabled` is changed.
+    *   **Task:** Add a property `self.figure_subplot_params: dict | None` to store captured explicit parameters (initialized to `None`).
+    *   **Task:** Add a method `set_auto_layout_enabled(self, enabled: bool)`:
+        *   Updates `self.auto_layout_enabled`.
+        *   If `enabled` is `False` and `self.auto_layout_enabled` was previously `True`:
+            *   Trigger one final auto-layout (`self.figure.tight_layout()` or equivalent).
+            *   Capture the current subplot parameters (`self.figure.subplotpars` or iterate axes `get_position()`) and store them in `self.figure_subplot_params`.
+            *   Emit `autoLayoutChanged(False)`.
+        *   If `enabled` is `True` and `self.auto_layout_enabled` was previously `False`:
+            *   Clear `self.figure_subplot_params = None`.
+            *   Emit `autoLayoutChanged(True)`.
 
-        # Matplotlib Figure Defaults
-        figure:
-          default_width: 8.5
-          default_height: 6
-          default_dpi: 150
-          default_facecolor: "white"
-          default_edgecolor: "black" # Example for future
-          subplot_left: 0.125 # Example for future
-          subplot_right: 0.9 # Example for future
-          subplot_bottom: 0.11 # Example for future
-          subplot_top: 0.88 # Example for future
-          subplot_wspace: 0.2 # Example for future
-          subplot_hspace: 0.2 # Example for future
-          axes_facecolor: "white" # Example for future
-          axes_edgecolor: "black" # Example for future
-          font_family: "sans-serif" # Example for future
-          font_size: 10 # Example for future
-          line_width: 1.0 # Example for future
-          marker_size: 6.0 # Example for future
+3.  **Modify `Renderer` (`src/views/renderer.py`):**
+    *   **Task:** Update `__init__` to accept `config_service: ConfigService` and `application_model: ApplicationModel`.
+    *   **Task:** Store references to `config_service` and `application_model`.
+    *   **Task:** In the `render(figure: Figure, root_node: SceneNode, selection: List[SceneNode])` method:
+        *   Before drawing, check `application_model.auto_layout_enabled`.
+        *   If `True`: Apply `figure.set_constrained_layout(True)` (or `figure.tight_layout()`).
+        *   If `False` and `application_model.figure_subplot_params` is not `None`: Apply these explicit parameters using `figure.subplots_adjust(**application_model.figure_subplot_params)`.
+    *   **Task:** Connect `application_model.autoLayoutChanged` to a redraw trigger.
 
-        # Layout & Grid Defaults
-        layout:
-          default_margin: 10
-          default_gutter: 5
-          max_recent_files: 10
-          default_template: "2x2_default.json" # Points to a file in configs/layouts
+4.  **Add UI Toggle:**
+    *   **Task:** In `src/views/main_window.py`, add a `QAction` (e.g., in the "Plot" menu) for "Enable Auto Layout" with `checkable=True`.
+    *   **Task:** Connect this action's `toggled` signal to `application_model.set_auto_layout_enabled()`.
+    *   **Task:** Initialize the action's checked state from `application_model.auto_layout_enabled`.
 
-        # Paths & Resources
-        paths:
-          icon_base_dir: "src/assets/icons"
-          layout_templates_dir: "configs/layouts"
-          project_extension: ".sci"
-          default_save_location: "~Documents/SciFig Projects" # Default for user, can be overridden by QSettings
+5.  **Modify `src/application_assembler.py`:**
+    *   **Task:** Pass `ConfigService` to `ApplicationModel` constructor.
+    *   **Task:** Pass `ApplicationModel` and `ConfigService` to `Renderer` constructor.
 
-        # Processing Defaults
-        processing:
-          default_delimiter: "\t"
-          default_comment_char: "#"
-          max_file_size_mb: 100
-          max_lines_preview: 1000
+**Testing Plan:**
+*   **Unit Tests (`tests/models/test_application_model.py`):**
+    *   Test `set_auto_layout_enabled` for correct state changes.
+    *   Verify `autoLayoutChanged` signal emission.
+    *   Mock Matplotlib `Figure` and test that `capture_current_layout_params` correctly calls `figure.tight_layout()` and captures `subplotpars`.
+*   **Unit Tests (`tests/views/test_renderer.py`):**
+    *   Mock `ApplicationModel` to control `auto_layout_enabled` and `figure_subplot_params`.
+    *   Test `render` method to ensure `figure.set_constrained_layout(True)` or `figure.subplots_adjust` is called conditionally.
+*   **Integration Tests:**
+    *   Launch app, toggle auto-layout on/off, verify visual changes.
+    *   Add axis labels while auto-layout is on, verify plots adjust.
+    *   Toggle auto-layout off, add axis labels, verify plots *do not* adjust automatically.
+    *   Verify captured parameters lead to consistent layout after toggle off/on.
 
-        # Tool Defaults
-        tool:
-          default_active_tool: "Selection" # Name of the tool
-          selection:
-            default_color: "red"
-          zoom:
-            zoom_factor: 1.15
-            scroll_factor: 1 # In units of notches
+**Risks & Mitigations:**
+*   **Risk:** `tight_layout`/`constrained_layout` can sometimes produce unexpected results, especially with complex figures.
+*   **Mitigation:** Provide robust error handling around these calls. Give user options to reset layout.
+*   **Risk:** Capturing `figure.subplotpars` might not be robust enough for `constrained_layout`. `constrained_layout` changes axis positions directly.
+*   **Mitigation:** For `constrained_layout`, capturing `ax.get_position()` for each axis might be more reliable when converting to fixed `geometry` values. This would mean updating `PlotNode.geometry` directly rather than `figure_subplot_params`. This option is preferable for more precise control. We would need a way to map each `ax` to its corresponding `PlotNode` for this to work.
 
-        # Debugging/Developer Options
-        debug:
-          log_level: "INFO" # "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
-          enable_dev_tools: false
-          show_perf_metrics: false
-        ```
+---
 
-2.  **Add `PyYAML` to Dependencies:**
-    *   **Task:** Add `pyyaml` to `requirements.txt`.
-    *   **Task:** Add `PyYAML` to `pyproject.toml` (if using Poetry/Flit).
+### Feature: Adding New Plot with Redistribution Options + Advanced Plot Redistribution
+**Description:** Implement the ability for users to add new plots to the canvas. When a new plot is added, the user will be presented with options to either intelligently redistribute all existing plots (including the new one) into a new optimal arrangement or to add the new plot as a free-form element that can be manually positioned. This includes a `CustomLayoutEngine` to handle dynamic plot sizing and positioning.
 
-3.  **Create `src/config_service.py`:**
-    *   **Task:** Create a new file `src/config_service.py`.
-    *   **Task:** Implement a `ConfigService` class in this file.
-        *   It should be responsible for loading the `default_config.yaml` at initialization.
-        *   Implement a method `get(key_path: str, default=None)` that allows accessing nested configuration values using a dot-separated string (e.g., `config.get("figure.default_width")`).
-        *   Consider making it a singleton or a module-level instance for easy access, or passing it via dependency injection.
-        *   Handle file not found or parsing errors gracefully, falling back to hardcoded defaults or raising specific exceptions.
-    *   **Task:** Create basic unit tests for `ConfigService` (e.g., `tests/test_config_service.py`) to ensure it loads and retrieves values correctly.
+**Planned Implementation:**
+
+1.  **Create `src/layout_engine.py`:**
+    *   **Task:** Create a new file `src/layout_engine.py`.
+    *   **Task:** Implement a class `CustomLayoutEngine`.
+        *   `__init__(self, config_service: ConfigService)`: Takes `ConfigService` for defaults (margins, gutters).
+        *   `calculate_grid_layout(self, plot_nodes: List[PlotNode], num_rows: int, num_cols: int) -> Dict[PlotNode, Tuple[float, float, float, float]]`:
+            *   Takes a list of `PlotNode`s and target grid dimensions.
+            *   Calculates new `(left, bottom, width, height)` `geometry` for each `PlotNode` based on equal division, respecting configurable margins and gutters.
+            *   Returns a dictionary mapping `PlotNode`s to their new geometries.
+        *   `calculate_auto_packed_layout(self, plot_nodes: List[PlotNode]) -> Dict[PlotNode, Tuple[float, float, float, float]]`:
+            *   (Future/Advanced) Implements a more intelligent "packing" algorithm to fill available space, potentially resizing plots based on some heuristic.
+            *   For initial implementation, `calculate_grid_layout` will suffice.
+
+2.  **Modify `ApplicationModel` (`src/models/application_model.py`):**
+    *   **Task:** Add a method `add_plot(self, plot_node: PlotNode)` that adds a new plot.
+    *   **Task:** Add a method `redistribute_plots(self, layout_algorithm: str = "grid")`:
+        *   Uses `CustomLayoutEngine` to calculate new geometries for all current `PlotNode`s.
+        *   Updates the `geometry` of each `PlotNode` in `self.scene_root` via `ChangePropertyCommand`.
+        *   Emits `modelChanged`.
+
+3.  **Modify `MainController` (`src/controllers/main_controller.py`):**
+    *   **Task:** Update `__init__` to accept `custom_layout_engine: CustomLayoutEngine`.
+    *   **Task:** Store `custom_layout_engine` as a member variable.
+    *   **Task:** Add a new method `add_new_plot_with_options()`:
+        *   Presents a `QMessageBox` or custom dialog with options: "Distribute evenly", "Add free-form".
+        *   If "Distribute evenly":
+            *   Creates a new `PlotNode`.
+            *   Calls `application_model.add_plot(new_plot_node)`.
+            *   Calls `application_model.redistribute_plots("grid")` (or the chosen algorithm).
+        *   If "Add free-form":
+            *   Creates a new `PlotNode` with a default `geometry` (e.g., small, central).
+            *   Calls `application_model.add_plot(new_plot_node)`.
+    *   **Task:** Connect a new menu action (e.g., "Plot" -> "Add Plot") to `add_new_plot_with_options()`.
 
 4.  **Modify `src/application_assembler.py`:**
-    *   **Task:** Import `ConfigService`.
-    *   **Task:** In `ApplicationAssembler.__init__`, instantiate `ConfigService`.
-    *   **Task:** In `_assemble_core_components`, modify the `figure` creation to use values from `ConfigService`:
-        ```python
-        # old: figure = Figure(figsize=(8.5, 6), dpi=150, facecolor='white')
-        # new:
-        figure_width = self._config_service.get("figure.default_width", 8.5)
-        figure_height = self._config_service.get("figure.default_height", 6)
-        figure_dpi = self._config_service.get("figure.default_dpi", 150)
-        figure_facecolor = self._config_service.get("figure.default_facecolor", "white")
-        figure = Figure(figsize=(figure_width, figure_height), dpi=figure_dpi, facecolor=figure_facecolor)
-        ```
-    *   **Task:** Pass the `ConfigService` instance to other components (e.g., `ApplicationModel`, `MainController`) that will need access to application defaults during their construction.
-
-5.  **Refactor `src/constants.py`:**
-    *   **Task:** Modify `IconPath` and `ToolName` (and any other constants) to retrieve their values from the `ConfigService` instance (passed in or accessed globally if singleton). This might involve changing their implementation to be more dynamic (e.g., functions that return paths based on config).
-    *   **Task:** Remove hardcoded values that are now in `default_config.yaml`.
-
-6.  **Modify `src/controllers/main_controller.py`:**
-    *   **Task:** Update `__init__` to accept the `ConfigService` instance.
-    *   **Task:** Store `ConfigService` as a member variable `self._config_service`.
-    *   **Task:** Replace hardcoded values for `default_margin`, `default_gutter`, and `MAX_RECENT_FILES` with values retrieved from `ConfigService`.
+    *   **Task:** Instantiate `CustomLayoutEngine(config_service)`.
+    *   **Task:** Pass `CustomLayoutEngine` to `MainController`.
 
 **Testing Plan:**
-*   **Unit Tests (`tests/test_config_service.py`):**
-    *   Verify `ConfigService` loads valid YAML.
-    *   Test `get()` method for various key paths (nested, non-existent, default values).
-    *   Test error handling for invalid YAML or non-existent files.
-*   **Integration Tests (`tests/test_application_assembler.py`, `tests/test_main_window.py`):**
-    *   Verify `ApplicationAssembler` successfully initializes `ConfigService` and uses its values for `Figure` creation (e.g., check `figure.get_figwidth()` after assembly).
-    *   Verify `main_controller` uses config values for layout defaults.
-    *   Ensure the application starts up correctly and the UI elements (e.g., toolbars) are initialized with paths/names derived from the config.
-*   **Manual Verification:**
-    *   Change values in `default_config.yaml` (e.g., default window size, figure facecolor) and verify that the application reflects these changes on startup.
-
-**Risks & Mitigations:**
-*   **Risk:** Circular dependencies if `ConfigService` tries to access components that depend on it during its own initialization.
-*   **Mitigation:** `ConfigService` should only load and provide data; it should not depend on other application components. Its instantiation should happen very early in `ApplicationAssembler`.
-*   **Risk:** Performance overhead if config values are re-read excessively.
-*   **Mitigation:** Load the config once at startup and pass around the `ConfigService` instance. Cache values internally if necessary.
-*   **Risk:** Errors due to incorrect key paths or missing values.
-*   **Mitigation:** `ConfigService.get()` should provide robust default value handling. Consider a validation layer (e.g., Pydantic model for the config itself) for the `default_config.yaml` to ensure it always conforms to an expected schema.
-
-### Feature: Customizable UI Layout (User-Level Preferences)
-**Description:** Enable the application to save and restore the user's preferred main window geometry, toolbar positions, and dock widget states using Qt's `QSettings` mechanism. This ensures a persistent and personalized workspace.
-
-**Planned Implementation:**
-
-1.  **Modify `src/views/main_window.py`:**
-    *   **Task:** Import `QSettings` from `PySide6.QtCore` and `QCloseEvent` from `PySide6.QtGui`.
-    *   **Task:** In `MainWindow.__init__`:
-        *   Instantiate `self.settings = QSettings(self._config_service.get("organization"), self._config_service.get("app_name"))`. The organization and app name should come from `ConfigService`.
-        *   **Task:** After all dock widgets and toolbars have been added to the `QMainWindow` (this is crucial for `restoreState()` to work correctly), attempt to restore the state:
-            ```python
-            # ... after self.setCentralWidget, self.addToolBar, self.addDockWidget calls ...
-
-            # Restore geometry and state
-            geometry = self.settings.value("mainWindowGeometry")
-            if geometry:
-                self.restoreGeometry(geometry)
-            else: # Apply default geometry if no saved state
-                default_geom = self._config_service.get("default_window_geometry")
-                if default_geom:
-                    self.setGeometry(default_geom["x"], default_geom["y"], default_geom["width"], default_geom["height"])
-
-            state = self.settings.value("mainWindowState")
-            if state:
-                self.restoreState(state)
-            else: # Apply default toolbar/dock areas if no saved state
-                # This would involve explicitly setting default toolbar and dock widget areas
-                # if they were not set during their initial creation.
-                # Since toolbars and dock widgets are already added with default positions,
-                # this 'else' block might be primarily for future complex default layouts.
-                pass # For now, relying on initial placement from Assembler
-            ```
-    *   **Task:** Override `MainWindow.closeEvent(self, event: QCloseEvent)`:
-        ```python
-        class MainWindow(QMainWindow):
-            # ...
-            def closeEvent(self, event: QCloseEvent):
-                self.settings.setValue("mainWindowGeometry", self.saveGeometry())
-                self.settings.setValue("mainWindowState", self.saveState())
-                super().closeEvent(event)
-        ```
-    *   **Task:** Update `MainWindow.__init__` signature to accept `config_service: ConfigService`.
-    *   **Task:** Store `config_service` as a member variable `self._config_service`.
-
-2.  **Modify `src/application_assembler.py`:**
-    *   **Task:** Pass the `ConfigService` instance to the `MainWindow` constructor.
-
-**Testing Plan:**
-*   **Manual Verification:**
-    *   Run the application. Resize and reposition the main window. Move and resize dock widgets. Close the application. Re-open and verify that the window and dock widget layout are restored to their previous state.
-    *   (Optional) Delete the `QSettings` file/registry entry for SciFig to verify that default geometry is applied on first run.
+*   **Unit Tests (`tests/test_layout_engine.py`):**
+    *   Mock `ConfigService`.
+    *   Test `calculate_grid_layout` with various numbers of plots and grid dimensions to ensure correct geometry calculation (positive width/height, non-overlapping, respecting margins/gutters).
+    *   Test edge cases (e.g., 1 plot, many plots).
+*   **Unit Tests (`tests/models/test_application_model.py`):**
+    *   Test `add_plot` correctly adds to `scene_root` and emits `modelChanged`.
+    *   Test `redistribute_plots` ensures all plots get new geometries and `modelChanged` is emitted. Mock `CustomLayoutEngine`.
 *   **Integration Tests:**
-    *   A simple integration test could launch the application, programmatically move/resize elements, simulate close, and then relaunch to assert the state is restored. This might be complex for initial implementation.
+    *   Launch app, create a layout.
+    *   Add a new plot and choose "Distribute evenly", verify all plots resize/reposition.
+    *   Add a new plot and choose "Add free-form", verify new plot appears with default geometry and others remain fixed.
 
 **Risks & Mitigations:**
-*   **Risk:** `restoreState()` might not work correctly if dock widgets or toolbars are not yet created when it's called.
-*   **Mitigation:** Ensure `restoreState()` is called *after* all relevant UI elements have been added to the `QMainWindow` in `MainWindow.__init__`.
-*   **Risk:** Conflicts between application defaults and user settings.
-*   **Mitigation:** `QSettings` values should always take precedence over application defaults. The `ConfigService` provides the fallback if `QSettings` has no value.
+*   **Risk:** `CustomLayoutEngine` calculation errors leading to invalid geometries (e.g., negative width/height).
+*   **Mitigation:** Thorough unit tests for `calculate_grid_layout` and edge cases. Implement validation checks in `PlotNode.geometry` setter.
+*   **Risk:** Performance with a large number of plots during redistribution.
+*   **Mitigation:** Optimize `CustomLayoutEngine` algorithms. Consider using a `QProgressDialog` for very long calculations.
 
-### Feature: Externalized Content Layouts (Project-Level Templates)
-**Description:** Replace the hardcoded logic for creating layouts (e.g., the "2x2 layout") with a system that loads predefined layout templates from external JSON files. This allows for flexible and extensible canvas content arrangements.
+---
+
+### Feature: Drag-and-Drop Plot Reassignment
+**Description:** Enable users to interactively reassign plots on the canvas by dragging and dropping them from one location to another. This includes swapping plots between existing slots or placing them into empty template slots.
 
 **Planned Implementation:**
 
-1.  **Create `configs/layouts` Directory and Layout Templates:**
-    *   **Task:** Create a new directory `configs/layouts` in the project root.
-    *   **Task:** Create `2x2_default.json` (and potentially other layout files like `vertical_split.json`) within `configs/layouts`.
-    *   **Task:** Populate `2x2_default.json` with a serialized `GroupNode` structure, similar to the `.sci` file content but only containing the layout definition.
-        ```json
-        {
-          "type": "GroupNode",
-          "name": "2x2 Layout",
-          "geometry": {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0}, # Full canvas
-          "children": [
-            {
-              "type": "PlotNode",
-              "name": "Plot 1",
-              "geometry": { "x": 0.0, "y": 0.0, "width": 0.5, "height": 0.5 },
-              "plot_properties": { /* default properties, e.g., line color, style */ }
-            },
-            {
-              "type": "PlotNode",
-              "name": "Plot 2",
-              "geometry": { "x": 0.5, "y": 0.0, "width": 0.5, "height": 0.5 },
-              "plot_properties": { /* default properties */ }
-            },
-            {
-              "type": "PlotNode",
-              "name": "Plot 3",
-              "geometry": { "x": 0.0, "y": 0.5, "width": 0.5, "height": 0.5 },
-              "plot_properties": { /* default properties */ }
-            },
-            {
-              "type": "PlotNode",
-              "name": "Plot 4",
-              "geometry": { "x": 0.5, "y": 0.5, "width": 0.5, "height": 0.5 },
-              "plot_properties": { /* default properties */ }
-            }
-          ]
-        }
-        ```
-    *   **Task:** Ensure the `plot_properties` within the template are suitable defaults or placeholders.
+1.  **Modify `CanvasWidget` (`src/views/canvas_widget.py`):**
+    *   **Task:** Override `mousePressEvent`, `mouseMoveEvent`, `mouseReleaseEvent` to detect drag gestures on `PlotNode`s.
+    *   **Task:** Implement logic to identify the `PlotNode` under the mouse press.
+    *   **Task:** Store the `PlotNode` being dragged and its initial position.
+    *   **Task:** During `mouseMoveEvent` (if a drag is in progress):
+        *   Visually indicate the drag (e.g., draw a semi-transparent ghost of the plot).
+        *   Detect potential drop targets (other `PlotNode`s or empty `PlotNode` slots).
+        *   Visually indicate potential drop targets (e.g., highlight the target slot).
+    *   **Task:** In `mouseReleaseEvent` (if a drag occurred):
+        *   Identify the final drop target.
+        *   Based on target, construct a `Command` (e.g., `RearrangePlotCommand`, `SwapPlotsCommand`).
+        *   Pass the command to `command_manager.execute_command()`.
 
-2.  **Modify `src/controllers/main_controller.py`:**
-    *   **Task:** Update `__init__` to accept the `ConfigService` instance.
-    *   **Task:** Store `ConfigService` as a member variable `self._config_service`.
-    *   **Task:** Refactor `create_new_layout()`:
-        *   Get the `default_template` path from `self._config_service.get("layout.default_template")`.
-        *   Construct the full path to the template file using `pathlib` and `self._config_service.get("paths.layout_templates_dir")`.
-        *   Load and parse the JSON file.
-        *   Use `scene_node.node_factory(template_data)` (from `src/models/nodes/scene_node.py`) to deserialize the JSON into a `GroupNode`.
-        *   Clear the existing `self._model.scene_root` and replace it with the loaded `GroupNode` (or append the children of the loaded `GroupNode` to the existing root).
-        *   Emit `self._model.modelChanged.emit()`.
-    *   **Task:** (Future consideration) Add a method `create_layout_from_template(template_name: str)` that takes a template name, loads the corresponding file, and applies it. This would be called from the "New figure from template" menu item.
+2.  **New Commands (`src/commands/rearrange_plot_command.py`, `src/commands/swap_plots_command.py`):**
+    *   **Task:** Create `RearrangePlotCommand(plot_node: PlotNode, new_geometry: Tuple[float, float, float, float])`.
+    *   **Task:** Create `SwapPlotsCommand(plot_node1: PlotNode, plot_node2: PlotNode)`.
+    *   **Task:** Implement `execute()` and `undo()` for these commands, ensuring `ApplicationModel` is updated and `modelChanged` is emitted.
 
-3.  **Modify `src/application_assembler.py`:**
-    *   **Task:** Pass the `ConfigService` instance to the `MainController` constructor.
+3.  **Modify `ApplicationModel` (`src/models/application_model.py`):**
+    *   **Task:** Add helper methods for finding `PlotNode`s by ID or by `geometry` (e.g., `get_plot_node_at_position(pos)`).
+    *   **Task:** Add methods to `swap_plot_geometries(plot_node1: PlotNode, plot_node2: PlotNode)` or `set_plot_node_geometry(plot_node: PlotNode, new_geometry: Tuple)`.
+
+4.  **Modify `CanvasController` (`src/controllers/canvas_controller.py`):**
+    *   **Task:** Update `__init__` to accept `command_manager: CommandManager`.
+    *   **Task:** Connect `CanvasWidget`'s custom drag-and-drop signals (if any are emitted) to methods in `CanvasController` that construct and execute the appropriate `Command`s.
 
 **Testing Plan:**
-*   **Unit Tests for `main_controller` (`tests/controllers/test_main_controller.py`):**
-    *   Mock `ConfigService` to return specific template paths and data.
-    *   Test `create_new_layout` to ensure it loads the correct template, deserializes it into `SceneNode` objects, and updates the `ApplicationModel`'s `scene_root` correctly.
+*   **Unit Tests (`tests/commands/test_rearrange_plot_command.py`, `tests/commands/test_swap_plots_command.py`):**
+    *   Test `execute()` and `undo()` for correct state changes in `ApplicationModel`.
     *   Verify `modelChanged` signal is emitted.
+*   **Unit Tests (`tests/views/test_canvas_widget.py`):**
+    *   Mock `CanvasController` and `ApplicationModel`.
+    *   Test `mousePressEvent`, `mouseMoveEvent`, `mouseReleaseEvent` for correctly detecting drags and identifying drop targets.
 *   **Integration Tests:**
-    *   Launch the application, create a new layout, and visually verify that the 2x2 layout (or whatever is in `2x2_default.json`) is correctly displayed.
-    *   Modify `2x2_default.json` and verify the changes are reflected when a new layout is created.
+    *   Launch app, create a layout.
+    *   Drag one plot onto another, verify they swap positions.
+    *   Drag a plot into an empty slot (if implemented), verify it moves.
+    *   Verify undo/redo works for these operations.
 
 **Risks & Mitigations:**
-*   **Risk:** Errors in parsing JSON layout files or schema mismatches with `node_factory`.
-*   **Mitigation:** Add robust error handling during JSON loading and deserialization. Use schema validation for layout JSONs if they become complex.
-*   **Risk:** `plot_properties` within the template might be incomplete or conflict with application defaults.
-*   **Mitigation:** Ensure `plot_properties` in templates define clear base states. The `PlotNode` constructor should merge these with its own defaults.
+*   **Risk:** Complex state management during drag-and-drop, leading to visual glitches or incorrect model updates.
+*   **Mitigation:** Clear separation of concerns between `CanvasWidget` (UI events), `CanvasController` (logic), and `CommandManager` (state changes). Thorough unit tests for event handling.
+*   **Risk:** Performance issues with visual
 
-### Feature: Clean up "Magic Strings" (Refactor `src/constants.py`)
-**Description:** Systematically replace hardcoded literal values (e.g., icon paths, tool names) across the codebase with references to configuration values provided by the `ConfigService`.
+---
+
+## Epic: Dynamic Layout UI & Enhanced Grid Interaction
+
+**Overarching Goal:** To enhance the user experience of the Layout Management System by integrating dynamic layout controls directly into the properties panel, providing clearer mode indication, and improving the "snap to grid" functionality.
+
+---
+
+### Feature 1: Dynamic Properties Panel Content
+**Description:** Refactor the properties panel (`PropertiesView`) to dynamically display either layout-specific controls (by default) or plot-specific properties (when a plot with data is selected).
 
 **Planned Implementation:**
+1.  **Modify `src/views/properties_view.py`:**
+    *   **Task:** Update `PropertiesView.__init__` to accept `layout_ui_factory: LayoutUIFactory`, `layout_manager: LayoutManager`, and `main_controller: MainController`. Store these as instance variables.
+    *   **Task:** Implement a slot (e.g., `_update_content(self)`) that responds to changes in `ApplicationModel.selectionChanged` and `LayoutManager.layoutModeChanged`. This method will be responsible for clearing the current content and rebuilding it based on the current state.
+    *   **Task:** Within `_update_content`:
+        *   Clear any existing UI elements from the properties panel.
+        *   **Condition 1: Single PlotNode with Data Selected:** If `self.model.selection` contains exactly one item which is a `PlotNode` and `plot_node.data` is not `None`:
+            *   Call `self.properties_ui_factory.build_properties_ui(plot_node)` to get the plot-specific controls.
+            *   Add these controls to the properties panel's layout.
+        *   **Condition 2: Otherwise (Default/Layout Controls):**
+            *   Call `self.layout_ui_factory.build_layout_controls(self.layout_manager.layout_mode, self.main_controller, self)` to get the layout-specific controls.
+            *   Add these controls to the properties panel's layout.
+    *   **Task:** In `PropertiesView.__init__`, connect `self.model.selectionChanged` to `self._update_content` and `self.layout_manager.layoutModeChanged` to `self._update_content`.
+    *   **Task:** Trigger `self._update_content()` once at the end of `PropertiesView.__init__` to set the initial state.
+2.  **Modify `src/application_assembler.py`:**
+    *   **Task:** When instantiating `PropertiesView` in `_assemble_main_window` or `_create_properties_dock` (if applicable), pass the new dependencies: `layout_ui_factory`, `layout_manager`, and `main_controller`.
+3.  **Refine `src/views/main_window.py`:**
+    *   **Task:** The separate `self.layout_menu` and its associated `_update_layout_menu` slot and connections can now be removed or significantly simplified, as the primary layout controls are moving to the properties panel. The "Layout" menu might still exist in the main menu for global layout actions, but not for dynamic controls.
 
-1.  **Modify `src/constants.py`:**
-    *   **Task:** Update `IconPath` and `ToolName` to dynamically fetch values from the `ConfigService`. This might involve changing them from simple enums to classes or functions that query the config.
-    *   **Task:** Ensure `ConfigService` is accessible (e.g., passed to `constants.py` via a setter function or globally accessible if `ConfigService` is a singleton).
-    *   **Task:** Remove any hardcoded strings or values that are now in `default_config.yaml`.
+**Testing Plan (Feature 1):**
+*   **Unit Tests (`tests/views/test_properties_view.py`):**
+    *   `test_properties_view_displays_layout_controls_by_default`: Verify that on initialization, the `PropertiesView` calls `layout_ui_factory.build_layout_controls`.
+    *   `test_properties_view_displays_plot_properties_on_single_plot_selection_with_data`: Mock a selection of a single `PlotNode` with data, verify `properties_ui_factory.build_properties_ui` is called.
+    *   `test_properties_view_displays_layout_controls_on_multiple_selection`: Mock multiple `PlotNode`s selected, verify `layout_ui_factory.build_layout_controls` is called.
+    *   `test_properties_view_displays_layout_controls_on_single_plot_selection_no_data`: Mock a single `PlotNode` without data selected, verify `layout_ui_factory.build_layout_controls` is called.
+    *   `test_properties_view_updates_on_layout_mode_change`: Mock a layout mode change, verify `layout_ui_factory.build_layout_controls` is called with the new mode.
 
-2.  **Iterate and Replace:**
-    *   **Task:** Perform a project-wide search for hardcoded strings and values (e.g., "Selection", "Direct_Select", various paths).
-    *   **Task:** Replace these with calls to `ConfigService.get()` where appropriate.
-    *   **Task:** Focus initially on constants identified in the `default_config.yaml` example (e.g., `default_margin`, `default_gutter`, tool names, icon paths).
+---
 
-3.  **Modify other files as necessary:**
-    *   **Task:** Update any file that directly uses the removed constants from `src/constants.py` to now access values via `ConfigService`.
+### Feature 2: Clearer Layout Mode Toggle & SVG Icon Integration
+**Description:** Implement a more intuitive "Free Form / Grid Layout" toggle in the UI (likely in `MainWindow`'s menu bar or toolbar) and ensure all layout actions generated by `LayoutUIFactory` use SVG icons.
 
-**Testing Plan:**
-*   **Regression Tests:**
-    *   Run all existing unit and integration tests after each set of "magic string" replacements to ensure no functionality is broken.
-*   **Manual Verification:**
-    *   Visually inspect the UI to ensure icons are loading correctly, tool names are displayed as expected, and default layout behaviors match the config.
+**Planned Implementation:**
+1.  **Modify `src/views/main_window.py`:**
+    *   **Task:** In `MainWindow.__init__`, create a new `QAction` (e.g., `layout_mode_toggle_action`) for toggling between Free Form and Grid layout modes. Set `checkable=True` for this action.
+    *   **Task:** Set its initial `checked` state based on `self._layout_manager.layout_mode == LayoutMode.GRID`.
+    *   **Task:** Connect `layout_mode_toggle_action.toggled` signal to a new slot in `main_controller` (e.g., `main_controller.toggle_layout_mode(checked)`).
+    *   **Task:** Connect `self._layout_manager.layoutModeChanged` signal to a slot in `MainWindow` (e.g., `_update_layout_mode_toggle_ui`) that updates the `layout_mode_toggle_action`'s text and checked state.
+    *   **Task:** Add this action to a suitable menu (e.g., a "View" menu, or a simplified "Layout" menu that only contains this toggle).
+2.  **Modify `src/controllers/main_controller.py`:**
+    *   **Task:** Add a new method `toggle_layout_mode(self, checked: bool)`:
+        *   If `checked` is `True`, call `self._layout_manager.set_layout_mode(LayoutMode.GRID)`.
+        *   If `checked` is `False`, call `self._layout_manager.set_layout_mode(LayoutMode.FREE_FORM)`.
+3.  **Modify `src/views/layout_ui_factory.py`:**
+    *   **Task:** Update `_build_free_form_controls` and `_build_grid_layout_controls` methods to ensure all `QAction`s use SVG icons (loaded via `IconPath` from `ConfigService`) instead of plain text where appropriate. This means updating `QAction` constructors to accept `QIcon`.
+    *   **Task:** Remove the "Switch to Grid Mode" and "Switch to Free-Form Mode" actions, as these are now handled by the main toggle.
+4.  **Modify `src/constants.py`:**
+    *   **Task:** Add new constants in `IconPath` (if not already present) for all layout-related actions that will now have SVG icons (e.g., align_left, distribute_horizontal, grid_layout_on, free_layout_off).
+5.  **Modify `configs/default_config.yaml`:**
+    *   **Task:** Add corresponding entries for the new SVG icon paths under `paths.icon_base_dir` and `tool_icons` or a new `layout_icons` section.
 
-**Risks & Mitigations:**
-*   **Risk:** Missing some "magic strings" or introducing typos in key paths.
-*   **Mitigation:** A systematic search (e.g., using `grep` or IDE search) for literals and careful review. Unit tests for `ConfigService` will catch key path errors.
-*   **Risk:** Refactoring `src/constants.py` might break many existing references.
-*   **Mitigation:** Change `constants.py` incrementally, or provide backward compatibility (e.g., old constants redirect to `ConfigService` values) if the migration is too disruptive.
+**Testing Plan (Feature 2):**
+*   **Unit Tests (`tests/views/test_main_window.py`):**
+    *   `test_layout_mode_toggle_action_exists`: Verify the new action is created and checkable.
+    *   `test_layout_mode_toggle_action_updates_main_controller`: Verify its `toggled` signal connects to `main_controller.toggle_layout_mode`.
+    *   `test_layout_mode_toggle_action_reflects_manager_state`: Verify `_update_layout_mode_toggle_ui` correctly updates the action's checked state and text.
+*   **Unit Tests (`tests/controllers/test_main_controller.py`):**
+    *   `test_toggle_layout_mode_sets_layout_manager_mode`: Verify `toggle_layout_mode` correctly calls `layout_manager.set_layout_mode`.
+*   **Unit Tests (`tests/views/test_layout_ui_factory.py`):
+    *   `test_build_free_form_controls_uses_svg_icons`: Verify actions have `QIcon` objects set.
+    *   `test_build_grid_layout_controls_uses_svg_icons`: Verify actions have `QIcon` objects set.
+
+---
+
+### Feature 3: Enhanced "Snap to Grid" Functionality
+**Description:** When transitioning from free-form to grid mode, the system will automatically infer suitable grid dimensions (rows/columns) and assign existing plots to these cells.
+
+**Planned Implementation:**
+1.  **Modify `src/layout_manager.py`:**
+    *   **Task:** In `set_layout_mode`, ensure that when transitioning from `FREE_FORM` to `GRID`, `self._grid_engine.snap_plots_to_grid(all_plots, self._create_default_grid_config())` is called. The `_create_default_grid_config()` provides base margin/gutter, but the `snap_plots_to_grid` should infer rows/cols/ratios.
+    *   **Task:** Update `_application_model.current_layout_config` with the `GridConfig` returned by `snap_plots_to_grid`.
+2.  **Modify `src/layout_engine.py`:**
+    *   **Task:** Refine `GridLayoutEngine.snap_plots_to_grid(self, plots: List[PlotNode], current_grid_config: GridConfig) -> GridConfig`:
+        *   **Heuristic 1: Determine Rows/Cols:**
+            *   Calculate `num_plots = len(plots)`.
+            *   Implement a heuristic to determine `inferred_rows` and `inferred_cols`. A simple approach is `inferred_rows = max(1, round(num_plots**0.5))` and `inferred_cols = (num_plots + inferred_rows - 1) // inferred_rows`.
+            *   Ensure `inferred_rows` and `inferred_cols` are at least 1.
+        *   **Heuristic 2: Sort Plots for Assignment:**
+            *   Sort `plots` based on their current (x,y) positions. A common stable sort is by y-coordinate (descending for top-to-bottom) then x-coordinate (ascending for left-to-right): `sorted_plots = sorted(plots, key=lambda p: (-p.geometry[1], p.geometry[0]))`.
+        *   **Heuristic 3: Infer Ratios:**
+            *   For initial implementation, `inferred_row_ratios = [1.0 / inferred_rows] * inferred_rows` and `inferred_col_ratios = [1.0 / inferred_cols] * inferred_cols`.
+        *   **Task:** Create and return a new `GridConfig` with these `inferred_rows`, `inferred_cols`, `inferred_row_ratios`, `inferred_col_ratios`, and existing `margin`/`gutter` from `current_grid_config`.
+3.  **Add Test Stubs (Feature 3):**
+    *   **Unit Tests (`tests/test_layout_manager.py`):**
+        *   `test_set_layout_mode_free_to_grid_calls_snap_and_updates_config`: Verify `_grid_engine.snap_plots_to_grid` is called and `application_model.current_layout_config` is updated to the inferred `GridConfig`.
+    *   **Unit Tests (`tests/test_layout_engine.py`):**
+        *   `test_grid_layout_engine_snap_plots_to_grid_basic_inference`: Test with varying numbers of plots (0, 1, 4, 5, 6, 9) to ensure correct `rows` and `cols` are inferred.
+        *   `test_grid_layout_engine_snap_plots_to_grid_sorts_plots`: Test with plots at various positions to verify correct sorting before assignment.
+
+---
+
+### Feature 4: Live Update Performance & Command Wrappers for Grid Parameters
+**Description:** Implement smooth, interactive adjustment of grid parameters (rows, columns, margins, gutters) in the properties panel, ensuring updates are debounced and changes are undoable.
+
+**Planned Implementation:**
+1.  **Modify `src/views/layout_ui_factory.py`:**
+    *   **Task:** In `_build_grid_layout_controls`, for each grid parameter UI element (e.g., `QSpinBox` for rows/cols, `QDoubleSpinBox` for margin/gutter):
+        *   Connect its relevant signal (e.g., `valueChanged`, `editingFinished`) to a *single debounced slot* in `main_controller` (e.g., `main_controller.on_grid_parameter_changed`).
+        *   The debouncing mechanism should be implemented using `QTimer.singleShot` or similar.
+    *   **Task:** The debounced slot will gather the *current values of all grid parameters* from the UI controls before calling `main_controller.adjust_grid_parameters()`.
+2.  **Modify `src/controllers/main_controller.py`:**
+    *   **Task:** Add a new method `on_grid_parameter_changed(self)` (the debounced slot). This will collect the values from the UI elements (passed as a dictionary or tuple) and call `adjust_grid_parameters`.
+    *   **Task:** Add or refine `adjust_grid_parameters(self, rows: int, cols: int, margin: float, gutter: float, row_ratios: List[float] | None = None, col_ratios: List[float] | None = None)`:
+        *   This method will construct a new `GridConfig` with the provided parameters.
+        *   It will create a new `ChangeGridParametersCommand` (see below) passing the old and new `GridConfig`.
+        *   Execute the command via `self.command_manager.execute_command()`.
+3.  **Create `src/commands/change_grid_parameters_command.py`:**
+    *   **Task:** Implement `ChangeGridParametersCommand(BaseCommand)`:
+        *   `__init__(self, model: ApplicationModel, old_grid_config: GridConfig, new_grid_config: GridConfig, description: str)`: Stores the model, old config, and new config.
+        *   `execute(self)`: Sets `model.current_layout_config = self._new_grid_config`.
+        *   `undo(self)`: Sets `model.current_layout_config = self._old_grid_config`.
+4.  **Add Test Stubs (Feature 4):**
+    *   **Unit Tests (`tests/views/test_layout_ui_factory.py`):**
+        *   `test_grid_parameter_controls_connected_to_debounced_slot`: Verify grid parameter UI elements connect to the debounced slot in `main_controller`.
+    *   **Unit Tests (`tests/controllers/test_main_controller.py`):**
+        *   `test_adjust_grid_parameters_executes_command`: Verify `adjust_grid_parameters` creates and executes a `ChangeGridParametersCommand`.
+        *   `test_on_grid_parameter_changed_debounces_calls`: Mock `QTimer.singleShot` to verify debouncing behavior.
+    *   **Unit Tests (`tests/commands/test_change_grid_parameters_command.py`):**
+        *   `test_execute_change_grid_parameters_command`: Verify `execute` correctly updates `model.current_layout_config`.
+        *   `test_undo_change_grid_parameters_command`: Verify `undo` correctly restores `model.current_layout_config`.
+
+### General Refinements/Considerations for the Epic:
+
+*   **Error Handling and User Feedback:** Implement robust validation for user input in grid parameter fields (e.g., non-negative numbers, valid ratios). Provide clear visual feedback (e.g., invalid input highlighting, status bar messages).
+*   **Default Configuration:** Add new configuration keys to `configs/default_config.yaml` for default grid parameter values (if different from existing ones) and all new icon paths.
+*   **Documentation:** Update `docs/technical-design-document.md` to include this new Epic and its features. Update any other relevant documentation (`README.md`, `backlog.md`).

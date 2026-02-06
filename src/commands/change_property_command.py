@@ -20,7 +20,8 @@ class ChangePropertyCommand(BaseCommand):
         new_value: Any,
         property_dict_name: str | None = None,
     ):
-        super().__init__()
+        description = f"Change property '{property_name}' of node '{node.name}' to '{new_value}'"
+        super().__init__(description)
         self.node = node
         self.property_name = property_name
         self.new_value = new_value

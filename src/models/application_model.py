@@ -1,5 +1,6 @@
 import logging 
 from pathlib import Path
+from typing import Optional
 
 import matplotlib.figure
 from PySide6.QtCore import QObject, Signal
@@ -7,6 +8,8 @@ from PySide6.QtCore import QObject, Signal
 from .nodes import GroupNode, SceneNode
 from .nodes.scene_node import node_factory
 from src.config_service import ConfigService
+from src.constants import LayoutMode
+from src.models.layout_config import LayoutConfig, FreeConfig, GridConfig
 
 
 class ApplicationModel(QObject):
@@ -17,62 +20,31 @@ class ApplicationModel(QObject):
 
     modelChanged = Signal()
     selectionChanged = Signal()
-    autoLayoutChanged = Signal(bool) # Added signal
+    layoutConfigChanged = Signal() # Replaced autoLayoutChanged
 
-    def __init__(self, figure: matplotlib.figure.Figure, config_service: ConfigService): # Modified signature
+    def __init__(self, figure: matplotlib.figure.Figure, config_service: ConfigService):
         super().__init__()
-        self.logger = logging.getLogger(self.__class__.__name__) # Added logger
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.figure = figure
-        self._config_service = config_service # Stored config service
+        self._config_service = config_service
         self.scene_root = GroupNode(name="root")
         self.selection: list[SceneNode] = []
 
-        # Auto-layout properties
-        self._auto_layout_enabled: bool = self._config_service.get("figure.auto_layout_enabled_default", False) # Initialized from config
-        self._figure_subplot_params: dict | None = None # Stores explicit layout when auto-layout is off
+        # Layout configuration property
+        # Initialize from config or default to FreeConfig
+        self._current_layout_config: LayoutConfig = FreeConfig() # Default to FreeConfig
 
     @property
-    def auto_layout_enabled(self) -> bool:
-        return self._auto_layout_enabled
+    def current_layout_config(self) -> LayoutConfig:
+        return self._current_layout_config
 
-    def set_auto_layout_enabled(self, enabled: bool):
-        """
-        Sets whether automatic layout adjustment is enabled for the figure.
-        If disabling auto-layout, captures the current layout parameters.
-        If enabling auto-layout, clears captured parameters.
-        """
-        if self._auto_layout_enabled == enabled:
-            return # No change
-
-        self.logger.info(f"Setting auto-layout enabled: {enabled}. Previous: {self._auto_layout_enabled}")
-
-        if not enabled and self._auto_layout_enabled:
-            # Transitioning from enabled to disabled, capture current layout
-            self.figure.tight_layout() # Apply one last auto-layout
-            
-            # Capture subplot parameters (left, right, bottom, top, wspace, hspace)
-            # Iterate through axes to get their positions
-            subplot_params = self.figure.subplotpars
-            self._figure_subplot_params = {
-                "left": subplot_params.left,
-                "right": subplot_params.right,
-                "bottom": subplot_params.bottom,
-                "top": subplot_params.top,
-                "wspace": subplot_params.wspace,
-                "hspace": subplot_params.hspace,
-            }
-            self.logger.debug(f"Captured subplot parameters: {self._figure_subplot_params}")
-        elif enabled and not self._auto_layout_enabled:
-            # Transitioning from disabled to enabled, clear captured layout
-            self._figure_subplot_params = None
-            self.logger.debug("Cleared captured subplot parameters.")
-
-        self._auto_layout_enabled = enabled
-        self.autoLayoutChanged.emit(enabled) # Emit signal
-
-    @property
-    def figure_subplot_params(self) -> dict | None:
-        return self._figure_subplot_params
+    @current_layout_config.setter
+    def current_layout_config(self, config: LayoutConfig):
+        if self._current_layout_config != config:
+            self._current_layout_config = config
+            self.logger.info(f"Layout config changed to mode: {config.mode.value}")
+            self.layoutConfigChanged.emit()
+            self.modelChanged.emit() # Also trigger a general model change for redraw
 
     def add_node(self, node: SceneNode, parent: SceneNode | None = None):
         """Adds a node to the scene graph."""
@@ -107,6 +79,7 @@ class ApplicationModel(QObject):
         return {
             "version": "1.0",
             "scene_root": self.scene_root.to_dict(),
+            "layout_config": self.current_layout_config.to_dict() # Serialize layout config
         }
 
     def load_from_dict(self, data: dict, temp_dir: Path):
@@ -114,4 +87,12 @@ class ApplicationModel(QObject):
         # Version check can be added here in the future
         self.clear_scene()
         self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
+        
+        # Deserialize layout config
+        layout_config_data = data.get("layout_config")
+        if layout_config_data:
+            self.current_layout_config = LayoutConfig.from_dict(layout_config_data) # Use LayoutConfig.from_dict
+        else:
+            self.current_layout_config = FreeConfig() # Default if not found
+        
         self.modelChanged.emit()

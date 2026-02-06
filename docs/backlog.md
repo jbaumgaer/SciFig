@@ -764,3 +764,438 @@ This epic focuses on externalizing various application settings, user preference
 *   **Mitigation:** A systematic search (e.g., using `grep` or IDE search) for literals and careful review. Unit tests for `ConfigService` will catch key path errors.
 *   **Risk:** Refactoring `src/constants.py` might break many existing references.
 *   **Mitigation:** Change `constants.py` incrementally, or provide backward compatibility (e.g., old constants redirect to `ConfigService` values) if the migration is too disruptive.
+
+### Feature: Externalized Content Layouts (Project-Level Templates)
+**Description:** Replace the hardcoded logic for creating layouts (e.g., the "2x2 layout") with a system that loads predefined layout templates from external JSON files. This allows for flexible and extensible canvas content arrangements. When a new layout is applied, existing plots are intelligently redistributed onto the new layout slots, preserving data where possible.
+
+**Planned Implementation:**
+
+1.  **Create `configs/layouts` Directory and Default Layout Template:**
+    *   **Task:** Create a new directory `configs/layouts` in the project root.
+    *   **Task:** Create `2x2_default.json` within `configs/layouts`.
+    *   **Task:** Populate `2x2_default.json` with a serialized `GroupNode` structure, defining 4 `PlotNode` children with `geometry` and placeholder `plot_properties`. Example content:
+        ```json
+        {
+          "type": "GroupNode",
+          "name": "2x2 Layout",
+          "geometry": {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0},
+          "children": [
+            {
+              "type": "PlotNode",
+              "name": "Plot 1",
+              "geometry": { "x": 0.02, "y": 0.52, "width": 0.46, "height": 0.46 },
+              "plot_properties": { "plot_type": "LINE", "title": "Top-Left" }
+            },
+            {
+              "type": "PlotNode",
+              "name": "Plot 2",
+              "geometry": { "x": 0.52, "y": 0.52, "width": 0.46, "height": 0.46 },
+              "plot_properties": { "plot_type": "LINE", "title": "Top-Right" }
+            },
+            {
+              "type": "PlotNode",
+              "name": "Plot 3",
+              "geometry": { "x": 0.02, "y": 0.02, "width": 0.46, "height": 0.46 },
+              "plot_properties": { "plot_type": "SCATTER", "title": "Bottom-Left" }
+            },
+            {
+              "type": "PlotNode",
+              "name": "Plot 4",
+              "geometry": { "x": 0.52, "y": 0.02, "width": 0.46, "height": 0.46 },
+              "plot_properties": { "plot_type": "LINE", "title": "Bottom-Right" }
+            }
+          ]
+        }
+        ```
+    *   **Task:** Ensure `plot_properties` includes suitable defaults or placeholders for new plots.
+
+2.  **Modify `PlotProperties` and `PlotNode` for `update_from_dict`:**
+    *   **Task:** In `src/models/nodes/plot_properties.py`, add a method `update_from_dict(self, data: dict, exclude_geometry: bool = False)` to `BasePlotProperties`. This method should iterate through the `data` dictionary and update the corresponding attributes of the `PlotProperties` instance. The `exclude_geometry` flag is for when we only want to update non-geometry properties during redistribution.
+    *   **Task:** In `src/models/nodes/plot_node.py`, update `to_dict` to accept `exclude_geometry: bool = False` argument. This ensures that when extracting plot state, geometry can be optionally omitted.
+
+3.  **Refactor `src/controllers/main_controller.py`:**
+    *   **Task:** Modify `create_new_layout()` method:
+        *   Extract existing plot data and properties (data, `PlotProperties` excluding `geometry`) from `self.model.scene_root.all_descendants()`.
+        *   Clear `self.model.scene_root`'s children.
+        *   Get the `default_template` name from `self._config_service.get("layout.default_template")`.
+        *   Construct the full path to the template file using `pathlib` and `self._config_service.get("paths.layout_templates_dir")`.
+        *   Load and parse the JSON file using `json.load()`.
+        *   Use `scene_node.node_factory(template_data)` to deserialize the JSON into a `GroupNode` hierarchy (this will be the `new_layout_root_node`).
+        *   Iterate through the `PlotNode`s within `new_layout_root_node`. For each new slot, try to assign an extracted plot state from the previous step (simple first-come, first-served matching).
+            *   If an extracted plot state is assigned, update the `new_slot_node`'s `data` and call `new_slot_node.plot_properties.update_from_dict()` (preserving the new slot's geometry).
+        *   Add `new_layout_root_node` (or its children) to `self.model.scene_root`.
+        *   Emit `self.model.modelChanged.emit()`.
+    *   **Task:** (Future consideration): Add a method `load_layout_template(template_name: str)` to encapsulate the loading and processing logic, to be reused by a template selection UI.
+
+**Testing Plan:**
+*   **Unit Tests (`tests/models/test_plot_properties.py`, `tests/models/nodes/test_plot_node.py`):**
+    *   Verify `PlotProperties.update_from_dict` correctly updates properties and respects `exclude_geometry`.
+    *   Verify `PlotNode.to_dict` correctly omits geometry when `exclude_geometry=True`.
+*   **Unit Tests (`tests/controllers/test_main_controller.py`):**
+    *   Mock `ConfigService` to return specific template paths and data.
+    *   Mock `node_factory` to return predefined `SceneNode` hierarchies.
+    *   Test `create_new_layout` to ensure:
+        *   It extracts existing plot data/properties before clearing.
+        *   It loads the correct template.
+        *   It deserializes the template into `SceneNode` objects.
+        *   It intelligently redistributes existing plot data/properties onto new slots (e.g., first N plots are assigned).
+        *   It updates the `ApplicationModel`'s `scene_root` correctly.
+        *   `modelChanged` signal is emitted.
+        *   Handles scenarios where new layout has more/fewer slots than existing plots.
+*   **Integration Tests:**
+    *   Launch the application, load some data into plots, then trigger `create_new_layout`. Visually verify data is preserved and redistributed on the new 2x2 layout.
+    *   Change `2x2_default.json` and verify changes are reflected.
+
+**Risks & Mitigations:**
+*   **Risk:** Errors in parsing JSON layout files or schema mismatches with `node_factory`.
+*   **Mitigation:** Add robust error handling during JSON loading and deserialization. Use schema validation for layout JSONs if they become complex.
+*   **Risk:** `plot_properties` within the template might be incomplete or conflict with existing plot properties.
+*   **Mitigation:** Ensure `PlotProperties.update_from_dict` handles missing keys gracefully. The `PlotNode` constructor should merge template properties with its own defaults.
+*   **Risk:** Complexities in correctly handling `GroupNode` vs `PlotNode` hierarchy during redistribution, especially when `all_descendants()` is used.
+*   **Mitigation:** Thorough unit tests for `all_descendants()` and the redistribution logic. Ensure `node_factory` correctly rebuilds the hierarchy.
+
+
+## Epic: Layout Management System
+
+
+  This epic focuses on implementing a flexible, extensible, and user-friendly layout management system. It allows users to arrange plots on the canvas
+  through either a structured, adaptive grid or a free-form manual mode, with dynamic UI adaptation and full undo/redo support.
+
+  ### Feature 1: Core Layout Engine Architecture
+
+
+  Description: Establish the foundational abstract LayoutEngine, concrete FreeLayoutEngine, GridLayoutEngine, the orchestrating LayoutManager, and the
+  initial LayoutConfig hierarchy. This feature focuses on the underlying logic and structure, not the UI integration yet.
+
+  Planned Implementation:
+
+
+   1. Define `LayoutMode` Enum:
+       * Task: Add LayoutMode(Enum) to src/constants.py with members FREE_FORM and GRID.
+       * Test Consideration: N/A (Enum definition).
+
+
+   2. Define Abstract `LayoutConfig` and Concrete Implementations:
+       * Task: Define src/models/layout_config.py (new file) with LayoutConfig(abc.ABC) as an abstract base class. It should have an abstract property mode:
+         LayoutMode.
+       * Task: Implement FreeConfig(LayoutConfig) in the same file: A simple class with mode = LayoutMode.FREE_FORM.
+       * Task: Implement GridConfig(LayoutConfig) in the same file:
+           * Properties: rows: int = field(default=2), cols: int = field(default=2), row_ratios: List[float] = field(default_factory=list), col_ratios:
+             List[float] = field(default_factory=list), margin: float = field(default=0.05), gutter: float = field(default=0.05). Use dataclasses.
+           * mode = LayoutMode.GRID.
+       * Test Consideration (`tests/models/test_layout_config.py` - new file):
+           * Unit test: test_free_config_mode: Verify FreeConfig().mode is LayoutMode.FREE_FORM.
+           * Unit test: test_grid_config_init_defaults: Verify GridConfig initializes with specified defaults.
+           * Unit test: test_grid_config_init_custom: Verify GridConfig initializes with custom provided values.
+           * Unit test: test_grid_config_mode: Verify GridConfig().mode is LayoutMode.GRID.
+
+
+   3. Create Abstract `LayoutEngine`:
+       * Task: Create src/layout_engine.py.
+       * Task: Define LayoutEngine as an abc.ABC with an abstract method:
+
+
+
+    1         from abc import ABC, abstractmethod
+    2         from typing import Dict, List, Tuple, Any
+    3
+    4         from src.models.nodes import PlotNode
+    5         from src.models.layout_config import LayoutConfig # Assuming this file now exists
+    6
+    7         class LayoutEngine(ABC):
+    8             @abstractmethod
+    9             def calculate_geometries(self, plots: List[PlotNode], layout_config: LayoutConfig) -> Dict[PlotNode, Tuple[float, float, float, float]]:
+   10                 """
+   11                 Calculates and returns the target (left, bottom, width, height) geometry for each PlotNode.
+   12                 This method is stateless; all necessary parameters are passed via layout_config.
+   13                 """
+       * Test Consideration: N/A (Abstract class).
+
+
+   4. Implement `FreeLayoutEngine`:
+       * Task: In src/layout_engine.py, create FreeLayoutEngine inheriting from LayoutEngine.
+       * Task: Implement calculate_geometries: For FreeConfig, it will simply return a dictionary mapping each PlotNode to its current plot_node.geometry
+         attribute. It will act as a pass-through when layout_config is FreeConfig.
+       * Task: Add public methods perform_align(nodes: List[PlotNode], edge: str) -> Dict[PlotNode, Tuple[float, float, float, float]] and
+         perform_distribute(nodes: List[PlotNode], axis: str) -> Dict[PlotNode, Tuple[float, float, float, float]]. These methods will perform the geometric
+         calculations for alignment and distribution, and return the new geometries. These methods will not be part of the abstract LayoutEngine interface,
+         but will be exposed by FreeLayoutEngine for LayoutManager to call when in Free-Form mode.
+       * Test Consideration (`tests/test_layout_engine.py` - modify/new file):
+           * Unit test: test_free_layout_engine_calculate_geometries_pass_through: Verify it returns input plot geometries unmodified.
+           * Unit test: test_free_layout_engine_align_left: Test with 2-3 plots, verify left edges align and other coordinates are preserved.
+           * Unit test: test_free_layout_engine_distribute_horizontal: Test with 3 plots, verify even horizontal spacing.
+           * Edge case: align/distribute with empty nodes list.
+
+
+   5. Implement `GridLayoutEngine`:
+       * Task: In src/layout_engine.py, create GridLayoutEngine inheriting from LayoutEngine.
+       * Task: In __init__, accept config_service: ConfigService.
+       * Task: Implement calculate_geometries:
+           * It will expect GridConfig as layout_config.
+           * It will determine the (rows, cols) from layout_config.
+           * It will calculate the new (l, b, w, h) for each PlotNode based on GridConfig parameters (rows, cols, ratios, margins, gutters).
+           * It should assign plots to grid cells based on some ordering heuristic (e.g., iterating through plot_nodes and assigning them to (0,0), (0,1),
+             ..., (1,0), (1,1), ... grid cells).
+           * Return the Dict[PlotNode, Rect].
+       * Task: Add a public method snap_plots_to_grid(plots: List[PlotNode], current_grid_config: GridConfig) -> GridConfig: This method embodies the "Smart
+         Re-Gridding with Heuristics" logic discussed. It will analyze plots' current positions, determine an appropriate rows/cols, and return an updated
+         GridConfig object (with initial row_ratios/col_ratios derived from basic even distribution and potentially refined by analyzing clusterings in
+         plots).
+       * Test Consideration (`tests/test_layout_engine.py` - modify/new file):
+           * Unit test: test_grid_layout_engine_calculate_geometries_2x2: Test with 4 plots, verify correct, non-overlapping (l,b,w,h) for a 2x2 grid.
+           * Unit test: test_grid_layout_engine_calculate_geometries_1x3: Test with 3 plots, verify correct layout.
+           * Unit test: test_grid_layout_engine_calculate_geometries_with_ratios: Test with custom row_ratios/col_ratios, verify correct proportional
+             sizing.
+           * Unit test: test_grid_layout_engine_snap_plots_to_grid_simple: Test with a few scattered plots, verify it returns a sensible GridConfig (e.g.,
+             2x2 for 4 plots).
+           * Unit test: test_grid_layout_engine_snap_plots_to_grid_already_grid_like: Test with plots already in a grid, verify it infers the correct
+             GridConfig and approximate ratios.
+           * Edge case: snap_plots_to_grid with empty plots list.
+
+
+   6. Create `LayoutManager` Service:
+       * Task: Create src/layout_manager.py.
+       * Task: In __init__, accept application_model: ApplicationModel, free_engine: FreeLayoutEngine, grid_engine: GridLayoutEngine, config_service:
+         ConfigService.
+       * Task: Store references. Initialize self._application_model.current_layout_config (using FreeConfig or GridConfig based on a default from
+         ConfigService).
+       * Task: Implement get_active_engine() -> LayoutEngine: Returns _free_engine or _grid_engine based on application_model.current_layout_config.mode.
+       * Task: Implement public methods that the MainController will call:
+           * set_layout_mode(mode: LayoutMode): Updates application_model.current_layout_config.mode. If switching to GRID from FREE_FORM, it calls
+             _snap_plots_to_grid.
+           * perform_align(plots: List[PlotNode], edge: str) -> Dict[PlotNode, Rect]: Delegates to _free_engine.perform_align. Raises error if not in
+             Free-Form mode.
+           * perform_distribute(plots: List[PlotNode], axis: str) -> Dict[PlotNode, Rect]: Delegates to _free_engine.perform_distribute. Raises error if not
+             in Free-Form mode.
+           * apply_grid_layout_by_config(grid_config: GridConfig) -> Dict[PlotNode, Rect]: Updates application_model.current_layout_config to grid_config,
+             then calls _grid_engine.calculate_geometries.
+           * adjust_current_grid(rows: int | None = None, cols: int | None = None, row_ratios: List[float] | None = None, col_ratios: List[float] | None =
+             None) -> Dict[PlotNode, Rect]: Updates application_model.current_layout_config (must be GridConfig) and calls
+             _grid_engine.calculate_geometries.
+           * get_current_layout_geometries(plots: List[PlotNode]) -> Dict[PlotNode, Rect]: Calls self.get_active_engine().calculate_geometries(plots,
+             self._application_model.current_layout_config).
+       * Task: Implement _snap_plots_to_grid(plots: List[PlotNode]): Calls _grid_engine.snap_plots_to_grid and updates
+         application_model.current_layout_config with the returned GridConfig.
+       * Test Consideration (`tests/test_layout_manager.py` - new file):
+           * Unit test: test_layout_manager_init: Verify correct engine/model injection and initial config.
+           * Unit test: test_set_layout_mode_free_to_grid_snaps: Mock plots, verify _snap_plots_to_grid is called and GridConfig is set.
+           * Unit test: test_set_layout_mode_grid_to_free: Verify FreeConfig is set.
+           * Unit test: test_perform_align_in_free_mode: Mock FreeLayoutEngine, verify delegation.
+           * Unit test: test_perform_align_in_grid_mode_raises_error: Verify appropriate error/warning.
+           * Unit test: test_get_current_layout_geometries_delegation: Verify calls to correct active engine.
+
+  Risks & Mitigations (Feature 1):
+
+
+   * Risk: snap_plots_to_grid heuristic is not "smart enough" and produces visually unappealing results, frustrating users during Free -> Grid transitions.
+   * Mitigation: Iterative refinement of the sorting and assignment logic within snap_plots_to_grid. Provide user preference for sorting criteria (e.g., "by
+     position," "by ID"). Communicate this behavior clearly in the UI. Initial implementation can be simple (e.g., sort by (x,y)) and improved later.
+   * Risk: Deep nesting of calculate_geometries calls (e.g., LayoutManager calls get_active_engine which calls calculate_geometries).
+   * Mitigation: This is the nature of the Strategy pattern and is acceptable. Ensure LayoutEngine.calculate_geometries is stateless and fast.
+   * Risk: Overlap in responsibilities between LayoutManager and ApplicationModel regarding LayoutConfig.
+   * Mitigation: ApplicationModel owns LayoutConfig (state). LayoutManager manipulates that state (logic) and triggers recalculation. This separation is
+     crucial.
+
+  ---
+
+  ### Feature 2: Integrating Layout State & Engine with Application Model and Renderer
+
+
+  Description: Update the ApplicationModel to manage LayoutConfig, and simplify the Renderer to solely draw based on plot geometries provided by the
+  LayoutManager.
+
+  Planned Implementation:
+
+
+   1. Modify `ApplicationModel`:
+       * Task: In src/models/application_model.py, change the _auto_layout_enabled property to _current_layout_config: LayoutConfig.
+       * Task: In __init__, initialize _current_layout_config to FreeConfig() (default to free-form initially, or based on a new config default
+         ui.default_layout_mode).
+       * Task: Remove self._figure_subplot_params and all related tight_layout() calls from set_auto_layout_enabled.
+       * Task: The set_auto_layout_enabled(self, enabled: bool) method on ApplicationModel will be removed. The layout mode will now be explicitly
+         controlled by LayoutManager.set_layout_mode().
+       * Task: The autoLayoutChanged = Signal(bool) signal will be replaced by layoutConfigChanged = Signal(), emitted whenever self._current_layout_config
+         is set or one of its mutable properties changes (if GridConfig is mutable).
+       * Task: Update to_dict() and load_from_dict() to serialize/deserialize the current_layout_config. LayoutConfig objects will need a to_dict() and
+         from_dict() method, possibly using node_factory-like approach for polymorphism.
+       * Test Consideration (`tests/models/test_application_model.py`):
+           * Unit test: test_application_model_initial_layout_config: Verify _current_layout_config is correctly initialized.
+           * Unit test: test_application_model_layout_config_serialization: Verify to_dict() and load_from_dict() correctly handle current_layout_config.
+
+
+   2. Modify `Renderer`:
+       * Task: Update Renderer.__init__ to accept layout_manager: LayoutManager (and remove application_model as a direct dependency for layout decisions).
+       * Task: Store self._layout_manager and self._application_model (still needed for scene root, selection).
+       * Task: Modify render method:
+           * Always call figure.clear().
+           * Get all PlotNodes from self._application_model.scene_root.all_descendants(type=PlotNode).
+           * Call calculated_geometries = self._layout_manager.get_current_layout_geometries(list_of_plot_nodes).
+           * Iterate plot_node and geometry from calculated_geometries.items():
+               * Create ax = figure.add_axes(geometry).
+               * Update plot_node.axes = ax.
+               * Plot data (if plot_node.data exists) and apply plot properties to ax.
+           * Crucial: If self._application_model.current_layout_config.mode == LayoutMode.GRID: call figure.set_constrained_layout(True).
+           * (Optional Polishing Step): If self._application_model.current_layout_config.mode == LayoutMode.FREE_FORM and a "tighten layout" action is
+             invoked, then figure.tight_layout() can be called. (This is a manual action, not part of automatic rendering by Renderer.)
+       * Test Consideration (`tests/views/test_renderer.py`):
+           * Unit test: test_renderer_render_free_mode: Mock LayoutManager to return explicit geometries, verify add_axes calls with correct rects.
+           * Unit test: test_renderer_render_grid_mode: Mock LayoutManager to return grid-aligned geometries, verify add_axes calls and
+             figure.set_constrained_layout(True) is called.
+           * Unit test: test_renderer_render_no_plots: Verify graceful handling of empty plot list.
+
+
+  Risks & Mitigations (Feature 2):
+
+
+   * Risk: Circular dependencies during initialization (ApplicationModel needs LayoutManager for set_layout_mode if its setter calls it, LayoutManager needs
+     ApplicationModel).
+   * Mitigation: Refactor ApplicationModel.set_layout_mode to be called externally by MainController or LayoutManager after full assembly. The initial
+     _current_layout_config is set directly in ApplicationModel.__init__. The LayoutManager should observe ApplicationModel.layoutConfigChanged and adjust
+     its internal engine usage, rather than ApplicationModel calling LayoutManager.
+   * Risk: Data re-plotting on every redraw causes flicker/performance issues.
+   * Mitigation: This is an accepted trade-off for the dynamic nature. Performance optimizations (e.g., only updating changed axes, using Matplotlib's
+     set_position) could be considered in a later iteration if profiling indicates a problem. For now, rely on figure.clear() and add_axes.
+
+  ---
+
+  ### Feature 3: UI Integration and User Interaction
+
+
+  Description: Build the user interface elements (menus, actions) that allow users to control layout modes and perform layout operations. This leverages
+  LayoutUIFactory for dynamic UI adaptation.
+
+  Planned Implementation:
+
+
+   1. Modify `default_config.yaml`:
+       * Task: In the figure section, rename auto_layout_enabled_default to default_layout_mode: "FREE_FORM" or "GRID".
+       * Task: In the layout section, add default_grid_rows: 2, default_grid_cols: 2, grid_margin: 0.05, grid_gutter: 0.05.
+       * Task: Add a new free_form_layout section with snap_grid_unit_x: 0.01, snap_grid_unit_y: 0.01, align_offset: 0.01, distribute_spacing: 0.01.
+       * Test Consideration: N/A (Config definition).
+
+
+   2. Create `LayoutUIFactory`:
+       * Task: Create src/views/layout_ui_factory.py.
+       * Task: Implement LayoutUIFactory with a constructor taking config_service: ConfigService.
+       * Task: Implement build_layout_controls(layout_mode: LayoutMode, main_controller: MainController, parent: QObject) -> List[QAction | QMenu]:
+           * This method will internally use different private builder methods (_build_free_form_controls, _build_grid_layout_controls) based on
+             layout_mode.
+           * It will return a list of UI elements (QActions, menus) that are connected to MainController slots.
+       * Task: Implement _build_free_form_controls(main_controller, parent):
+           * Creates QActions for "Align Left", "Align Center", "Align Right", "Align Top", "Align Middle", "Align Bottom", "Distribute Horizontal",
+             "Distribute Vertical".
+           * Connects these actions to corresponding MainController slots (e.g., main_controller.align_selected_plots('left')).
+           * Can optionally add a "Snap to Grid" option/dialog in this mode, linked to main_controller.snap_free_plots_to_grid().
+       * Task: Implement _build_grid_layout_controls(main_controller, parent):
+           * Creates QActions/sub-menus for "Set Grid Size" (e.g., 1x1, 1x2, 2x2, Custom), "Adjust Ratios".
+           * Connects these actions to corresponding MainController slots (e.g., main_controller.apply_grid_layout(2,2)).
+       * Test Consideration (`tests/views/test_layout_ui_factory.py` - new file):
+           * Unit test: test_layout_ui_factory_build_free_form: Verify correct QActions are returned and connected.
+           * Unit test: test_layout_ui_factory_build_grid_layout: Verify correct QActions/menus are returned and connected.
+
+
+   3. Modify `MainController` for Layout Actions:
+       * Task: Update MainController.__init__ to accept layout_manager: LayoutManager.
+       * Task: Add methods for specific layout actions, delegating to layout_manager and executing BatchChangePlotGeometryCommand:
+           * set_layout_mode(mode: LayoutMode): Calls layout_manager.set_layout_mode(mode).
+           * align_selected_plots(edge: str): Calls layout_manager.perform_align(selected_plots, edge).
+           * distribute_selected_plots(axis: str): Calls layout_manager.perform_distribute(selected_plots, axis).
+           * apply_grid_layout_from_ui(rows: int, cols: int): Calls layout_manager.apply_grid_layout(...).
+           * snap_free_plots_to_grid_action(): Calls layout_manager.snap_free_plots_to_grid().
+           * All these methods will take the returned Dict[PlotNode, Rect] and wrap them in a BatchChangePlotGeometryCommand, executing it via
+             CommandManager.
+       * Test Consideration (`tests/controllers/test_main_controller.py`):
+           * Unit test: test_main_controller_set_layout_mode_delegation.
+           * Unit test: test_main_controller_align_delegation_command_execution.
+
+
+   4. Modify `MainWindow` and Menu Builders for Dynamic Layout UI:
+       * Task: In src/views/main_window.py, remove any existing QAction for "Enable Auto Layout".
+       * Task: Update MainWindow.__init__ to accept layout_ui_factory: LayoutUIFactory.
+       * Task: Add a QMenu for "Layout" to the MainWindow's menu bar (e.g., after "Plot" menu).
+       * Task: Implement a slot _update_layout_menu(layout_mode: LayoutMode) in MainWindow.
+           * This slot will clear the existing "Layout" menu.
+           * It will call self._layout_ui_factory.build_layout_controls(layout_mode, self._main_controller, self) to get the new QActions/QMenus.
+           * It will add these dynamically generated controls to the "Layout" menu.
+       * Task: Connect layout_manager.layoutModeChanged signal to _update_layout_menu slot.
+       * Task: Trigger _update_layout_menu initially in MainWindow.__init__ with the initial layout mode from ApplicationModel.
+       * Test Consideration (`tests/views/test_main_window.py`):
+           * Integration test: Mock LayoutManager to emit different LayoutModes. Verify MainWindow's "Layout" menu content changes dynamically.
+           * Test initial menu state.
+
+  Risks & Mitigations (Feature 3):
+
+
+   * Risk: LayoutUIFactory logic becoming overly complex if too many unique UI elements per engine type.
+   * Mitigation: Keep builder functions focused on creating basic Qt widgets/actions. Complex dialogs (e.g., "Custom Grid Size") could be separate, reusable
+     components.
+   * Risk: Ensuring QAction connections remain valid if menus are rebuilt frequently.
+   * Mitigation: QActions are objects managed by Qt; as long as parent is correctly set, connections should hold. Ensure MainController methods are robust.
+   * Risk: User confusion when UI elements change based on mode.
+   * Mitigation: Clear visual indicators of the active layout mode (e.g., status bar, highlighted status for the "Layout Mode" toggle).
+
+  ---
+
+  ### Feature 4: Refactoring Application Assembler & Data Loading
+
+  Description: Integrate the new layout architecture into the ApplicationAssembler and ensure data loading correctly triggers redraws within the new layout
+  paradigm.
+
+  Planned Implementation:
+
+
+   1. Update `ApplicationAssembler`:
+       * Task: In _assemble_core_components:
+           * Instantiate ApplicationModel(figure, config_service).
+           * Instantiate FreeLayoutEngine(config_service).
+           * Instantiate GridLayoutEngine(config_service).
+           * Instantiate LayoutManager(application_model, free_layout_engine, grid_layout_engine, config_service).
+           * Instantiate LayoutUIFactory(config_service).
+           * Instantiate Renderer(layout_manager, application_model) (note change from previous plans where it directly took app_model; now it primarily
+             uses layout_manager for geometries).
+       * Task: Pass LayoutManager to MainController and Renderer.
+       * Task: Pass LayoutUIFactory to MainWindow.
+       * Task: Adjust ApplicationComponents to include LayoutManager and LayoutUIFactory.
+       * Test Consideration (`tests/test_application_assembler.py`):
+           * Integration test: Verify ApplicationAssembler successfully instantiates and wires up all new layout components (LayoutManager,
+             FreeLayoutEngine, GridLayoutEngine, LayoutUIFactory) with correct dependencies.
+           * Test that the initial layout mode is correctly set (Free-Form or Grid) and the UI reflects this (if MainWindow's initial update slot is
+             called).
+
+
+   2. Refactor `CanvasController` `on_data_ready`:
+       * Task: Update CanvasController.__init__ to accept layout_manager: LayoutManager.
+       * Task: In on_data_ready: After node.data and node.plot_properties are set, check self._application_model.current_layout_config.mode.
+       * Task: If LayoutMode.GRID is active, call self._main_controller.apply_default_grid_layout() to ensure the newly added plot is integrated into the
+         grid. (This implicitly assumes MainController's method applies a default grid to all plots).
+       * Test Consideration (`tests/controllers/test_canvas_controller.py`):
+           * Integration test: Drag-and-drop a file in FREE_FORM mode, verify plot appears at drop location.
+           * Integration test: Drag-and-drop a file in GRID mode, verify plot appears in the next available grid cell and the layout re-adjusts.
+
+
+  Risks & Mitigations (Feature 4):
+
+
+   * Risk: ApplicationAssembler becoming excessively large and hard to read.
+   * Mitigation: Group component assembly into smaller, private helper methods within ApplicationAssembler (e.g., _assemble_layout_components()).
+   * Risk: Subtle bugs due to complex initialization order and inter-component dependencies.
+   * Mitigation: Extensive unit and integration tests covering component wiring and initial state. Logging at DEBUG level for all component initializations.
+   * Risk: Performance overhead of layout recalculations during data loading.
+   * Mitigation: The BatchChangePlotGeometryCommand will help. If profiling shows issues, consider optimizing calculate_geometries or deferring
+     recalculation until interactive operations cease.
+
+Add a to_str method to handle data validation from user or config file input instead of insisting on lower or upper case input
+Clean up imports, unnecessary comments, lint the document, and make it type safe, e.g. by adding more custom types (axis string in layout manager), replace all List type hints with list etc., regroup the files that are currently just in the src directory, rename files to be a bit more standardized or descriptive (config is all over the place, same with consants or utils)
+Methods become bloated, e.g. in Renderer, separation of concerns is not fully clear anymore, Single Responsibility is frequently broken --> Check code part by part for whether we adhere to the SOLID design principles, also coupling starts to be very strong
+Update the docs to give a clear view of the core classes: The MainController, the CanvasController, the ToolManager, the ApplicationModel, the DataLoader, the LayoutEngine, the MainWindow, the Renderer, the CommandManager and the ConfigService
+Fix how properties_view doesn't treat layout_ui_factory and properties_ui_factory on equal ground.
+Try and see if we can increase code reusability in any way
+
+Make sure that when a plot is unclicked, that we switch back to the layout managment properties panel
+Make sure that grid options actually update properly
+
+[ ] Extract ProjectController from Main Controller for all file-related operations (save, open, recent files).                                                    
+[ ] Extract LayoutController from Main Controller and PropertiesView for managing layout modes, alignment, distribution, and grid configurations.                                     
+[ ] Extract NodeController from PropertiesView managing the intrinsic attributes of selected SceneNodes. 
+
+Implement a properties controller

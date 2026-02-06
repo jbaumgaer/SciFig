@@ -16,9 +16,12 @@ from src.models import ApplicationModel
 from src.models.nodes.plot_types import PlotType
 from src.views.canvas_widget import CanvasWidget
 from src.views.properties_view import PropertiesView
+from src.layout_manager import LayoutManager # New import
+from src.constants import LayoutMode # New import
 
 
 from src.views.properties_ui_factory import PropertiesUIFactory
+from src.views.layout_ui_factory import LayoutUIFactory # New import
 from src.config_service import ConfigService
 
 
@@ -38,18 +41,23 @@ class MainWindow(QMainWindow):
         main_menu_actions: MainMenuActions,
         tool_bar: QToolBar,
         tool_bar_actions: ToolBarActions,
-        properties_ui_factory: PropertiesUIFactory, # New argument
-        config_service: ConfigService, # Added argument
+        properties_ui_factory: PropertiesUIFactory,
+        config_service: ConfigService,
+        layout_ui_factory: LayoutUIFactory, # New argument
+        layout_manager: LayoutManager, # New argument
     ):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
         self.setGeometry(50, 50, 800, 600)
 
         self.model = model
+        self.main_controller = main_controller # Store main_controller
         self.command_manager = command_manager
         self.plot_types = plot_types
-        self.properties_ui_factory = properties_ui_factory # Store the instance
-        self._config_service = config_service # Stored ConfigService
+        self.properties_ui_factory = properties_ui_factory
+        self._config_service = config_service
+        self._layout_ui_factory = layout_ui_factory # Store layout_ui_factory
+        self._layout_manager = layout_manager # Store layout_manager
 
         # Now create the UI components
         self.canvas_widget = self._create_canvas()
@@ -100,12 +108,8 @@ class MainWindow(QMainWindow):
         self.colors_action: QAction = self.main_menu_actions.colors_action
         self.settings_action: QAction = self.main_menu_actions.settings_action
 
-        # Add "Enable Auto Layout" action
-        self.auto_layout_action = QAction("Enable Auto Layout", self)
-        self.auto_layout_action.setCheckable(True)
-        self.auto_layout_action.setChecked(self.model.auto_layout_enabled) # Initialize state
-        self.auto_layout_action.toggled.connect(self.model.set_auto_layout_enabled) # Connect signal
-        self.edit_menu.addAction(self.auto_layout_action) # Add to Edit menu
+
+
 
     def _create_canvas(self) -> CanvasWidget:
         canvas = CanvasWidget(figure=self.model.figure, parent=self)
@@ -116,7 +120,10 @@ class MainWindow(QMainWindow):
             model=self.model,
             command_manager=self.command_manager,
             plot_types=self.plot_types,
-            properties_ui_factory=self.properties_ui_factory, # Pass the factory
+            properties_ui_factory=self.properties_ui_factory,
+            layout_ui_factory=self._layout_ui_factory, # New dependency
+            layout_manager=self._layout_manager, # New dependency
+            main_controller=self.main_controller, # New dependency
         )
         dock = QDockWidget("Properties", self)
         dock.setObjectName("Properties")
@@ -124,8 +131,13 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         return properties_view, dock
 
+
     def show_properties_panel(self):
         """Makes the properties dock widget visible and raises it to the top."""
         if self.properties_dock:
             self.properties_dock.show()
             self.properties_dock.raise_()
+
+
+
+

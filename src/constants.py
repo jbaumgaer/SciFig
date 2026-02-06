@@ -19,6 +19,13 @@ class ToolName(str, Enum):
     ZOOM = "zoom"
     # Add other tools as they are implemented
 
+class LayoutMode(str, Enum):
+    """
+    Defines the different layout modes for the application canvas.
+    """
+    FREE_FORM = "free_form"
+    GRID = "grid"
+
 
 class IconPath:
     """

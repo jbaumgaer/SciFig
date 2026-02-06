@@ -14,11 +14,14 @@ from src.controllers.tool_manager import ToolManager
 from src.controllers.tools import MockTool
 from src.controllers.tools.selection_tool import SelectionTool
 from src.constants import IconPath, ToolName
+from src.layout_engine import FreeLayoutEngine, GridLayoutEngine # New imports
+from src.layout_manager import LayoutManager # New import
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_types import PlotType
 from src.views.main_window import MainWindow
 from src.views.renderer import Renderer
 from src.views.properties_ui_factory import PropertiesUIFactory, _build_line_plot_ui_widgets, _build_scatter_plot_ui_widgets
+from src.views.layout_ui_factory import LayoutUIFactory # New import
 from src.config_service import ConfigService
 
 
@@ -43,6 +46,10 @@ class ApplicationAssembler:
         self._main_controller: MainController | None = None
         self._renderer: Renderer | None = None
         self._plot_types: list = []
+        self._layout_manager: LayoutManager | None = None # New
+        self._free_layout_engine: FreeLayoutEngine | None = None # New
+        self._grid_layout_engine: GridLayoutEngine | None = None # New
+        self._layout_ui_factory: LayoutUIFactory | None = None # New
 
         # UI components
         self._menu_bar: QMenuBar | None = None
@@ -71,9 +78,25 @@ class ApplicationAssembler:
 
         self._model = ApplicationModel(figure=figure, config_service=self._config_service) # Pass config_service
         self._command_manager = CommandManager(model=self._model)
-        # Pass ConfigService to MainController
-        self._main_controller = MainController(model=self._model, config_service=self._config_service)
-        self._renderer = Renderer(config_service=self._config_service, application_model=self._model) # Pass config_service and application_model
+        
+        # Instantiate layout components
+        self._free_layout_engine = FreeLayoutEngine()
+        self._grid_layout_engine = GridLayoutEngine(config_service=self._config_service)
+        self._layout_manager = LayoutManager(
+            application_model=self._model,
+            free_engine=self._free_layout_engine,
+            grid_engine=self._grid_layout_engine,
+            config_service=self._config_service,
+        )
+        # Pass ConfigService and LayoutManager to MainController
+        self._main_controller = MainController(model=self._model, config_service=self._config_service, layout_manager=self._layout_manager, command_manager=self._command_manager)
+
+        self._layout_ui_factory = LayoutUIFactory(
+            config_service=self._config_service,
+            layout_manager=self._layout_manager, # Pass layout_manager
+        )
+        # Pass layout_manager and application_model to Renderer
+        self._renderer = Renderer(layout_manager=self._layout_manager, application_model=self._model)
         self._plot_types = list(self._renderer.plotting_strategies.keys())
         self._properties_ui_factory = PropertiesUIFactory()
         
@@ -184,6 +207,8 @@ class ApplicationAssembler:
             tool_bar_actions=self._tool_bar_actions,
             properties_ui_factory=self._properties_ui_factory,
             config_service=self._config_service,
+            layout_ui_factory=self._layout_ui_factory, # Pass LayoutUIFactory
+            layout_manager=self._layout_manager, # Pass LayoutManager
         )
 
         # Now that MainWindow exists, set its canvas_widget for tools
@@ -199,6 +224,8 @@ class ApplicationAssembler:
             canvas_widget=self._view.canvas_widget,
             tool_manager=self._tool_manager,
             command_manager=self._command_manager,
+            layout_manager=self._layout_manager,
+            main_controller=self._main_controller,
         )
 
     def _connect_signals(self):
@@ -218,7 +245,7 @@ class ApplicationAssembler:
         # Model changes to redraw
         self._model.modelChanged.connect(self._redraw_canvas_callback)
         self._model.selectionChanged.connect(self._redraw_canvas_callback)
-        self._model.autoLayoutChanged.connect(self._redraw_canvas_callback) # Added connection
+        self._model.layoutConfigChanged.connect(self._redraw_canvas_callback)
 
         # Tool-specific signals
         self._selection_tool.plot_double_clicked.connect(self._view.show_properties_panel)
@@ -257,4 +284,6 @@ class ApplicationAssembler:
             main_menu_actions=self._main_menu_actions,
             tool_bar_actions=self._tool_bar_actions,
             config_service=self._config_service,
+            layout_manager=self._layout_manager,
+            layout_ui_factory=self._layout_ui_factory,
         )

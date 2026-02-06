@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 import logging
 from pathlib import Path
+from typing import Generator, Type # Add Type import
 
 from PySide6.QtCore import QObject
 
@@ -77,12 +78,31 @@ class SceneNode(QObject):
         self.logger.debug(f"Hit test on {self.name} (ID: {self.id}): No child hit.")
         return None
 
-    def all_descendants(self) -> "Generator[SceneNode, None, None]":
-        """A generator that yields all nodes in the subtree, including this node."""
+    def all_descendants(self, of_type: Type[SceneNode] | None = None) -> Generator[SceneNode, None, None]:
+        """
+        A generator that yields all nodes in the subtree, including this node.
+        If 'of_type' is provided, only nodes of that type (or subclasses) are yielded.
+        """
         self.logger.debug(f"Getting all descendants starting from {self.name} (ID: {self.id}).")
-        yield self
+        
+        # Yield self if it matches the type or no type is specified
+        if of_type is None or isinstance(self, of_type):
+            yield self
+        
         for child in self.children:
-            yield from child.all_descendants()
+            yield from child.all_descendants(of_type) # Pass of_type recursively
+
+    def find_node_by_id(self, node_id: str) -> SceneNode | None:
+        """
+        Recursively finds a node within this node's subtree by its ID.
+        """
+        if self.id == node_id:
+            return self
+        for child in self.children:
+            found_node = child.find_node_by_id(node_id)
+            if found_node:
+                return found_node
+        return None
 
     def to_dict(self) -> dict:
         """Serializes the node to a dictionary."""

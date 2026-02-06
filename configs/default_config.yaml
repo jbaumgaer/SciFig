@@ -21,6 +21,7 @@ splash_screen_path: "src/assets/images/splash.png" # Example for future
 
 ui:
   default_theme: "dark" # "dark", "light", etc.
+  default_layout_mode: "free_form" # New: Default layout mode at startup
 
 # Matplotlib Figure Defaults
 figure:
@@ -28,7 +29,7 @@ figure:
   default_height: 6
   default_dpi: 150
   default_facecolor: "white"
-  auto_layout_enabled_default: true # Added
+  # auto_layout_enabled_default: true # Removed
   default_edgecolor: "black" # Example for future
   subplot_left: 0.125 # Example for future
   subplot_right: 0.9 # Example for future
@@ -49,6 +50,17 @@ layout:
   default_gutter: 0.08
   max_recent_files: 10
   default_template: "2x2_default.json" # Points to a file in configs/layouts
+  default_grid_rows: 2 # New
+  default_grid_cols: 2 # New
+  grid_margin: 0.05 # New
+  grid_gutter: 0.05 # New
+
+# Free Form Layout Defaults (new section)
+free_form_layout:
+  snap_grid_unit_x: 0.01
+  snap_grid_unit_y: 0.01
+  align_offset: 0.01
+  distribute_spacing: 0.01
 
 # Paths & Resources
 paths:
@@ -63,6 +75,18 @@ paths:
     plot: "toolbar/Plot.svg"
     text: "toolbar/Text.svg"
     zoom: "toolbar/Zoom.svg"
+  properties:
+    alignment:
+      align_horizontal_center: "properties/alignment/align_horizontal_center_24dp_E3E3E3.svg"
+      align_horizontal_left: "properties/alignment/align_horizontal_left_24dp_E3E3E3.svg"
+      align_horizontal_right: "properties/alignment/align_horizontal_right_24dp_E3E3E3.svg"
+      align_vertical_bottom: "properties/alignment/align_vertical_bottom_24dp_E3E3E3.svg"
+      align_vertical_center: "properties/alignment/align_vertical_center_24dp_E3E3E3.svg"
+      align_vertical_top: "properties/alignment/align_vertical_top_24dp_E3E3E3.svg"
+    distribute:
+      horizontal_distribute: "properties/distribute/horizontal_distribute_24dp_E3E3E3.svg"
+      vertical_distribute: "properties/distribute/vertical_distribute_24dp_E3E3E3.svg"
+    snap_to_grid: "plots/add_chart_24dp_E3E3E3.svg" # Temporary icon for snap to grid
 
 # Processing Defaults
 processing:

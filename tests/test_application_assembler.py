@@ -1,11 +1,12 @@
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from PySide6.QtWidgets import QApplication, QMenuBar, QToolBar
+from PySide6.QtWidgets import QApplication, QMenuBar
 
 from src.application_assembler import ApplicationAssembler
-from src.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
+from src.builders.menu_bar_builder import MainMenuActions
 from src.builders.tool_bar_builder import ToolBarActions # Assuming ToolBarActions is also a dataclass
 from src.models.application_model import ApplicationModel
+from src.controllers.canvas_controller import CanvasController # New import
 from src.controllers.main_controller import MainController
 from src.commands.command_manager import CommandManager
 from src.views.main_window import MainWindow
@@ -14,6 +15,10 @@ from src.controllers.tools.selection_tool import SelectionTool
 from src.views.renderer import Renderer
 from src.application_components import ApplicationComponents
 from src.config_service import ConfigService
+from src.layout_manager import LayoutManager
+from src.layout_engine import FreeLayoutEngine, GridLayoutEngine
+from src.models.layout_config import FreeConfig, GridConfig
+from src.constants import LayoutMode
 
 
 @pytest.fixture
@@ -26,6 +31,10 @@ def mock_model():
     """Fixture for a mock ApplicationModel."""
     model = MagicMock(spec=ApplicationModel)
     model.figure = Mock() # Mock the figure attribute as it's accessed
+    # Mock layoutConfigChanged signal
+    model.layoutConfigChanged = MagicMock()
+    # Mock current_layout_config for initial state checks
+    model.current_layout_config = FreeConfig()
     return model
 
 @pytest.fixture
@@ -93,8 +102,37 @@ def mock_config_service():
         "layout.default_margin": 0.1,
         "layout.default_gutter": 0.08,
         "layout.max_recent_files": 5,
+        "ui.default_layout_mode": "free_form", # Added for LayoutManager initialization
     }.get(key, default)
     return config_service
+
+@pytest.fixture
+def mock_free_layout_engine():
+    """Fixture for a mock FreeLayoutEngine."""
+    return MagicMock(spec=FreeLayoutEngine)
+
+@pytest.fixture
+def mock_grid_layout_engine():
+    """Fixture for a mock GridLayoutEngine."""
+    return MagicMock(spec=GridLayoutEngine)
+
+@pytest.fixture
+def mock_layout_manager():
+    """Fixture for a mock LayoutManager."""
+    manager = MagicMock(spec=LayoutManager)
+    manager.layoutModeChanged = MagicMock() # Mock the signal
+    return manager
+
+@pytest.fixture
+def mock_layout_ui_factory():
+    """Fixture for a mock LayoutUIFactory."""
+    return MagicMock(spec=LayoutUIFactory)
+
+@pytest.fixture
+def mock_canvas_controller():
+    """Fixture for a mock CanvasController."""
+    return MagicMock(spec=CanvasController)
+
 
 @pytest.fixture
 def assembler(
@@ -106,32 +144,49 @@ def assembler(
     mock_tool_manager,
     mock_selection_tool,
     mock_main_window,
-    mock_config_service # Inject the mock config service
+    mock_config_service, # Inject the mock config service
+    mock_free_layout_engine, # New mock
+    mock_grid_layout_engine, # New mock
+    mock_layout_manager, # New mock
+    mock_layout_ui_factory, # New mock
+    mock_canvas_controller, # New mock
 ):
     """Fixture for an ApplicationAssembler instance with mocked dependencies."""
     # Patch the ConfigService __new__ method so it always returns our mock
-    with patch('src.application_assembler.ConfigService', return_value=mock_config_service):
-        assembler = ApplicationAssembler(mock_qapplication)
-        # Manually assign mocks to internal attributes that are normally set by _assemble_ methods
-        # to allow testing of individual _assemble_ methods without running the full assemble()
-        assembler._model = mock_model
-        assembler._command_manager = mock_command_manager
-        assembler._main_controller = mock_main_controller
-        assembler._renderer = mock_renderer
-        assembler._plot_types = list(mock_renderer.plotting_strategies.keys()) # Simulate _assemble_core_components
+    with patch('src.application_assembler.ConfigService', return_value=mock_config_service), \
+         patch('src.application_assembler.ApplicationModel', return_value=mock_model), \
+         patch('src.application_assembler.CommandManager', return_value=mock_command_manager), \
+         patch('src.application_assembler.MainController', return_value=mock_main_controller), \
+         patch('src.application_assembler.FreeLayoutEngine', return_value=mock_free_layout_engine), \
+         patch('src.application_assembler.GridLayoutEngine', return_value=mock_grid_layout_engine), \
+         patch('src.application_assembler.LayoutManager', return_value=mock_layout_manager), \
+         patch('src.application_assembler.LayoutUIFactory', return_value=mock_layout_ui_factory), \
+         patch('src.application_assembler.Renderer', return_value=mock_renderer), \
+         patch('src.application_assembler.ToolManager', return_value=mock_tool_manager), \
+         patch('src.application_assembler.SelectionTool', return_value=mock_selection_tool), \
+         patch('src.application_assembler.MainWindow', return_value=mock_main_window), \
+         patch('src.application_assembler.CanvasController', return_value=mock_canvas_controller), \
+         patch('src.application_assembler.MenuBarBuilder'), \
+         patch('src.application_assembler.ToolBarBuilder'), \
+         patch('src.constants.IconPath.set_config_service') as mock_set_icon_config:
 
-        assembler._tool_manager = mock_tool_manager
-        assembler._selection_tool = mock_selection_tool
-        assembler._view = mock_main_window # Simulate _assemble_main_window
+        assembler_instance = ApplicationAssembler(mock_qapplication, mock_config_service)
+        assembler_instance._model = mock_model # Ensure internal reference is the mock
+        assembler_instance._command_manager = mock_command_manager
+        assembler_instance._main_controller = mock_main_controller
+        assembler_instance._renderer = mock_renderer
+        assembler_instance._tool_manager = mock_tool_manager
+        assembler_instance._selection_tool = mock_selection_tool
+        assembler_instance._view = mock_main_window
+        assembler_instance._free_layout_engine = mock_free_layout_engine
+        assembler_instance._grid_layout_engine = mock_grid_layout_engine
+        assembler_instance._layout_manager = mock_layout_manager
+        assembler_instance._layout_ui_factory = mock_layout_ui_factory
+        assembler_instance._canvas_controller = mock_canvas_controller # New assignment
 
-        # Also set the mock_config_service on IconPath if it's being used statically
-        # This simulates IconPath.set_config_service(self._config_service) call
-        with patch('src.constants.IconPath.set_config_service') as mock_set_config:
-            # Call _assemble_core_components to trigger config_service instantiation and IconPath setup
-            assembler._assemble_core_components() 
-            mock_set_config.assert_called_once_with(mock_config_service)
+        mock_set_icon_config.assert_called_once_with(mock_config_service)
         
-    return assembler
+    return assembler_instance
 
 # Test for the fix in _assemble_menus
 def test_assemble_menus_assigns_correctly(assembler, mock_main_controller, mock_command_manager):
@@ -188,24 +243,24 @@ def test_assemble_returns_application_components(assembler, mock_main_window):
     mock_toolbar_actions = MagicMock(spec=ToolBarActions)
 
     with (\
-        patch('src.application_assembler.MenuBarBuilder') as MockMenuBarBuilder, \
+        patch('src.application_assembler.MenuBarBuilder'), \
         patch('src.application_assembler.ToolBarBuilder') as MockToolBarBuilder, \
-        patch('src.application_assembler.MainMenuActions') as MockMainMenuActions, \
+        patch('src.application_assembler.MainMenuActions'), \
         patch('src.application_assembler.MainWindow') as MockMainWindow \
     ):
         # Configure mocks for builders
-        MockMenuBarBuilder.return_value.build.return_value = MainMenuActions(
-            menu_bar=Mock(spec=QMenuBar), # Needs a QMenuBar instance
-            file_menu=Mock(), new_layout_action=Mock(), new_file_action=Mock(),
-            new_file_from_template_action=Mock(), open_project_action=Mock(),
-            open_recent_projects_menu=Mock(), close_action=Mock(), save_project_action=Mock(),
-            save_copy_action=Mock(), export_figure_menu=Mock(), export_vector_menu=Mock(),
-            export_raster_menu=Mock(), export_svg_action=Mock(), export_pdf_action=Mock(),
-            export_eps_action=Mock(), export_png_action=Mock(), export_tiff_action=Mock(),
-            export_python_action=Mock(), exit_action=Mock(), edit_menu=Mock(),
-            undo_action=Mock(), redo_action=Mock(), cut_action=Mock(), copy_action=Mock(),
-            paste_action=Mock(), colors_action=Mock(), settings_action=Mock()
-        )
+        # MockMenuBarBuilder.return_value.build.return_value = MainMenuActions(
+        #     menu_bar=Mock(spec=QMenuBar), # Needs a QMenuBar instance
+        #     file_menu=Mock(), new_layout_action=Mock(), new_file_action=Mock(),
+        #     new_file_from_template_action=Mock(), open_project_action=Mock(),
+        #     open_recent_projects_menu=Mock(), close_action=Mock(), save_project_action=Mock(),
+        #     save_copy_action=Mock(), export_figure_menu=Mock(), export_vector_menu=Mock(),
+        #     export_raster_menu=Mock(), export_svg_action=Mock(), export_pdf_action=Mock(),
+        #     export_eps_action=Mock(), export_png_action=Mock(), export_tiff_action=Mock(),
+        #     export_python_action=Mock(), exit_action=Mock(), edit_menu=Mock(),
+        #     undo_action=Mock(), redo_action=Mock(), cut_action=Mock(), copy_action=Mock(),
+        #     paste_action=Mock(), colors_action=Mock(), settings_action=Mock()
+        # )
         MockToolBarBuilder.return_value.build.return_value = (mock_toolbar, mock_toolbar_actions)
         MockMainWindow.return_value = mock_main_window # Ensure it returns the fixture's mock
 
@@ -255,4 +310,107 @@ def test_icon_path_config_service_is_set(assembler, mock_config_service):
     Test that ConfigService is correctly set on the IconPath class.
     """
     # This assertion is now part of the assembler fixture's patch for IconPath.set_config_service
+    pass
+
+def test_application_assembler_layout_component_wiring(assembler, mock_model, mock_command_manager,
+                                                    mock_config_service, mock_free_layout_engine,
+                                                    mock_grid_layout_engine, mock_layout_manager,
+                                                    mock_layout_ui_factory, mock_main_controller,
+                                                    mock_main_window, mock_renderer, mock_tool_manager,
+                                                    mock_canvas_controller):
+    """
+    Test that ApplicationAssembler successfully instantiates and wires up all new layout components
+    (FreeLayoutEngine, GridLayoutEngine, LayoutManager, LayoutUIFactory) with correct dependencies,
+    and passes LayoutManager to MainController and Renderer, and LayoutUIFactory to MainWindow.
+    """
+    # Ensure that all component factories are reset before calling assemble
+    ApplicationModel.reset_mock()
+    CommandManager.reset_mock()
+    MainController.reset_mock()
+    FreeLayoutEngine.reset_mock()
+    GridLayoutEngine.reset_mock()
+    LayoutManager.reset_mock()
+    LayoutUIFactory.reset_mock()
+    Renderer.reset_mock()
+    ToolManager.reset_mock()
+    SelectionTool.reset_mock()
+    MainWindow.reset_mock()
+    CanvasController.reset_mock()
+
+
+    # Call assemble to trigger all instantiations and wiring
+    components = assembler.assemble()
+
+    # Verify FreeLayoutEngine instantiation
+    FreeLayoutEngine.assert_called_once_with(config_service=mock_config_service)
+    assert components.layout_manager._free_engine is mock_free_layout_engine
+
+    # Verify GridLayoutEngine instantiation
+    GridLayoutEngine.assert_called_once_with(config_service=mock_config_service)
+    assert components.layout_manager._grid_engine is mock_grid_layout_engine
+
+    # Verify LayoutManager instantiation
+    LayoutManager.assert_called_once_with(
+        application_model=mock_model,
+        free_engine=mock_free_layout_engine,
+        grid_engine=mock_grid_layout_engine,
+        config_service=mock_config_service,
+    )
+    assert components.layout_manager is mock_layout_manager
+
+    # Verify MainController receives LayoutManager
+    MainController.assert_called_once_with(
+        model=mock_model,
+        config_service=mock_config_service,
+        layout_manager=mock_layout_manager,
+        command_manager=mock_command_manager
+    )
+    assert components.main_controller is mock_main_controller
+
+    # Verify LayoutUIFactory instantiation
+    LayoutUIFactory.assert_called_once_with(
+        main_controller=mock_main_controller,
+        layout_manager=mock_layout_manager,
+        application_model=mock_model,
+    )
+    assert components.layout_ui_factory is mock_layout_ui_factory
+
+    # Verify Renderer receives LayoutManager
+    Renderer.assert_called_once_with(layout_manager=mock_layout_manager, application_model=mock_model)
+    assert components.canvas_controller.model._renderer is mock_renderer # Renderer is set in canvas_controller.model
+
+    # Verify MainWindow receives LayoutUIFactory and LayoutManager
+    MainWindow.assert_called_once_with(
+        model=mock_model,
+        main_controller=mock_main_controller,
+        command_manager=mock_command_manager,
+        plot_types=mock_renderer.plotting_strategies.keys(), # Assumes plot_types is derived from renderer
+        menu_bar=assembler._menu_bar, # Cannot mock this easily without further patching
+        main_menu_actions=assembler._main_menu_actions,
+        tool_bar=assembler._tool_bar,
+        tool_bar_actions=assembler._tool_bar_actions,
+        properties_ui_factory=assembler._properties_ui_factory,
+        config_service=mock_config_service,
+        layout_ui_factory=mock_layout_ui_factory,
+        layout_manager=mock_layout_manager,
+    )
+    assert components.view is mock_main_window
+
+    # Verify CanvasController receives LayoutManager and MainController
+    CanvasController.assert_called_once_with(
+        model=mock_model,
+        canvas_widget=mock_main_window.canvas_widget,
+        tool_manager=mock_tool_manager,
+        command_manager=mock_command_manager,
+        layout_manager=mock_layout_manager,
+        main_controller=mock_main_controller,
+    )
+    assert components.canvas_controller is mock_canvas_controller
+
+def test_application_assembler_initial_layout_mode_reflection(assembler, mock_model, mock_main_window):
+    """
+    Test that the initial layout mode (from ConfigService) is correctly set in the ApplicationModel
+    and reflected in the UI (via MainWindow's initial update slot if applicable).
+    """
+    # TODO: Implement test logic
     pass

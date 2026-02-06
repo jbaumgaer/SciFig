@@ -12,6 +12,9 @@ from src.processing.data_loader import DataLoader
 from src.views.canvas_widget import CanvasWidget
 
 from .tool_manager import ToolManager
+from src.layout_manager import LayoutManager
+from src.constants import LayoutMode
+from src.controllers.main_controller import MainController
 
 
 class CanvasController(QObject):
@@ -26,6 +29,8 @@ class CanvasController(QObject):
         canvas_widget: CanvasWidget,
         tool_manager: ToolManager,
         command_manager: CommandManager,
+        layout_manager: LayoutManager, # New parameter
+        main_controller: MainController, # New parameter
         parent: QObject | None = None,
     ):
         super().__init__(parent)
@@ -33,6 +38,8 @@ class CanvasController(QObject):
         self.view = canvas_widget
         self.tool_manager = tool_manager
         self.command_manager = command_manager
+        self._layout_manager = layout_manager # Store it
+        self._main_controller = main_controller # Store it
         self.canvas = self.view.figure_canvas
         self.logger = logging.getLogger(self.__class__.__name__) # Added logger
         self.logger.info("CanvasController initialized.") # Added log
@@ -163,6 +170,10 @@ class CanvasController(QObject):
 
             self.model.modelChanged.emit()
             self.logger.debug(f"modelChanged signal emitted after data load for '{node.name}'.")
+
+            if self._layout_manager.layout_mode == LayoutMode.GRID:
+                self.logger.info("Grid layout mode active. Applying default grid layout for new plot.")
+                self._main_controller.apply_default_grid_layout()
         else:
             self.logger.warning(f"Data ready for node '{node.name}' (ID: {node.id}) but it's no longer in the scene_root's children. Data not assigned.")
 

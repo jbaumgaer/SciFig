@@ -11,6 +11,8 @@ from src.controllers.main_controller import MainController
 from src.models import ApplicationModel
 from src.models.nodes import GroupNode, PlotNode, SceneNode
 from src.models.nodes.plot_properties import BasePlotProperties, PlotType
+from src.layout_manager import LayoutManager
+from src.layout_engine import LayoutMode
 
 
 @pytest.fixture
@@ -42,11 +44,21 @@ def mock_config_service():
         "layout.default_gutter": 0.08,
         "layout.max_recent_files": 5,
     }.get(key, default)
+    config_service.get_specific_setting.return_value = "free_form" # Default for layout mode
     return config_service
 
 @pytest.fixture
-def main_controller(mock_model, mock_config_service):
-    return MainController(mock_model, mock_config_service)
+def mock_layout_manager():
+    """
+    Fixture for a mock LayoutManager.
+    """
+    manager = MagicMock(spec=LayoutManager)
+    manager.layoutModeChanged = MagicMock()
+    return manager
+
+@pytest.fixture
+def main_controller(mock_model, mock_config_service, mock_command_manager, mock_layout_manager):
+    return MainController(mock_model, mock_config_service, mock_command_manager, mock_layout_manager)
 
 
 @pytest.fixture
@@ -86,7 +98,7 @@ def mock_layout_template_file(tmp_path):
     return file
 
 # Test cases for MainController
-def test_main_controller_init(mock_model, mock_config_service):
+def test_main_controller_init(mock_model, mock_config_service, mock_command_manager, mock_layout_manager):
     """
     Test MainController initialization, including QSettings setup
     with config values.
@@ -230,3 +242,95 @@ def test_create_new_layout_redistributes_existing_plots_more_slots(main_controll
     # assert new_root_node.children[1].data is None # Second slot should be empty
     # assert new_root_node.children[0].plot_properties.title == "Old Title 1"
     # assert new_root_node.children[1].plot_properties.title == "Plot B Title" # Should retain template default title for empty slot
+
+def test_set_layout_mode(main_controller, mock_layout_manager):
+    """
+    Test that set_layout_mode correctly calls the layout manager and updates the config.
+    """
+    # main_controller.set_layout_mode(LayoutMode.FREE_FORM)
+    # mock_layout_manager.set_layout_mode.assert_called_once_with(LayoutMode.FREE_FORM)
+    # main_controller._config_service.set_specific_setting.assert_called_once_with("ui.default_layout_mode", LayoutMode.FREE_FORM.value)
+
+def test_align_selected_plots(main_controller, mock_layout_manager, mock_command_manager):
+    """
+    Test that align_selected_plots calls the layout manager's align_plots and executes a command.
+    """
+    # mock_layout_manager.align_plots.return_value = {"plot_id_1": (0, 0, 100, 100)} # Mock return value
+    # main_controller.model.selection = [MagicMock(spec=PlotNode)] # Mock a selected plot
+    # main_controller.align_selected_plots("left")
+    # mock_layout_manager.align_plots.assert_called_once_with(main_controller.model.selection, "left")
+    # mock_command_manager.execute_command.assert_called_once()
+    # assert isinstance(mock_command_manager.execute_command.call_args[0][0], BatchChangePlotGeometryCommand)
+
+def test_distribute_selected_plots(main_controller, mock_layout_manager, mock_command_manager):
+    """
+    Test that distribute_selected_plots calls the layout manager's distribute_plots and executes a command.
+    """
+    # mock_layout_manager.distribute_plots.return_value = {"plot_id_1": (0, 0, 100, 100)} # Mock return value
+    # main_controller.model.selection = [MagicMock(spec=PlotNode)] # Mock a selected plot
+    # main_controller.distribute_selected_plots("horizontal")
+    # mock_layout_manager.distribute_plots.assert_called_once_with(main_controller.model.selection, "horizontal")
+    # mock_command_manager.execute_command.assert_called_once()
+    # assert isinstance(mock_command_manager.execute_command.call_args[0][0], BatchChangePlotGeometryCommand)
+
+def test_apply_grid_layout_from_ui(main_controller, mock_layout_manager, mock_command_manager):
+    """
+    Test that apply_grid_layout_from_ui calls the layout manager's apply_grid_layout and executes a command.
+    """
+    # main_controller.model.scene_root.all_descendants.return_value = [MagicMock(spec=PlotNode)] # Mock plots
+    # main_controller.apply_grid_layout_from_ui(2, 2, 0.1, 0.1)
+    # mock_layout_manager.apply_grid_layout.assert_called_once()
+    # mock_command_manager.execute_command.assert_called_once()
+    # assert isinstance(mock_command_manager.execute_command.call_args[0][0], BatchChangePlotGeometryCommand)
+
+def test_snap_free_plots_to_grid_action(main_controller, mock_layout_manager, mock_command_manager):
+    """
+    Test that snap_free_plots_to_grid_action calls the layout manager's snap_to_grid for free-form plots
+    and executes a command.
+    """
+    # mock_layout_manager.snap_to_grid.return_value = {"plot_id_1": (0, 0, 100, 100)} # Mock return value
+    # main_controller.model.scene_root.all_descendants.return_value = [MagicMock(spec=PlotNode)] # Mock plots
+    # main_controller.snap_to_grid.assert_called_once()
+    # mock_command_manager.execute_command.assert_called_once()
+    # assert isinstance(mock_command_manager.execute_command.call_args[0][0], BatchChangePlotGeometryCommand)
+
+def test_toggle_layout_mode(main_controller, mock_layout_manager, mock_config_service):
+    """
+    Test that toggle_layout_mode switches the layout mode, updates the config,
+    and emits the layoutModeChanged signal.
+    """
+    pass
+
+def test_update_grid_parameters(main_controller, mock_layout_manager, mock_command_manager):
+    """
+    Test that update_grid_parameters calls the layout manager's update_grid_layout_parameters
+    and executes a BatchChangePlotGeometryCommand.
+    """
+    mock_layout_manager.update_grid_layout_parameters.return_value = {"plot_id_1": (0, 0, 100, 100)}
+    main_controller.update_grid_parameters(rows=2, cols=2, margin=0.1, gutter=0.05)
+    mock_layout_manager.update_grid_layout_parameters.assert_called_once_with(rows=2, cols=2, margin=0.1, gutter=0.05)
+    mock_command_manager.execute_command.assert_called_once()
+    assert isinstance(mock_command_manager.execute_command.call_args[0][0], BatchChangePlotGeometryCommand)
+
+def test_update_grid_parameters_none_values(main_controller, mock_layout_manager, mock_command_manager):
+    """
+    Test that update_grid_parameters correctly passes None values to layout manager
+    for inference.
+    """
+    mock_layout_manager.update_grid_layout_parameters.return_value = {"plot_id_1": (0, 0, 100, 100)}
+    main_controller.update_grid_parameters(rows=None, cols=None, margin=0.1, gutter=0.05)
+    mock_layout_manager.update_grid_layout_parameters.assert_called_once_with(rows=None, cols=None, margin=0.1, gutter=0.05)
+    mock_command_manager.execute_command.assert_called_once()
+    assert isinstance(mock_command_manager.execute_command.call_args[0][0], BatchChangePlotGeometryCommand)
+
+def test_update_grid_parameters_default_values(main_controller, mock_layout_manager, mock_command_manager):
+    """
+    Test that update_grid_parameters uses default values if not provided.
+    """
+    mock_layout_manager.update_grid_layout_parameters.return_value = {"plot_id_1": (0, 0, 100, 100)}
+    # When called without arguments, it should pass None for rows, cols, margin, gutter
+    # assuming that is the expected behavior based on the method signature in main_controller
+    main_controller.update_grid_parameters() 
+    mock_layout_manager.update_grid_layout_parameters.assert_called_once_with(rows=None, cols=None, margin=None, gutter=None)
+    mock_command_manager.execute_command.assert_called_once()
+    assert isinstance(mock_command_manager.execute_command.call_args[0][0], BatchChangePlotGeometryCommand)

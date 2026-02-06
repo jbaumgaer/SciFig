@@ -14,7 +14,9 @@ if TYPE_CHECKING:
     from src.views.main_window import MainWindow
     from src.builders.menu_bar_builder import MainMenuActions
     from src.builders.tool_bar_builder import ToolBarActions
-    from src.config_service import ConfigService # Added import
+    from src.config_service import ConfigService
+    from src.layout_manager import LayoutManager # New import
+    from src.views.layout_ui_factory import LayoutUIFactory # New import
 
 
 @dataclass
@@ -34,3 +36,5 @@ class ApplicationComponents:
     main_menu_actions: "MainMenuActions"
     tool_bar_actions: "ToolBarActions"
     config_service: "ConfigService"
+    layout_manager: "LayoutManager" # New field
+    layout_ui_factory: "LayoutUIFactory" # New field
