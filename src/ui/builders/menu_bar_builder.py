@@ -5,12 +5,13 @@ from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QMenu, QMenuBar
 
 from src.services.commands import CommandManager
-from src.controllers.main_controller import MainController
+from src.controllers.project_controller import ProjectController
+from src.controllers.layout_controller import LayoutController
+
 
 
 @dataclass
 class MainMenuActions:
-    menu_bar: QMenuBar
     # File Menu Actions
     file_menu: QMenu
     new_layout_action: QAction
@@ -45,16 +46,18 @@ class MainMenuActions:
 class MenuBarBuilder:
     def __init__(
         self,
-        main_controller: MainController,
+        project_controller: ProjectController,
+        layout_controller: LayoutController,
         command_manager: CommandManager,
     ):
-        self._main_controller = main_controller
+        self._project_controller = project_controller
+        self._layout_controller = layout_controller
         self._command_manager = command_manager
 
     def _update_recent_projects_menu(self, menu: QMenu): # Removed parent_window argument
         """Clears and repopulates the recent projects menu."""
         menu.clear()
-        recent_files = self._main_controller.get_recent_files()
+        recent_files = self._project_controller.get_recent_files()
 
         if not recent_files:
             action = QAction("No Recent Projects", menu) # Parent is the menu itself
@@ -66,7 +69,7 @@ class MenuBarBuilder:
             action = QAction(file_path, menu) # Parent is the menu itself
             action.triggered.connect(
                 functools.partial(
-                    self._main_controller.open_project,
+                    self._project_controller.open_project,
                     file_path,
                     # Removed parent=self._parent_window
                 )
@@ -97,6 +100,7 @@ class MenuBarBuilder:
         file_menu = menu_bar.addMenu("&File")
 
         new_layout_action = file_menu.addAction("&New Layout...")
+        new_layout_action.triggered.connect(self._project_controller.create_new_layout)
         new_file_action = file_menu.addAction("&New File...")
         new_file_action.setShortcut(QKeySequence.StandardKey.New)
         new_file_from_template_action = file_menu.addAction(
@@ -108,6 +112,7 @@ class MenuBarBuilder:
 
         open_project_action = file_menu.addAction("&Open Project...")
         open_project_action.setShortcut(QKeySequence.StandardKey.Open)
+        open_project_action.triggered.connect(self._project_controller.open_project)
 
         open_recent_projects_menu = file_menu.addMenu("Open &Recent Projects")
         open_recent_projects_menu.aboutToShow.connect(
@@ -119,6 +124,7 @@ class MenuBarBuilder:
 
         save_project_action = file_menu.addAction("&Save Project")
         save_project_action.setShortcut(QKeySequence.StandardKey.Save)
+        save_project_action.triggered.connect(self._project_controller.save_project)
 
         save_copy_action = file_menu.addAction("Save a &Copy...")
         save_copy_action.setShortcut(QKeySequence.StandardKey.SaveAs)
@@ -250,8 +256,7 @@ class MenuBarBuilder:
             settings_action,
         ) = self._build_edit_menu(menu_bar)
 
-        return MainMenuActions(
-            menu_bar=menu_bar,
+        return menu_bar, MainMenuActions(
             file_menu=file_menu,
             new_layout_action=new_layout_action,
             new_file_action=new_file_action,

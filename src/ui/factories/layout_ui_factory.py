@@ -14,8 +14,9 @@ from PySide6.QtWidgets import (
 
 from src.services.config_service import ConfigService
 from src.shared.constants import IconPath, LayoutMode
-from src.controllers.main_controller import MainController
+
 from src.services.layout_manager import LayoutManager
+from src.controllers.layout_controller import LayoutController
 
 
 class LayoutUIFactory:
@@ -30,20 +31,20 @@ class LayoutUIFactory:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutUIFactory initialized.")
 
-    def build_layout_controls(self, layout_mode: LayoutMode, main_controller: MainController, parent: QObject) -> QWidget:
+    def build_layout_controls(self, layout_mode: LayoutMode, layout_controller: LayoutController, parent: QObject) -> QWidget:
         """
         Builds and returns a QWidget containing controls relevant to the given layout mode.
         """
         self.logger.debug(f"Building layout controls for mode: {layout_mode.value}")
         if layout_mode == LayoutMode.FREE_FORM:
-            return self._build_free_form_controls(main_controller, parent)
+            return self._build_free_form_controls(layout_controller, parent)
         elif layout_mode == LayoutMode.GRID:
-            return self._build_grid_layout_controls(main_controller, parent)
+            return self._build_grid_layout_controls(layout_controller, parent)
         else:
             self.logger.warning(f"Unknown layout mode '{layout_mode}'. Returning empty widget.")
             return QWidget(parent) # Return an empty widget for unknown mode
 
-    def _build_free_form_controls(self, main_controller: MainController, parent: QObject) -> QWidget:
+    def _build_free_form_controls(self, layout_controller: LayoutController, parent: QObject) -> QWidget:
         """
         Builds UI controls for Free-Form layout mode (e.g., alignment, distribution).
         Returns a QWidget containing these controls.
@@ -60,19 +61,19 @@ class LayoutUIFactory:
         # Align Left
         btn_align_left = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_horizontal_left")), "", container)
         btn_align_left.setToolTip("Align Left")
-        btn_align_left.clicked.connect(lambda: main_controller.align_selected_plots("left"))
+        btn_align_left.clicked.connect(lambda: layout_controller.align_selected_plots("left"))
         align_layout.addWidget(btn_align_left)
 
         # Align Horizontal Center
         btn_align_h_center = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_horizontal_center")), "", container)
         btn_align_h_center.setToolTip("Align Horizontal Center")
-        btn_align_h_center.clicked.connect(lambda: main_controller.align_selected_plots("h_center"))
+        btn_align_h_center.clicked.connect(lambda: layout_controller.align_selected_plots("h_center"))
         align_layout.addWidget(btn_align_h_center)
 
         # Align Right
         btn_align_right = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_horizontal_right")), "", container)
         btn_align_right.setToolTip("Align Right")
-        btn_align_right.clicked.connect(lambda: main_controller.align_selected_plots("right"))
+        btn_align_right.clicked.connect(lambda: layout_controller.align_selected_plots("right"))
         align_layout.addWidget(btn_align_right)
 
         align_layout.addStretch() # Spacer
@@ -80,19 +81,19 @@ class LayoutUIFactory:
         # Align Top
         btn_align_top = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_vertical_top")), "", container)
         btn_align_top.setToolTip("Align Top")
-        btn_align_top.clicked.connect(lambda: main_controller.align_selected_plots("top"))
+        btn_align_top.clicked.connect(lambda: layout_controller.align_selected_plots("top"))
         align_layout.addWidget(btn_align_top)
 
         # Align Vertical Center
         btn_align_v_center = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_vertical_center")), "", container)
         btn_align_v_center.setToolTip("Align Vertical Center")
-        btn_align_v_center.clicked.connect(lambda: main_controller.align_selected_plots("v_center"))
+        btn_align_v_center.clicked.connect(lambda: layout_controller.align_selected_plots("v_center"))
         align_layout.addWidget(btn_align_v_center)
 
         # Align Bottom
         btn_align_bottom = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_vertical_bottom")), "", container)
         btn_align_bottom.setToolTip("Align Bottom")
-        btn_align_bottom.clicked.connect(lambda: main_controller.align_selected_plots("bottom"))
+        btn_align_bottom.clicked.connect(lambda: layout_controller.align_selected_plots("bottom"))
         align_layout.addWidget(btn_align_bottom)
 
         layout.addWidget(QLabel("Alignment:")) # Label for clarity
@@ -106,13 +107,13 @@ class LayoutUIFactory:
         # Distribute Horizontally
         btn_distribute_h = QPushButton(QIcon(IconPath.get_path("properties.distribute.horizontal_distribute")), "", container)
         btn_distribute_h.setToolTip("Distribute Horizontally")
-        btn_distribute_h.clicked.connect(lambda: main_controller.distribute_selected_plots("horizontal"))
+        btn_distribute_h.clicked.connect(lambda: layout_controller.distribute_selected_plots("horizontal"))
         distribute_layout.addWidget(btn_distribute_h)
 
         # Distribute Vertically
         btn_distribute_v = QPushButton(QIcon(IconPath.get_path("properties.distribute.vertical_distribute")), "", container)
         btn_distribute_v.setToolTip("Distribute Vertically")
-        btn_distribute_v.clicked.connect(lambda: main_controller.distribute_selected_plots("vertical"))
+        btn_distribute_v.clicked.connect(lambda: layout_controller.distribute_selected_plots("vertical"))
         distribute_layout.addWidget(btn_distribute_v)
 
         layout.addWidget(QLabel("Distribution:")) # Label for clarity
@@ -121,14 +122,13 @@ class LayoutUIFactory:
         # Snap to Grid Button
         btn_snap_to_grid = QPushButton(QIcon(IconPath.get_path("properties.snap_to_grid")), "Snap Selected to Grid", container)
         btn_snap_to_grid.setToolTip("Snap Selected to Grid")
-        btn_snap_to_grid.clicked.connect(main_controller.snap_free_plots_to_grid_action)
+        btn_snap_to_grid.clicked.connect(layout_controller.snap_free_plots_to_grid_action)
         layout.addWidget(btn_snap_to_grid)
-
         layout.addStretch() # Push everything to the top
 
         return container
 
-    def _build_grid_layout_controls(self, main_controller: MainController, parent: QObject) -> QWidget:
+    def _build_grid_layout_controls(self, layout_controller: LayoutController, parent: QObject) -> QWidget:
         """
         Builds UI controls for Grid layout mode (e.g., set grid size, adjust ratios).
         Uses QLineEdit for input fields for rows, columns, margin, and gutter.
@@ -210,7 +210,7 @@ class LayoutUIFactory:
                (margin is not None and margin != current_grid_config_for_comparison.margin) or \
                (gutter is not None and gutter != current_grid_config_for_comparison.gutter):
 
-                main_controller.update_grid_parameters(
+                layout_controller.update_grid_parameters(
                     rows=rows,
                     cols=cols,
                     margin=margin,

@@ -12,7 +12,9 @@ from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.services.commands import CommandManager
 from src.services.config_service import ConfigService
-from src.controllers.main_controller import MainController
+from src.controllers.project_controller import ProjectController
+from src.controllers.layout_controller import LayoutController
+from src.controllers.node_controller import NodeController
 from src.services.layout_manager import LayoutManager
 from src.models.application_model import ApplicationModel
 from src.models.plots.plot_types import PlotType
@@ -31,8 +33,10 @@ class MainWindow(QMainWindow):
     def __init__(
         self,
         model: ApplicationModel,
-        main_controller: MainController,
-        command_manager: CommandManager,
+        project_controller: ProjectController,
+        layout_controller: LayoutController,
+        node_controller: NodeController,
+        command_manager: CommandManager, # Still needed for undo/redo actions, but not directly passed to PropertiesPanel
         plot_types: list[PlotType],
         menu_bar: QMenuBar,
         main_menu_actions: MainMenuActions,
@@ -41,20 +45,22 @@ class MainWindow(QMainWindow):
         properties_ui_factory: PropertiesUIFactory,
         config_service: ConfigService,
         layout_ui_factory: LayoutUIFactory,
-        layout_manager: LayoutManager,
+        # layout_manager: LayoutManager, # Removed, now accessed via layout_controller
     ):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
         self.setGeometry(50, 50, 800, 600) #TODO: Put into config
 
         self.model = model
-        self.main_controller = main_controller # Store main_controller
+        self.project_controller = project_controller
+        self.layout_controller = layout_controller
+        self.node_controller = node_controller
         self.command_manager = command_manager
         self.plot_types = plot_types
         self.properties_ui_factory = properties_ui_factory
         self._config_service = config_service
-        self._layout_ui_factory = layout_ui_factory # Store layout_ui_factory
-        self._layout_manager = layout_manager # Store layout_manager
+        self._layout_ui_factory = layout_ui_factory
+        self._layout_manager = layout_controller._layout_manager # Access via layout_controller
 
         # Now create the UI components
         self.canvas_widget = self._create_canvas()
@@ -115,12 +121,10 @@ class MainWindow(QMainWindow):
     def _create_properties_dock(self) -> tuple[PropertiesPanel, QDockWidget]:
         properties_view = PropertiesPanel(
             model=self.model,
-            command_manager=self.command_manager,
-            plot_types=self.plot_types,
+            node_controller=self.node_controller,
+            layout_controller=self.layout_controller,
             properties_ui_factory=self.properties_ui_factory,
-            layout_ui_factory=self._layout_ui_factory, # New dependency
-            layout_manager=self._layout_manager, # New dependency
-            main_controller=self.main_controller, # New dependency
+            layout_ui_factory=self._layout_ui_factory,
         )
         dock = QDockWidget("Properties", self)
         dock.setObjectName("Properties")

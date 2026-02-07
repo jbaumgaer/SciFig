@@ -4,8 +4,9 @@ from PySide6.QtCore import QObject, QPointF, QThread
 
 from src.services.commands.command_manager import CommandManager
 from src.shared.constants import LayoutMode
-from src.controllers.main_controller import MainController
+
 from src.services.layout_manager import LayoutManager
+from src.controllers.layout_controller import LayoutController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import (
@@ -30,8 +31,7 @@ class CanvasController(QObject):
         canvas_widget: CanvasWidget,
         tool_manager: ToolService,
         command_manager: CommandManager,
-        layout_manager: LayoutManager, # New parameter
-        main_controller: MainController, # New parameter
+        layout_controller: LayoutController, # Corrected parameter
         parent: QObject | None = None,
     ):
         super().__init__(parent)
@@ -39,8 +39,7 @@ class CanvasController(QObject):
         self.view = canvas_widget
         self.tool_manager = tool_manager
         self.command_manager = command_manager
-        self._layout_manager = layout_manager # Store it
-        self._main_controller = main_controller # Store it
+        self._layout_manager = layout_controller._layout_manager # Access via layout_controller
         self.canvas = self.view.figure_canvas
         self.logger = logging.getLogger(self.__class__.__name__) # Added logger
         self.logger.info("CanvasController initialized.") # Added log
@@ -174,7 +173,7 @@ class CanvasController(QObject):
 
             if self._layout_manager.layout_mode == LayoutMode.GRID:
                 self.logger.info("Grid layout mode active. Applying default grid layout for new plot.")
-                self._main_controller.apply_default_grid_layout()
+                self._layout_manager.apply_default_grid_layout()
         else:
             self.logger.warning(f"Data ready for node '{node.name}' (ID: {node.id}) but it's no longer in the scene_root's children. Data not assigned.")
 

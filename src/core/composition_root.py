@@ -9,7 +9,9 @@ from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.shared.constants import IconPath, ToolName
 from src.controllers.canvas_controller import CanvasController
-from src.controllers.main_controller import MainController
+from src.controllers.project_controller import ProjectController
+from src.controllers.layout_controller import LayoutController
+from src.controllers.node_controller import NodeController
 from src.services.tool_service import ToolService
 from src.services.tools import MockTool
 from src.services.tools.selection_tool import SelectionTool
@@ -46,8 +48,10 @@ class CompositionRoot:
         # Core components
         self._model: ApplicationModel | None = None
         self._command_manager: CommandManager | None = None
-        self._main_controller: MainController | None = None
-        self._renderer: Renderer | None = None
+        # self._main_controller: MainController | None = None # Removed
+        self._project_controller: ProjectController | None = None
+        self._layout_controller: LayoutController | None = None
+        self._node_controller: NodeController | None = None
         self._plot_types: list = []
         self._layout_manager: LayoutManager | None = None # New
         self._free_layout_engine: FreeLayoutEngine | None = None # New
@@ -79,7 +83,7 @@ class CompositionRoot:
         figure = Figure(figsize=(figure_width, figure_height), dpi=figure_dpi, facecolor=figure_facecolor)
         self.logger.debug(f"Figure created with dimensions: {figure_width}x{figure_height} @ {figure_dpi}dpi, Facecolor: {figure_facecolor}")
 
-        self._model = ApplicationModel(figure=figure, config_service=self._config_service) # Pass config_service
+        self._model = ApplicationModel(figure=figure, config_service=self._config_service)
         self._command_manager = CommandManager(model=self._model)
 
         # Instantiate layout components
@@ -91,17 +95,19 @@ class CompositionRoot:
             grid_engine=self._grid_layout_engine,
             config_service=self._config_service,
         )
-        # Pass ConfigService and LayoutManager to MainController
-        self._main_controller = MainController(model=self._model, config_service=self._config_service, layout_manager=self._layout_manager, command_manager=self._command_manager)
+
+        # Instantiate new controllers
+        self._project_controller = ProjectController(model=self._model, command_manager=self._command_manager, config_service=self._config_service, layout_manager=self._layout_manager)
+        self._layout_controller = LayoutController(model=self._model, command_manager=self._command_manager, layout_manager=self._layout_manager)
+        self._node_controller = NodeController(model=self._model, command_manager=self._command_manager)
 
         self._layout_ui_factory = LayoutUIFactory(
             config_service=self._config_service,
-            layout_manager=self._layout_manager, # Pass layout_manager
+            layout_manager=self._layout_manager,
         )
-        # Pass layout_manager and application_model to Renderer
         self._renderer = Renderer(layout_manager=self._layout_manager, application_model=self._model)
         self._plot_types = list(self._renderer.plotting_strategies.keys())
-        self._properties_ui_factory = PropertiesUIFactory()
+        self._properties_ui_factory = PropertiesUIFactory(node_controller=self._node_controller)
 
         # Register plot-specific UI builders
         self._properties_ui_factory.register_builder(
@@ -115,12 +121,11 @@ class CompositionRoot:
         """Assemble the menu bar and its actions."""
         self.logger.info("Assembling menus.")
         menu_builder = MenuBarBuilder(
-            main_controller=self._main_controller,
+            project_controller=self._project_controller,
+            layout_controller=self._layout_controller,
             command_manager=self._command_manager,
-            # ConfigService might be needed here if menu items are configurable
         )
-        assembled_menu_actions = menu_builder.build()
-        self._menu_bar = assembled_menu_actions.menu_bar
+        self._menu_bar, assembled_menu_actions = menu_builder.build()
         self._main_menu_actions = assembled_menu_actions
 
     def _assemble_tooling(self):
@@ -201,7 +206,9 @@ class CompositionRoot:
         self.logger.info("Assembling main window.")
         self._view = MainWindow(
             model=self._model,
-            main_controller=self._main_controller,
+            project_controller=self._project_controller,
+            layout_controller=self._layout_controller,
+            node_controller=self._node_controller,
             command_manager=self._command_manager,
             plot_types=self._plot_types,
             menu_bar=self._menu_bar,
@@ -210,8 +217,7 @@ class CompositionRoot:
             tool_bar_actions=self._tool_bar_actions,
             properties_ui_factory=self._properties_ui_factory,
             config_service=self._config_service,
-            layout_ui_factory=self._layout_ui_factory, # Pass LayoutUIFactory
-            layout_manager=self._layout_manager, # Pass LayoutManager
+            layout_ui_factory=self._layout_ui_factory,
         )
 
         # Now that MainWindow exists, set its canvas_widget for tools
@@ -227,8 +233,7 @@ class CompositionRoot:
             canvas_widget=self._view.canvas_widget,
             tool_manager=self._tool_manager,
             command_manager=self._command_manager,
-            layout_manager=self._layout_manager,
-            main_controller=self._main_controller,
+            layout_controller=self._layout_controller,
         )
 
     def _connect_signals(self):
@@ -236,13 +241,13 @@ class CompositionRoot:
         self.logger.debug("Connecting signals.")
         # Main Window actions to Main Controller
         self._view.new_layout_action.triggered.connect(
-            self._main_controller.create_new_layout
+            self._project_controller.create_new_layout
         )
         self._view.save_project_action.triggered.connect(
-            lambda: self._main_controller.save_project(parent=self._view)
+            lambda: self._project_controller.save_project(self._view)
         )
         self._view.open_project_action.triggered.connect(
-            lambda: self._main_controller.open_project(parent=self._view)
+            lambda: self._project_controller.open_project(parent=self._view)
         )
 
         # Model changes to redraw
@@ -279,7 +284,9 @@ class CompositionRoot:
             app=self._app,
             model=self._model,
             command_manager=self._command_manager,
-            main_controller=self._main_controller,
+            project_controller=self._project_controller,
+            layout_controller=self._layout_controller,
+            node_controller=self._node_controller,
             canvas_controller=self._canvas_controller,
             view=self._view,
             selection_tool=self._selection_tool,

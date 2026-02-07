@@ -63,7 +63,12 @@ class PlotNode(SceneNode):
 
         # Exclude geometry if requested
         if not exclude_geometry:
-            node_dict["geometry"] = self.geometry
+            node_dict["geometry"] = {
+                "x": self.geometry[0],
+                "y": self.geometry[1],
+                "width": self.geometry[2],
+                "height": self.geometry[3],
+            }
 
         node_dict.update(
             {

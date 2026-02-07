@@ -16,6 +16,7 @@ from src.models.plots.plot_properties import (
     ScatterPlotProperties,
 )
 from src.models.plots.plot_types import PlotType
+from src.controllers.node_controller import NodeController
 
 
 def _build_column_selectors(
@@ -23,7 +24,7 @@ def _build_column_selectors(
     layout: QFormLayout,
     x_combo: QComboBox,
     y_combo: QComboBox,
-    on_column_mapping_changed: Callable,
+    node_controller: NodeController,
 ):
     assert node.data is not None
     assert node.plot_properties is not None
@@ -38,7 +39,7 @@ def _build_column_selectors(
     if current_x in columns:
         x_combo.setCurrentText(current_x)
     x_combo.currentTextChanged.connect(
-        partial(on_column_mapping_changed, node=node)
+        partial(node_controller.on_column_mapping_changed, node=node, x_combo=x_combo, y_combo=y_combo)
     )
     layout.addRow("X-Axis Column:", x_combo)
 
@@ -47,7 +48,7 @@ def _build_column_selectors(
     if current_y in columns:
         y_combo.setCurrentText(current_y)
     y_combo.currentTextChanged.connect(
-        partial(on_column_mapping_changed, node=node)
+        partial(node_controller.on_column_mapping_changed, node=node, x_combo=x_combo, y_combo=y_combo)
     )
     layout.addRow("Y-Axis Column:", y_combo)
 
@@ -56,7 +57,7 @@ def _build_limit_selectors(
     node: PlotNode,
     layout: QFormLayout,
     limit_edits: dict,
-    on_limit_editing_finished: Callable,
+    node_controller: NodeController,
 ):
     assert node.plot_properties is not None
     validator = QDoubleValidator()
@@ -70,7 +71,6 @@ def _build_limit_selectors(
 
     for w in (limit_edits["xlim_min"], limit_edits["xlim_max"]):
         w.setValidator(validator)
-        w.editingFinished.connect(partial(on_limit_editing_finished, node=node))
     lim_layout_x = QHBoxLayout()
     lim_layout_x.addWidget(limit_edits["xlim_min"])
     lim_layout_x.addWidget(QLabel("to"))
@@ -85,7 +85,17 @@ def _build_limit_selectors(
 
     for w in (limit_edits["ylim_min"], limit_edits["ylim_max"]):
         w.setValidator(validator)
-        w.editingFinished.connect(partial(on_limit_editing_finished, node=node))
+    lim_layout_y = QHBoxLayout()
+    lim_layout_y.addWidget(limit_edits["ylim_min"])
+    lim_layout_y.addWidget(QLabel("to"))
+    lim_layout_y.addWidget(limit_edits["ylim_max"])
+    layout.addRow("Y-Axis Limits:", lim_layout_y)
+
+    # Connect signals after all QLineEdit widgets are defined
+    limit_edits["xlim_min"].editingFinished.connect(partial(node_controller.on_limit_editing_finished, node=node, xlim_min_text=limit_edits["xlim_min"].text(), xlim_max_text=limit_edits["xlim_max"].text(), ylim_min_text=limit_edits["ylim_min"].text(), ylim_max_text=limit_edits["ylim_max"].text()))
+    limit_edits["xlim_max"].editingFinished.connect(partial(node_controller.on_limit_editing_finished, node=node, xlim_min_text=limit_edits["xlim_min"].text(), xlim_max_text=limit_edits["xlim_max"].text(), ylim_min_text=limit_edits["ylim_min"].text(), ylim_max_text=limit_edits["ylim_max"].text()))
+    limit_edits["ylim_min"].editingFinished.connect(partial(node_controller.on_limit_editing_finished, node=node, xlim_min_text=limit_edits["xlim_min"].text(), xlim_max_text=limit_edits["xlim_max"].text(), ylim_min_text=limit_edits["ylim_min"].text(), ylim_max_text=limit_edits["ylim_max"].text()))
+    limit_edits["ylim_max"].editingFinished.connect(partial(node_controller.on_limit_editing_finished, node=node, xlim_min_text=limit_edits["xlim_min"].text(), xlim_max_text=limit_edits["xlim_max"].text(), ylim_min_text=limit_edits["ylim_min"].text(), ylim_max_text=limit_edits["ylim_max"].text()))
 
     lim_layout_y = QHBoxLayout()
     lim_layout_y.addWidget(limit_edits["ylim_min"])
@@ -98,9 +108,7 @@ def _build_base_plot_properties_ui(
     node: PlotNode,
     layout: QFormLayout,
     parent: QWidget,
-    on_property_changed: Callable,
-    on_column_mapping_changed: Callable,
-    on_limit_editing_finished: Callable,
+    node_controller: NodeController,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -114,9 +122,7 @@ def _build_base_plot_properties_ui(
     title_edit = QLineEdit(props.title, parent)
     title_edit.setObjectName("title_edit")
     title_edit.editingFinished.connect(
-        partial(
-            on_property_changed, node=node, prop_name="title", widget=title_edit
-        )
+        partial(node_controller.on_property_changed, node=node, prop_name="title", new_value=title_edit.text())
     )
     layout.addRow("Title:", title_edit)
 
@@ -124,9 +130,7 @@ def _build_base_plot_properties_ui(
     xlabel_edit = QLineEdit(props.xlabel, parent)
     xlabel_edit.setObjectName("xlabel_edit")
     xlabel_edit.editingFinished.connect(
-        partial(
-            on_property_changed, node=node, prop_name="xlabel", widget=xlabel_edit
-        )
+        partial(node_controller.on_property_changed, node=node, prop_name="xlabel", new_value=xlabel_edit.text())
     )
     layout.addRow("X-Axis Label:", xlabel_edit)
 
@@ -134,19 +138,17 @@ def _build_base_plot_properties_ui(
     ylabel_edit = QLineEdit(props.ylabel, parent)
     ylabel_edit.setObjectName("ylabel_edit")
     ylabel_edit.editingFinished.connect(
-        partial(
-            on_property_changed, node=node, prop_name="ylabel", widget=ylabel_edit
-        )
+        partial(node_controller.on_property_changed, node=node, prop_name="ylabel", new_value=ylabel_edit.text())
     )
     layout.addRow("Y-Axis Label:", ylabel_edit)
 
     if node.data is not None:
         _build_column_selectors(
-            node, layout, x_combo, y_combo, on_column_mapping_changed
+            node, layout, x_combo, y_combo, node_controller
         )
 
     _build_limit_selectors(
-            node, layout, limit_edits, on_limit_editing_finished
+            node, layout, limit_edits, node_controller
         )
 
 
@@ -154,9 +156,7 @@ def _build_line_plot_ui_widgets(
     node: PlotNode,
     layout: QFormLayout,
     parent: QWidget,
-    on_property_changed: Callable,
-    on_column_mapping_changed: Callable,
-    on_limit_editing_finished: Callable,
+    node_controller: NodeController,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -169,9 +169,7 @@ def _build_line_plot_ui_widgets(
         node=node,
         layout=layout,
         parent=parent,
-        on_property_changed=on_property_changed,
-        on_column_mapping_changed=on_column_mapping_changed,
-        on_limit_editing_finished=on_limit_editing_finished,
+        node_controller=node_controller,
         limit_edits=limit_edits,
         x_combo=x_combo,
         y_combo=y_combo,
@@ -183,9 +181,7 @@ def _build_scatter_plot_ui_widgets(
     node: PlotNode,
     layout: QFormLayout,
     parent: QWidget,
-    on_property_changed: Callable,
-    on_column_mapping_changed: Callable,
-    on_limit_editing_finished: Callable,
+    node_controller: NodeController,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -198,9 +194,7 @@ def _build_scatter_plot_ui_widgets(
         node=node,
         layout=layout,
         parent=parent,
-        on_property_changed=on_property_changed,
-        on_column_mapping_changed=on_column_mapping_changed,
-        on_limit_editing_finished=on_limit_editing_finished,
+        node_controller=node_controller,
         limit_edits=limit_edits,
         x_combo=x_combo,
         y_combo=y_combo,
@@ -212,10 +206,10 @@ def _build_scatter_plot_ui_widgets(
         marker_size_edit.setObjectName("marker_size_edit")
         marker_size_edit.editingFinished.connect(
             partial(
-                on_property_changed,
+                node_controller.on_property_changed,
                 node=node,
                 prop_name="marker_size",
-                widget=marker_size_edit,
+                new_value=marker_size_edit.text(),
             )
         )
         layout.addRow("Marker Size:", marker_size_edit)
@@ -226,8 +220,9 @@ class PropertiesUIFactory:
     A factory class for creating the UI for the properties view
     based on the type of the plot.
     """
-    def __init__(self):
+    def __init__(self, node_controller: NodeController):
         self._builders = {}
+        self._node_controller = node_controller
 
     def register_builder(self, plot_type: PlotType, builder_func: Callable):
         self._builders[plot_type] = builder_func
@@ -237,9 +232,6 @@ class PropertiesUIFactory:
         node: PlotNode,
         layout: QFormLayout,
         parent: QWidget,
-        on_property_changed: Callable,
-        on_column_mapping_changed: Callable,
-        on_limit_editing_finished: Callable,
         limit_edits: dict,
         x_combo: QComboBox,
         y_combo: QComboBox,
@@ -257,9 +249,7 @@ class PropertiesUIFactory:
                 node=node,
                 layout=layout,
                 parent=parent,
-                on_property_changed=on_property_changed,
-                on_column_mapping_changed=on_column_mapping_changed,
-                on_limit_editing_finished=on_limit_editing_finished,
+                node_controller=self._node_controller,
                 limit_edits=limit_edits,
                 x_combo=x_combo,
                 y_combo=y_combo,
@@ -269,9 +259,7 @@ class PropertiesUIFactory:
                 node=node,
                 layout=layout,
                 parent=parent,
-                on_property_changed=on_property_changed,
-                on_column_mapping_changed=on_column_mapping_changed,
-                on_limit_editing_finished=on_limit_editing_finished,
+                node_controller=self._node_controller,
                 limit_edits=limit_edits,
                 x_combo=x_combo,
                 y_combo=y_combo,

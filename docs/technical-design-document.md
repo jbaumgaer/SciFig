@@ -7,11 +7,11 @@ This epic focuses on externalizing various application settings, user preference
 
 **Planned Implementation:**
 
-1.  **Modify `default_config.yaml`:**
+1.  **Modify `configs/default_config.yaml`:**
     *   **Task:** Add `figure.auto_layout_enabled_default: true` to define the default state.
 
 2.  **Modify `ApplicationModel` (`src/models/application_model.py`):**
-    *   **Task:** Add a property `self.auto_layout_enabled: bool` initialized from `ConfigService.get("figure.auto_layout_enabled_default")` or a user setting from `QSettings` (if F2 is already done).
+    *   **Task:** Add a property `self.auto_layout_enabled: bool` initialized from `ConfigService.get("figure.auto_layout_enabled_default")` or a user setting from `QSettings`.
     *   **Task:** Add a signal `autoLayoutChanged = Signal(bool)` that emits when `auto_layout_enabled` is changed.
     *   **Task:** Add a property `self.figure_subplot_params: dict | None` to store captured explicit parameters (initialized to `None`).
     *   **Task:** Add a method `set_auto_layout_enabled(self, enabled: bool)`:
@@ -24,7 +24,7 @@ This epic focuses on externalizing various application settings, user preference
             *   Clear `self.figure_subplot_params = None`.
             *   Emit `autoLayoutChanged(True)`.
 
-3.  **Modify `Renderer` (`src/views/renderer.py`):**
+3.  **Modify `Renderer` (`src/ui/renderers/renderer.py`):**
     *   **Task:** Update `__init__` to accept `config_service: ConfigService` and `application_model: ApplicationModel`.
     *   **Task:** Store references to `config_service` and `application_model`.
     *   **Task:** In the `render(figure: Figure, root_node: SceneNode, selection: List[SceneNode])` method:
@@ -34,11 +34,12 @@ This epic focuses on externalizing various application settings, user preference
     *   **Task:** Connect `application_model.autoLayoutChanged` to a redraw trigger.
 
 4.  **Add UI Toggle:**
-    *   **Task:** In `src/views/main_window.py`, add a `QAction` (e.g., in the "Plot" menu) for "Enable Auto Layout" with `checkable=True`.
+    *   **Task:** In `src/ui/windows/main_window.py`, add a `QAction` (e.g., in the "Plot" menu) for "Enable Auto Layout" with `checkable=True`.
+    *   **Task:** Set its initial `checked` state based on `self._layout_manager.layout_mode == LayoutMode.GRID`.
     *   **Task:** Connect this action's `toggled` signal to `application_model.set_auto_layout_enabled()`.
     *   **Task:** Initialize the action's checked state from `application_model.auto_layout_enabled`.
 
-5.  **Modify `src/application_assembler.py`:**
+5.  **Modify `CompositionRoot` (`src/core/composition_root.py`):**
     *   **Task:** Pass `ConfigService` to `ApplicationModel` constructor.
     *   **Task:** Pass `ApplicationModel` and `ConfigService` to `Renderer` constructor.
 
@@ -47,7 +48,7 @@ This epic focuses on externalizing various application settings, user preference
     *   Test `set_auto_layout_enabled` for correct state changes.
     *   Verify `autoLayoutChanged` signal emission.
     *   Mock Matplotlib `Figure` and test that `capture_current_layout_params` correctly calls `figure.tight_layout()` and captures `subplotpars`.
-*   **Unit Tests (`tests/views/test_renderer.py`):**
+*   **Unit Tests (`tests/ui/renderers/test_renderer.py`):**
     *   Mock `ApplicationModel` to control `auto_layout_enabled` and `figure_subplot_params`.
     *   Test `render` method to ensure `figure.set_constrained_layout(True)` or `figure.subplots_adjust` is called conditionally.
 *   **Integration Tests:**
@@ -65,32 +66,20 @@ This epic focuses on externalizing various application settings, user preference
 ---
 
 ### Feature: Adding New Plot with Redistribution Options + Advanced Plot Redistribution
-**Description:** Implement the ability for users to add new plots to the canvas. When a new plot is added, the user will be presented with options to either intelligently redistribute all existing plots (including the new one) into a new optimal arrangement or to add the new plot as a free-form element that can be manually positioned. This includes a `CustomLayoutEngine` to handle dynamic plot sizing and positioning.
+**Description:** Implement the ability for users to add new plots to the canvas. When a new plot is added, the user will be presented with options to either intelligently redistribute all existing plots (including the new one) into a new optimal arrangement or to add the new plot as a free-form element that can be manually positioned. This includes a `LayoutManager` to handle dynamic plot sizing and positioning.
 
 **Planned Implementation:**
 
-1.  **Create `src/layout_engine.py`:**
-    *   **Task:** Create a new file `src/layout_engine.py`.
-    *   **Task:** Implement a class `CustomLayoutEngine`.
-        *   `__init__(self, config_service: ConfigService)`: Takes `ConfigService` for defaults (margins, gutters).
-        *   `calculate_grid_layout(self, plot_nodes: List[PlotNode], num_rows: int, num_cols: int) -> Dict[PlotNode, Tuple[float, float, float, float]]`:
-            *   Takes a list of `PlotNode`s and target grid dimensions.
-            *   Calculates new `(left, bottom, width, height)` `geometry` for each `PlotNode` based on equal division, respecting configurable margins and gutters.
-            *   Returns a dictionary mapping `PlotNode`s to their new geometries.
-        *   `calculate_auto_packed_layout(self, plot_nodes: List[PlotNode]) -> Dict[PlotNode, Tuple[float, float, float, float]]`:
-            *   (Future/Advanced) Implements a more intelligent "packing" algorithm to fill available space, potentially resizing plots based on some heuristic.
-            *   For initial implementation, `calculate_grid_layout` will suffice.
-
-2.  **Modify `ApplicationModel` (`src/models/application_model.py`):**
+1.  **Modify `ApplicationModel` (`src/models/application_model.py`):**
     *   **Task:** Add a method `add_plot(self, plot_node: PlotNode)` that adds a new plot.
     *   **Task:** Add a method `redistribute_plots(self, layout_algorithm: str = "grid")`:
-        *   Uses `CustomLayoutEngine` to calculate new geometries for all current `PlotNode`s.
+        *   Uses `LayoutManager` to calculate new geometries for all current `PlotNode`s.
         *   Updates the `geometry` of each `PlotNode` in `self.scene_root` via `ChangePropertyCommand`.
         *   Emits `modelChanged`.
 
-3.  **Modify `MainController` (`src/controllers/main_controller.py`):**
-    *   **Task:** Update `__init__` to accept `custom_layout_engine: CustomLayoutEngine`.
-    *   **Task:** Store `custom_layout_engine` as a member variable.
+2.  **Modify `LayoutController` (`src/controllers/layout_controller.py`):**
+    *   **Task:** Update `__init__` to accept `layout_manager: LayoutManager`.
+    *   **Task:** Store `layout_manager` as a member variable.
     *   **Task:** Add a new method `add_new_plot_with_options()`:
         *   Presents a `QMessageBox` or custom dialog with options: "Distribute evenly", "Add free-form".
         *   If "Distribute evenly":
@@ -102,28 +91,28 @@ This epic focuses on externalizing various application settings, user preference
             *   Calls `application_model.add_plot(new_plot_node)`.
     *   **Task:** Connect a new menu action (e.g., "Plot" -> "Add Plot") to `add_new_plot_with_options()`.
 
-4.  **Modify `src/application_assembler.py`:**
-    *   **Task:** Instantiate `CustomLayoutEngine(config_service)`.
-    *   **Task:** Pass `CustomLayoutEngine` to `MainController`.
+3.  **Modify `CompositionRoot` (`src/core/composition_root.py`):**
+    *   **Task:** Instantiate `LayoutManager(application_model, free_engine, grid_engine, config_service)`.
+    *   **Task:** Pass `LayoutManager` to `LayoutController`.
 
 **Testing Plan:**
-*   **Unit Tests (`tests/test_layout_engine.py`):**
-    *   Mock `ConfigService`.
-    *   Test `calculate_grid_layout` with various numbers of plots and grid dimensions to ensure correct geometry calculation (positive width/height, non-overlapping, respecting margins/gutters).
-    *   Test edge cases (e.g., 1 plot, many plots).
 *   **Unit Tests (`tests/models/test_application_model.py`):**
     *   Test `add_plot` correctly adds to `scene_root` and emits `modelChanged`.
-    *   Test `redistribute_plots` ensures all plots get new geometries and `modelChanged` is emitted. Mock `CustomLayoutEngine`.
+    *   Test `redistribute_plots` ensures all plots get new geometries and `modelChanged` is emitted. Mock `LayoutManager`.
+*   **Unit Tests (`tests/controllers/test_layout_controller.py`):**
+    *   Mock `ConfigService`.
+    *   Test `add_new_plot_with_options` with various numbers of plots and grid dimensions to ensure correct geometry calculation (positive width/height, non-overlapping, respecting margins/gutters).
+    *   Test edge cases (e.g., 1 plot, many plots).
 *   **Integration Tests:**
     *   Launch app, create a layout.
     *   Add a new plot and choose "Distribute evenly", verify all plots resize/reposition.
     *   Add a new plot and choose "Add free-form", verify new plot appears with default geometry and others remain fixed.
 
 **Risks & Mitigations:**
-*   **Risk:** `CustomLayoutEngine` calculation errors leading to invalid geometries (e.g., negative width/height).
+*   **Risk:** `LayoutManager` calculation errors leading to invalid geometries (e.g., negative width/height).
 *   **Mitigation:** Thorough unit tests for `calculate_grid_layout` and edge cases. Implement validation checks in `PlotNode.geometry` setter.
 *   **Risk:** Performance with a large number of plots during redistribution.
-*   **Mitigation:** Optimize `CustomLayoutEngine` algorithms. Consider using a `QProgressDialog` for very long calculations.
+*   **Mitigation:** Optimize `LayoutManager` algorithms. Consider using a `QProgressDialog` for very long calculations.
 
 ---
 
@@ -132,7 +121,7 @@ This epic focuses on externalizing various application settings, user preference
 
 **Planned Implementation:**
 
-1.  **Modify `CanvasWidget` (`src/views/canvas_widget.py`):**
+1.  **Modify `CanvasWidget` (`src/ui/widgets/canvas_widget.py`):**
     *   **Task:** Override `mousePressEvent`, `mouseMoveEvent`, `mouseReleaseEvent` to detect drag gestures on `PlotNode`s.
     *   **Task:** Implement logic to identify the `PlotNode` under the mouse press.
     *   **Task:** Store the `PlotNode` being dragged and its initial position.
@@ -145,7 +134,7 @@ This epic focuses on externalizing various application settings, user preference
         *   Based on target, construct a `Command` (e.g., `RearrangePlotCommand`, `SwapPlotsCommand`).
         *   Pass the command to `command_manager.execute_command()`.
 
-2.  **New Commands (`src/commands/rearrange_plot_command.py`, `src/commands/swap_plots_command.py`):**
+2.  **New Commands (`src/services/commands/rearrange_plot_command.py`, `src/services/commands/swap_plots_command.py`):**
     *   **Task:** Create `RearrangePlotCommand(plot_node: PlotNode, new_geometry: Tuple[float, float, float, float])`.
     *   **Task:** Create `SwapPlotsCommand(plot_node1: PlotNode, plot_node2: PlotNode)`.
     *   **Task:** Implement `execute()` and `undo()` for these commands, ensuring `ApplicationModel` is updated and `modelChanged` is emitted.
@@ -159,10 +148,10 @@ This epic focuses on externalizing various application settings, user preference
     *   **Task:** Connect `CanvasWidget`'s custom drag-and-drop signals (if any are emitted) to methods in `CanvasController` that construct and execute the appropriate `Command`s.
 
 **Testing Plan:**
-*   **Unit Tests (`tests/commands/test_rearrange_plot_command.py`, `tests/commands/test_swap_plots_command.py`):**
+*   **Unit Tests (`tests/services/commands/test_rearrange_plot_command.py`, `tests/services/commands/test_swap_plots_command.py`):**
     *   Test `execute()` and `undo()` for correct state changes in `ApplicationModel`.
     *   Verify `modelChanged` signal is emitted.
-*   **Unit Tests (`tests/views/test_canvas_widget.py`):**
+*   **Unit Tests (`tests/ui/widgets/test_canvas_widget.py`):**
     *   Mock `CanvasController` and `ApplicationModel`.
     *   Test `mousePressEvent`, `mouseMoveEvent`, `mouseReleaseEvent` for correctly detecting drags and identifying drop targets.
 *   **Integration Tests:**
@@ -188,8 +177,8 @@ This epic focuses on externalizing various application settings, user preference
 **Description:** Refactor the properties panel (`PropertiesView`) to dynamically display either layout-specific controls (by default) or plot-specific properties (when a plot with data is selected).
 
 **Planned Implementation:**
-1.  **Modify `src/views/properties_view.py`:**
-    *   **Task:** Update `PropertiesView.__init__` to accept `layout_ui_factory: LayoutUIFactory`, `layout_manager: LayoutManager`, and `main_controller: MainController`. Store these as instance variables.
+1.  **Modify `src/ui/panels/properties_panel.py`:**
+    *   **Task:** Update `PropertiesPanel.__init__` to accept `layout_ui_factory: LayoutUIFactory`, `layout_manager: LayoutManager`, and `layout_controller: LayoutController`. Store these as instance variables.
     *   **Task:** Implement a slot (e.g., `_update_content(self)`) that responds to changes in `ApplicationModel.selectionChanged` and `LayoutManager.layoutModeChanged`. This method will be responsible for clearing the current content and rebuilding it based on the current state.
     *   **Task:** Within `_update_content`:
         *   Clear any existing UI elements from the properties panel.
@@ -197,22 +186,22 @@ This epic focuses on externalizing various application settings, user preference
             *   Call `self.properties_ui_factory.build_properties_ui(plot_node)` to get the plot-specific controls.
             *   Add these controls to the properties panel's layout.
         *   **Condition 2: Otherwise (Default/Layout Controls):**
-            *   Call `self.layout_ui_factory.build_layout_controls(self.layout_manager.layout_mode, self.main_controller, self)` to get the layout-specific controls.
+            *   Call `self.layout_ui_factory.build_layout_controls(self.layout_manager.layout_mode, self.layout_controller, self)` to get the layout-specific controls.
             *   Add these controls to the properties panel's layout.
-    *   **Task:** In `PropertiesView.__init__`, connect `self.model.selectionChanged` to `self._update_content` and `self.layout_manager.layoutModeChanged` to `self._update_content`.
-    *   **Task:** Trigger `self._update_content()` once at the end of `PropertiesView.__init__` to set the initial state.
-2.  **Modify `src/application_assembler.py`:**
-    *   **Task:** When instantiating `PropertiesView` in `_assemble_main_window` or `_create_properties_dock` (if applicable), pass the new dependencies: `layout_ui_factory`, `layout_manager`, and `main_controller`.
-3.  **Refine `src/views/main_window.py`:**
+    *   **Task:** In `PropertiesPanel.__init__`, connect `self.model.selectionChanged` to `self._update_content` and `self.layout_manager.layoutModeChanged` to `self._update_content`.
+    *   **Task:** Trigger `self._update_content()` once at the end of `PropertiesPanel.__init__` to set the initial state.
+2.  **Modify `src/core/composition_root.py`:**
+    *   **Task:** When instantiating `PropertiesPanel` in `_assemble_main_window` or `_create_properties_dock` (if applicable), pass the new dependencies: `layout_ui_factory`, `layout_manager`, and `layout_controller`.
+3.  **Refine `src/ui/windows/main_window.py`:**
     *   **Task:** The separate `self.layout_menu` and its associated `_update_layout_menu` slot and connections can now be removed or significantly simplified, as the primary layout controls are moving to the properties panel. The "Layout" menu might still exist in the main menu for global layout actions, but not for dynamic controls.
 
 **Testing Plan (Feature 1):**
-*   **Unit Tests (`tests/views/test_properties_view.py`):**
-    *   `test_properties_view_displays_layout_controls_by_default`: Verify that on initialization, the `PropertiesView` calls `layout_ui_factory.build_layout_controls`.
-    *   `test_properties_view_displays_plot_properties_on_single_plot_selection_with_data`: Mock a selection of a single `PlotNode` with data, verify `properties_ui_factory.build_properties_ui` is called.
-    *   `test_properties_view_displays_layout_controls_on_multiple_selection`: Mock multiple `PlotNode`s selected, verify `layout_ui_factory.build_layout_controls` is called.
-    *   `test_properties_view_displays_layout_controls_on_single_plot_selection_no_data`: Mock a single `PlotNode` without data selected, verify `layout_ui_factory.build_layout_controls` is called.
-    *   `test_properties_view_updates_on_layout_mode_change`: Mock a layout mode change, verify `layout_ui_factory.build_layout_controls` is called with the new mode.
+*   **Unit Tests (`tests/ui/panels/test_properties_panel.py`):**
+    *   `test_properties_panel_displays_layout_controls_by_default`: Verify that on initialization, the `PropertiesPanel` calls `layout_ui_factory.build_layout_controls`.
+    *   `test_properties_panel_displays_plot_properties_on_single_plot_selection_with_data`: Mock a selection of a single `PlotNode` with data, verify `properties_ui_factory.build_properties_ui` is called.
+    *   `test_properties_panel_displays_layout_controls_on_multiple_selection`: Mock multiple `PlotNode`s selected, verify `layout_ui_factory.build_layout_controls` is called.
+    *   `test_properties_panel_displays_layout_controls_on_single_plot_selection_no_data`: Mock a single `PlotNode` without data selected, verify `layout_ui_factory.build_layout_controls` is called.
+    *   `test_properties_panel_updates_on_layout_mode_change`: Mock a layout mode change, verify `layout_ui_factory.build_layout_controls` is called with the new mode.
 
 ---
 
@@ -220,32 +209,32 @@ This epic focuses on externalizing various application settings, user preference
 **Description:** Implement a more intuitive "Free Form / Grid Layout" toggle in the UI (likely in `MainWindow`'s menu bar or toolbar) and ensure all layout actions generated by `LayoutUIFactory` use SVG icons.
 
 **Planned Implementation:**
-1.  **Modify `src/views/main_window.py`:**
+1.  **Modify `src/ui/windows/main_window.py`:**
     *   **Task:** In `MainWindow.__init__`, create a new `QAction` (e.g., `layout_mode_toggle_action`) for toggling between Free Form and Grid layout modes. Set `checkable=True` for this action.
     *   **Task:** Set its initial `checked` state based on `self._layout_manager.layout_mode == LayoutMode.GRID`.
-    *   **Task:** Connect `layout_mode_toggle_action.toggled` signal to a new slot in `main_controller` (e.g., `main_controller.toggle_layout_mode(checked)`).
+    *   **Task:** Connect `layout_mode_toggle_action.toggled` signal to a new slot in `layout_controller` (e.g., `layout_controller.toggle_layout_mode(checked)`).
     *   **Task:** Connect `self._layout_manager.layoutModeChanged` signal to a slot in `MainWindow` (e.g., `_update_layout_mode_toggle_ui`) that updates the `layout_mode_toggle_action`'s text and checked state.
     *   **Task:** Add this action to a suitable menu (e.g., a "View" menu, or a simplified "Layout" menu that only contains this toggle).
-2.  **Modify `src/controllers/main_controller.py`:**
+2.  **Modify `src/controllers/layout_controller.py`:**
     *   **Task:** Add a new method `toggle_layout_mode(self, checked: bool)`:
         *   If `checked` is `True`, call `self._layout_manager.set_layout_mode(LayoutMode.GRID)`.
         *   If `checked` is `False`, call `self._layout_manager.set_layout_mode(LayoutMode.FREE_FORM)`.
-3.  **Modify `src/views/layout_ui_factory.py`:**
+3.  **Modify `src/ui/factories/layout_ui_factory.py`:**
     *   **Task:** Update `_build_free_form_controls` and `_build_grid_layout_controls` methods to ensure all `QAction`s use SVG icons (loaded via `IconPath` from `ConfigService`) instead of plain text where appropriate. This means updating `QAction` constructors to accept `QIcon`.
     *   **Task:** Remove the "Switch to Grid Mode" and "Switch to Free-Form Mode" actions, as these are now handled by the main toggle.
-4.  **Modify `src/constants.py`:**
+4.  **Modify `src/shared/constants.py`:**
     *   **Task:** Add new constants in `IconPath` (if not already present) for all layout-related actions that will now have SVG icons (e.g., align_left, distribute_horizontal, grid_layout_on, free_layout_off).
 5.  **Modify `configs/default_config.yaml`:**
     *   **Task:** Add corresponding entries for the new SVG icon paths under `paths.icon_base_dir` and `tool_icons` or a new `layout_icons` section.
 
 **Testing Plan (Feature 2):**
-*   **Unit Tests (`tests/views/test_main_window.py`):**
+*   **Unit Tests (`tests/ui/windows/test_main_window.py`):**
     *   `test_layout_mode_toggle_action_exists`: Verify the new action is created and checkable.
-    *   `test_layout_mode_toggle_action_updates_main_controller`: Verify its `toggled` signal connects to `main_controller.toggle_layout_mode`.
+    *   `test_layout_mode_toggle_action_updates_layout_controller`: Verify its `toggled` signal connects to `layout_controller.toggle_layout_mode`.
     *   `test_layout_mode_toggle_action_reflects_manager_state`: Verify `_update_layout_mode_toggle_ui` correctly updates the action's checked state and text.
-*   **Unit Tests (`tests/controllers/test_main_controller.py`):**
+*   **Unit Tests (`tests/controllers/test_layout_controller.py`):**
     *   `test_toggle_layout_mode_sets_layout_manager_mode`: Verify `toggle_layout_mode` correctly calls `layout_manager.set_layout_mode`.
-*   **Unit Tests (`tests/views/test_layout_ui_factory.py`):
+*   **Unit Tests (`tests/ui/factories/test_layout_ui_factory.py`):**
     *   `test_build_free_form_controls_uses_svg_icons`: Verify actions have `QIcon` objects set.
     *   `test_build_grid_layout_controls_uses_svg_icons`: Verify actions have `QIcon` objects set.
 
@@ -255,10 +244,10 @@ This epic focuses on externalizing various application settings, user preference
 **Description:** When transitioning from free-form to grid mode, the system will automatically infer suitable grid dimensions (rows/columns) and assign existing plots to these cells.
 
 **Planned Implementation:**
-1.  **Modify `src/layout_manager.py`:**
+1.  **Modify `src/services/layout_manager.py`:**
     *   **Task:** In `set_layout_mode`, ensure that when transitioning from `FREE_FORM` to `GRID`, `self._grid_engine.snap_plots_to_grid(all_plots, self._create_default_grid_config())` is called. The `_create_default_grid_config()` provides base margin/gutter, but the `snap_plots_to_grid` should infer rows/cols/ratios.
     *   **Task:** Update `_application_model.current_layout_config` with the `GridConfig` returned by `snap_plots_to_grid`.
-2.  **Modify `src/layout_engine.py`:**
+2.  **Modify `src/models/layout/layout_engines.py`:**
     *   **Task:** Refine `GridLayoutEngine.snap_plots_to_grid(self, plots: List[PlotNode], current_grid_config: GridConfig) -> GridConfig`:
         *   **Heuristic 1: Determine Rows/Cols:**
             *   Calculate `num_plots = len(plots)`.
@@ -270,9 +259,9 @@ This epic focuses on externalizing various application settings, user preference
             *   For initial implementation, `inferred_row_ratios = [1.0 / inferred_rows] * inferred_rows` and `inferred_col_ratios = [1.0 / inferred_cols] * inferred_cols`.
         *   **Task:** Create and return a new `GridConfig` with these `inferred_rows`, `inferred_cols`, `inferred_row_ratios`, `inferred_col_ratios`, and existing `margin`/`gutter` from `current_grid_config`.
 3.  **Add Test Stubs (Feature 3):**
-    *   **Unit Tests (`tests/test_layout_manager.py`):**
+    *   **Unit Tests (`tests/services/test_layout_manager.py`):**
         *   `test_set_layout_mode_free_to_grid_calls_snap_and_updates_config`: Verify `_grid_engine.snap_plots_to_grid` is called and `application_model.current_layout_config` is updated to the inferred `GridConfig`.
-    *   **Unit Tests (`tests/test_layout_engine.py`):**
+    *   **Unit Tests (`tests/models/layout/test_layout_engines.py`):**
         *   `test_grid_layout_engine_snap_plots_to_grid_basic_inference`: Test with varying numbers of plots (0, 1, 4, 5, 6, 9) to ensure correct `rows` and `cols` are inferred.
         *   `test_grid_layout_engine_snap_plots_to_grid_sorts_plots`: Test with plots at various positions to verify correct sorting before assignment.
 
@@ -282,29 +271,29 @@ This epic focuses on externalizing various application settings, user preference
 **Description:** Implement smooth, interactive adjustment of grid parameters (rows, columns, margins, gutters) in the properties panel, ensuring updates are debounced and changes are undoable.
 
 **Planned Implementation:**
-1.  **Modify `src/views/layout_ui_factory.py`:**
+1.  **Modify `src/ui/factories/layout_ui_factory.py`:**
     *   **Task:** In `_build_grid_layout_controls`, for each grid parameter UI element (e.g., `QSpinBox` for rows/cols, `QDoubleSpinBox` for margin/gutter):
-        *   Connect its relevant signal (e.g., `valueChanged`, `editingFinished`) to a *single debounced slot* in `main_controller` (e.g., `main_controller.on_grid_parameter_changed`).
+        *   Connect its relevant signal (e.g., `valueChanged`, `editingFinished`) to a *single debounced slot* in `layout_controller` (e.g., `layout_controller.on_grid_parameter_changed`).
         *   The debouncing mechanism should be implemented using `QTimer.singleShot` or similar.
-    *   **Task:** The debounced slot will gather the *current values of all grid parameters* from the UI controls before calling `main_controller.adjust_grid_parameters()`.
-2.  **Modify `src/controllers/main_controller.py`:**
+    *   **Task:** The debounced slot will gather the *current values of all grid parameters* from the UI controls before calling `layout_controller.adjust_grid_parameters()`.
+2.  **Modify `src/controllers/layout_controller.py`:**
     *   **Task:** Add a new method `on_grid_parameter_changed(self)` (the debounced slot). This will collect the values from the UI elements (passed as a dictionary or tuple) and call `adjust_grid_parameters`.
     *   **Task:** Add or refine `adjust_grid_parameters(self, rows: int, cols: int, margin: float, gutter: float, row_ratios: List[float] | None = None, col_ratios: List[float] | None = None)`:
         *   This method will construct a new `GridConfig` with the provided parameters.
         *   It will create a new `ChangeGridParametersCommand` (see below) passing the old and new `GridConfig`.
         *   Execute the command via `self.command_manager.execute_command()`.
-3.  **Create `src/commands/change_grid_parameters_command.py`:**
+3.  **Create `src/services/commands/change_grid_parameters_command.py`:**
     *   **Task:** Implement `ChangeGridParametersCommand(BaseCommand)`:
         *   `__init__(self, model: ApplicationModel, old_grid_config: GridConfig, new_grid_config: GridConfig, description: str)`: Stores the model, old config, and new config.
         *   `execute(self)`: Sets `model.current_layout_config = self._new_grid_config`.
         *   `undo(self)`: Sets `model.current_layout_config = self._old_grid_config`.
 4.  **Add Test Stubs (Feature 4):**
-    *   **Unit Tests (`tests/views/test_layout_ui_factory.py`):**
-        *   `test_grid_parameter_controls_connected_to_debounced_slot`: Verify grid parameter UI elements connect to the debounced slot in `main_controller`.
-    *   **Unit Tests (`tests/controllers/test_main_controller.py`):**
+    *   **Unit Tests (`tests/ui/factories/test_layout_ui_factory.py`):**
+        *   `test_grid_parameter_controls_connected_to_debounced_slot`: Verify grid parameter UI elements connect to the debounced slot in `layout_controller`.
+    *   **Unit Tests (`tests/controllers/test_layout_controller.py`):**
         *   `test_adjust_grid_parameters_executes_command`: Verify `adjust_grid_parameters` creates and executes a `ChangeGridParametersCommand`.
         *   `test_on_grid_parameter_changed_debounces_calls`: Mock `QTimer.singleShot` to verify debouncing behavior.
-    *   **Unit Tests (`tests/commands/test_change_grid_parameters_command.py`):**
+    *   **Unit Tests (`tests/services/commands/test_change_grid_parameters_command.py`):**
         *   `test_execute_change_grid_parameters_command`: Verify `execute` correctly updates `model.current_layout_config`.
         *   `test_undo_change_grid_parameters_command`: Verify `undo` correctly restores `model.current_layout_config`.
 
