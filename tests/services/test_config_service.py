@@ -1,6 +1,9 @@
 import pytest
+from pathlib import Path
+from src.services.config_service import ConfigService
+from src.shared.exceptions import ConfigError
+from src.shared.constants import IconPath
 
-# Assuming ConfigService is importable from src.config_service
 
 # Helper function to create a temporary config file for testing
 @pytest.fixture
@@ -82,3 +85,29 @@ def test_icon_path_get_path_from_config(temp_config_file):
     # IconPath.set_config_service(config_service)
     # expected_path = str(Path("test/icons") / "test_icon.svg")
     # assert IconPath.get_path("tool_icons.test_tool") == expected_path
+
+def test_config_service_get_required_missing_key(tmp_path):
+    """
+    Test that ConfigService.get_required() raises ConfigError when a required key is missing,
+    and returns the correct value when the key exists.
+    """
+    # Create a temporary config file with some data, but missing a 'required' key
+    config_content = """
+    test_section:
+        existing_key: "value"
+    """
+    file = tmp_path / "test_config_required.yaml"
+    file.write_text(config_content)
+
+    config_service = ConfigService(file)
+
+    # Test that it raises ConfigError for a missing key
+    with pytest.raises(ConfigError, match="Required configuration key 'test_section.missing_key' not found"):
+        config_service.get_required("test_section.missing_key")
+
+    # Test that it returns the correct value for an existing key
+    assert config_service.get_required("test_section.existing_key") == "value"
+
+    # Test with a top-level missing key
+    with pytest.raises(ConfigError, match="Required configuration key 'non_existent_top_level_key' not found"):
+        config_service.get_required("non_existent_top_level_key")

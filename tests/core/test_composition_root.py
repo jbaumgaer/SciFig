@@ -8,6 +8,7 @@ from src.controllers.project_controller import ProjectController
 from src.core.composition_root import CompositionRoot
 from src.services.commands.command_manager import CommandManager
 
+from src.shared.exceptions import ConfigError
 from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.tool_bar_builder import (
     ToolBarActions,  # Assuming ToolBarActions is also a dataclass
@@ -474,3 +475,19 @@ def test_composition_root_initial_layout_mode_reflection(assembler, mock_model, 
     """
     # TODO: Implement test logic
     pass
+
+def test_assemble_core_components_raises_config_error_on_missing_figure_properties(assembler, mock_config_service):
+    """
+    Test that _assemble_core_components raises a ConfigError if required figure properties are missing
+    from the ConfigService.
+    """
+    # Configure the mock to raise KeyError for figure properties
+    def config_side_effect(key, default=None):
+        if key.startswith("figure.default_"):
+            raise ConfigError(f"Missing config key: {key}")
+        return default
+
+    mock_config_service.get.side_effect = config_side_effect
+
+    with pytest.raises(ConfigError, match="Missing config key: figure.default_"):
+        assembler._assemble_core_components()

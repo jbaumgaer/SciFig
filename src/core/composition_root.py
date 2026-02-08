@@ -70,18 +70,17 @@ class CompositionRoot:
         self._selection_tool: SelectionTool | None = None
         self._layout_manager: LayoutManager | None = None
 
-        self.logger.debug("ConfigService provided with path: configs/default_config.yaml") #TODO: This path should be an interactive path
+        self.logger.debug(f"ConfigService provided with path: {self._config_service.get('config_path', 'Not Provided')}")
         IconPath.set_config_service(self._config_service)
 
     def _assemble_core_components(self):
         """Assemble core models, managers, and controllers.
-        TODO: Change this to not assume any default values for figure properties. 
         Instead, require them to be set in the config and throw an error if they are missing."""
         self.logger.info("Assembling core components: Model, CommandManager, MainController, Renderer.")
-        figure_width = self._config_service.get("figure.default_width", 8.5)
-        figure_height = self._config_service.get("figure.default_height", 6)
-        figure_dpi = self._config_service.get("figure.default_dpi", 150)
-        figure_facecolor = self._config_service.get("figure.default_facecolor", "white")
+        figure_width = self._config_service.get_required("figure.default_width")
+        figure_height = self._config_service.get_required("figure.default_height")
+        figure_dpi = self._config_service.get_required("figure.default_dpi")
+        figure_facecolor = self._config_service.get_required("figure.default_facecolor")
         figure = Figure(figsize=(figure_width, figure_height), dpi=figure_dpi, facecolor=figure_facecolor)
         self.logger.debug(f"Figure created with dimensions: {figure_width}x{figure_height} @ {figure_dpi}dpi, Facecolor: {figure_facecolor}")
 
@@ -90,7 +89,7 @@ class CompositionRoot:
 
         # Instantiate layout components
         self._free_layout_engine = FreeLayoutEngine()
-        self._grid_layout_engine = GridLayoutEngine(config_service=self._config_service)
+        self._grid_layout_engine = GridLayoutEngine(config_service=self._config_service) #TODO: Having a default grid size in the config is a bit weird. It should just initialize to empty
         self._layout_manager = LayoutManager(
             application_model=self._model,
             free_engine=self._free_layout_engine,
