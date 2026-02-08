@@ -6,7 +6,7 @@ import pytest
 from src.services.commands.command_manager import CommandManager
 from src.shared.constants import LayoutMode
 from src.controllers.canvas_controller import CanvasController
-from src.controllers.main_controller import MainController
+from src.controllers.layout_controller import LayoutController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import (
@@ -41,8 +41,8 @@ def mock_canvas_widget():
 
 
 @pytest.fixture
-def mock_tool_manager():
-    """Provides a mock ToolManager."""
+def mock_tool_service():
+    """Provides a mock ToolService."""
     return MagicMock()
 
 
@@ -51,6 +51,7 @@ def mock_command_manager():
     """Provides a mock CommandManager."""
     return MagicMock(spec=CommandManager)
 
+
 @pytest.fixture
 def mock_layout_manager():
     """Provides a mock LayoutManager."""
@@ -58,26 +59,28 @@ def mock_layout_manager():
     manager.layout_mode = LayoutMode.FREE_FORM # Default to Free Form
     return manager
 
+
 @pytest.fixture
-def mock_main_controller():
-    """Provides a mock MainController."""
-    controller = MagicMock(spec=MainController)
+def mock_layout_controller():
+    """Provides a mock LayoutController."""
+    controller = MagicMock(spec=LayoutController)
+    controller._layout_manager = MagicMock()
     controller.apply_default_grid_layout = MagicMock() # Mock the method
     return controller
 
 
 @pytest.fixture
 def canvas_controller(
-    mock_model, mock_canvas_widget, mock_tool_manager, mock_command_manager, mock_layout_manager, mock_main_controller
+    mock_model, mock_canvas_widget, mock_tool_service, mock_command_manager, mock_layout_controller
 ):
     """Provides a CanvasController instance."""
     return CanvasController(
         model=mock_model,
         canvas_widget=mock_canvas_widget,
-        tool_manager=mock_tool_manager,
+        tool_manager=mock_tool_service,
         command_manager=mock_command_manager,
-        layout_manager=mock_layout_manager,
-        main_controller=mock_main_controller,
+        layout_controller=mock_layout_controller,
+        parent=None,
     )
 
 
@@ -116,7 +119,6 @@ def plot_node_with_mapping():
 def test_on_data_ready_sets_default_properties_for_new_data(
     canvas_controller,
     mock_model,
-    mock_command_manager,
     sample_dataframe,
     plot_node_empty_props,
 ):
@@ -149,7 +151,6 @@ def test_on_data_ready_sets_default_properties_for_new_data(
 def test_on_data_ready_does_not_overwrite_existing_properties(
     canvas_controller,
     mock_model,
-    mock_command_manager,
     sample_dataframe,
     plot_node_with_mapping,
 ):
@@ -258,3 +259,8 @@ def test_on_data_ready_in_grid_mode(
 
     mock_main_controller.apply_default_grid_layout.assert_called_once()
     mock_model.modelChanged.emit.assert_called_once()
+
+
+def test_correct_coordinate_conversion():
+    """Tests the correct _convert_qt_scene_to_mpl_figure_coords operation"""
+    pass
