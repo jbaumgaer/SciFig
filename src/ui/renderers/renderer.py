@@ -206,16 +206,17 @@ class Renderer:
     ):
         """
         Draws highlight rectangles for all selected nodes.
+        "TODO: These default values should be moved to the config
         """
         if selection:
             self.logger.debug(f"Rendering highlights for {len(selection)} selected nodes.")
         for node in selection:
             if isinstance(node, PlotNode):  # For now, we only highlight plots
-                left, b, w, h = node.geometry
+                left, bottom, width, height = node.geometry
                 highlight = patches.Rectangle(
-                    (left, b),
-                    w,
-                    h,
+                    (left, bottom),
+                    width,
+                    height,
                     facecolor="none",
                     edgecolor="cornflowerblue",
                     linewidth=2,

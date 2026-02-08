@@ -56,7 +56,7 @@ class PropertiesPanel(QWidget):
          #TODO: These are magic numbers and should go into config
 
         # Set initial state and text
-        initial_layout_mode = self.layout_controller._layout_manager.layout_mode # Access via controller
+        initial_layout_mode = self.layout_controller._layout_manager.layout_mode # This is a bit of a code smell
         self.layout_mode_toggle_button.setChecked(initial_layout_mode == LayoutMode.GRID)
         self._update_layout_mode_toggle_button_ui(initial_layout_mode)
 

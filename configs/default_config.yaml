@@ -145,6 +145,7 @@ themes:
       Link: [42, 130, 218]
       Highlight: [42, 130, 218]
       HighlightedText: [0, 0, 0]
+      PlaceholderText: [160, 160, 160]
   light:
     style: "Fusion"
     palette:
@@ -161,3 +162,4 @@ themes:
       Link: [0, 0, 238]
       Highlight: [51, 153, 255]
       HighlightedText: [255, 255, 255]
+      PlaceholderText: [128, 128, 128]

@@ -1,4 +1,6 @@
 import logging
+from functools import partial
+from typing import Any, Callable
 
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QDoubleValidator, QIcon, QIntValidator, QValidator
@@ -33,6 +35,47 @@ class LayoutUIFactory:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutUIFactory initialized.")
 
+    def _create_icon_button(self, icon_key: str, tooltip: str, command: Callable, parent: QWidget, object_name: str | None = None) -> QPushButton:
+        """
+        Helper to create an icon-only QPushButton with a tooltip and connected command.
+        """
+        button = QPushButton(QIcon(IconPath.get_path(icon_key)), "", parent)
+        button.setToolTip(tooltip)
+        if object_name:
+            button.setObjectName(object_name)
+        button.clicked.connect(command)
+        return button
+
+    def _create_parameter_line_edit(
+        self,
+        param_name: str,
+        initial_value: Any,
+        validator: QValidator | None,
+        container: QWidget,
+        layout_controller: LayoutController,
+        placeholder_text: str | None = None,
+        is_list_param: bool = False # Flag to indicate if the parameter is a list (e.g., hspace, wspace)
+    ) -> QLineEdit:
+        """
+        Helper to create a QLineEdit for editing a layout parameter.
+        Connects editingFinished signal to _handle_line_edit_change.
+        """
+        line_edit = QLineEdit(container)
+        line_edit.setObjectName(f"{param_name}_edit")
+        if initial_value is not None:
+            if is_list_param and isinstance(initial_value, list):
+                line_edit.setText(", ".join(map(str, initial_value)))
+            else:
+                line_edit.setText(str(initial_value))
+        if validator:
+            line_edit.setValidator(validator)
+        if placeholder_text:
+            line_edit.setPlaceholderText(placeholder_text)
+        
+        # Connect editingFinished to the handler, passing the line_edit instance
+        line_edit.editingFinished.connect(partial(self._handle_line_edit_change, layout_controller, param_name, line_edit))
+        return line_edit
+
     def build_layout_controls(self, layout_mode: LayoutMode, layout_controller: LayoutController, parent: QObject) -> QWidget:
         """
         Builds and returns a QWidget containing controls relevant to the given layout mode.
@@ -61,42 +104,24 @@ class LayoutUIFactory:
         align_layout.setContentsMargins(0,0,0,0)
 
         # Align Left
-        btn_align_left = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_horizontal_left")), "", container)
-        btn_align_left.setToolTip("Align Left")
-        btn_align_left.clicked.connect(lambda: layout_controller.align_selected_plots("left"))
-        align_layout.addWidget(btn_align_left)
+        align_layout.addWidget(self._create_icon_button("properties.alignment.align_horizontal_left", "Align Left", lambda: layout_controller.align_selected_plots("left"), container, "btn_align_left"))
 
         # Align Horizontal Center
-        btn_align_h_center = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_horizontal_center")), "", container)
-        btn_align_h_center.setToolTip("Align Horizontal Center")
-        btn_align_h_center.clicked.connect(lambda: layout_controller.align_selected_plots("h_center"))
-        align_layout.addWidget(btn_align_h_center)
+        align_layout.addWidget(self._create_icon_button("properties.alignment.align_horizontal_center", "Align Horizontal Center", lambda: layout_controller.align_selected_plots("h_center"), container, "btn_align_h_center"))
 
         # Align Right
-        btn_align_right = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_horizontal_right")), "", container)
-        btn_align_right.setToolTip("Align Right")
-        btn_align_right.clicked.connect(lambda: layout_controller.align_selected_plots("right"))
-        align_layout.addWidget(btn_align_right)
+        align_layout.addWidget(self._create_icon_button("properties.alignment.align_horizontal_right", "Align Right", lambda: layout_controller.align_selected_plots("right"), container, "btn_align_right"))
 
         align_layout.addStretch() # Spacer
 
         # Align Top
-        btn_align_top = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_vertical_top")), "", container)
-        btn_align_top.setToolTip("Align Top")
-        btn_align_top.clicked.connect(lambda: layout_controller.align_selected_plots("top"))
-        align_layout.addWidget(btn_align_top)
+        align_layout.addWidget(self._create_icon_button("properties.alignment.align_vertical_top", "Align Top", lambda: layout_controller.align_selected_plots("top"), container, "btn_align_top"))
 
         # Align Vertical Center
-        btn_align_v_center = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_vertical_center")), "", container)
-        btn_align_v_center.setToolTip("Align Vertical Center")
-        btn_align_v_center.clicked.connect(lambda: layout_controller.align_selected_plots("v_center"))
-        align_layout.addWidget(btn_align_v_center)
+        align_layout.addWidget(self._create_icon_button("properties.alignment.align_vertical_center", "Align Vertical Center", lambda: layout_controller.align_selected_plots("v_center"), container, "btn_align_v_center"))
 
         # Align Bottom
-        btn_align_bottom = QPushButton(QIcon(IconPath.get_path("properties.alignment.align_vertical_bottom")), "", container)
-        btn_align_bottom.setToolTip("Align Bottom")
-        btn_align_bottom.clicked.connect(lambda: layout_controller.align_selected_plots("bottom"))
-        align_layout.addWidget(btn_align_bottom)
+        align_layout.addWidget(self._create_icon_button("properties.alignment.align_vertical_bottom", "Align Bottom", lambda: layout_controller.align_selected_plots("bottom"), container, "btn_align_bottom"))
 
         layout.addWidget(QLabel("Alignment:")) # Label for clarity
         layout.addWidget(align_group_box)
@@ -107,16 +132,10 @@ class LayoutUIFactory:
         distribute_layout.setContentsMargins(0,0,0,0)
 
         # Distribute Horizontally
-        btn_distribute_h = QPushButton(QIcon(IconPath.get_path("properties.distribute.horizontal_distribute")), "", container)
-        btn_distribute_h.setToolTip("Distribute Horizontally")
-        btn_distribute_h.clicked.connect(lambda: layout_controller.distribute_selected_plots("horizontal"))
-        distribute_layout.addWidget(btn_distribute_h)
+        distribute_layout.addWidget(self._create_icon_button("properties.distribute.horizontal_distribute", "Distribute Horizontally", lambda: layout_controller.distribute_selected_plots("horizontal"), container, "btn_distribute_h"))
 
         # Distribute Vertically
-        btn_distribute_v = QPushButton(QIcon(IconPath.get_path("properties.distribute.vertical_distribute")), "", container)
-        btn_distribute_v.setToolTip("Distribute Vertically")
-        btn_distribute_v.clicked.connect(lambda: layout_controller.distribute_selected_plots("vertical"))
-        distribute_layout.addWidget(btn_distribute_v)
+        distribute_layout.addWidget(self._create_icon_button("properties.distribute.vertical_distribute", "Distribute Vertically", lambda: layout_controller.distribute_selected_plots("vertical"), container, "btn_distribute_v"))
 
         layout.addWidget(QLabel("Distribution:")) # Label for clarity
         layout.addWidget(distribute_group_box)
@@ -154,85 +173,47 @@ class LayoutUIFactory:
 
         is_grid_inferred = not is_default_grid_config(current_grid_config)
 
-        # Rows (QLineEdit)
-        line_rows = QLineEdit(container)
-        line_rows.setValidator(QIntValidator(1, 99))
-        line_rows.setText(str(current_grid_config.rows) if is_grid_inferred else "")
-        current_line_rows = line_rows # Capture the QLineEdit object
-        line_rows.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "rows", current_line_rows))
+        # Rows
+        line_rows = self._create_parameter_line_edit("rows", current_grid_config.rows if is_grid_inferred else None, QIntValidator(1, 99), container, layout_controller)
         form_layout.addRow("Rows:", line_rows)
 
-        # Columns (QLineEdit)
-        line_cols = QLineEdit(container)
-        line_cols.setValidator(QIntValidator(1, 99))
-        line_cols.setText(str(current_grid_config.cols) if is_grid_inferred else "")
-        current_line_cols = line_cols # Capture the QLineEdit object
-        line_cols.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "cols", current_line_cols))
+        # Columns
+        line_cols = self._create_parameter_line_edit("cols", current_grid_config.cols if is_grid_inferred else None, QIntValidator(1, 99), container, layout_controller)
         form_layout.addRow("Cols:", line_cols)
 
-        # Granular Margins (QLineEdit)
-        # Top Margin
-        line_margin_top = QLineEdit(container)
-        # line_margin_top.setValidator(QDoubleValidator(0.0, 0.5, 3)) # Allow 3 decimal places - Temporarily commented out to enable editingFinished signal.
-        line_margin_top.setText(str(current_grid_config.margins.top) if is_grid_inferred else "")
-        current_line_margin_top = line_margin_top # Capture the QLineEdit object
-        line_margin_top.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "margin_top", current_line_margin_top)) # TODO: Manual parsing/validation required for editingFinished
+        # Granular Margins
+        line_margin_top = self._create_parameter_line_edit("margin_top", current_grid_config.margins.top if is_grid_inferred else None, None, container, layout_controller)
         form_layout.addRow("Margin Top:", line_margin_top)
-
-        # Bottom Margin
-        line_margin_bottom = QLineEdit(container)
-        # line_margin_bottom.setValidator(QDoubleValidator(0.0, 0.5, 3)) # Temporarily commented out to enable editingFinished signal.
-        line_margin_bottom.setText(str(current_grid_config.margins.bottom) if is_grid_inferred else "")
-        current_line_margin_bottom = line_margin_bottom # Capture the QLineEdit object
-        line_margin_bottom.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "margin_bottom", current_line_margin_bottom)) # TODO: Manual parsing/validation required for editingFinished
+        
+        line_margin_bottom = self._create_parameter_line_edit("margin_bottom", current_grid_config.margins.bottom if is_grid_inferred else None, None, container, layout_controller)
         form_layout.addRow("Margin Bottom:", line_margin_bottom)
-
-        # Left Margin
-        line_margin_left = QLineEdit(container)
-        # line_margin_left.setValidator(QDoubleValidator(0.0, 0.5, 3)) # Temporarily commented out to enable editingFinished signal.
-        line_margin_left.setText(str(current_grid_config.margins.left) if is_grid_inferred else "")
-        current_line_margin_left = line_margin_left # Capture the QLineEdit object
-        line_margin_left.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "margin_left", current_line_margin_left)) # TODO: Manual parsing/validation required for editingFinished
+        
+        line_margin_left = self._create_parameter_line_edit("margin_left", current_grid_config.margins.left if is_grid_inferred else None, None, container, layout_controller)
         form_layout.addRow("Margin Left:", line_margin_left)
-
-        # Right Margin
-        line_margin_right = QLineEdit(container)
-        # line_margin_right.setValidator(QDoubleValidator(0.0, 0.5, 3)) # Temporarily commented out to enable editingFinished signal.
-        line_margin_right.setText(str(current_grid_config.margins.right) if is_grid_inferred else "")
-        current_line_margin_right = line_margin_right # Capture the QLineEdit object
-        line_margin_right.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "margin_right", current_line_margin_right)) # TODO: Manual parsing/validation required for editingFinished
+        
+        line_margin_right = self._create_parameter_line_edit("margin_right", current_grid_config.margins.right if is_grid_inferred else None, None, container, layout_controller)
         form_layout.addRow("Margin Right:", line_margin_right)
 
-        # Gutters (QLineEdit for list-based input)
-        # Horizontal Space (hspace)
-        line_hspace = QLineEdit(container)
-        # Display current hspace list as comma-separated string
-        line_hspace.setText(", ".join(map(str, current_grid_config.gutters.hspace)) if is_grid_inferred else "")
-        line_hspace.setPlaceholderText("e.g., 0.1, 0.2")
-        current_line_hspace = line_hspace # Capture the QLineEdit object
-        line_hspace.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "hspace", current_line_hspace)) # TODO: Manual parsing/validation required for editingFinished
+        # Gutters (list-based input)
+        line_hspace = self._create_parameter_line_edit("hspace", current_grid_config.gutters.hspace if is_grid_inferred else None, None, container, layout_controller, placeholder_text="e.g., 0.1, 0.2", is_list_param=True)
         form_layout.addRow("H-Space (csv):", line_hspace)
 
-        # Vertical Space (wspace)
-        line_wspace = QLineEdit(container)
-        # Display current wspace list as comma-separated string
-        line_wspace.setText(", ".join(map(str, current_grid_config.gutters.wspace)) if is_grid_inferred else "")
-        line_wspace.setPlaceholderText("e.g., 0.1, 0.2")
-        current_line_wspace = line_wspace # Capture the QLineEdit object
-        line_wspace.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "wspace", current_line_wspace)) # TODO: Manual parsing/validation required for editingFinished
+        line_wspace = self._create_parameter_line_edit("wspace", current_grid_config.gutters.wspace if is_grid_inferred else None, None, container, layout_controller, placeholder_text="e.g., 0.1, 0.2", is_list_param=True)
         form_layout.addRow("W-Space (csv):", line_wspace)
 
 
         overall_container_layout.addLayout(form_layout)
         
         # Infer Grid Button
-        btn_infer_grid = QPushButton(QIcon(IconPath.get_path("properties.infer_grid")), "Infer Grid", container)
+        btn_infer_grid = QPushButton("Infer Grid", container)
+        btn_infer_grid.setIcon(QIcon(IconPath.get_path("properties.infer_grid")))
         btn_infer_grid.setToolTip("Infer grid parameters (rows, cols, margins, gutters) from current free-form plot positions.")
         btn_infer_grid.clicked.connect(self._layout_manager.infer_grid_parameters)
         overall_container_layout.addWidget(btn_infer_grid)
 
         # Optimize Layout Button (formerly Snap to Grid)
-        btn_optimize_layout = QPushButton(QIcon(IconPath.get_path("properties.optimize_layout")), "Optimize Layout", container)
+        btn_optimize_layout = QPushButton("Optimize Layout", container)
+        btn_optimize_layout.setIcon(QIcon(IconPath.get_path("properties.optimize_layout")))
         btn_optimize_layout.setToolTip("Optimize layout using current grid parameters and Matplotlib's constrained layout.")
         btn_optimize_layout.clicked.connect(self._layout_manager.optimize_layout_action)
         overall_container_layout.addWidget(btn_optimize_layout)
@@ -242,9 +223,6 @@ class LayoutUIFactory:
         return container
 
     def _handle_line_edit_change(self, layout_controller: LayoutController, param_name: str, line_edit: QLineEdit):
-        # TODO: Manual parsing/validation required for editingFinished.
-        # QDoubleValidator appears to suppress editingFinished, so we are disabling it for now.
-        # This function will now receive values for margin fields without prior QDoubleValidator validation.
         raw_value = line_edit.text()
         value_to_pass = raw_value # Default to passing raw string
 
@@ -260,6 +238,21 @@ class LayoutUIFactory:
                     self.logger.debug(f"LayoutUIFactory: Could not convert '{raw_value}' to float for {param_name}, passing as string.")
             else:
                 self.logger.warning(f"LayoutUIFactory: Input for {param_name} ('{raw_value}') is not acceptable (state: {state}). Not processing.")
+                # Restore the original text if validation fails
+                if param_name.startswith("margin"):
+                    current_grid_config = self._layout_manager._last_grid_config
+                    if param_name == "margin_top": line_edit.setText(str(current_grid_config.margins.top))
+                    elif param_name == "margin_bottom": line_edit.setText(str(current_grid_config.margins.bottom))
+                    elif param_name == "margin_left": line_edit.setText(str(current_grid_config.margins.left))
+                    elif param_name == "margin_right": line_edit.setText(str(current_grid_config.margins.right))
+                elif param_name == "rows":
+                    line_edit.setText(str(self._layout_manager._last_grid_config.rows))
+                elif param_name == "cols":
+                    line_edit.setText(str(self._layout_manager._last_grid_config.cols))
+                elif param_name == "hspace":
+                    line_edit.setText(", ".join(map(str, self._layout_manager._last_grid_config.gutters.hspace)))
+                elif param_name == "wspace":
+                    line_edit.setText(", ".join(map(str, self._layout_manager._last_grid_config.gutters.wspace)))
                 return # Do not process invalid input if a validator is present and rejects it.
         else:
             # If no validator, attempt conversion to float, otherwise pass as string
