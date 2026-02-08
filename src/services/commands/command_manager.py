@@ -13,8 +13,8 @@ class CommandManager:
         self.model = model
         self._undo_stack: list[BaseCommand] = []
         self._redo_stack: list[BaseCommand] = []
-        self.logger = logging.getLogger(self.__class__.__name__) # Added logger
-        self.logger.info("CommandManager initialized.") # Added log
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info("CommandManager initialized.")
 
     def execute_command(self, command: BaseCommand):
         """

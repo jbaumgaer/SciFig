@@ -10,10 +10,10 @@
       "name": "Top-Left Plot",
       "id": "plot_001",
       "visible": true,
-      "geometry": { "x": 0.02, "y": 0.52, "width": 0.46, "height": 0.46 },
+      "geometry": { "x": 0.07, "y": 0.57, "width": 0.4, "height": 0.4 },
       "plot_properties": {
         "plot_type": "line",
-        "title": "Default Top-Left",
+        "title": "",
         "xlabel": "X-Axis",
         "ylabel": "Y-Axis",
         "line_color": "#FF0000"
@@ -24,10 +24,10 @@
       "name": "Top-Right Plot",
       "id": "plot_002",
       "visible": true,
-      "geometry": { "x": 0.52, "y": 0.52, "width": 0.46, "height": 0.46 },
+      "geometry": { "x": 0.57, "y": 0.57, "width": 0.4, "height": 0.4 },
       "plot_properties": {
         "plot_type": "line",
-        "title": "Default Top-Right",
+        "title": "",
         "xlabel": "X-Axis",
         "ylabel": "Y-Axis",
         "line_color": "#00FF00"
@@ -38,10 +38,10 @@
       "name": "Bottom-Left Plot",
       "id": "plot_003",
       "visible": true,
-      "geometry": { "x": 0.02, "y": 0.02, "width": 0.46, "height": 0.46 },
+      "geometry": { "x": 0.07, "y": 0.08, "width": 0.4, "height": 0.4 },
       "plot_properties": {
         "plot_type": "scatter",
-        "title": "Default Bottom-Left",
+        "title": "",
         "xlabel": "X-Axis",
         "ylabel": "Y-Axis",
         "marker_color": "#0000FF"
@@ -52,10 +52,10 @@
       "name": "Bottom-Right Plot",
       "id": "plot_004",
       "visible": true,
-      "geometry": { "x": 0.52, "y": 0.02, "width": 0.46, "height": 0.46 },
+      "geometry": { "x": 0.57, "y": 0.08, "width": 0.4, "height": 0.4 },
       "plot_properties": {
         "plot_type": "line",
-        "title": "Default Bottom-Right",
+        "title": "",
         "xlabel": "X-Axis",
         "ylabel": "Y-Axis",
         "line_color": "#FFFF00"

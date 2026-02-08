@@ -37,26 +37,22 @@ class CompositionRoot:
     """
 
     def __init__(self, app: QApplication, config_service: ConfigService):
-        self._app = app
-        self._config_service = config_service # Stored config_service
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("CompositionRoot initialized.")
-        self.logger.debug("ConfigService provided with path: configs/default_config.yaml")
 
-        IconPath.set_config_service(self._config_service)
+        self._app = app
 
-        # Core components
-        self._model: ApplicationModel | None = None
-        self._command_manager: CommandManager | None = None
-        # self._main_controller: MainController | None = None # Removed
+        # Controllers
+        self._canvas_controller: CanvasController | None = None
         self._project_controller: ProjectController | None = None
         self._layout_controller: LayoutController | None = None
         self._node_controller: NodeController | None = None
-        self._plot_types: list = []
-        self._layout_manager: LayoutManager | None = None # New
-        self._free_layout_engine: FreeLayoutEngine | None = None # New
-        self._grid_layout_engine: GridLayoutEngine | None = None # New
-        self._layout_ui_factory: LayoutUIFactory | None = None # New
+
+        # Models
+        self._model: ApplicationModel | None = None
+        self._plot_types: list = [] #TODO: Why do plot_types have to be initialized already now? And do they really have to be owned as attributed by the Composition Root?
+        self._free_layout_engine: FreeLayoutEngine | None = None
+        self._grid_layout_engine: GridLayoutEngine | None = None
 
         # UI components
         self._menu_bar: QMenuBar | None = None
@@ -64,17 +60,23 @@ class CompositionRoot:
         self._tool_bar: QToolBar | None = None
         self._tool_bar_actions: ToolBarActions | None = None
         self._view: MainWindow | None = None
+        self._layout_ui_factory: LayoutUIFactory | None = None
         self._properties_ui_factory: PropertiesUIFactory | None = None
 
-        # Tooling components
+        # Services
+        self._config_service = config_service
+        self._command_manager: CommandManager | None = None
         self._tool_manager: ToolService | None = None
         self._selection_tool: SelectionTool | None = None
+        self._layout_manager: LayoutManager | None = None
 
-        # Other controllers
-        self._canvas_controller: CanvasController | None = None
+        self.logger.debug("ConfigService provided with path: configs/default_config.yaml") #TODO: This path should be an interactive path
+        IconPath.set_config_service(self._config_service)
 
     def _assemble_core_components(self):
-        """Assemble core models, managers, and controllers."""
+        """Assemble core models, managers, and controllers.
+        TODO: Change this to not assume any default values for figure properties. 
+        Instead, require them to be set in the config and throw an error if they are missing."""
         self.logger.info("Assembling core components: Model, CommandManager, MainController, Renderer.")
         figure_width = self._config_service.get("figure.default_width", 8.5)
         figure_height = self._config_service.get("figure.default_height", 6)

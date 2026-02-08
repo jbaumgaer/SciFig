@@ -168,3 +168,12 @@ src/controllers/__pycache__/project_controller.cpython-313.pyc
 data/test.sci
 app.log.1
 app.log
+tests/commands/__pycache__/test_change_property_command.cpython-314-pytest-9.0.2.pyc
+tests/commands/__pycache__/test_change_property_command.cpython-314-pytest-9.0.2.pyc
+tests/controllers/__pycache__/test_layout_controller.cpython-313-pytest-9.0.2.pyc
+tests/commands/__pycache__/test_change_property_command.cpython-314-pytest-9.0.2.pyc
+tests/controllers/__pycache__/test_project_controller.cpython-313-pytest-9.0.2.pyc
+tests/services/commands/__pycache__/test_change_property_command.cpython-313-pytest-9.0.2.pyc
+tests/services/commands/__pycache__/test_change_property_command.cpython-314-pytest-9.0.2.pyc
+tests/ui/builders/__pycache__/test_menu_bar_builder.cpython-313-pytest-9.0.2.pyc
+src/services/commands/__pycache__/change_grid_parameters_command.cpython-313.pyc

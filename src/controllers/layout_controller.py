@@ -1,7 +1,6 @@
 import logging
 
 from PySide6.QtCore import QObject
-from PySide6.QtWidgets import QMessageBox
 
 from src.models.application_model import ApplicationModel
 from src.services.commands.command_manager import CommandManager
@@ -79,21 +78,86 @@ class LayoutController(QObject):
         else:
             self.logger.info("No geometry changes after distribution calculation.")
 
-    def apply_grid_layout_from_ui(self, rows: int, cols: int, margin: float, gutter: float):
-        """
-        Applies a new grid layout with specified rows, columns, margin, and gutter.
-        This is typically called from the UI.
-        """
-        self.logger.info(f"LayoutController received request to apply grid layout from UI: {rows}x{cols}, Margin: {margin}, Gutter: {gutter}")
-        # The actual logic for applying the layout is now in update_grid_parameters
-        new_geometries = self._layout_manager.update_grid_layout_parameters(rows=rows, cols=cols, margin=margin, gutter=gutter)
+import logging
+from typing import Any, List, Optional
+from PySide6.QtCore import QObject
 
-        if new_geometries:
-            command = BatchChangePlotGeometryCommand(self.model, new_geometries, f"Apply {rows}x{cols} Grid Layout")
-            self.command_manager.execute_command(command)
-            self.logger.debug(f"Executed BatchChangePlotGeometryCommand for {rows}x{cols} grid layout.")
+from src.models.application_model import ApplicationModel
+from src.services.commands.command_manager import CommandManager
+from src.services.layout_manager import LayoutManager
+from src.shared.constants import LayoutMode
+from src.services.commands.batch_change_plot_geometry_command import BatchChangePlotGeometryCommand
+from src.models.nodes.plot_node import PlotNode
+from src.models.layout.layout_config import GridConfig, Margins # Added import for isinstance check and Margins
+from src.services.commands.change_grid_parameters_command import ChangeGridParametersCommand # Import new command
+
+
+class LayoutController(QObject):
+    def __init__(self, model: ApplicationModel, command_manager: CommandManager, layout_manager: LayoutManager):
+        super().__init__()
+        self.model = model
+        self.command_manager = command_manager
+        self._layout_manager = layout_manager
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info("LayoutController initialized.")
+
+    def set_layout_mode(self, mode: LayoutMode):
+        """
+        Sets the application's layout mode via the LayoutManager.
+        """
+        self.logger.info(f"LayoutController received request to set layout mode to: {mode.value}")
+        self._layout_manager.set_layout_mode(mode)
+
+    def toggle_layout_mode(self, checked: bool):
+        """
+        Toggles the layout mode between GRID and FREE_FORM based on the checked state
+        of a UI element (e.g., a QAction).
+        """
+        if checked:
+            self.set_layout_mode(LayoutMode.GRID)
+            self.logger.info("Layout mode toggled to GRID.")
         else:
-            self.logger.info("No geometry changes after applying grid layout.")
+            self.set_layout_mode(LayoutMode.FREE_FORM)
+            self.logger.info("Layout mode toggled to FREE_FORM.")
+
+    def align_selected_plots(self, edge: str):
+        """
+        Aligns the currently selected plots.
+        """
+        self.logger.info(f"LayoutController received request to align selected plots to: {edge}")
+        selected_plots = [node for node in self.model.selection if isinstance(node, PlotNode)]
+        if not selected_plots:
+            self.logger.warning("No plots selected for alignment.")
+            return
+
+        # Delegate to LayoutManager to calculate new geometries
+        new_geometries = self._layout_manager.perform_align(selected_plots, edge)
+        if new_geometries:
+            # Wrap changes in a command for undo/redo
+            command = BatchChangePlotGeometryCommand(self.model, new_geometries, "Align Plots")
+            self.command_manager.execute_command(command)
+            self.logger.debug(f"Executed BatchChangePlotGeometryCommand for aligning plots to {edge}.")
+        else:
+            self.logger.info("No geometry changes after alignment calculation.")
+
+    def distribute_selected_plots(self, axis: str):
+        """
+        Distributes the currently selected plots.
+        """
+        self.logger.info(f"LayoutController received request to distribute selected plots along: {axis}")
+        selected_plots = [node for node in self.model.selection if isinstance(node, PlotNode)]
+        if not selected_plots:
+            self.logger.warning("No plots selected for distribution.")
+            return
+
+        # Delegate to LayoutManager to calculate new geometries
+        new_geometries = self._layout_manager.perform_distribute(selected_plots, axis)
+        if new_geometries:
+            command = BatchChangePlotGeometryCommand(self.model, new_geometries, "Distribute Plots")
+            self.command_manager.execute_command(command)
+            self.logger.debug(f"Executed BatchChangePlotGeometryCommand for distributing plots along {axis}.")
+        else:
+            self.logger.info("No geometry changes after distribution calculation.")
 
     def snap_free_plots_to_grid_action(self):
         """
@@ -105,22 +169,92 @@ class LayoutController(QObject):
         self._layout_manager.set_layout_mode(LayoutMode.GRID)
         self.logger.debug("Switched layout mode to GRID to snap plots.")
 
-    def update_grid_parameters(self, rows: int, cols: int, margin: float, gutter: float):
+    def on_grid_layout_param_changed(self, param_name: str, value: Any):
         """
-        Updates the grid layout parameters and applies the layout.
-        This method is designed to be called by debounced UI signals.
+        Handles changes from granular UI controls for grid layout parameters.
+        Collects changes and dispatches a ChangeGridParametersCommand.
+        TODO: This is doing redundante work to some of the validators in other parts of the program because I'm also validating input here
         """
-        self.logger.info(f"Updating grid parameters: Rows={rows}, Cols={cols}, Margin={margin}, Gutter={gutter}")
+        self.logger.debug(f"Grid layout param changed: {param_name} = {value}")
 
-        # Call the layout manager's method directly with individual parameters
-        new_geometries = self._layout_manager.update_grid_layout_parameters(rows=rows, cols=cols, margin=margin, gutter=gutter)
+        current_grid_config: GridConfig = self._layout_manager._last_grid_config
+        old_grid_config = current_grid_config # Store for undo
 
-        if new_geometries:
-            command = BatchChangePlotGeometryCommand(self.model, new_geometries, f"Update Grid Layout ({rows}x{cols})")
-            self.command_manager.execute_command(command)
-            self.logger.debug("Executed BatchChangePlotGeometryCommand for updating grid layout with new parameters.")
+        # Initialize new_config_params with current values
+        new_rows = current_grid_config.rows
+        new_cols = current_grid_config.cols
+        new_margins = current_grid_config.margins
+        new_gutters = current_grid_config.gutters
+
+        changed = False
+
+        if param_name == "rows":
+            try:
+                new_rows = int(value)
+                if new_rows <= 0: raise ValueError("Rows must be positive")
+                changed = new_rows != current_grid_config.rows
+            except ValueError:
+                self.logger.warning(f"Invalid value for rows: {value}")
+                return
+        elif param_name == "cols":
+            try:
+                new_cols = int(value)
+                if new_cols <= 0: raise ValueError("Cols must be positive")
+                changed = new_cols != current_grid_config.cols
+            except ValueError:
+                self.logger.warning(f"Invalid value for cols: {value}")
+                return
+        elif param_name.startswith("margin_"):
+            try:
+                margin_value = float(value)
+                if not (0.0 <= margin_value <= 0.5): raise ValueError("Margin must be between 0.0 and 0.5")
+                
+                # Create a new Margins object for immutability
+                temp_margins_dict = new_margins.to_dict()
+                temp_margins_dict[param_name.replace("margin_", "")] = margin_value
+                new_margins = Margins.from_dict(temp_margins_dict)
+                changed = new_margins != current_grid_config.margins
+            except ValueError:
+                self.logger.warning(f"Invalid value for {param_name}: {value}")
+                return
+        elif param_name == "hspace":
+            try:
+                # Interpret empty string as empty list for hspace
+                new_hspace = [float(x.strip()) for x in value.split(',') if x.strip()] if value else []
+                new_gutters = new_gutters.from_dict({"hspace": new_hspace, "wspace": new_gutters.wspace})
+                changed = new_gutters.hspace != current_grid_config.gutters.hspace
+            except ValueError:
+                self.logger.warning(f"Invalid value for hspace: {value}. Must be comma-separated numbers.")
+                return
+        elif param_name == "wspace":
+            try:
+                # Interpret empty string as empty list for wspace
+                new_wspace = [float(x.strip()) for x in value.split(',') if x.strip()] if value else []
+                new_gutters = new_gutters.from_dict({"hspace": new_gutters.hspace, "wspace": new_wspace})
+                changed = new_gutters.wspace != current_grid_config.gutters.wspace
+            except ValueError:
+                self.logger.warning(f"Invalid value for wspace: {value}. Must be comma-separated numbers.")
+                return
         else:
-            self.logger.info("No geometry changes after updating grid parameters.")
+            self.logger.warning(f"Unknown grid parameter: {param_name}")
+            return
+
+        if changed:
+            new_grid_config = GridConfig(
+                rows=new_rows,
+                cols=new_cols,
+                row_ratios=current_grid_config.row_ratios, # Preserve for now
+                col_ratios=current_grid_config.col_ratios, # Preserve for now
+                margins=new_margins,
+                gutters=new_gutters
+            )
+            self.logger.debug(f"Creating ChangeGridParametersCommand with new_grid_config margins: {new_grid_config.margins}")
+            self.logger.debug(f"Creating ChangeGridParametersCommand with new_grid_config gutters: {new_grid_config.gutters}")
+            command = ChangeGridParametersCommand(self.model, self._layout_manager, old_grid_config, new_grid_config)
+            self.command_manager.execute_command(command)
+            self.logger.debug(f"Executed ChangeGridParametersCommand for {param_name} change.")
+        else:
+            self.logger.debug(f"Parameter {param_name} did not change or value was invalid.")
 
     def apply_default_grid_layout(self):
         """
@@ -134,22 +268,16 @@ class LayoutController(QObject):
             self.logger.warning("No plots in scene to apply default grid layout.")
             return
 
-        # Call update_grid_parameters with None for rows/cols to trigger inference
-        # and use default margin/gutter from config.
-        # This implicitly uses the defaults from _create_default_grid_config
-        # and infers rows/cols if needed.
-        new_geometries = self._layout_manager.update_grid_layout_parameters(rows=None, cols=None)
+        # Get the default grid config
+        default_grid_config = self._layout_manager._create_default_grid_config()
 
-        if new_geometries:
-            # The description for the command should reflect that it's a default application
-            current_grid_config = self._layout_manager.current_layout_config # Get the config after update
-            if isinstance(current_grid_config, GridConfig): # Fix: import GridConfig
-                description = f"Apply Default Grid Layout ({current_grid_config.rows}x{current_grid_config.cols})"
-            else:
-                description = "Apply Default Grid Layout (FreeForm fallback)"
-
-            command = BatchChangePlotGeometryCommand(self.model, new_geometries, description)
-            self.command_manager.execute_command(command)
-            self.logger.debug("Executed BatchChangePlotGeometryCommand for default grid layout.")
+        # If current mode is not GRID, setting it will apply the default config
+        if self._layout_manager.layout_mode != LayoutMode.GRID:
+            self._layout_manager.set_layout_mode(LayoutMode.GRID)
+            # The set_layout_mode will implicitly apply the _last_grid_config (which is now default_grid_config)
         else:
-            self.logger.info("No geometry changes after applying default grid layout.")
+            # If already in GRID mode, apply the default config explicitly
+            current_grid_config = self._layout_manager._last_grid_config
+            command = ChangeGridParametersCommand(self.model, self._layout_manager, current_grid_config, default_grid_config, "Apply Default Grid Layout")
+            self.command_manager.execute_command(command)
+            self.logger.debug("Executed ChangeGridParametersCommand for default grid layout.")

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import Any, TypeVar, List
+from src.shared.types import Margins, Gutters # Import new types
 
 from src.shared.constants import LayoutMode
 
@@ -69,9 +70,11 @@ class GridConfig(LayoutConfig):
     rows: int = 2
     cols: int = 2
     row_ratios: list[float] = field(default_factory=list) # Empty means equal distribution
-    col_ratios: list[float] = field(default_factory=list) # Empty means equal distribution
-    margin: float = 0.05 # Margin around the entire grid (0.0 to 1.0) 
-    gutter: float = 0.05 # Space between grid cells (0.0 to 1.0)
+    col_ratios: List[float] = field(default_factory=list) # Empty means equal distribution
+    margins: Margins = field(default_factory=Margins)
+    gutters: Gutters = field(default_factory=Gutters)
+
+
     mode: LayoutMode = field(default=LayoutMode.GRID, init=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -81,8 +84,8 @@ class GridConfig(LayoutConfig):
             "cols": self.cols,
             "row_ratios": self.row_ratios,
             "col_ratios": self.col_ratios,
-            "margin": self.margin,
-            "gutter": self.gutter,
+            "margins": self.margins.to_dict(),
+            "gutters": self.gutters.to_dict(),
         }
 
     @staticmethod
@@ -92,6 +95,6 @@ class GridConfig(LayoutConfig):
             cols=data.get("cols", 2),
             row_ratios=data.get("row_ratios", []),
             col_ratios=data.get("col_ratios", []),
-            margin=data.get("margin", 0.05),
-            gutter=data.get("gutter", 0.05)
+            margins=Margins.from_dict(data.get("margins", {})),
+            gutters=Gutters.from_dict(data.get("gutters", {})),
         )

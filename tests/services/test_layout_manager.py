@@ -6,7 +6,7 @@ from src.services.config_service import ConfigService
 from src.models.layout.layout_engine import FreeLayoutEngine, GridLayoutEngine, LayoutMode
 from src.services.layout_manager import LayoutManager
 from src.models.application_model import ApplicationModel
-from src.models.layout.layout_config import GridConfig
+from src.models.layout.layout_config import FreeConfig, GridConfig
 from src.models.nodes import GroupNode, PlotNode
 
 

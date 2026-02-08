@@ -121,41 +121,39 @@ class ProjectController(QObject):
 
         self.logger.info(f"Saving project to: {file_path}")
 
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir_str:
+                temp_dir = Path(temp_dir_str)
+                data_dir = temp_dir / "data"
+                data_dir.mkdir()
+                self.logger.debug(f"Temporary directory for save: {temp_dir}")
 
-        with tempfile.TemporaryDirectory() as temp_dir_str:
-            temp_dir = Path(temp_dir_str)
-            data_dir = temp_dir / "data"
-            data_dir.mkdir()
-            self.logger.debug(f"Temporary directory for save: {temp_dir}")
+                # 1. Save all dataframes to parquet files
+                for node in self.model.scene_root.all_descendants():
+                    if isinstance(node, PlotNode) and node.data is not None:
+                        parquet_path = data_dir / f"{node.id}.parquet"
+                        node.data.to_parquet(parquet_path)
+                        self.logger.debug(f"Saved data for node {node.id} to {parquet_path}")
 
+                # 2. Get the model dictionary (which now contains data_path)
+                project_dict = self.model.to_dict()
 
-            # 1. Save all dataframes to parquet files
-            for node in self.model.scene_root.all_descendants():
-                if isinstance(node, PlotNode) and node.data is not None:
-                    parquet_path = data_dir / f"{node.id}.parquet"
-                    node.data.to_parquet(parquet_path)
-                    self.logger.debug(f"Saved data for node {node.id} to {parquet_path}")
+                # 3. Save the project dictionary to project.json
+                json_path = temp_dir / "project.json"
+                with open(json_path, "w") as f:
+                    json.dump(project_dict, f, indent=4)
+                self.logger.debug(f"Saved project metadata to {json_path}")
 
-            # 2. Get the model dictionary (which now contains data_path)
-            project_dict = self.model.to_dict()
+                # 4. Zip the contents of the temporary directory
+                with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for file_to_zip in temp_dir.rglob("*"):
+                        zf.write(file_to_zip, file_to_zip.relative_to(temp_dir))
+                self.logger.debug(f"Zipped project contents to {file_path}")
 
-            # 3. Save the project dictionary to project.json
-            json_path = temp_dir / "project.json"
-            with open(json_path, "w") as f:
-                json.dump(project_dict, f, indent=4)
-            self.logger.debug(f"Saved project metadata to {json_path}")
-
-
-            # 4. Zip the contents of the temporary directory
-            with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                for file_to_zip in temp_dir.rglob("*"):
-                    zf.write(file_to_zip, file_to_zip.relative_to(temp_dir))
-            self.logger.debug(f"Zipped project contents to {file_path}")
-
-
-            self._add_to_recent_files(file_path)
-            self.logger.info(f"Project saved to {file_path}")
-
+                self._add_to_recent_files(file_path)
+                self.logger.info(f"Project saved to {file_path}")
+        except (IOError, zipfile.BadZipFile, Exception) as e:
+            self.logger.error(f"Error saving project to '{file_path}': {e}", exc_info=True)
     def open_project(self, file_path: str | None = None, parent: QWidget = None):
         """Opens a .sci project file."""
         if not file_path:

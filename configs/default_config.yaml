@@ -50,10 +50,16 @@ layout:
   default_gutter: 0.08
   max_recent_files: 10
   default_template: "2x2_default.json" # Points to a file in configs/layouts
-  default_grid_rows: 2 # New
-  default_grid_cols: 2 # New
-  grid_margin: 0.05 # New
-  grid_gutter: 0.05 # New
+  default_grid_rows: 2
+  default_grid_cols: 2
+  grid_margin_top: 0.05
+  grid_margin_bottom: 0.05
+  grid_margin_left: 0.05
+  grid_margin_right: 0.05
+  grid_hspace: [] # Default to empty list for flexible spacing
+  grid_wspace: [] # Default to empty list for flexible spacing
+  constrained_w_space: 0.02 # Default constrained layout width space
+  constrained_h_space: 0.02 # Default constrained layout height space
 
 # Free Form Layout Defaults (new section)
 free_form_layout:

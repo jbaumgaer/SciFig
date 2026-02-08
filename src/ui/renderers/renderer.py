@@ -189,7 +189,7 @@ class Renderer:
         """
         Renders a single RectangleNode.
         """
-        self.logger.debug(f"Rendering RectangleNode: {node.name} (ID: {node.id}). (Placeholder)") # Added log
+        self.logger.debug(f"Rendering RectangleNode: {node.name} (ID: {node.id}). (Placeholder)")
         # Placeholder for rendering a rectangle
         pass
 
@@ -197,7 +197,7 @@ class Renderer:
         """
         Renders a single TextNode.
         """
-        self.logger.debug(f"Rendering TextNode: {node.name} (ID: {node.id}). (Placeholder)") # Added log
+        self.logger.debug(f"Rendering TextNode: {node.name} (ID: {node.id}). (Placeholder)")
         # Placeholder for rendering text
         pass
 
@@ -208,7 +208,7 @@ class Renderer:
         Draws highlight rectangles for all selected nodes.
         """
         if selection:
-            self.logger.debug(f"Rendering highlights for {len(selection)} selected nodes.") # Added log
+            self.logger.debug(f"Rendering highlights for {len(selection)} selected nodes.")
         for node in selection:
             if isinstance(node, PlotNode):  # For now, we only highlight plots
                 left, b, w, h = node.geometry
@@ -225,4 +225,4 @@ class Renderer:
                     zorder=1000,
                 )
                 figure.add_artist(highlight)
-                self.logger.debug(f"  Highlight rendered for PlotNode: {node.name} (ID: {node.id}).") # Added log
+                self.logger.debug(f"  Highlight rendered for PlotNode: {node.name} (ID: {node.id}).")

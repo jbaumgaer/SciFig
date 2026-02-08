@@ -167,138 +167,245 @@ This epic focuses on externalizing various application settings, user preference
 
 ---
 
-## Epic: Dynamic Layout UI & Enhanced Grid Interaction
+##  Epic: Dynamic Grid Layout with constrained_layout Integration
 
-**Overarching Goal:** To enhance the user experience of the Layout Management System by integrating dynamic layout controls directly into the properties panel, providing clearer mode indication, and improving the "snap to grid" functionality.
 
----
+  Description: This epic aims to enhance the application's grid layout capabilities by introducing granular control over margins and gutters, leveraging
+  Matplotlib's constrained_layout for intelligent automatic spacing, and adapting the UI to expose these new controls to the user. This will lead to more
+  flexible and visually appealing plot arrangements.
 
-### Feature 1: Dynamic Properties Panel Content
-**Description:** Refactor the properties panel (`PropertiesView`) to dynamically display either layout-specific controls (by default) or plot-specific properties (when a plot with data is selected).
+  ---
 
-**Planned Implementation:**
-1.  **Modify `src/ui/panels/properties_panel.py`:**
-    *   **Task:** Update `PropertiesPanel.__init__` to accept `layout_ui_factory: LayoutUIFactory`, `layout_manager: LayoutManager`, and `layout_controller: LayoutController`. Store these as instance variables.
-    *   **Task:** Implement a slot (e.g., `_update_content(self)`) that responds to changes in `ApplicationModel.selectionChanged` and `LayoutManager.layoutModeChanged`. This method will be responsible for clearing the current content and rebuilding it based on the current state.
-    *   **Task:** Within `_update_content`:
-        *   Clear any existing UI elements from the properties panel.
-        *   **Condition 1: Single PlotNode with Data Selected:** If `self.model.selection` contains exactly one item which is a `PlotNode` and `plot_node.data` is not `None`:
-            *   Call `self.properties_ui_factory.build_properties_ui(plot_node)` to get the plot-specific controls.
-            *   Add these controls to the properties panel's layout.
-        *   **Condition 2: Otherwise (Default/Layout Controls):**
-            *   Call `self.layout_ui_factory.build_layout_controls(self.layout_manager.layout_mode, self.layout_controller, self)` to get the layout-specific controls.
-            *   Add these controls to the properties panel's layout.
-    *   **Task:** In `PropertiesPanel.__init__`, connect `self.model.selectionChanged` to `self._update_content` and `self.layout_manager.layoutModeChanged` to `self._update_content`.
-    *   **Task:** Trigger `self._update_content()` once at the end of `PropertiesPanel.__init__` to set the initial state.
-2.  **Modify `src/core/composition_root.py`:**
-    *   **Task:** When instantiating `PropertiesPanel` in `_assemble_main_window` or `_create_properties_dock` (if applicable), pass the new dependencies: `layout_ui_factory`, `layout_manager`, and `layout_controller`.
-3.  **Refine `src/ui/windows/main_window.py`:**
-    *   **Task:** The separate `self.layout_menu` and its associated `_update_layout_menu` slot and connections can now be removed or significantly simplified, as the primary layout controls are moving to the properties panel. The "Layout" menu might still exist in the main menu for global layout actions, but not for dynamic controls.
 
-**Testing Plan (Feature 1):**
-*   **Unit Tests (`tests/ui/panels/test_properties_panel.py`):**
-    *   `test_properties_panel_displays_layout_controls_by_default`: Verify that on initialization, the `PropertiesPanel` calls `layout_ui_factory.build_layout_controls`.
-    *   `test_properties_panel_displays_plot_properties_on_single_plot_selection_with_data`: Mock a selection of a single `PlotNode` with data, verify `properties_ui_factory.build_properties_ui` is called.
-    *   `test_properties_panel_displays_layout_controls_on_multiple_selection`: Mock multiple `PlotNode`s selected, verify `layout_ui_factory.build_layout_controls` is called.
-    *   `test_properties_panel_displays_layout_controls_on_single_plot_selection_no_data`: Mock a single `PlotNode` without data selected, verify `layout_ui_factory.build_layout_controls` is called.
-    *   `test_properties_panel_updates_on_layout_mode_change`: Mock a layout mode change, verify `layout_ui_factory.build_layout_controls` is called with the new mode.
+  Feature 1: Granular Layout Configuration Model
 
----
+  Description: Extend the existing GridConfig to store individual top, bottom, left, and right margins, and to support list-based horizontal and vertical
+  spacing (gutters) to align with Matplotlib's GridSpec and constrained_layout functionality.
 
-### Feature 2: Clearer Layout Mode Toggle & SVG Icon Integration
-**Description:** Implement a more intuitive "Free Form / Grid Layout" toggle in the UI (likely in `MainWindow`'s menu bar or toolbar) and ensure all layout actions generated by `LayoutUIFactory` use SVG icons.
 
-**Planned Implementation:**
-1.  **Modify `src/ui/windows/main_window.py`:**
-    *   **Task:** In `MainWindow.__init__`, create a new `QAction` (e.g., `layout_mode_toggle_action`) for toggling between Free Form and Grid layout modes. Set `checkable=True` for this action.
-    *   **Task:** Set its initial `checked` state based on `self._layout_manager.layout_mode == LayoutMode.GRID`.
-    *   **Task:** Connect `layout_mode_toggle_action.toggled` signal to a new slot in `layout_controller` (e.g., `layout_controller.toggle_layout_mode(checked)`).
-    *   **Task:** Connect `self._layout_manager.layoutModeChanged` signal to a slot in `MainWindow` (e.g., `_update_layout_mode_toggle_ui`) that updates the `layout_mode_toggle_action`'s text and checked state.
-    *   **Task:** Add this action to a suitable menu (e.g., a "View" menu, or a simplified "Layout" menu that only contains this toggle).
-2.  **Modify `src/controllers/layout_controller.py`:**
-    *   **Task:** Add a new method `toggle_layout_mode(self, checked: bool)`:
-        *   If `checked` is `True`, call `self._layout_manager.set_layout_mode(LayoutMode.GRID)`.
-        *   If `checked` is `False`, call `self._layout_manager.set_layout_mode(LayoutMode.FREE_FORM)`.
-3.  **Modify `src/ui/factories/layout_ui_factory.py`:**
-    *   **Task:** Update `_build_free_form_controls` and `_build_grid_layout_controls` methods to ensure all `QAction`s use SVG icons (loaded via `IconPath` from `ConfigService`) instead of plain text where appropriate. This means updating `QAction` constructors to accept `QIcon`.
-    *   **Task:** Remove the "Switch to Grid Mode" and "Switch to Free-Form Mode" actions, as these are now handled by the main toggle.
-4.  **Modify `src/shared/constants.py`:**
-    *   **Task:** Add new constants in `IconPath` (if not already present) for all layout-related actions that will now have SVG icons (e.g., align_left, distribute_horizontal, grid_layout_on, free_layout_off).
-5.  **Modify `configs/default_config.yaml`:**
-    *   **Task:** Add corresponding entries for the new SVG icon paths under `paths.icon_base_dir` and `tool_icons` or a new `layout_icons` section.
+  Planned Implementation:
 
-**Testing Plan (Feature 2):**
-*   **Unit Tests (`tests/ui/windows/test_main_window.py`):**
-    *   `test_layout_mode_toggle_action_exists`: Verify the new action is created and checkable.
-    *   `test_layout_mode_toggle_action_updates_layout_controller`: Verify its `toggled` signal connects to `layout_controller.toggle_layout_mode`.
-    *   `test_layout_mode_toggle_action_reflects_manager_state`: Verify `_update_layout_mode_toggle_ui` correctly updates the action's checked state and text.
-*   **Unit Tests (`tests/controllers/test_layout_controller.py`):**
-    *   `test_toggle_layout_mode_sets_layout_manager_mode`: Verify `toggle_layout_mode` correctly calls `layout_manager.set_layout_mode`.
-*   **Unit Tests (`tests/ui/factories/test_layout_ui_factory.py`):**
-    *   `test_build_free_form_controls_uses_svg_icons`: Verify actions have `QIcon` objects set.
-    *   `test_build_grid_layout_controls_uses_svg_icons`: Verify actions have `QIcon` objects set.
 
----
+   1. Modify `src/shared/types.py`:
+       * Task: Update the Gutters dataclass:
+           * Change hspace: float to hspace: List[float] = field(default_factory=list).
+           * Change wspace: float to wspace: List[float] = field(default_factory=list).
+           * Ensure to_dict() and from_dict() methods correctly handle lists.
+           * Reason: To accurately represent Matplotlib's ability to define varying spacing between different rows/columns.
+       * Task: Add List to import from typing.
 
-### Feature 3: Enhanced "Snap to Grid" Functionality
-**Description:** When transitioning from free-form to grid mode, the system will automatically infer suitable grid dimensions (rows/columns) and assign existing plots to these cells.
 
-**Planned Implementation:**
-1.  **Modify `src/services/layout_manager.py`:**
-    *   **Task:** In `set_layout_mode`, ensure that when transitioning from `FREE_FORM` to `GRID`, `self._grid_engine.snap_plots_to_grid(all_plots, self._create_default_grid_config())` is called. The `_create_default_grid_config()` provides base margin/gutter, but the `snap_plots_to_grid` should infer rows/cols/ratios.
-    *   **Task:** Update `_application_model.current_layout_config` with the `GridConfig` returned by `snap_plots_to_grid`.
-2.  **Modify `src/models/layout/layout_engines.py`:**
-    *   **Task:** Refine `GridLayoutEngine.snap_plots_to_grid(self, plots: List[PlotNode], current_grid_config: GridConfig) -> GridConfig`:
-        *   **Heuristic 1: Determine Rows/Cols:**
-            *   Calculate `num_plots = len(plots)`.
-            *   Implement a heuristic to determine `inferred_rows` and `inferred_cols`. A simple approach is `inferred_rows = max(1, round(num_plots**0.5))` and `inferred_cols = (num_plots + inferred_rows - 1) // inferred_rows`.
-            *   Ensure `inferred_rows` and `inferred_cols` are at least 1.
-        *   **Heuristic 2: Sort Plots for Assignment:**
-            *   Sort `plots` based on their current (x,y) positions. A common stable sort is by y-coordinate (descending for top-to-bottom) then x-coordinate (ascending for left-to-right): `sorted_plots = sorted(plots, key=lambda p: (-p.geometry[1], p.geometry[0]))`.
-        *   **Heuristic 3: Infer Ratios:**
-            *   For initial implementation, `inferred_row_ratios = [1.0 / inferred_rows] * inferred_rows` and `inferred_col_ratios = [1.0 / inferred_cols] * inferred_cols`.
-        *   **Task:** Create and return a new `GridConfig` with these `inferred_rows`, `inferred_cols`, `inferred_row_ratios`, `inferred_col_ratios`, and existing `margin`/`gutter` from `current_grid_config`.
-3.  **Add Test Stubs (Feature 3):**
-    *   **Unit Tests (`tests/services/test_layout_manager.py`):**
-        *   `test_set_layout_mode_free_to_grid_calls_snap_and_updates_config`: Verify `_grid_engine.snap_plots_to_grid` is called and `application_model.current_layout_config` is updated to the inferred `GridConfig`.
-    *   **Unit Tests (`tests/models/layout/test_layout_engines.py`):**
-        *   `test_grid_layout_engine_snap_plots_to_grid_basic_inference`: Test with varying numbers of plots (0, 1, 4, 5, 6, 9) to ensure correct `rows` and `cols` are inferred.
-        *   `test_grid_layout_engine_snap_plots_to_grid_sorts_plots`: Test with plots at various positions to verify correct sorting before assignment.
+   2. Modify `src/models/layout/layout_config.py`:
+       * Task: Update the GridConfig dataclass:
+           * Remove margin: float and gutter: float.
+           * Add margins: Margins = field(default_factory=Margins) (using the existing Margins dataclass, which already supports top, bottom, left, right).
+           * Add gutters: Gutters = field(default_factory=Gutters) (using the now-modified Gutters dataclass).
+           * Reason: To directly store granular layout parameters.
+       * Task: Update GridConfig.to_dict():
+           * Replace margin and gutter serialization with self.margins.to_dict() and self.gutters.to_dict().
+           * Reason: To serialize the new nested dataclass structure.
+       * Task: Update GridConfig.from_dict():
+           * Replace margin and gutter deserialization with Margins.from_dict(data.get("margins", {})) and Gutters.from_dict(data.get("gutters", {})).
+           * Reason: To deserialize the new nested dataclass structure.
+       * Task: Add List to import from typing.
 
----
+  Testing Plan:
 
-### Feature 4: Live Update Performance & Command Wrappers for Grid Parameters
-**Description:** Implement smooth, interactive adjustment of grid parameters (rows, columns, margins, gutters) in the properties panel, ensuring updates are debounced and changes are undoable.
 
-**Planned Implementation:**
-1.  **Modify `src/ui/factories/layout_ui_factory.py`:**
-    *   **Task:** In `_build_grid_layout_controls`, for each grid parameter UI element (e.g., `QSpinBox` for rows/cols, `QDoubleSpinBox` for margin/gutter):
-        *   Connect its relevant signal (e.g., `valueChanged`, `editingFinished`) to a *single debounced slot* in `layout_controller` (e.g., `layout_controller.on_grid_parameter_changed`).
-        *   The debouncing mechanism should be implemented using `QTimer.singleShot` or similar.
-    *   **Task:** The debounced slot will gather the *current values of all grid parameters* from the UI controls before calling `layout_controller.adjust_grid_parameters()`.
-2.  **Modify `src/controllers/layout_controller.py`:**
-    *   **Task:** Add a new method `on_grid_parameter_changed(self)` (the debounced slot). This will collect the values from the UI elements (passed as a dictionary or tuple) and call `adjust_grid_parameters`.
-    *   **Task:** Add or refine `adjust_grid_parameters(self, rows: int, cols: int, margin: float, gutter: float, row_ratios: List[float] | None = None, col_ratios: List[float] | None = None)`:
-        *   This method will construct a new `GridConfig` with the provided parameters.
-        *   It will create a new `ChangeGridParametersCommand` (see below) passing the old and new `GridConfig`.
-        *   Execute the command via `self.command_manager.execute_command()`.
-3.  **Create `src/services/commands/change_grid_parameters_command.py`:**
-    *   **Task:** Implement `ChangeGridParametersCommand(BaseCommand)`:
-        *   `__init__(self, model: ApplicationModel, old_grid_config: GridConfig, new_grid_config: GridConfig, description: str)`: Stores the model, old config, and new config.
-        *   `execute(self)`: Sets `model.current_layout_config = self._new_grid_config`.
-        *   `undo(self)`: Sets `model.current_layout_config = self._old_grid_config`.
-4.  **Add Test Stubs (Feature 4):**
-    *   **Unit Tests (`tests/ui/factories/test_layout_ui_factory.py`):**
-        *   `test_grid_parameter_controls_connected_to_debounced_slot`: Verify grid parameter UI elements connect to the debounced slot in `layout_controller`.
-    *   **Unit Tests (`tests/controllers/test_layout_controller.py`):**
-        *   `test_adjust_grid_parameters_executes_command`: Verify `adjust_grid_parameters` creates and executes a `ChangeGridParametersCommand`.
-        *   `test_on_grid_parameter_changed_debounces_calls`: Mock `QTimer.singleShot` to verify debouncing behavior.
-    *   **Unit Tests (`tests/services/commands/test_change_grid_parameters_command.py`):**
-        *   `test_execute_change_grid_parameters_command`: Verify `execute` correctly updates `model.current_layout_config`.
-        *   `test_undo_change_grid_parameters_command`: Verify `undo` correctly restores `model.current_layout_config`.
+   * Unit Tests (`tests/shared/test_types.py`):
+       * test_gutters_list_serialization: Verify Gutters.to_dict() correctly serializes lists for hspace and wspace.
+       * test_gutters_list_deserialization: Verify Gutters.from_dict() correctly deserializes lists for hspace and wspace.
+       * test_gutters_default_empty_lists: Verify default Gutters object has empty lists for hspace and wspace.
+   * Unit Tests (`tests/models/layout/test_layout_config.py`):
+       * test_gridconfig_granular_params_init: Verify GridConfig initializes with Margins and Gutters objects.
+       * test_gridconfig_granular_params_to_dict: Verify GridConfig.to_dict() correctly serializes nested Margins and Gutters dictionaries.
+       * test_gridconfig_granular_params_from_dict: Verify GridConfig.from_dict() correctly deserializes nested Margins and Gutters.
+       * test_gridconfig_from_dict_partial_data: Verify from_dict handles missing 'margins' or 'gutters' keys gracefully, falling back to defaults.
 
-### General Refinements/Considerations for the Epic:
+  Risks & Mitigations:
 
-*   **Error Handling and User Feedback:** Implement robust validation for user input in grid parameter fields (e.g., non-negative numbers, valid ratios). Provide clear visual feedback (e.g., invalid input highlighting, status bar messages).
-*   **Default Configuration:** Add new configuration keys to `configs/default_config.yaml` for default grid parameter values (if different from existing ones) and all new icon paths.
-*   **Documentation:** Update `docs/technical-design-document.md` to include this new Epic and its features. Update any other relevant documentation (`README.md`, `backlog.md`).
+
+   * Risk: Backward compatibility issues if old GridConfig JSONs/YAMLs are loaded without the new 'margins' and 'gutters' keys.
+   * Mitigation: from_dict methods for Margins and Gutters use .get() with default values, ensuring older configurations can still be loaded without
+     crashing (though they will revert to new defaults for margins/gutters). Documentation should highlight this change.
+
+  ---
+
+  Feature 2: Matplotlib constrained_layout Integration for Grid Layout
+
+
+  Description: Modify GridLayoutEngine to use Matplotlib's constrained_layout for calculating plot geometries, respecting the granular margin and gutter
+  configurations. This includes creating Matplotlib Axes based on GridSpec, applying the layout, and extracting the final calculated positions and spacings.
+
+  Planned Implementation:
+
+
+   1. Modify `src/models/layout/layout_engine.py`:
+       * Task: Update imports: Add import matplotlib.pyplot as plt, import matplotlib.gridspec as gridspec, from matplotlib.figure import Figure, from
+         matplotlib.axes import Axes, from matplotlib.transforms import Bbox.
+       * Task: Refactor GridLayoutEngine.calculate_geometries():
+           * Decision: This method will be deprecated or refactored to simply call apply_matplotlib_grid_layout to get the final Rect values from
+             Matplotlib. It's inconsistent to have a separate calculation when Matplotlib is the renderer. For this feature, we will update it to call
+             apply_matplotlib_grid_layout on a temporary figure to get the geometries.
+           * Reason: To ensure all grid geometry calculations leverage Matplotlib for consistency.
+       * Task: Update GridLayoutEngine.apply_matplotlib_grid_layout(self, figure: Figure, plot_nodes: List[PlotNode], grid_config: GridConfig) ->
+         tuple[dict[PlotID, Axes], dict[PlotID, Rect], Margins, Gutters]:
+           * Grid Dimension Calculation: Keep logic for inferring rows and cols if grid_config.rows or grid_config.cols are 0.
+           * `GridSpec` Creation: Pass grid_config.gutters.hspace and grid_config.gutters.wspace directly to the gridspec.GridSpec constructor. Normalize
+             row_ratios and col_ratios if they are empty or don't match dimensions.
+           * Clear Figure: Add figure.clear() to ensure previous axes are removed when applying a new layout.
+           * Add `Axes`: Iterate through plot_nodes (sorted by approximate current position) and add Axes to the figure using gs[r_idx, c_idx]. Store PlotID
+             to Axes mapping.
+           * Configure `constrained_layout`:
+               * Convert grid_config.margins (figure fractions) to "inches" for figure.set_constrained_layout_pads(). For instance, w_pad_left =
+                 grid_config.margins.left * figure.get_figwidth(). set_constrained_layout_pads requires w_pad, h_pad, w_space, h_space parameters, which are
+                 global. The GridSpec's list-based hspace/wspace will guide internal spacing.
+               * Set figure.set_layout_engine('constrained').
+           * Retrieve Final Geometries: Iterate through the created Axes and get their final positions using ax.get_position(), converting Bbox to Rect.
+           * Retrieve Effective Margins: Calculate effective_margin_top/bottom/left/right by finding the union bounding box of all Axes and comparing it to
+             the figure's extent. Return as a Margins object.
+           * Retrieve Effective Gutters: This is complex. constrained_layout does not directly expose per-row/per-column effective gutters.
+               * Initial Approach: For hspace and wspace, return the target lists provided to GridSpec if they were provided and valid. If not, return
+                 default (e.g., empty lists or averaged single values).
+               * Refined Approach (Future): Implement logic to explicitly measure the distances between adjacent Axes in each row/column to calculate the
+                 actual effective list of hspace and wspace. This would involve iterating gs.get_subplot_positions(figure) and analyzing the resulting Bbox
+                 objects. For the initial implementation, relying on the target GridSpec values for Gutters will be sufficient, as constrained_layout
+                 respects them.
+           * Return Value: Return the mpl_axes_map, final_plot_geometries, calculated_margins, and calculated_gutters.
+
+  Testing Plan:
+
+
+   * Unit Tests (`tests/models/layout/test_layout_engine.py`):
+       * test_apply_matplotlib_grid_layout_basic_grid: Test with a simple GridConfig (e.g., 2x2, default margins/gutters) to ensure correct Axes creation,
+         and that returned Rects are sensible.
+       * test_apply_matplotlib_grid_layout_with_ratios: Test with row_ratios and col_ratios to verify Axes dimensions reflect ratios.
+       * test_apply_matplotlib_grid_layout_granular_margins: Test with custom Margins (e.g., large left margin) and verify calculated_margins reflect this,
+         and Axes positions are adjusted.
+       * test_apply_matplotlib_grid_layout_list_gutters: Test with GridConfig.gutters providing list values for hspace/wspace and verify GridSpec is created
+         correctly and calculated_gutters reflect the target values. (If direct measurement is implemented, verify actual measured values).
+       * test_apply_matplotlib_grid_layout_empty_plot_nodes: Verify handling of no PlotNodes.
+       * test_apply_matplotlib_grid_layout_figure_clears_axes: Verify figure.clear() is called and new axes are added.
+       * test_calculate_geometries_calls_apply_matplotlib_grid_layout: Verify the refactored calculate_geometries correctly delegates to
+         apply_matplotlib_grid_layout on a temporary figure.
+
+  Risks & Mitigations:
+
+
+   * Risk: Accurate conversion of GridConfig's relative Margins and Gutters to constrained_layout's specific units (inches, fractions of font size).
+   * Mitigation: Thorough testing with various GridConfig values and visual inspection of generated plots. Document any limitations or non-intuitive
+     behaviors. Provide clear comments in code regarding unit conversions.
+   * Risk: constrained_layout can sometimes fail or produce unexpected results with very complex GridSpec definitions or when many elements are present.
+   * Mitigation: Implement robust error handling around figure.set_layout_engine(). Log warnings/errors gracefully. Consider providing a "reset layout" or
+     "fallback to simple layout" option in the UI.
+   * Risk: Calculating effective list-based hspace/wspace accurately after constrained_layout runs might be complex without direct Matplotlib API support.
+   * Mitigation: Start with returning the target values if valid. If user feedback demands more precision, invest in measuring actual distances between Axes
+     bounding boxes.
+
+  ---
+
+
+  Feature 3: UI for Granular Layout Controls
+
+  Description: Adapt the Layout section of the Properties Panel to expose granular controls for top/bottom/left/right margins and list-based
+  horizontal/vertical gutters, allowing users to fine-tune layout appearance.
+
+  Planned Implementation:
+
+
+   1. Modify `src/ui/factories/layout_ui_factory.py`:
+       * Task: Update _build_grid_layout_controls(self, current_grid_config: GridConfig, layout_controller: LayoutController, parent: QWidget) -> QWidget
+         (assuming this method builds the grid layout specific UI).
+       * Task: Replace the single 'margin' input with four QDoubleSpinBoxes for margins.top, margins.bottom, margins.left, margins.right.
+           * Reason: To enable granular control.
+       * Task: Replace the single 'gutter' input with two QLineEdits for gutters.hspace and gutters.wspace.
+           * Reason: To allow input of comma-separated lists for per-row/per-column spacing.
+           * Input Handling: Connect editingFinished signal to controller methods, which will parse the comma-separated string into List[float].
+       * Task: Connect the valueChanged (for QDoubleSpinBox) and editingFinished (for QLineEdit) signals of these new widgets to a unified debounced slot in
+         layout_controller (e.g., layout_controller.on_grid_param_changed).
+       * Task: Initialize each widget with values from current_grid_config.margins and current_grid_config.gutters.
+
+
+   2. Modify `src/controllers/layout_controller.py`:
+       * Task: Update on_grid_param_changed(self, param_name: str, value: Any):
+           * When param_name is "margin_top", "margin_bottom", "margin_left", "margin_right", update the corresponding field in a temporary Margins object.
+           * When param_name is "hspace" or "wspace":
+               * Parse the value (string) into a List[float]. Implement robust error handling for invalid input (e.g., non-numeric values, incorrect
+                 format).
+               * Update the corresponding field in a temporary Gutters object.
+           * After collecting all changes (perhaps after a debounce period), construct a new GridConfig and execute a ChangeGridParametersCommand (as
+             outlined in the TDD's Feature 4).
+       * Task: Ensure the ChangeGridParametersCommand accepts the new GridConfig structure.
+
+  Testing Plan:
+
+
+   * Unit Tests (`tests/ui/factories/test_layout_ui_factory.py`):
+       * test_build_grid_layout_controls_has_granular_margin_inputs: Verify 4 QDoubleSpinBoxes for margins are present and correctly initialized.
+       * test_build_grid_layout_controls_has_list_gutter_inputs: Verify 2 QLineEdits for hspace and wspace are present and correctly initialized.
+       * test_grid_param_inputs_connect_to_controller: Verify all new input widgets connect their signals to layout_controller.on_grid_param_changed.
+   * Unit Tests (`tests/controllers/test_layout_controller.py`):
+       * test_on_grid_param_changed_updates_margins: Mock UI input for margins and verify ChangeGridParametersCommand is created with correct Margins.
+       * test_on_grid_param_changed_parses_hspace_wspace_lists: Mock UI input for comma-separated hspace/wspace strings and verify
+         ChangeGridParametersCommand is created with correct Gutters lists.
+       * test_on_grid_param_changed_invalid_gutter_input_handled: Verify error handling for non-numeric or malformed list input.
+
+  Risks & Mitigations:
+
+
+   * Risk: Complex UI for list-based input might be cumbersome for users. Input validation and parsing of comma-separated strings can be error-prone.
+   * Mitigation: Provide clear input instructions in the UI (e.g., tooltips, placeholder text). Implement robust parsing logic with clear user feedback for
+     invalid input. Consider an alternative UI (e.g., a custom widget with dynamically added spinboxes) if the list input proves too difficult for users.
+   * Risk: Increased number of UI controls could clutter the Properties Panel.
+   * Mitigation: Group related controls visually (e.g., "Margins" group box, "Gutters" group box). Use sensible default values to minimize initial user
+     configuration.
+
+  ---
+
+  Feature 4: Enhanced "Snap to Grid" with constrained_layout
+
+
+  Description: The "Snap to Grid" functionality will be improved to use Matplotlib's constrained_layout during its inference process, intelligently
+  determining optimal Margins and Gutters for the inferred grid.
+
+  Planned Implementation:
+
+
+   1. Modify `src/models/layout/layout_engine.py`:
+       * Task: Update GridLayoutEngine.snap_plots_to_grid(self, plots: List[PlotNode], current_grid_config: GridConfig) -> GridConfig:
+           * Initial Grid Inference: Keep existing logic for inferring rows and cols based on num_plots.
+           * Initial Ratios: Keep logic for inferred_row_ratios and inferred_col_ratios.
+           * Ephemeral Matplotlib Figure: Create a temporary matplotlib.pyplot.figure() for the dry run. Ensure it's closed in a try...finally block.
+           * Temporary `GridConfig` for Dry Run: Create a temp_grid_config_for_dry_run using the inferred rows, cols, row_ratios, col_ratios. For margins
+             and gutters in this temporary config, use the current_grid_config.margins and current_grid_config.gutters as initial suggestions for
+             constrained_layout.
+           * Call `apply_matplotlib_grid_layout`: Call self.apply_matplotlib_grid_layout(temp_fig, plots, temp_grid_config_for_dry_run).
+           * Retrieve `calculated_margins` and `calculated_gutters`: Directly use the Margins and Gutters objects returned by apply_matplotlib_grid_layout.
+           * Construct New `GridConfig`: Create and return a new_grid_config using the inferred rows, cols, row_ratios, col_ratios, and the
+             calculated_margins/calculated_gutters. No more averaging or max() calls are needed for these specific attributes.
+           * Reason: To intelligently leverage constrained_layout's optimization for spacing when snapping to a grid.
+
+  Testing Plan:
+
+
+   * Unit Tests (`tests/models/layout/test_layout_engine.py`):
+       * test_snap_plots_to_grid_uses_ephemeral_figure: Verify a temporary Matplotlib figure is created and closed.
+       * test_snap_plots_to_grid_calls_apply_matplotlib_grid_layout: Verify apply_matplotlib_grid_layout is called during the dry run.
+       * test_snap_plots_to_grid_inferred_margins_match_constrained_layout_output: Test with various plot arrangements (e.g., plots with long titles/labels)
+         and verify the margins in the returned GridConfig are consistent with what constrained_layout would produce.
+       * test_snap_plots_to_grid_inferred_gutters_match_constrained_layout_output: Test with multiple plots and verify the gutters (lists) in the returned
+         GridConfig are consistent with constrained_layout's spacing decisions.
+       * test_snap_plots_to_grid_handles_empty_plots: Verify it returns the current config if no plots are present.
+       * test_snap_plots_to_grid_error_handling: Verify graceful handling if apply_matplotlib_grid_layout encounters an error during the dry run.
+
+
+  Risks & Mitigations:
+
+
+   * Risk: constrained_layout's "intelligent" determination of margins/gutters might not always align with user expectations, especially when going from
+     free-form to grid.
+   * Mitigation: Document the behavior clearly. Provide UI controls (Feature 3) for manual adjustment after snapping. Allow the user to "undo" the snap
+     operation.
+   * Risk: Performance overhead of creating a temporary Matplotlib figure and running layout solver for each "snap" operation, especially with many plots.
+   * Mitigation: Profile the snap_plots_to_grid method. If performance is an issue, consider debouncing snap requests or caching results for frequently
+     snapped configurations.

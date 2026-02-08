@@ -28,8 +28,8 @@ class SelectionTool(BaseTool):
         canvas_widget: "CanvasWidget",
     ):
         super().__init__(model, command_manager, canvas_widget)
-        self.logger = logging.getLogger(self.__class__.__name__) # Added logger
-        self.logger.info("SelectionTool initialized.") # Added log
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info("SelectionTool initialized.")
 
     @property
     def name(self) -> str:
@@ -49,12 +49,12 @@ class SelectionTool(BaseTool):
 
     def mouse_press_event(self, event: QMouseEvent):
         """Handles single clicks to select or deselect nodes."""
-        self.logger.debug(f"Mouse press event at: ({event.xdata}, {event.ydata})") # Added log
+        self.logger.debug(f"Mouse press event at: ({event.xdata}, {event.ydata})")
         # Ignore clicks outside of any axes
         if event.xdata is None or event.ydata is None:
             # Deselect if clicking outside
             self._model.set_selection([])
-            self.logger.debug("Click outside axes. Deselecting all.") # Added log
+            self.logger.debug("Click outside axes. Deselecting all.")
             return
 
         # TODO: Maybe refactor this to a utility function later or give this a more descriptive name
@@ -64,20 +64,20 @@ class SelectionTool(BaseTool):
             )
         )
         node_hit = self._model.get_node_at(fig_coords)
-        self.logger.debug(f"Node hit: {node_hit.name if node_hit else 'None'} at figure coords: {fig_coords}") # Added log
+        self.logger.debug(f"Node hit: {node_hit.name if node_hit else 'None'} at figure coords: {fig_coords}")
 
 
         if event.dblclick:
             if node_hit and isinstance(node_hit, PlotNode):
                 self.plot_double_clicked.emit(node_hit)
-                self.logger.info(f"Double-clicked on PlotNode '{node_hit.name}'. Emitting plot_double_clicked signal.") # Added log
+                self.logger.info(f"Double-clicked on PlotNode '{node_hit.name}'. Emitting plot_double_clicked signal.")
         else:
             if node_hit:
                 self._model.set_selection([node_hit])
-                self.logger.info(f"Selected PlotNode '{node_hit.name}'.") # Added log
+                self.logger.info(f"Selected PlotNode '{node_hit.name}'.")
             else:
                 self._model.set_selection([])
-                self.logger.info("Clicked on empty space. Deselecting all.") # Added log
+                self.logger.info("Clicked on empty space. Deselecting all.")
 
 
     def mouse_move_event(self, event: QMouseEvent):

@@ -20,8 +20,8 @@ class DataLoader(QObject):
 
     def __init__(self):
         super().__init__()
-        self.logger = logging.getLogger(self.__class__.__name__) # Added logger
-        self.logger.info("DataLoader initialized.") # Added log
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info("DataLoader initialized.")
 
 
     def process_data(self, file_path: str, node):  # node is a PlotNode

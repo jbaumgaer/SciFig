@@ -1,7 +1,7 @@
 import logging
 
 from PySide6.QtCore import QObject
-from PySide6.QtGui import QDoubleValidator, QIcon, QIntValidator
+from PySide6.QtGui import QDoubleValidator, QIcon, QIntValidator, QValidator
 from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
@@ -17,6 +17,8 @@ from src.shared.constants import IconPath, LayoutMode
 
 from src.services.layout_manager import LayoutManager
 from src.controllers.layout_controller import LayoutController
+from src.models.layout.layout_config import GridConfig
+from src.shared.types import Margins, Gutters
 
 
 class LayoutUIFactory:
@@ -119,11 +121,6 @@ class LayoutUIFactory:
         layout.addWidget(QLabel("Distribution:")) # Label for clarity
         layout.addWidget(distribute_group_box)
 
-        # Snap to Grid Button
-        btn_snap_to_grid = QPushButton(QIcon(IconPath.get_path("properties.snap_to_grid")), "Snap Selected to Grid", container)
-        btn_snap_to_grid.setToolTip("Snap Selected to Grid")
-        btn_snap_to_grid.clicked.connect(layout_controller.snap_free_plots_to_grid_action)
-        layout.addWidget(btn_snap_to_grid)
         layout.addStretch() # Push everything to the top
 
         return container
@@ -131,7 +128,8 @@ class LayoutUIFactory:
     def _build_grid_layout_controls(self, layout_controller: LayoutController, parent: QObject) -> QWidget:
         """
         Builds UI controls for Grid layout mode (e.g., set grid size, adjust ratios).
-        Uses QLineEdit for input fields for rows, columns, margin, and gutter.
+        Uses QLineEdit for rows and columns, QDoubleSpinBoxes for granular margins,
+        and QLineEdits for list-based hspace and wspace.
         Initializes values from the current LayoutManager's last grid config.
         Returns a QWidget containing these controls.
         """
@@ -143,88 +141,133 @@ class LayoutUIFactory:
         form_layout = QFormLayout()
         form_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Get current grid config from layout manager to initialize UI fields
         current_grid_config = self._layout_manager._last_grid_config
+        default_grid_config_instance = self._layout_manager._create_default_grid_config()
+
+        # Helper function to check if a config is 'default' for display purposes
+        def is_default_grid_config(config: GridConfig) -> bool:
+            # Compare all relevant fields to determine if it's still the default/placeholder
+            return (config.rows == default_grid_config_instance.rows and
+                    config.cols == default_grid_config_instance.cols and
+                    config.margins == default_grid_config_instance.margins and
+                    config.gutters == default_grid_config_instance.gutters)
+
+        is_grid_inferred = not is_default_grid_config(current_grid_config)
 
         # Rows (QLineEdit)
         line_rows = QLineEdit(container)
-        line_rows.setValidator(QIntValidator(1, 99)) # Allow only integers between 1 and 99
-        line_rows.setText(str(current_grid_config.rows))
+        line_rows.setValidator(QIntValidator(1, 99))
+        line_rows.setText(str(current_grid_config.rows) if is_grid_inferred else "")
+        current_line_rows = line_rows # Capture the QLineEdit object
+        line_rows.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "rows", current_line_rows))
         form_layout.addRow("Rows:", line_rows)
 
         # Columns (QLineEdit)
         line_cols = QLineEdit(container)
-        line_cols.setValidator(QIntValidator(1, 99)) # Allow only integers between 1 and 99
-        line_cols.setText(str(current_grid_config.cols))
+        line_cols.setValidator(QIntValidator(1, 99))
+        line_cols.setText(str(current_grid_config.cols) if is_grid_inferred else "")
+        current_line_cols = line_cols # Capture the QLineEdit object
+        line_cols.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "cols", current_line_cols))
         form_layout.addRow("Cols:", line_cols)
 
-        # Margin (QLineEdit)
-        line_margin = QLineEdit(container)
-        # Allow floating point numbers (e.g., 0.0 to 0.5 with 2 decimal places)
-        line_margin.setValidator(QDoubleValidator(0.0, 0.5, 2))
-        line_margin.setText(str(current_grid_config.margin))
-        form_layout.addRow("Margin:", line_margin)
+        # Granular Margins (QLineEdit)
+        # Top Margin
+        line_margin_top = QLineEdit(container)
+        # line_margin_top.setValidator(QDoubleValidator(0.0, 0.5, 3)) # Allow 3 decimal places - Temporarily commented out to enable editingFinished signal.
+        line_margin_top.setText(str(current_grid_config.margins.top) if is_grid_inferred else "")
+        current_line_margin_top = line_margin_top # Capture the QLineEdit object
+        line_margin_top.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "margin_top", current_line_margin_top)) # TODO: Manual parsing/validation required for editingFinished
+        form_layout.addRow("Margin Top:", line_margin_top)
 
-        # Gutter (QLineEdit)
-        line_gutter = QLineEdit(container)
-        line_gutter.setValidator(QDoubleValidator(0.0, 0.5, 2))
-        line_gutter.setText(str(current_grid_config.gutter))
-        form_layout.addRow("Gutter:", line_gutter)
+        # Bottom Margin
+        line_margin_bottom = QLineEdit(container)
+        # line_margin_bottom.setValidator(QDoubleValidator(0.0, 0.5, 3)) # Temporarily commented out to enable editingFinished signal.
+        line_margin_bottom.setText(str(current_grid_config.margins.bottom) if is_grid_inferred else "")
+        current_line_margin_bottom = line_margin_bottom # Capture the QLineEdit object
+        line_margin_bottom.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "margin_bottom", current_line_margin_bottom)) # TODO: Manual parsing/validation required for editingFinished
+        form_layout.addRow("Margin Bottom:", line_margin_bottom)
 
-        # Connect editingFinished signals to the update method
-        def _update_grid_parameters_on_edit_finish(): # Renamed function
-            self.logger.debug("(_update_grid_parameters_on_edit_finish) called.")
-            self.logger.debug(f"Current QLineEdit values: Rows='{line_rows.text()}', Cols='{line_cols.text()}', Margin='{line_margin.text()}', Gutter='{line_gutter.text()}'")
+        # Left Margin
+        line_margin_left = QLineEdit(container)
+        # line_margin_left.setValidator(QDoubleValidator(0.0, 0.5, 3)) # Temporarily commented out to enable editingFinished signal.
+        line_margin_left.setText(str(current_grid_config.margins.left) if is_grid_inferred else "")
+        current_line_margin_left = line_margin_left # Capture the QLineEdit object
+        line_margin_left.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "margin_left", current_line_margin_left)) # TODO: Manual parsing/validation required for editingFinished
+        form_layout.addRow("Margin Left:", line_margin_left)
 
-            # Get values and convert to appropriate types, handling potential conversion errors
-            try:
-                rows = int(line_rows.text()) if line_rows.text() else None
-            except ValueError:
-                rows = None
-                self.logger.warning(f"Invalid input for rows: {line_rows.text()}")
+        # Right Margin
+        line_margin_right = QLineEdit(container)
+        # line_margin_right.setValidator(QDoubleValidator(0.0, 0.5, 3)) # Temporarily commented out to enable editingFinished signal.
+        line_margin_right.setText(str(current_grid_config.margins.right) if is_grid_inferred else "")
+        current_line_margin_right = line_margin_right # Capture the QLineEdit object
+        line_margin_right.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "margin_right", current_line_margin_right)) # TODO: Manual parsing/validation required for editingFinished
+        form_layout.addRow("Margin Right:", line_margin_right)
 
-            try:
-                cols = int(line_cols.text()) if line_cols.text() else None
-            except ValueError:
-                cols = None
-                self.logger.warning(f"Invalid input for cols: {line_cols.text()}")
+        # Gutters (QLineEdit for list-based input)
+        # Horizontal Space (hspace)
+        line_hspace = QLineEdit(container)
+        # Display current hspace list as comma-separated string
+        line_hspace.setText(", ".join(map(str, current_grid_config.gutters.hspace)) if is_grid_inferred else "")
+        line_hspace.setPlaceholderText("e.g., 0.1, 0.2")
+        current_line_hspace = line_hspace # Capture the QLineEdit object
+        line_hspace.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "hspace", current_line_hspace)) # TODO: Manual parsing/validation required for editingFinished
+        form_layout.addRow("H-Space (csv):", line_hspace)
 
-            try:
-                margin = float(line_margin.text()) if line_margin.text() else None
-            except ValueError:
-                margin = None
-                self.logger.warning(f"Invalid input for margin: {line_margin.text()}")
+        # Vertical Space (wspace)
+        line_wspace = QLineEdit(container)
+        # Display current wspace list as comma-separated string
+        line_wspace.setText(", ".join(map(str, current_grid_config.gutters.wspace)) if is_grid_inferred else "")
+        line_wspace.setPlaceholderText("e.g., 0.1, 0.2")
+        current_line_wspace = line_wspace # Capture the QLineEdit object
+        line_wspace.editingFinished.connect(lambda: self._handle_line_edit_change(layout_controller, "wspace", current_line_wspace)) # TODO: Manual parsing/validation required for editingFinished
+        form_layout.addRow("W-Space (csv):", line_wspace)
 
-            try:
-                gutter = float(line_gutter.text()) if line_gutter.text() else None
-            except ValueError:
-                gutter = None
-                self.logger.warning(f"Invalid input for gutter: {line_gutter.text()}")
-
-            # Get the current grid config from the layout manager for comparison
-            current_grid_config_for_comparison = self._layout_manager._last_grid_config
-
-            # Only call if at least one value is valid and actually changed
-            if (rows is not None and rows != current_grid_config_for_comparison.rows) or \
-               (cols is not None and cols != current_grid_config_for_comparison.cols) or \
-               (margin is not None and margin != current_grid_config_for_comparison.margin) or \
-               (gutter is not None and gutter != current_grid_config_for_comparison.gutter):
-
-                layout_controller.update_grid_parameters(
-                    rows=rows,
-                    cols=cols,
-                    margin=margin,
-                    gutter=gutter,
-                )
-            else:
-                self.logger.debug("No effective change in grid parameters detected or input is invalid.")
-
-        line_rows.editingFinished.connect(_update_grid_parameters_on_edit_finish)
-        line_cols.editingFinished.connect(_update_grid_parameters_on_edit_finish)
-        line_margin.editingFinished.connect(_update_grid_parameters_on_edit_finish)
-        line_gutter.editingFinished.connect(_update_grid_parameters_on_edit_finish)
 
         overall_container_layout.addLayout(form_layout)
+        
+        # Infer Grid Button
+        btn_infer_grid = QPushButton(QIcon(IconPath.get_path("properties.infer_grid")), "Infer Grid", container)
+        btn_infer_grid.setToolTip("Infer grid parameters (rows, cols, margins, gutters) from current free-form plot positions.")
+        btn_infer_grid.clicked.connect(self._layout_manager.infer_grid_parameters)
+        overall_container_layout.addWidget(btn_infer_grid)
+
+        # Optimize Layout Button (formerly Snap to Grid)
+        btn_optimize_layout = QPushButton(QIcon(IconPath.get_path("properties.optimize_layout")), "Optimize Layout", container)
+        btn_optimize_layout.setToolTip("Optimize layout using current grid parameters and Matplotlib's constrained layout.")
+        btn_optimize_layout.clicked.connect(self._layout_manager.optimize_layout_action)
+        overall_container_layout.addWidget(btn_optimize_layout)
+        
         overall_container_layout.addStretch()
 
         return container
+
+    def _handle_line_edit_change(self, layout_controller: LayoutController, param_name: str, line_edit: QLineEdit):
+        # TODO: Manual parsing/validation required for editingFinished.
+        # QDoubleValidator appears to suppress editingFinished, so we are disabling it for now.
+        # This function will now receive values for margin fields without prior QDoubleValidator validation.
+        raw_value = line_edit.text()
+        value_to_pass = raw_value # Default to passing raw string
+
+        validator = line_edit.validator()
+        if validator:
+            state, _, _ = validator.validate(raw_value, 0)
+            self.logger.debug(f"LayoutUIFactory: Validator state for {param_name} ('{raw_value}'): {state} (0=Invalid, 1=Intermediate, 2=Acceptable)")
+            if state == QValidator.Acceptable:
+                # If a validator is present and accepts the input, try converting to float if applicable
+                try:
+                    value_to_pass = float(raw_value)
+                except ValueError:
+                    self.logger.debug(f"LayoutUIFactory: Could not convert '{raw_value}' to float for {param_name}, passing as string.")
+            else:
+                self.logger.warning(f"LayoutUIFactory: Input for {param_name} ('{raw_value}') is not acceptable (state: {state}). Not processing.")
+                return # Do not process invalid input if a validator is present and rejects it.
+        else:
+            # If no validator, attempt conversion to float, otherwise pass as string
+            try:
+                value_to_pass = float(raw_value)
+            except ValueError:
+                self.logger.debug(f"LayoutUIFactory: No validator for {param_name} and could not convert '{raw_value}' to float, passing as string.")
+
+        self.logger.debug(f"LayoutUIFactory: Processing change for {param_name}. Value: {value_to_pass}")
+        layout_controller.on_grid_layout_param_changed(param_name, value_to_pass)
+
