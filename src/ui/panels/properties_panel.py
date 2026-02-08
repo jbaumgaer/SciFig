@@ -85,6 +85,9 @@ class PropertiesPanel(QWidget):
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self.model.selectionChanged.connect(self._update_content)
+        # Connect _update_content to uiLayoutModeChanged to rebuild layout controls when UI selection changes
+        self.layout_controller._layout_manager.uiLayoutModeChanged.connect(self._update_content)
+        self.model.layoutConfigChanged.connect(self._update_content) # New connection for active config changes
         self.layout_controller._layout_manager.layoutModeChanged.connect(self._update_content) # New connection
         self._update_content() # Initial call at the end of __init__
 
@@ -139,7 +142,7 @@ class PropertiesPanel(QWidget):
         else:
             self.logger.debug("Displaying layout controls.")
             layout_controls_widget = self._layout_ui_factory.build_layout_controls(
-                self.layout_controller._layout_manager.layout_mode, self.layout_controller, self
+                self.layout_controller, self
             )
             self._main_layout.addWidget(layout_controls_widget)
             self._main_layout.addStretch()

@@ -3,7 +3,7 @@ from functools import partial
 from typing import Any, Callable
 
 from PySide6.QtCore import QObject
-from PySide6.QtGui import QDoubleValidator, QIcon, QIntValidator, QValidator
+from PySide6.QtGui import QIcon, QIntValidator, QValidator
 from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
@@ -19,8 +19,6 @@ from src.shared.constants import IconPath, LayoutMode
 
 from src.services.layout_manager import LayoutManager
 from src.controllers.layout_controller import LayoutController
-from src.models.layout.layout_config import GridConfig
-from src.shared.types import Margins, Gutters
 
 
 class LayoutUIFactory:
@@ -76,17 +74,18 @@ class LayoutUIFactory:
         line_edit.editingFinished.connect(partial(self._handle_line_edit_change, layout_controller, param_name, line_edit))
         return line_edit
 
-    def build_layout_controls(self, layout_mode: LayoutMode, layout_controller: LayoutController, parent: QObject) -> QWidget:
+    def build_layout_controls(self, layout_controller: LayoutController, parent: QObject) -> QWidget:
         """
-        Builds and returns a QWidget containing controls relevant to the given layout mode.
+        Builds and returns a QWidget containing controls relevant to the currently UI-selected layout mode.
         """
-        self.logger.debug(f"Building layout controls for mode: {layout_mode.value}")
-        if layout_mode == LayoutMode.FREE_FORM:
+        ui_mode = self._layout_manager.ui_selected_layout_mode
+        self.logger.debug(f"Building layout controls for UI selected mode: {ui_mode.value}")
+        if ui_mode == LayoutMode.FREE_FORM:
             return self._build_free_form_controls(layout_controller, parent)
-        elif layout_mode == LayoutMode.GRID:
+        elif ui_mode == LayoutMode.GRID:
             return self._build_grid_layout_controls(layout_controller, parent)
         else:
-            self.logger.warning(f"Unknown layout mode '{layout_mode}'. Returning empty widget.")
+            self.logger.warning(f"Unknown UI selected layout mode '{ui_mode}'. Returning empty widget.")
             return QWidget(parent) # Return an empty widget for unknown mode
 
     def _build_free_form_controls(self, layout_controller: LayoutController, parent: QObject) -> QWidget:
@@ -161,44 +160,33 @@ class LayoutUIFactory:
         form_layout.setContentsMargins(0, 0, 0, 0)
 
         current_grid_config = self._layout_manager._last_grid_config
-        default_grid_config_instance = self._layout_manager._create_default_grid_config()
-
-        # Helper function to check if a config is 'default' for display purposes
-        def is_default_grid_config(config: GridConfig) -> bool:
-            # Compare all relevant fields to determine if it's still the default/placeholder
-            return (config.rows == default_grid_config_instance.rows and
-                    config.cols == default_grid_config_instance.cols and
-                    config.margins == default_grid_config_instance.margins and
-                    config.gutters == default_grid_config_instance.gutters)
-
-        is_grid_inferred = not is_default_grid_config(current_grid_config)
 
         # Rows
-        line_rows = self._create_parameter_line_edit("rows", current_grid_config.rows if is_grid_inferred else None, QIntValidator(1, 99), container, layout_controller)
+        line_rows = self._create_parameter_line_edit("rows", current_grid_config.rows if current_grid_config else None, QIntValidator(1, 99), container, layout_controller)
         form_layout.addRow("Rows:", line_rows)
 
         # Columns
-        line_cols = self._create_parameter_line_edit("cols", current_grid_config.cols if is_grid_inferred else None, QIntValidator(1, 99), container, layout_controller)
+        line_cols = self._create_parameter_line_edit("cols", current_grid_config.cols if current_grid_config else None, QIntValidator(1, 99), container, layout_controller)
         form_layout.addRow("Cols:", line_cols)
 
         # Granular Margins
-        line_margin_top = self._create_parameter_line_edit("margin_top", current_grid_config.margins.top if is_grid_inferred else None, None, container, layout_controller)
+        line_margin_top = self._create_parameter_line_edit("margin_top", current_grid_config.margins.top if current_grid_config else None, None, container, layout_controller)
         form_layout.addRow("Margin Top:", line_margin_top)
         
-        line_margin_bottom = self._create_parameter_line_edit("margin_bottom", current_grid_config.margins.bottom if is_grid_inferred else None, None, container, layout_controller)
+        line_margin_bottom = self._create_parameter_line_edit("margin_bottom", current_grid_config.margins.bottom if current_grid_config else None, None, container, layout_controller)
         form_layout.addRow("Margin Bottom:", line_margin_bottom)
         
-        line_margin_left = self._create_parameter_line_edit("margin_left", current_grid_config.margins.left if is_grid_inferred else None, None, container, layout_controller)
+        line_margin_left = self._create_parameter_line_edit("margin_left", current_grid_config.margins.left if current_grid_config else None, None, container, layout_controller)
         form_layout.addRow("Margin Left:", line_margin_left)
         
-        line_margin_right = self._create_parameter_line_edit("margin_right", current_grid_config.margins.right if is_grid_inferred else None, None, container, layout_controller)
+        line_margin_right = self._create_parameter_line_edit("margin_right", current_grid_config.margins.right if current_grid_config else None, None, container, layout_controller)
         form_layout.addRow("Margin Right:", line_margin_right)
 
         # Gutters (list-based input)
-        line_hspace = self._create_parameter_line_edit("hspace", current_grid_config.gutters.hspace if is_grid_inferred else None, None, container, layout_controller, placeholder_text="e.g., 0.1, 0.2", is_list_param=True)
+        line_hspace = self._create_parameter_line_edit("hspace", current_grid_config.gutters.hspace if current_grid_config else None, None, container, layout_controller, placeholder_text="e.g., 0.1, 0.2", is_list_param=True)
         form_layout.addRow("H-Space (csv):", line_hspace)
 
-        line_wspace = self._create_parameter_line_edit("wspace", current_grid_config.gutters.wspace if is_grid_inferred else None, None, container, layout_controller, placeholder_text="e.g., 0.1, 0.2", is_list_param=True)
+        line_wspace = self._create_parameter_line_edit("wspace", current_grid_config.gutters.wspace if current_grid_config else None, None, container, layout_controller, placeholder_text="e.g., 0.1, 0.2", is_list_param=True)
         form_layout.addRow("W-Space (csv):", line_wspace)
 
 
@@ -239,20 +227,23 @@ class LayoutUIFactory:
             else:
                 self.logger.warning(f"LayoutUIFactory: Input for {param_name} ('{raw_value}') is not acceptable (state: {state}). Not processing.")
                 # Restore the original text if validation fails
-                if param_name.startswith("margin"):
-                    current_grid_config = self._layout_manager._last_grid_config
-                    if param_name == "margin_top": line_edit.setText(str(current_grid_config.margins.top))
-                    elif param_name == "margin_bottom": line_edit.setText(str(current_grid_config.margins.bottom))
-                    elif param_name == "margin_left": line_edit.setText(str(current_grid_config.margins.left))
-                    elif param_name == "margin_right": line_edit.setText(str(current_grid_config.margins.right))
-                elif param_name == "rows":
-                    line_edit.setText(str(self._layout_manager._last_grid_config.rows))
-                elif param_name == "cols":
-                    line_edit.setText(str(self._layout_manager._last_grid_config.cols))
-                elif param_name == "hspace":
-                    line_edit.setText(", ".join(map(str, self._layout_manager._last_grid_config.gutters.hspace)))
-                elif param_name == "wspace":
-                    line_edit.setText(", ".join(map(str, self._layout_manager._last_grid_config.gutters.wspace)))
+                current_grid_config = self._layout_manager._last_grid_config
+                if current_grid_config is not None:
+                    if param_name.startswith("margin"):
+                        if param_name == "margin_top": line_edit.setText(str(current_grid_config.margins.top))
+                        elif param_name == "margin_bottom": line_edit.setText(str(current_grid_config.margins.bottom))
+                        elif param_name == "margin_left": line_edit.setText(str(current_grid_config.margins.left))
+                        elif param_name == "margin_right": line_edit.setText(str(current_grid_config.margins.right))
+                    elif param_name == "rows":
+                        line_edit.setText(str(current_grid_config.rows))
+                    elif param_name == "cols":
+                        line_edit.setText(str(current_grid_config.cols))
+                    elif param_name == "hspace":
+                        line_edit.setText(", ".join(map(str, current_grid_config.gutters.hspace)))
+                    elif param_name == "wspace":
+                        line_edit.setText(", ".join(map(str, current_grid_config.gutters.wspace)))
+                else:
+                    line_edit.setText("") # Clear the field if no current grid config to restore from
                 return # Do not process invalid input if a validator is present and rejects it.
         else:
             # If no validator, attempt conversion to float, otherwise pass as string

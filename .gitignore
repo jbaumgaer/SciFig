@@ -178,3 +178,5 @@ tests/services/commands/__pycache__/test_change_property_command.cpython-314-pyt
 tests/ui/builders/__pycache__/test_menu_bar_builder.cpython-313-pytest-9.0.2.pyc
 src/services/commands/__pycache__/change_grid_parameters_command.cpython-313.pyc
 src/shared/__pycache__/exceptions.cpython-313.pyc
+src/models/layout/__pycache__/free_layout_engine.cpython-313.pyc
+src/models/layout/__pycache__/grid_layout_engine.cpython-313.pyc

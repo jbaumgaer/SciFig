@@ -16,7 +16,8 @@ from src.services.tool_service import ToolService
 from src.services.tools import MockTool
 from src.services.tools.selection_tool import SelectionTool
 from src.core.application_components import ApplicationComponents
-from src.models.layout.layout_engine import FreeLayoutEngine, GridLayoutEngine
+from src.models.layout.free_layout_engine import FreeLayoutEngine
+from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.services.layout_manager import LayoutManager
 from src.models.application_model import ApplicationModel
 from src.models.plots.plot_types import PlotType

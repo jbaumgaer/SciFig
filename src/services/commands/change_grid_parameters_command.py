@@ -1,8 +1,7 @@
 from src.services.commands.base_command import BaseCommand
 from src.models.application_model import ApplicationModel
 from src.models.layout.layout_config import GridConfig
-from src.services.layout_manager import LayoutManager # Import LayoutManager
-from src.services.commands.batch_change_plot_geometry_command import BatchChangePlotGeometryCommand # Import to apply new geometries
+from src.services.layout_manager import LayoutManager
 
 import logging
 

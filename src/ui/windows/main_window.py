@@ -15,7 +15,6 @@ from src.services.config_service import ConfigService
 from src.controllers.project_controller import ProjectController
 from src.controllers.layout_controller import LayoutController
 from src.controllers.node_controller import NodeController
-from src.services.layout_manager import LayoutManager
 from src.models.application_model import ApplicationModel
 from src.models.plots.plot_types import PlotType
 from src.ui.widgets.canvas_widget import CanvasWidget

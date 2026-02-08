@@ -1,12 +1,52 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, TypeVar, List
-from src.shared.types import Margins, Gutters # Import new types
+from typing import Any, TypeVar
 
 from src.shared.constants import LayoutMode
 
 # Using a TypeVar for the static method's return type hint
 T = TypeVar('T', bound='LayoutConfig')
+
+
+@dataclass(frozen=True)
+class Margins:
+    """Represents figure margins (in figure fractions)."""
+    top: float
+    bottom: float
+    left: float
+    right: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"top": self.top, "bottom": self.bottom, "left": self.left, "right": self.right}
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> "Margins":
+        return Margins(
+            top=data["top"],
+            bottom=data["bottom"],
+            left=data["left"],
+            right=data["right"]
+        )
+
+
+@dataclass(frozen=True)
+class Gutters:
+    """
+    Represents spacing between subplots (in figure fractions).
+    Can be single float for global spacing or lists for per-row/column spacing.
+    """
+    hspace: list[float]
+    wspace: list[float]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"hspace": self.hspace, "wspace": self.wspace}
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> "Gutters":
+        return Gutters(
+            hspace=data["hspace"],
+            wspace=data["wspace"]
+        )
 
 
 class LayoutConfig(ABC):
@@ -65,15 +105,13 @@ class FreeConfig(LayoutConfig):
 class GridConfig(LayoutConfig):
     """
     Configuration for grid-based layout mode.
-    TODO: Have these in a config file
     """
-    rows: int = 2
-    cols: int = 2
-    row_ratios: list[float] = field(default_factory=list) # Empty means equal distribution
-    col_ratios: List[float] = field(default_factory=list) # Empty means equal distribution
-    margins: Margins = field(default_factory=Margins)
-    gutters: Gutters = field(default_factory=Gutters)
-
+    rows: int
+    cols: int
+    row_ratios: list[float]
+    col_ratios: list[float]
+    margins: Margins
+    gutters: Gutters
 
     mode: LayoutMode = field(default=LayoutMode.GRID, init=False)
 
@@ -91,10 +129,15 @@ class GridConfig(LayoutConfig):
     @staticmethod
     def from_dict(data: dict[str, Any]) -> "GridConfig":
         return GridConfig(
-            rows=data.get("rows", 2),
-            cols=data.get("cols", 2),
-            row_ratios=data.get("row_ratios", []),
-            col_ratios=data.get("col_ratios", []),
-            margins=Margins.from_dict(data.get("margins", {})),
-            gutters=Gutters.from_dict(data.get("gutters", {})),
+            rows=data["rows"],
+            cols=data["cols"],
+            row_ratios=data["row_ratios"],
+            col_ratios=data["col_ratios"],
+            margins=Margins.from_dict(data["margins"]),
+            gutters=Gutters.from_dict(data["gutters"]),
         )
+
+# Sentinel values for Margins and Gutters when they are not applicable or empty
+NO_MARGINS = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
+NO_GUTTERS = Gutters(hspace=[], wspace=[])
+

@@ -1,84 +1,4 @@
 import logging
-
-from PySide6.QtCore import QObject
-
-from src.models.application_model import ApplicationModel
-from src.services.commands.command_manager import CommandManager
-from src.services.layout_manager import LayoutManager
-from src.shared.constants import LayoutMode
-from src.services.commands.batch_change_plot_geometry_command import BatchChangePlotGeometryCommand
-from src.models.nodes.plot_node import PlotNode
-from src.models.layout.layout_config import GridConfig # Added import for isinstance check
-
-
-class LayoutController(QObject):
-    def __init__(self, model: ApplicationModel, command_manager: CommandManager, layout_manager: LayoutManager):
-        super().__init__()
-        self.model = model
-        self.command_manager = command_manager
-        self._layout_manager = layout_manager
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info("LayoutController initialized.")
-
-    def set_layout_mode(self, mode: LayoutMode):
-        """
-        Sets the application's layout mode via the LayoutManager.
-        """
-        self.logger.info(f"LayoutController received request to set layout mode to: {mode.value}")
-        self._layout_manager.set_layout_mode(mode)
-
-    def toggle_layout_mode(self, checked: bool):
-        """
-        Toggles the layout mode between GRID and FREE_FORM based on the checked state
-        of a UI element (e.g., a QAction).
-        """
-        if checked:
-            self.set_layout_mode(LayoutMode.GRID)
-            self.logger.info("Layout mode toggled to GRID.")
-        else:
-            self.set_layout_mode(LayoutMode.FREE_FORM)
-            self.logger.info("Layout mode toggled to FREE_FORM.")
-
-    def align_selected_plots(self, edge: str):
-        """
-        Aligns the currently selected plots.
-        """
-        self.logger.info(f"LayoutController received request to align selected plots to: {edge}")
-        selected_plots = [node for node in self.model.selection if isinstance(node, PlotNode)]
-        if not selected_plots:
-            self.logger.warning("No plots selected for alignment.")
-            return
-
-        # Delegate to LayoutManager to calculate new geometries
-        new_geometries = self._layout_manager.perform_align(selected_plots, edge)
-        if new_geometries:
-            # Wrap changes in a command for undo/redo
-            command = BatchChangePlotGeometryCommand(self.model, new_geometries, "Align Plots")
-            self.command_manager.execute_command(command)
-            self.logger.debug(f"Executed BatchChangePlotGeometryCommand for aligning plots to {edge}.")
-        else:
-            self.logger.info("No geometry changes after alignment calculation.")
-
-    def distribute_selected_plots(self, axis: str):
-        """
-        Distributes the currently selected plots.
-        """
-        self.logger.info(f"LayoutController received request to distribute selected plots along: {axis}")
-        selected_plots = [node for node in self.model.selection if isinstance(node, PlotNode)]
-        if not selected_plots:
-            self.logger.warning("No plots selected for distribution.")
-            return
-
-        # Delegate to LayoutManager to calculate new geometries
-        new_geometries = self._layout_manager.perform_distribute(selected_plots, axis)
-        if new_geometries:
-            command = BatchChangePlotGeometryCommand(self.model, new_geometries, "Distribute Plots")
-            self.command_manager.execute_command(command)
-            self.logger.debug(f"Executed BatchChangePlotGeometryCommand for distributing plots along {axis}.")
-        else:
-            self.logger.info("No geometry changes after distribution calculation.")
-
-import logging
 from typing import Any, List, Optional
 from PySide6.QtCore import QObject
 
@@ -103,22 +23,23 @@ class LayoutController(QObject):
 
     def set_layout_mode(self, mode: LayoutMode):
         """
-        Sets the application's layout mode via the LayoutManager.
+        Sets the UI selected layout mode in the LayoutManager.
+        This does NOT immediately change the active layout in the application.
         """
-        self.logger.info(f"LayoutController received request to set layout mode to: {mode.value}")
-        self._layout_manager.set_layout_mode(mode)
+        self.logger.info(f"LayoutController received request to set UI selected layout mode to: {mode.value}")
+        self._layout_manager.ui_selected_layout_mode = mode
 
     def toggle_layout_mode(self, checked: bool):
         """
-        Toggles the layout mode between GRID and FREE_FORM based on the checked state
+        Toggles the UI selected layout mode between GRID and FREE_FORM based on the checked state
         of a UI element (e.g., a QAction).
         """
         if checked:
             self.set_layout_mode(LayoutMode.GRID)
-            self.logger.info("Layout mode toggled to GRID.")
+            self.logger.info("UI selected layout mode toggled to GRID.")
         else:
             self.set_layout_mode(LayoutMode.FREE_FORM)
-            self.logger.info("Layout mode toggled to FREE_FORM.")
+            self.logger.info("UI selected layout mode toggled to FREE_FORM.")
 
     def align_selected_plots(self, edge: str):
         """
@@ -164,6 +85,9 @@ class LayoutController(QObject):
         Snaps selected free-form plots to a grid.
         This action is typically only available in FREE_FORM mode.
         It triggers a mode switch to GRID, which internally handles snapping.
+        TODO: I think this method is now redundant since the "Optimize Layout" button in the UI 
+        directly calls the optimize_layout_action in the LayoutManager, which applies the grid layout
+          without needing to switch modes. Consider removing this method if it's no longer used.
         """
         self.logger.info("LayoutController received request to snap free plots to grid.")
         self._layout_manager.set_layout_mode(LayoutMode.GRID)
@@ -176,6 +100,10 @@ class LayoutController(QObject):
         TODO: This is doing redundante work to some of the validators in other parts of the program because I'm also validating input here
         """
         self.logger.debug(f"Grid layout param changed: {param_name} = {value}")
+
+        if self._layout_manager._last_grid_config is None:
+            self.logger.warning("on_grid_layout_param_changed called when _last_grid_config is None. This should not happen in GRID mode.")
+            return
 
         current_grid_config: GridConfig = self._layout_manager._last_grid_config
         old_grid_config = current_grid_config # Store for undo
@@ -255,29 +183,3 @@ class LayoutController(QObject):
             self.logger.debug(f"Executed ChangeGridParametersCommand for {param_name} change.")
         else:
             self.logger.debug(f"Parameter {param_name} did not change or value was invalid.")
-
-    def apply_default_grid_layout(self):
-        """
-        Applies a default grid layout to all plots in the scene.
-        This is typically called when a new plot is added in GRID mode,
-        or when the grid layout needs to be refreshed with default parameters.
-        """
-        self.logger.info("LayoutController received request to apply default grid layout.")
-        all_plots = [node for node in self.model.scene_root.all_descendants() if isinstance(node, PlotNode)]
-        if not all_plots:
-            self.logger.warning("No plots in scene to apply default grid layout.")
-            return
-
-        # Get the default grid config
-        default_grid_config = self._layout_manager._create_default_grid_config()
-
-        # If current mode is not GRID, setting it will apply the default config
-        if self._layout_manager.layout_mode != LayoutMode.GRID:
-            self._layout_manager.set_layout_mode(LayoutMode.GRID)
-            # The set_layout_mode will implicitly apply the _last_grid_config (which is now default_grid_config)
-        else:
-            # If already in GRID mode, apply the default config explicitly
-            current_grid_config = self._layout_manager._last_grid_config
-            command = ChangeGridParametersCommand(self.model, self._layout_manager, current_grid_config, default_grid_config, "Apply Default Grid Layout")
-            self.command_manager.execute_command(command)
-            self.logger.debug("Executed ChangeGridParametersCommand for default grid layout.")
