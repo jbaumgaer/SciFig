@@ -101,6 +101,7 @@ class ScatterPlotProperties(BasePlotProperties):
     """Properties specific to a scatter plot."""
 
     marker_size: int = 10 #TODO: Move into config
+    plot_type: PlotType = PlotType.SCATTER
 
 
 # Mapping of PlotType enum to their respective Property classes
