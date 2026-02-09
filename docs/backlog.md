@@ -1415,6 +1415,300 @@ Implement a properties controller
 * Update the docs to give a clear view of the core classes: The MainController, the CanvasController, the ToolManager, the ApplicationModel, the DataLoader, the LayoutEngine, the MainWindow, the Renderer, the CommandManager and the ConfigService
 
 
+
+##  Epic: Dynamic Grid Layout with constrained_layout Integration
+
+
+  Description: This epic aims to enhance the application's grid layout capabilities by introducing granular control over margins and gutters, leveraging
+  Matplotlib's constrained_layout for intelligent automatic spacing, and adapting the UI to expose these new controls to the user. This will lead to more
+  flexible and visually appealing plot arrangements.
+
+  ---
+
+
+  Feature 1: Granular Layout Configuration Model
+
+  Description: Extend the existing GridConfig to store individual top, bottom, left, and right margins, and to support list-based horizontal and vertical
+  spacing (gutters) to align with Matplotlib's GridSpec and constrained_layout functionality.
+
+
+  Planned Implementation:
+
+
+   1. Modify `src/shared/types.py`:
+       * Task: Update the Gutters dataclass:
+           * Change hspace: float to hspace: List[float] = field(default_factory=list).
+           * Change wspace: float to wspace: List[float] = field(default_factory=list).
+           * Ensure to_dict() and from_dict() methods correctly handle lists.
+           * Reason: To accurately represent Matplotlib's ability to define varying spacing between different rows/columns.
+       * Task: Add List to import from typing.
+
+
+   2. Modify `src/models/layout/layout_config.py`:
+       * Task: Update the GridConfig dataclass:
+           * Remove margin: float and gutter: float.
+           * Add margins: Margins = field(default_factory=Margins) (using the existing Margins dataclass, which already supports top, bottom, left, right).
+           * Add gutters: Gutters = field(default_factory=Gutters) (using the now-modified Gutters dataclass).
+           * Reason: To directly store granular layout parameters.
+       * Task: Update GridConfig.to_dict():
+           * Replace margin and gutter serialization with self.margins.to_dict() and self.gutters.to_dict().
+           * Reason: To serialize the new nested dataclass structure.
+       * Task: Update GridConfig.from_dict():
+           * Replace margin and gutter deserialization with Margins.from_dict(data.get("margins", {})) and Gutters.from_dict(data.get("gutters", {})).
+           * Reason: To deserialize the new nested dataclass structure.
+       * Task: Add List to import from typing.
+
+  Testing Plan:
+
+
+   * Unit Tests (`tests/shared/test_types.py`):
+       * test_gutters_list_serialization: Verify Gutters.to_dict() correctly serializes lists for hspace and wspace.
+       * test_gutters_list_deserialization: Verify Gutters.from_dict() correctly deserializes lists for hspace and wspace.
+       * test_gutters_default_empty_lists: Verify default Gutters object has empty lists for hspace and wspace.
+   * Unit Tests (`tests/models/layout/test_layout_config.py`):
+       * test_gridconfig_granular_params_init: Verify GridConfig initializes with Margins and Gutters objects.
+       * test_gridconfig_granular_params_to_dict: Verify GridConfig.to_dict() correctly serializes nested Margins and Gutters dictionaries.
+       * test_gridconfig_granular_params_from_dict: Verify GridConfig.from_dict() correctly deserializes nested Margins and Gutters.
+       * test_gridconfig_from_dict_partial_data: Verify from_dict handles missing 'margins' or 'gutters' keys gracefully, falling back to defaults.
+
+  Risks & Mitigations:
+
+
+   * Risk: Backward compatibility issues if old GridConfig JSONs/YAMLs are loaded without the new 'margins' and 'gutters' keys.
+   * Mitigation: from_dict methods for Margins and Gutters use .get() with default values, ensuring older configurations can still be loaded without
+     crashing (though they will revert to new defaults for margins/gutters). Documentation should highlight this change.
+
+  ---
+
+  Feature 2: Matplotlib constrained_layout Integration for Grid Layout
+
+
+  Description: Modify GridLayoutEngine to use Matplotlib's constrained_layout for calculating plot geometries, respecting the granular margin and gutter
+  configurations. This includes creating Matplotlib Axes based on GridSpec, applying the layout, and extracting the final calculated positions and spacings.
+
+  Planned Implementation:
+
+
+   1. Modify `src/models/layout/layout_engine.py`:
+       * Task: Update imports: Add import matplotlib.pyplot as plt, import matplotlib.gridspec as gridspec, from matplotlib.figure import Figure, from
+         matplotlib.axes import Axes, from matplotlib.transforms import Bbox.
+       * Task: Refactor GridLayoutEngine.calculate_geometries():
+           * Decision: This method will be deprecated or refactored to simply call apply_matplotlib_grid_layout to get the final Rect values from
+             Matplotlib. It's inconsistent to have a separate calculation when Matplotlib is the renderer. For this feature, we will update it to call
+             apply_matplotlib_grid_layout on a temporary figure to get the geometries.
+           * Reason: To ensure all grid geometry calculations leverage Matplotlib for consistency.
+       * Task: Update GridLayoutEngine.apply_matplotlib_grid_layout(self, figure: Figure, plot_nodes: List[PlotNode], grid_config: GridConfig) ->
+         tuple[dict[PlotID, Axes], dict[PlotID, Rect], Margins, Gutters]:
+           * Grid Dimension Calculation: Keep logic for inferring rows and cols if grid_config.rows or grid_config.cols are 0.
+           * `GridSpec` Creation: Pass grid_config.gutters.hspace and grid_config.gutters.wspace directly to the gridspec.GridSpec constructor. Normalize
+             row_ratios and col_ratios if they are empty or don't match dimensions.
+           * Clear Figure: Add figure.clear() to ensure previous axes are removed when applying a new layout.
+           * Add `Axes`: Iterate through plot_nodes (sorted by approximate current position) and add Axes to the figure using gs[r_idx, c_idx]. Store PlotID
+             to Axes mapping.
+           * Configure `constrained_layout`:
+               * Convert grid_config.margins (figure fractions) to "inches" for figure.set_constrained_layout_pads(). For instance, w_pad_left =
+                 grid_config.margins.left * figure.get_figwidth(). set_constrained_layout_pads requires w_pad, h_pad, w_space, h_space parameters, which are
+                 global. The GridSpec's list-based hspace/wspace will guide internal spacing.
+               * Set figure.set_layout_engine('constrained').
+           * Retrieve Final Geometries: Iterate through the created Axes and get their final positions using ax.get_position(), converting Bbox to Rect.
+           * Retrieve Effective Margins: Calculate effective_margin_top/bottom/left/right by finding the union bounding box of all Axes and comparing it to
+             the figure's extent. Return as a Margins object.
+           * Retrieve Effective Gutters: This is complex. constrained_layout does not directly expose per-row/per-column effective gutters.
+               * Initial Approach: For hspace and wspace, return the target lists provided to GridSpec if they were provided and valid. If not, return
+                 default (e.g., empty lists or averaged single values).
+               * Refined Approach (Future): Implement logic to explicitly measure the distances between adjacent Axes in each row/column to calculate the
+                 actual effective list of hspace and wspace. This would involve iterating gs.get_subplot_positions(figure) and analyzing the resulting Bbox
+                 objects. For the initial implementation, relying on the target GridSpec values for Gutters will be sufficient, as constrained_layout
+                 respects them.
+           * Return Value: Return the mpl_axes_map, final_plot_geometries, calculated_margins, and calculated_gutters.
+
+  Testing Plan:
+
+
+   * Unit Tests (`tests/models/layout/test_layout_engine.py`):
+       * test_apply_matplotlib_grid_layout_basic_grid: Test with a simple GridConfig (e.g., 2x2, default margins/gutters) to ensure correct Axes creation,
+         and that returned Rects are sensible.
+       * test_apply_matplotlib_grid_layout_with_ratios: Test with row_ratios and col_ratios to verify Axes dimensions reflect ratios.
+       * test_apply_matplotlib_grid_layout_granular_margins: Test with custom Margins (e.g., large left margin) and verify calculated_margins reflect this,
+         and Axes positions are adjusted.
+       * test_apply_matplotlib_grid_layout_list_gutters: Test with GridConfig.gutters providing list values for hspace/wspace and verify GridSpec is created
+         correctly and calculated_gutters reflect the target values. (If direct measurement is implemented, verify actual measured values).
+       * test_apply_matplotlib_grid_layout_empty_plot_nodes: Verify handling of no PlotNodes.
+       * test_apply_matplotlib_grid_layout_figure_clears_axes: Verify figure.clear() is called and new axes are added.
+       * test_calculate_geometries_calls_apply_matplotlib_grid_layout: Verify the refactored calculate_geometries correctly delegates to
+         apply_matplotlib_grid_layout on a temporary figure.
+
+  Risks & Mitigations:
+
+
+   * Risk: Accurate conversion of GridConfig's relative Margins and Gutters to constrained_layout's specific units (inches, fractions of font size).
+   * Mitigation: Thorough testing with various GridConfig values and visual inspection of generated plots. Document any limitations or non-intuitive
+     behaviors. Provide clear comments in code regarding unit conversions.
+   * Risk: constrained_layout can sometimes fail or produce unexpected results with very complex GridSpec definitions or when many elements are present.
+   * Mitigation: Implement robust error handling around figure.set_layout_engine(). Log warnings/errors gracefully. Consider providing a "reset layout" or
+     "fallback to simple layout" option in the UI.
+   * Risk: Calculating effective list-based hspace/wspace accurately after constrained_layout runs might be complex without direct Matplotlib API support.
+   * Mitigation: Start with returning the target values if valid. If user feedback demands more precision, invest in measuring actual distances between Axes
+     bounding boxes.
+
+  ---
+
+
+  Feature 3: UI for Granular Layout Controls
+
+  Description: Adapt the Layout section of the Properties Panel to expose granular controls for top/bottom/left/right margins and list-based
+  horizontal/vertical gutters, allowing users to fine-tune layout appearance.
+
+  Planned Implementation:
+
+
+   1. Modify `src/ui/factories/layout_ui_factory.py`:
+       * Task: Update _build_grid_layout_controls(self, current_grid_config: GridConfig, layout_controller: LayoutController, parent: QWidget) -> QWidget
+         (assuming this method builds the grid layout specific UI).
+       * Task: Replace the single 'margin' input with four QDoubleSpinBoxes for margins.top, margins.bottom, margins.left, margins.right.
+           * Reason: To enable granular control.
+       * Task: Replace the single 'gutter' input with two QLineEdits for gutters.hspace and gutters.wspace.
+           * Reason: To allow input of comma-separated lists for per-row/per-column spacing.
+           * Input Handling: Connect editingFinished signal to controller methods, which will parse the comma-separated string into List[float].
+       * Task: Connect the valueChanged (for QDoubleSpinBox) and editingFinished (for QLineEdit) signals of these new widgets to a unified debounced slot in
+         layout_controller (e.g., layout_controller.on_grid_param_changed).
+       * Task: Initialize each widget with values from current_grid_config.margins and current_grid_config.gutters.
+
+
+   2. Modify `src/controllers/layout_controller.py`:
+       * Task: Update on_grid_param_changed(self, param_name: str, value: Any):
+           * When param_name is "margin_top", "margin_bottom", "margin_left", "margin_right", update the corresponding field in a temporary Margins object.
+           * When param_name is "hspace" or "wspace":
+               * Parse the value (string) into a List[float]. Implement robust error handling for invalid input (e.g., non-numeric values, incorrect
+                 format).
+               * Update the corresponding field in a temporary Gutters object.
+           * After collecting all changes (perhaps after a debounce period), construct a new GridConfig and execute a ChangeGridParametersCommand (as
+             outlined in the TDD's Feature 4).
+       * Task: Ensure the ChangeGridParametersCommand accepts the new GridConfig structure.
+
+  Testing Plan:
+
+
+   * Unit Tests (`tests/ui/factories/test_layout_ui_factory.py`):
+       * test_build_grid_layout_controls_has_granular_margin_inputs: Verify 4 QDoubleSpinBoxes for margins are present and correctly initialized.
+       * test_build_grid_layout_controls_has_list_gutter_inputs: Verify 2 QLineEdits for hspace and wspace are present and correctly initialized.
+       * test_grid_param_inputs_connect_to_controller: Verify all new input widgets connect their signals to layout_controller.on_grid_param_changed.
+   * Unit Tests (`tests/controllers/test_layout_controller.py`):
+       * test_on_grid_param_changed_updates_margins: Mock UI input for margins and verify ChangeGridParametersCommand is created with correct Margins.
+       * test_on_grid_param_changed_parses_hspace_wspace_lists: Mock UI input for comma-separated hspace/wspace strings and verify
+         ChangeGridParametersCommand is created with correct Gutters lists.
+       * test_on_grid_param_changed_invalid_gutter_input_handled: Verify error handling for non-numeric or malformed list input.
+
+  Risks & Mitigations:
+
+
+   * Risk: Complex UI for list-based input might be cumbersome for users. Input validation and parsing of comma-separated strings can be error-prone.
+   * Mitigation: Provide clear input instructions in the UI (e.g., tooltips, placeholder text). Implement robust parsing logic with clear user feedback for
+     invalid input. Consider an alternative UI (e.g., a custom widget with dynamically added spinboxes) if the list input proves too difficult for users.
+   * Risk: Increased number of UI controls could clutter the Properties Panel.
+   * Mitigation: Group related controls visually (e.g., "Margins" group box, "Gutters" group box). Use sensible default values to minimize initial user
+     configuration.
+
+  ---
+
+  Feature 4: Enhanced "Snap to Grid" with constrained_layout
+
+
+  Description: The "Snap to Grid" functionality will be improved to use Matplotlib's constrained_layout during its inference process, intelligently
+  determining optimal Margins and Gutters for the inferred grid.
+
+  Planned Implementation:
+
+
+   1. Modify `src/models/layout/layout_engine.py`:
+       * Task: Update GridLayoutEngine.snap_plots_to_grid(self, plots: List[PlotNode], current_grid_config: GridConfig) -> GridConfig:
+           * Initial Grid Inference: Keep existing logic for inferring rows and cols based on num_plots.
+           * Initial Ratios: Keep logic for inferred_row_ratios and inferred_col_ratios.
+           * Ephemeral Matplotlib Figure: Create a temporary matplotlib.pyplot.figure() for the dry run. Ensure it's closed in a try...finally block.
+           * Temporary `GridConfig` for Dry Run: Create a temp_grid_config_for_dry_run using the inferred rows, cols, row_ratios, col_ratios. For margins
+             and gutters in this temporary config, use the current_grid_config.margins and current_grid_config.gutters as initial suggestions for
+             constrained_layout.
+           * Call `apply_matplotlib_grid_layout`: Call self.apply_matplotlib_grid_layout(temp_fig, plots, temp_grid_config_for_dry_run).
+           * Retrieve `calculated_margins` and `calculated_gutters`: Directly use the Margins and Gutters objects returned by apply_matplotlib_grid_layout.
+           * Construct New `GridConfig`: Create and return a new_grid_config using the inferred rows, cols, row_ratios, col_ratios, and the
+             calculated_margins/calculated_gutters. No more averaging or max() calls are needed for these specific attributes.
+           * Reason: To intelligently leverage constrained_layout's optimization for spacing when snapping to a grid.
+
+  Testing Plan:
+
+
+   * Unit Tests (`tests/models/layout/test_layout_engine.py`):
+       * test_snap_plots_to_grid_uses_ephemeral_figure: Verify a temporary Matplotlib figure is created and closed.
+       * test_snap_plots_to_grid_calls_apply_matplotlib_grid_layout: Verify apply_matplotlib_grid_layout is called during the dry run.
+       * test_snap_plots_to_grid_inferred_margins_match_constrained_layout_output: Test with various plot arrangements (e.g., plots with long titles/labels)
+         and verify the margins in the returned GridConfig are consistent with what constrained_layout would produce.
+       * test_snap_plots_to_grid_inferred_gutters_match_constrained_layout_output: Test with multiple plots and verify the gutters (lists) in the returned
+         GridConfig are consistent with constrained_layout's spacing decisions.
+       * test_snap_plots_to_grid_handles_empty_plots: Verify it returns the current config if no plots are present.
+       * test_snap_plots_to_grid_error_handling: Verify graceful handling if apply_matplotlib_grid_layout encounters an error during the dry run.
+
+
+  Risks & Mitigations:
+
+
+   * Risk: constrained_layout's "intelligent" determination of margins/gutters might not always align with user expectations, especially when going from
+     free-form to grid.
+   * Mitigation: Document the behavior clearly. Provide UI controls (Feature 3) for manual adjustment after snapping. Allow the user to "undo" the snap
+     operation.
+   * Risk: Performance overhead of creating a temporary Matplotlib figure and running layout solver for each "snap" operation, especially with many plots.
+   * Mitigation: Profile the snap_plots_to_grid method. If performance is an issue, consider debouncing snap requests or caching results for frequently
+     snapped configurations.
+
+# Session Summary - Backlog of Achievements
+
+This document summarizes the key achievements and resolved issues during the current development session, presented as a backlog.
+
+## Resolved Items
+
+### Architecture & State Management
+
+-   **Implemented `ui_selected_layout_mode`:** Introduced a new property (`_ui_selected_layout_mode`) and signal (`uiLayoutModeChanged`) in `LayoutManager` to explicitly separate the UI's selected layout mode from the application's active layout mode. This ensures UI changes do not prematurely alter the active application state.
+    *   **Related TODOs Completed:** 1, 2, 3
+-   **Refactored `LayoutManager.__init__`:** Modified initialization to correctly set `_ui_selected_layout_mode` and `_application_model.current_layout_config` based on `default_mode` without calling `set_layout_mode`. Explicitly creates a minimal `GridConfig` if the default is `GRID`.
+    *   **Related TODOs Completed:** 5
+-   **Re-purposed `LayoutManager.set_layout_mode`:** This method now solely controls the *active* layout (`_application_model.current_layout_config`), ensuring `_last_grid_config` is initialized (if `GRID` mode is activated) and storing previous configurations. It no longer affects the UI's selected mode directly.
+    *   **Related TODOs Completed:** 4
+
+### Feature Enhancements & Bug Fixes
+
+-   **Optimized Layout Actions (`infer_grid_parameters`, `optimize_layout_action`, `update_grid_layout_parameters`):** These methods now explicitly call `LayoutManager.set_layout_mode(LayoutMode.GRID)` to ensure the active layout is `GRID` before proceeding with calculations. Redundant `None` checks for `_last_grid_config` were removed.
+    *   **Related TODOs Completed:** 6, 7, 8
+-   **Corrected `GridLayoutEngine` Initialization:** Fixed `TypeError` in `GridLayoutEngine.calculate_geometries` and its helper `_apply_constrained_layout` by ensuring `Margins` and `Gutters` are always instantiated with required arguments.
+    *   **Related TODOs Completed:** (Partially 12, manual fix for `_apply_constrained_layout` was implied)
+-   **Synchronized UI Panel Building:** Updated `LayoutUIFactory.build_layout_controls()` to use the new `ui_selected_layout_mode` for determining which UI panel to build, aligning with the separation of concerns.
+    *   **Related TODOs Completed:** 10
+-   **Adapted `LayoutController` for UI Selection:** Modified `LayoutController.set_layout_mode` to now set `LayoutManager.ui_selected_layout_mode` (UI-only state), disentangling it from active layout changes.
+    *   **Related TODOs Completed:** 9
+
+### UI Responsiveness & Data Flow
+
+-   **Enhanced `PropertiesPanel` Updates:** Ensured the `PropertiesPanel` correctly responds to changes in the UI's selected layout mode and the active layout configuration parameters.
+    *   Connected `PropertiesPanel._update_content` to `LayoutManager.uiLayoutModeChanged` to rebuild controls when the UI's mode selection changes.
+    *   Connected `PropertiesPanel._update_content` to `ApplicationModel.layoutConfigChanged` to ensure UI fields update when active layout parameters (like optimized margins/gutters) change.
+    *   **Related TODOs Completed:** (Partially 10, manual fix for `PropertiesPanel` connection)
+
+### Test Updates
+
+-   **Updated `ApplicationModel.current_layout_config` setter:** Reverted type hint to `LayoutConfig` and removed `None` handling as the model should always hold a valid config object.
+    *   **Related TODOs Completed:** 11
+-   **Refactored Tests for LayoutManager and LayoutUIFactory:** Updated relevant unit tests to validate the new `ui_selected_layout_mode` behavior and the revised signal emission patterns.
+    *   **Related TODOs Completed:** 13, 14 (partial, due to ongoing debugging of `optimize_layout`)
+
+## Outstanding Items / Next Steps (from current debugging context)
+
+-   Investigate why `optimize_layout` view/values are not updating (despite connections).
+    *   **Initial Diagnosis:** The `GridLayoutEngine._apply_constrained_layout` method still has a `Margins()` call without arguments. (This was manually fixed, but the logs still showed it, implying a synchronization issue.)
+    *   **Current status:** Logs still indicate a `TypeError` in `_apply_constrained_layout`. Need to re-verify `GridLayoutEngine._apply_constrained_layout` and ensure `calculated_margins = Margins()` is replaced with `calculated_margins = Margins(0.0, 0.0, 0.0, 0.0)`.
+    *   **Further investigation needed:** Correctly extract calculated gutters from `constrained_layout` to ensure `calculated_gutters` reflect true optimized values, not just input values.
+
+This backlog reflects a shift towards a more robust and decoupled UI/logic architecture for layout management, with ongoing refinement of the optimization feedback loop.
+
+
 * Add a to_str method to handle data validation from user or config file input instead of insisting on lower or upper case input, maybe write a general parser that can also analyze lists etc.
 
 * Clean up imports, unnecessary comments, lint the document, and make it type safe, e.g. by adding more custom types (axis string in layout manager)
@@ -1423,3 +1717,4 @@ Implement a properties controller
 
 Make sure that when a plot is unclicked, that we switch back to the layout managment properties panel
 Make sure that grid options actually update properly
+Scan for new values that should really be config values
