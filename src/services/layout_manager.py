@@ -71,12 +71,7 @@ class LayoutManager(QObject):
         self._ui_selected_layout_mode = default_mode # Initialize new attribute
         self.logger.debug(f"Default UI selected layout mode from config: {default_mode.value}")
 
-        if default_mode == LayoutMode.GRID:
-            # Initialize _last_grid_config and current_layout_config with a minimal grid config
-            self._last_grid_config = self._create_minimal_grid_config()
-            self._application_model.current_layout_config = self._last_grid_config
-        else:
-            self._application_model.current_layout_config = self._last_free_form_config
+        self.set_layout_mode(default_mode) 
 
         self.logger.info(f"Initial active layout mode set to: {self._application_model.current_layout_config.mode.value}")
 
@@ -321,6 +316,7 @@ class LayoutManager(QObject):
             self._last_grid_config = current_config
         elif isinstance(current_config, FreeConfig):
             self._last_free_form_config = current_config
+            
 
         if mode == LayoutMode.GRID:
             # Transition to GRID: ensure _last_grid_config is initialized before setting as current
@@ -575,8 +571,6 @@ class LayoutManager(QObject):
 
         # Call the new method to update config and apply layout
         return self.update_grid_config_and_apply(new_grid_config)
-
-
 
 
     def get_current_layout_geometries(self, plots: list[PlotNode]) -> dict[PlotID, Rect]:
