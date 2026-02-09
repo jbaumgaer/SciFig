@@ -1,188 +1,24 @@
-from unittest.mock import DEFAULT, MagicMock, Mock, PropertyMock, patch
-
+from unittest.mock import DEFAULT, MagicMock, Mock, patch
 import pytest
-from PySide6.QtWidgets import QApplication, QMenuBar, QToolBar
-from src.controllers.layout_controller import LayoutController
-from src.controllers.node_controller import NodeController
-from src.controllers.project_controller import ProjectController
-from src.core.composition_root import CompositionRoot
-from src.models.application_model import ApplicationModel
-from src.models.layout.free_layout_engine import FreeLayoutEngine
-from src.models.layout.grid_layout_engine import GridLayoutEngine
-from src.models.plots.plot_types import PlotType
-from src.services.commands.command_manager import CommandManager
+from PySide6.QtWidgets import QMenuBar, QToolBar
 
-from src.services.layout_manager import LayoutManager
+from src.core.composition_root import CompositionRoot
+from src.models.plots.plot_types import PlotType
 from src.shared.exceptions import ConfigError
 from src.ui.builders.menu_bar_builder import MainMenuActions
-from src.ui.builders.tool_bar_builder import (
-    ToolBarActions,  # Assuming ToolBarActions is also a dataclass
-)
-from src.services.config_service import ConfigService
-from src.controllers.canvas_controller import CanvasController
-from src.services.tool_service import ToolService
-from src.services.tools.selection_tool import SelectionTool
+from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.core.application_components import ApplicationComponents
-from src.models.layout.layout_config import FreeConfig, GridConfig, LayoutConfig # Corrected import
-from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.factories.properties_ui_factory import PropertiesUIFactory
-from src.ui.windows.main_window import MainWindow
-from src.ui.renderers.renderer import Renderer
-from src.shared.constants import IconPath, LayoutMode, ToolName
+from src.shared.constants import ToolName
 from src.services.tools import MockTool
 
 
-@pytest.fixture
-def mock_qapplication():
-    """Fixture for a mock QApplication."""
-    return MagicMock(spec=QApplication)
-
-@pytest.fixture
-def mock_model():
-    """Fixture for a mock ApplicationModel."""
-    model = MagicMock(spec=ApplicationModel)
-    model.figure = Mock() # Mock the figure attribute as it's accessed
-    model.scene_root = Mock() # Add scene_root attribute for _redraw_canvas_callback
-    model.selection = Mock() # Add selection attribute for _redraw_canvas_callback
-    # Mock layoutConfigChanged signal
-    model.layoutConfigChanged = MagicMock()
-    model.modelChanged = MagicMock()
-    model.selectionChanged = MagicMock()
-    # DO NOT explicitly mock current_layout_config here. Let mocker.patch.object handle it.
-    return model
-
-@pytest.fixture
-def mock_command_manager():
-    """Fixture for a mock CommandManager."""
-    return MagicMock(spec=CommandManager)
-
-@pytest.fixture
-def mock_project_controller():
-    """Fixture for a mock ProjectController."""
-    return MagicMock(spec=ProjectController)
-
-@pytest.fixture
-def mock_layout_controller():
-    """Fixture for a mock LayoutController."""
-    return MagicMock(spec=LayoutController)
-
-@pytest.fixture
-def mock_node_controller():
-    """Fixture for a mock NodeController."""
-    return MagicMock(spec=NodeController)
-
-@pytest.fixture
-def mock_renderer():
-    """Fixture for a mock Renderer."""
-    renderer = MagicMock(spec=Renderer)
-    renderer.plotting_strategies = {'line': Mock()} # Mock attribute accessed by assembler
-    renderer.render = MagicMock()
-    return renderer
-
-@pytest.fixture
-def mock_selection_tool():
-    """Fixture for a mock SelectionTool."""
-    return MagicMock(spec=SelectionTool)
-
-@pytest.fixture
-def mock_tool_manager(mock_selection_tool):
-    """Fixture for a mock ToolManager."""
-    tool_manager = MagicMock(spec=ToolService)
-    # Mock add_tool to collect tools without affecting test logic
-    tool_manager._tools = {} # Initialize an empty dictionary to store tools added by add_tool
-    def mock_add_tool(tool):
-        tool_manager._tools[tool.name] = tool
-    tool_manager.add_tool.side_effect = mock_add_tool
-    tool_manager.set_active_tool = MagicMock()
-    return tool_manager
-
-@pytest.fixture
-def mock_main_window():
-    """Fixture for a mock MainWindow."""
-    main_window = MagicMock(spec=MainWindow)
-    main_window.canvas_widget = Mock() # Explicitly set canvas_widget as a Mock object
-    main_window.canvas_widget.figure_canvas = MagicMock() # Mock figure_canvas for redraw callback
-    main_window.canvas_widget.figure_canvas.draw = MagicMock() # Mock draw method
-    # Mock signals/actions that are connected - ensure triggered returns a consistent mock
-    main_window.new_layout_action = MagicMock()
-    main_window.new_layout_action.triggered = MagicMock()
-    main_window.save_project_action = MagicMock()
-    main_window.save_project_action.triggered = MagicMock()
-    main_window.open_project_action = MagicMock()
-    main_window.open_project_action.triggered = MagicMock()
-    main_window.show_properties_panel = MagicMock() # Added for _connect_signals test
-    return main_window
-
-@pytest.fixture
-def mock_config_service():
-    """Fixture for a mock ConfigService."""
-    config_service = MagicMock(spec=ConfigService)
-    # Configure mock to return specific values for testing figure creation
-    config_service.get.side_effect = lambda key, default=None: {
-        "figure.default_width": 5.0,
-        "figure.default_height": 3.0,
-        "figure.default_dpi": 200,
-        "figure.default_facecolor": "blue",
-        "tool.default_active_tool": "selection", # Ensure this matches ToolName.SELECTION.value
-        "paths.icon_base_dir": "mock/icons",
-        "paths.tool_icons.select": "mock_select.svg",
-        "paths.tool_icons.direct_select": "mock_direct_select.svg",
-        "paths.tool_icons.eyedropper": "mock_eyedropper.svg",
-        "paths.tool_icons.plot": "mock_plot.svg",
-        "paths.tool_icons.text": "mock_text.svg",
-        "paths.tool_icons.zoom": "mock_zoom.svg",
-        "organization": "TestOrg",
-        "app_name": "TestApp",
-        "layout.default_margin": 0.1,
-        "layout.default_gutter": 0.08,
-        "layout.max_recent_files": 5,
-        "ui.default_layout_mode": "free_form", # Added for LayoutManager initialization
-    }.get(key, default)
-    config_service.get_required.side_effect = lambda key: {
-        "figure.default_width": 5.0,
-        "figure.default_height": 3.0,
-        "figure.default_dpi": 200,
-        "figure.default_facecolor": "blue",
-    }.get(key)
-    return config_service
-
-@pytest.fixture
-def mock_free_layout_engine():
-    """Fixture for a mock FreeLayoutEngine."""
-    return MagicMock(spec=FreeLayoutEngine)
-
-@pytest.fixture
-def mock_grid_layout_engine():
-    """Fixture for a mock GridLayoutEngine."""
-    return MagicMock(spec=GridLayoutEngine)
-
-@pytest.fixture
-def mock_layout_manager():
-    """Fixture for a mock LayoutManager."""
-    manager = MagicMock(spec=LayoutManager)
-    manager.layoutModeChanged = MagicMock()
-    return manager
-
-@pytest.fixture
-def mock_layout_ui_factory():
-    """Fixture for a mock LayoutUIFactory."""
-    return MagicMock(spec=LayoutUIFactory)
-
-@pytest.fixture
-def mock_properties_ui_factory():
-    """Fixture for a mock PropertiesUIFactory."""
-    return MagicMock(spec=PropertiesUIFactory)
-
-@pytest.fixture
-def mock_canvas_controller():
-    """Fixture for a mock CanvasController."""
-    return MagicMock(spec=CanvasController)
+# No fixtures defined here anymore, all moved to tests/unit/conftest.py
 
 
 @pytest.fixture
 def composition_root(
     mock_qapplication,
-    mock_model,
+    mock_application_model, # Renamed from mock_model
     mock_command_manager,
     mock_project_controller,
     mock_layout_controller,
@@ -212,7 +48,7 @@ def composition_root(
 
     # --- Step 1: Patch all classes that CompositionRoot will instantiate or import ---
     # Store the patched class mocks in local variables
-    mock_ConfigService_class_patch = mocker.patch('src.core.composition_root.ConfigService')
+    # Note: ConfigService is not patched here as it's passed directly to CompositionRoot
     mock_ApplicationModel_class_patch = mocker.patch('src.core.composition_root.ApplicationModel')
     mock_CommandManager_class_patch = mocker.patch('src.core.composition_root.CommandManager')
     mock_ProjectController_class_patch = mocker.patch('src.core.composition_root.ProjectController')
@@ -237,8 +73,7 @@ def composition_root(
     mock_set_icon_config_patch = mocker.patch('src.shared.constants.IconPath.set_config_service', autospec=True)
     
     # --- Step 2: Set the return_value for each patched class to the fixture's instance mock ---
-    mock_ConfigService_class_patch.return_value = mock_config_service
-    mock_ApplicationModel_class_patch.return_value = mock_model
+    mock_ApplicationModel_class_patch.return_value = mock_application_model
     mock_CommandManager_class_patch.return_value = mock_command_manager
     mock_ProjectController_class_patch.return_value = mock_project_controller
     mock_LayoutController_class_patch.return_value = mock_layout_controller
@@ -269,7 +104,7 @@ def composition_root(
 
     # --- Step 4: Set internal references on the CompositionRoot instance to the mocked objects ---
     # These assignments ensure that when a test calls composition_root._model, it gets the fixture's mock_model
-    composition_root_instance._model = mock_model
+    composition_root_instance._model = mock_application_model
     composition_root_instance._command_manager = mock_command_manager
     composition_root_instance._project_controller = mock_project_controller
     composition_root_instance._layout_controller = mock_layout_controller
@@ -291,7 +126,7 @@ def composition_root(
     composition_root_instance._tool_bar_actions = mock_toolbar_actions_instance
     
     # Store patched class mocks for later assertions
-    composition_root_instance._mock_ConfigService_class = mock_ConfigService_class_patch
+    # mock_ConfigService_class_patch is not needed here as ConfigService is passed directly
     composition_root_instance._mock_ApplicationModel_class = mock_ApplicationModel_class_patch
     composition_root_instance._mock_CommandManager_class = mock_CommandManager_class_patch
     composition_root_instance._mock_ProjectController_class = mock_ProjectController_class_patch
@@ -365,7 +200,7 @@ class TestCompositionRoot:
         assert components.layout_manager is composition_root._layout_manager
 
 
-    def test_assemble_core_components_uses_config_for_figure(self, composition_root, mock_model, mock_config_service, mocker):
+    def test_assemble_core_components_uses_config_for_figure(self, composition_root, mock_application_model, mock_config_service, mocker): # Renamed mock_model
         """
         Test that _assemble_core_components uses values from ConfigService for Figure creation.
         """
@@ -383,7 +218,7 @@ class TestCompositionRoot:
             facecolor=mock_config_service.get_required("figure.default_facecolor")
         )
         # Assert that these properties are then also set on the application model
-        mock_model.figure = mock_figure_instance
+        mock_application_model.figure = mock_figure_instance
 
 
     def test_assemble_main_window_receives_config_service(self, composition_root, mock_main_window, mock_config_service, mocker):
@@ -417,7 +252,7 @@ class TestCompositionRoot:
         )
 
 
-    def test_controllers_receive_config_service(self, composition_root, mock_model, mock_command_manager, mock_config_service, mock_layout_manager):
+    def test_controllers_receive_config_service(self, composition_root, mock_application_model, mock_command_manager, mock_config_service, mock_layout_manager): # Renamed mock_model
         """
         Test that ProjectController, LayoutController, and NodeController are instantiated
         with the correct dependencies, including ConfigService for ProjectController and LayoutController.
@@ -426,7 +261,7 @@ class TestCompositionRoot:
 
         # ProjectController assertions
         composition_root._mock_ProjectController_class.assert_called_once_with(
-            model=mock_model,
+            model=mock_application_model,
             command_manager=mock_command_manager,
             config_service=mock_config_service,
             layout_manager=mock_layout_manager
@@ -434,14 +269,14 @@ class TestCompositionRoot:
 
         # LayoutController assertions
         composition_root._mock_LayoutController_class.assert_called_once_with(
-            model=mock_model,
+            model=mock_application_model,
             command_manager=mock_command_manager,
             layout_manager=mock_layout_manager
         )
 
         # NodeController assertions (does not take config_service)
         composition_root._mock_NodeController_class.assert_called_once_with(
-            model=mock_model,
+            model=mock_application_model,
             command_manager=mock_command_manager
         )
 
@@ -490,7 +325,6 @@ class TestCompositionRoot:
                 mock_config_service.get("tool.default_active_tool", ToolName.SELECTION.value)
             )
 
-
     def test_assemble_tooling_assigns_canvas_widget_to_tools(self, composition_root, mock_main_window, mock_tool_manager, mock_selection_tool):
         """
         Test that the canvas_widget is correctly assigned to the tools after MainWindow is assembled.
@@ -504,7 +338,7 @@ class TestCompositionRoot:
             assert tool._canvas_widget is mock_main_window.canvas_widget
 
 
-    def test_assemble_canvas_controller_instantiates_canvas_controller(self, composition_root, mock_canvas_controller, mock_model, mock_main_window, mock_tool_manager, mock_command_manager, mock_layout_controller):
+    def test_assemble_canvas_controller_instantiates_canvas_controller(self, composition_root, mock_canvas_controller, mock_application_model, mock_main_window, mock_tool_manager, mock_command_manager, mock_layout_controller): # Renamed mock_model
         """
         Test that _assemble_canvas_controller instantiates the CanvasController with correct dependencies.
         """
@@ -513,16 +347,16 @@ class TestCompositionRoot:
         composition_root._assemble_canvas_controller()
 
         composition_root._mock_CanvasController_class.assert_called_once_with(
-            model=mock_model,
+            model=mock_application_model,
             canvas_widget=mock_main_window.canvas_widget,
             tool_manager=mock_tool_manager,
             command_manager=mock_command_manager,
-            layout_controller=mock_layout_controller,
+            layout_controller=composition_root._layout_controller, # Use the stored instance from assembler
         )
         assert composition_root._canvas_controller is mock_canvas_controller
 
 
-    def test_connect_signals(self, composition_root, mock_model, mock_main_window, mock_project_controller, mock_layout_controller, mock_selection_tool):
+    def test_connect_signals(self, composition_root, mock_application_model, mock_main_window, mock_project_controller, mock_layout_controller, mock_selection_tool): # Renamed mock_model
         """
         Test that _connect_signals correctly connects all signals to their respective slots.
         """
@@ -544,13 +378,13 @@ class TestCompositionRoot:
         mock_main_window.open_project_action.triggered.connect.assert_called_once()
 
         # Verify connections for model changes
-        mock_model.modelChanged.connect.assert_called_once_with(
+        mock_application_model.modelChanged.connect.assert_called_once_with(
             composition_root._redraw_canvas_callback
         )
-        mock_model.selectionChanged.connect.assert_called_once_with(
+        mock_application_model.selectionChanged.connect.assert_called_once_with(
             composition_root._redraw_canvas_callback
         )
-        mock_model.layoutConfigChanged.connect.assert_called_once_with(
+        mock_application_model.layoutConfigChanged.connect.assert_called_once_with(
             composition_root._redraw_canvas_callback
         )
 
@@ -559,7 +393,8 @@ class TestCompositionRoot:
             mock_main_window.show_properties_panel
         )
 
-    def test_redraw_canvas_callback(self, composition_root, mock_renderer, mock_model, mock_main_window):
+
+    def test_redraw_canvas_callback(self, composition_root, mock_renderer, mock_application_model, mock_main_window): # Renamed mock_model
         """
         Test that _redraw_canvas_callback correctly calls renderer.render and figure_canvas.draw.
         """
@@ -573,11 +408,12 @@ class TestCompositionRoot:
         # Verify renderer.render is called with correct arguments
         mock_renderer.render.assert_called_once_with(
             mock_main_window.canvas_widget.figure,
-            mock_model.scene_root,
-            mock_model.selection,
+            mock_application_model.scene_root,
+            mock_application_model.selection,
         )
         # Verify figure_canvas.draw is called
         mock_main_window.canvas_widget.figure_canvas.draw.assert_called_once()
+
 
     def test_properties_ui_factory_registers_builders(self, composition_root, mock_properties_ui_factory):
         """
@@ -594,7 +430,9 @@ class TestCompositionRoot:
             PlotType.SCATTER, composition_root._mock_build_scatter_plot_ui_widgets_func
         )
         assert mock_properties_ui_factory.register_builder.call_count == 2
-    def test_composition_root_layout_component_wiring(self, composition_root, mock_model, mock_command_manager,
+
+
+    def test_composition_root_layout_component_wiring(self, composition_root, mock_application_model, mock_command_manager, # Renamed mock_model
                                                         mock_config_service, mock_free_layout_engine,
                                                         mock_grid_layout_engine, mock_layout_manager,
                                                         mock_layout_ui_factory,
@@ -616,7 +454,7 @@ class TestCompositionRoot:
 
         # Verify LayoutManager instantiation
         composition_root._mock_LayoutManager_class.assert_called_once_with(
-            application_model=mock_model,
+            application_model=mock_application_model,
             free_engine=mock_free_layout_engine,
             grid_engine=mock_grid_layout_engine,
             config_service=mock_config_service,
@@ -631,15 +469,15 @@ class TestCompositionRoot:
         assert components.layout_ui_factory is mock_layout_ui_factory
 
         # Verify Renderer receives LayoutManager
-        composition_root._mock_Renderer_class.assert_called_once_with(layout_manager=mock_layout_manager, application_model=mock_model)
+        composition_root._mock_Renderer_class.assert_called_once_with(layout_manager=mock_layout_manager, application_model=mock_application_model)
 
         # Verify MainWindow receives LayoutUIFactory and LayoutManager
         composition_root._mock_MainWindow_class.assert_called_once_with(
-            model=mock_model,
+            model=composition_root._model,
             project_controller=composition_root._project_controller,
             layout_controller=composition_root._layout_controller,
             node_controller=composition_root._node_controller,
-            command_manager=mock_command_manager,
+            command_manager=composition_root._command_manager,
             plot_types=composition_root._plot_types,
             menu_bar=composition_root._menu_bar,
             main_menu_actions=composition_root._main_menu_actions,
@@ -653,56 +491,13 @@ class TestCompositionRoot:
 
         # Verify CanvasController receives LayoutManager and ProjectController
         composition_root._mock_CanvasController_class.assert_called_once_with(
-            model=mock_model,
+            model=mock_application_model,
             canvas_widget=mock_main_window.canvas_widget,
             tool_manager=mock_tool_manager,
             command_manager=mock_command_manager,
             layout_controller=composition_root._layout_controller, # Use the stored instance from assembler
         )
         assert components.canvas_controller is mock_canvas_controller
-
-    # def test_composition_root_initial_layout_mode_reflection(self, composition_root, mock_model, mock_config_service, mock_layout_manager, mocker):
-    #     """
-    #     Test that the initial layout mode (from ConfigService) is correctly set in the ApplicationModel
-    #     and reflected in the UI (via MainWindow's initial update slot if applicable).
-    #     """
-    #     # Configure config_service to return a specific default layout mode
-    #     mock_config_service.get.side_effect = lambda key, default=None: {
-    #         "figure.default_width": 5.0,
-    #         "figure.default_height": 3.0,
-    #         "figure.default_dpi": 200,
-    #         "figure.default_facecolor": "blue",
-    #         "tool.default_active_tool": "selection",
-    #         "paths.icon_base_dir": "mock/icons",
-    #         "paths.tool_icons.select": "mock_select.svg",
-    #         "paths.tool_icons.direct_select": "mock_direct_select.svg",
-    #         "paths.tool_icons.eyedropper": "mock_eyedropper.svg",
-    #         "paths.tool_icons.plot": "mock_plot.svg",
-    #         "paths.tool_icons.text": "mock_text.svg",
-    #         "paths.tool_icons.zoom": "mock_zoom.svg",
-    #         "organization": "TestOrg",
-    #         "app_name": "TestApp",
-    #         "layout.default_margin": 0.1,
-    #         "layout.default_gutter": 0.08,
-    #         "layout.max_recent_files": 5,
-    #         "ui.default_layout_mode": LayoutMode.GRID.value, # Test with GRID mode
-    #     }.get(key, default)
-
-    #     # Patch the current_layout_config class property of the mock_model instance
-    #     # This ensures that assignments to mock_model.current_layout_config are intercepted
-    #     mock_current_layout_config_property = mocker.patch.object(
-    #         mock_model.__class__, 'current_layout_config', new_callable=PropertyMock
-    #     )
-
-    #     # Call assemble to trigger the configuration and wiring
-    #     components = composition_root.assemble()
-
-    #     # Assert that the ApplicationModel's current_layout_config reflects the configured mode
-    #     # Check that the setter for current_layout_config on mock_model was called
-    #     mock_current_layout_config_property.setter.assert_called_once()
-    #     # Get the LayoutConfig object that was passed to the setter
-    #     set_config = mock_current_layout_config_property.setter.call_args[0][0]
-    #     assert set_config.mode == LayoutMode.GRID
 
 
     def test_assemble_core_components_raises_config_error_on_missing_figure_properties(self, composition_root, mock_config_service):

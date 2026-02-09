@@ -1,8 +1,8 @@
 import pytest
-from unittest.mock import MagicMock, create_autospec
+from unittest.mock import MagicMock
 import matplotlib.figure
 from pathlib import Path
-import uuid
+import uuid # Keep for mock.id generation
 
 # Import the actual classes and functions
 from src.models.application_model import ApplicationModel
@@ -10,43 +10,11 @@ from src.models.layout.layout_config import FreeConfig, LayoutConfig, GridConfig
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.scene_node import SceneNode
 from src.services.config_service import ConfigService
-import src.models.nodes.scene_node as scene_node
-
+import src.models.nodes.scene_node as scene_node # Import as alias to access node_factory
 
 # --- Fixtures ---
-
-@pytest.fixture
-def mock_figure():
-    """Provides a mock matplotlib figure."""
-    return create_autospec(matplotlib.figure.Figure)
-
-@pytest.fixture
-def mock_config_service():
-    """Provides a mock ConfigService."""
-    return create_autospec(ConfigService)
-
-@pytest.fixture
-def mock_scene_node():
-    """Provides a mock SceneNode."""
-    mock = create_autospec(SceneNode, instance=True)
-    mock.id = str(uuid.uuid4()) # Ensure 'id' attribute exists
-    mock.name = "MockNode"
-    mock.to_dict.return_value = {"id": mock.id, "name": mock.name, "type": "SceneNode", "children": [], "visible": True}
-    return mock
-
-@pytest.fixture
-def mock_group_node():
-    """Provides a mock GroupNode."""
-    mock = create_autospec(GroupNode, instance=True)
-    mock.id = str(uuid.uuid4()) # Ensure 'id' attribute exists
-    mock.name = "MockGroup"
-    mock.children = []
-    # Mocking add_child to append to the mock's children list
-    mock.add_child.side_effect = lambda node: mock.children.append(node)
-    mock.to_dict.return_value = {"id": mock.id, "name": mock.name, "type": "GroupNode", "children": [], "visible": True}
-    # Default hit_test behavior for GroupNode mock
-    mock.hit_test.return_value = None 
-    return mock
+# All generic mock fixtures are moved to tests/unit/conftest.py
+# Only application_model_with_mocks remains as it's the specific test subject setup
 
 @pytest.fixture
 def application_model_with_mocks(mock_figure, mock_config_service):
