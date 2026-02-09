@@ -83,6 +83,7 @@ class ApplicationModel(QObject):
     def load_from_dict(self, data: dict, temp_dir: Path):
         """Loads the application model from a dictionary."""
         # Version check can be added here in the future
+        #TODO: This method emits two modelChanged signals, one from clear_scene and one at the end. Consider optimizing to emit only once.
         self.clear_scene()
         self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
 
