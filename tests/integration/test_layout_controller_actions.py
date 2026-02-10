@@ -56,7 +56,7 @@ def test_full_grid_layout_cycle(real_application_model, real_command_manager, re
     assert model.current_layout_config.rows == 2 # Debug assertion
     controller.on_grid_layout_param_changed("cols", 3)    # Check if grid config updated in model
     assert model.current_layout_config.rows == 2
-    assert model.current_layout_config.cols == 1
+    assert model.current_layout_config.cols == 3
     
     # Assert geometries are updated (exact values depend on GridLayoutEngine, check non-zero change)
     # The actual geometry calculation happens within the command's execute method
@@ -80,7 +80,7 @@ def test_full_grid_layout_cycle(real_application_model, real_command_manager, re
 
     command_manager.redo() # Redo the 'cols' change
     assert model.current_layout_config.rows == 2
-    assert model.current_layout_config.cols == 1
+    assert model.current_layout_config.cols == 3
 
 
 def test_free_form_alignment_undo_redo(real_application_model, real_command_manager, real_layout_manager, real_layout_controller):

@@ -107,6 +107,11 @@ def test_grid_layout_engine_constrained_layout_optimization(mock_config_service)
     Test that GridLayoutEngine's constrained layout optimization correctly calculates
     geometries and returns dynamically calculated margins and gutters.
     """
+    mock_config_service.get.side_effect = {
+        "layout.constrained_w_space": 0.02,
+        "layout.constrained_h_space": 0.02
+    }.get
+
     engine = GridLayoutEngine(config_service=mock_config_service)
 
     plot1 = PlotNode()
@@ -160,7 +165,7 @@ def test_grid_layout_engine_zero_plots(real_grid_layout_engine):
     Should return empty geometries and default margins/gutters.
     """
     engine = real_grid_layout_engine
-    config = GridConfig(rows=1, cols=1, margins=Margins(), gutters=Gutters())
+    config = GridConfig(rows=1, cols=1, row_ratios=[1], col_ratios=[1], margins=Margins(top=0.0, bottom=0.0, left=0.0, right=0.0), gutters=Gutters(hspace=[], wspace=[]))
     
     geometries, calculated_margins, calculated_gutters = engine.calculate_geometries([], config)
     assert geometries == {}
@@ -177,8 +182,10 @@ def test_grid_layout_engine_single_plot(real_grid_layout_engine):
     config = GridConfig(
         rows=1,
         cols=1,
+        row_ratios=[1],
+        col_ratios=[1],
         margins=Margins(left=0.1, right=0.1, top=0.1, bottom=0.1),
-        gutters=Gutters()
+        gutters=Gutters(hspace=[], wspace=[])
     )
 
     geometries, _, _ = engine.calculate_geometries(plots, config)
