@@ -30,6 +30,7 @@ from src.services.layout_manager import LayoutManager
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
 from src.ui.factories.properties_ui_factory import PropertiesUIFactory
 from src.controllers.canvas_controller import CanvasController
+from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 @pytest.fixture(scope="function")
@@ -94,27 +95,6 @@ def mock_application_model(): # Renamed from mock_model for clarity
     model.modelChanged = MagicMock()
     model.selectionChanged = MagicMock()
     return model
-
-@pytest.fixture(scope="function")
-def mock_scene_node():
-    """Provides a mock SceneNode."""
-    mock = create_autospec(SceneNode, instance=True)
-    mock.id = str(uuid.uuid4())
-    mock.name = "MockNode"
-    mock.to_dict.return_value = {"id": mock.id, "name": mock.name, "type": "SceneNode", "children": [], "visible": True}
-    return mock
-
-@pytest.fixture(scope="function")
-def mock_group_node():
-    """Provides a mock GroupNode."""
-    mock = create_autospec(GroupNode, instance=True)
-    mock.id = str(uuid.uuid4())
-    mock.name = "MockGroup"
-    mock.children = []
-    mock.add_child.side_effect = lambda node: mock.children.append(node)
-    mock.to_dict.return_value = {"id": mock.id, "name": mock.name, "type": "GroupNode", "children": [], "visible": True}
-    mock.hit_test.return_value = None
-    return mock
 
 @pytest.fixture
 def mock_command_manager():
@@ -201,8 +181,6 @@ def mock_layout_ui_factory():
     """Fixture for a mock LayoutUIFactory."""
     return MagicMock(spec=LayoutUIFactory)
 
-from src.ui.widgets.canvas_widget import CanvasWidget
-
 @pytest.fixture
 def mock_properties_ui_factory():
     """Fixture for a mock PropertiesUIFactory."""
@@ -230,6 +208,36 @@ def sample_dataframe():
     return pd.DataFrame(
         {"Time": [1, 2, 3], "Voltage": [10, 20, 15], "Current": [1, 2, 1.5]}
     )
+
+@pytest.fixture(scope="function")
+def mock_scene_node():
+    """Provides a mock SceneNode."""
+    mock = create_autospec(SceneNode, instance=True)
+    mock.id = str(uuid.uuid4())
+    mock.name = "MockNode"
+    mock.to_dict.return_value = {"id": mock.id, "name": mock.name, "type": "SceneNode", "children": [], "visible": True}
+    return mock
+
+@pytest.fixture(scope="function")
+def mock_group_node():
+    """Provides a mock GroupNode."""
+    mock = create_autospec(GroupNode, instance=True)
+    mock.id = str(uuid.uuid4())
+    mock.name = "MockGroup"
+    mock.children = []
+    mock.add_child.side_effect = lambda node: mock.children.append(node)
+    mock.to_dict.return_value = {"id": mock.id, "name": mock.name, "type": "GroupNode", "children": [], "visible": True}
+    mock.hit_test.return_value = None
+    return mock
+
+@pytest.fixture
+def mock_plot_node():
+    plot_node = MagicMock(spec=PlotNode)
+    plot_node.id = "test_plot_id"
+    plot_node.data = MagicMock(spec=pd.DataFrame)
+    plot_node.plot_properties = MagicMock() # Mock plot_properties object
+    plot_node.plot_properties.to_dict.return_value = {"plot_type": "line"} # Mock this for create_new_layout
+    return plot_node
 
 @pytest.fixture
 def plot_node_empty_props():
