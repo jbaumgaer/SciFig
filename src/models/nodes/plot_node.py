@@ -103,18 +103,7 @@ class PlotNode(SceneNode):
         props_data = data.get("plot_properties")
         if props_data:
             node.logger.debug(f"PlotNode.from_dict: Deserializing plot properties for '{node.name}'.")
-            # We need to reconstruct nested dataclasses manually
-            mapping_data = props_data.get("plot_mapping", {})
-            props_data["plot_mapping"] = PlotMapping(
-                x=mapping_data.get("x"),
-                y=mapping_data.get("y", [])
-            )
-            limits_data = props_data.get("axes_limits", {})
-            props_data["axes_limits"] = AxesLimits(
-                xlim=limits_data.get("xlim", (None, None)),
-                ylim=limits_data.get("ylim", (None, None))
-            )
-
+            
             # Determine the correct property class based on 'plot_type'
             plot_type_str = props_data.get("plot_type", "line") # Use lowercase default
             plot_type = PlotType(plot_type_str)
@@ -124,6 +113,19 @@ class PlotNode(SceneNode):
             node.plot_properties = BasePlotProperties.create_properties_from_plot_type(
                 plot_type
             )
+
+            # Reconstruct nested dataclasses manually
+            mapping_data = props_data.get("plot_mapping", {})
+            props_data["plot_mapping"] = PlotMapping(
+                x=mapping_data.get("x"),
+                y=mapping_data.get("y", [])
+            )
+            limits_data = props_data.get("axes_limits", {})
+            props_data["axes_limits"] = AxesLimits(
+                xlim=tuple(limits_data.get("xlim", (None, None))),
+                ylim=tuple(limits_data.get("ylim", (None, None)))
+            )
+            
             # Now update it from the dict, allowing the update_from_dict to handle specific properties
             node.plot_properties.update_from_dict(props_data)
             node.logger.debug(f"Plot properties for '{node.name}' updated from dict.")
