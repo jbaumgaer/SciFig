@@ -254,3 +254,4 @@ tests/unit/models/plots/__pycache__/test_base_plot_properties.cpython-313-pytest
 tests/unit/models/plots/__pycache__/test_line_plot_properties.cpython-313-pytest-9.0.2.pyc
 tests/unit/models/plots/__pycache__/test_plot_mapping.cpython-313-pytest-9.0.2.pyc
 tests/unit/models/plots/__pycache__/test_scatter_plot_properties.cpython-313-pytest-9.0.2.pyc
+tests/unit/models/nodes/__pycache__/test_group_node.cpython-313-pytest-9.0.2.pyc

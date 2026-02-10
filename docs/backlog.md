@@ -1718,3 +1718,4 @@ This backlog reflects a shift towards a more robust and decoupled UI/logic archi
 Make sure that when a plot is unclicked, that we switch back to the layout managment properties panel
 Make sure that grid options actually update properly
 Scan for new values that should really be config values
+Go through the fixtures in conftest and see if I should test them also in other parts of the code

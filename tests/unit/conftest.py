@@ -4,8 +4,14 @@ from unittest.mock import MagicMock, create_autospec, Mock
 import matplotlib.figure
 from PySide6.QtWidgets import QApplication
 import uuid
+import pandas as pd
 
-# Import classes that are being mocked
+from src.models.nodes.plot_node import PlotNode
+from src.models.plots.plot_properties import (
+    AxesLimits,
+    LinePlotProperties,
+    PlotMapping,
+)
 from src.services.config_service import ConfigService
 from src.models.application_model import ApplicationModel
 from src.models.nodes.scene_node import SceneNode
@@ -76,7 +82,12 @@ def mock_application_model(): # Renamed from mock_model for clarity
     """Fixture for a mock ApplicationModel."""
     model = MagicMock(spec=ApplicationModel)
     model.figure = Mock() # Mock the figure attribute as it's accessed
-    model.scene_root = Mock() # Add scene_root attribute for _redraw_canvas_callback
+    
+    # Mock scene_root to be a MagicMock that has a 'children' attribute which is a list
+    mock_scene_root_instance = MagicMock(spec=GroupNode)
+    mock_scene_root_instance.children = [] # This makes it a real list
+    model.scene_root = mock_scene_root_instance
+
     model.selection = Mock() # Add selection attribute for _redraw_canvas_callback
     # Mock signals
     model.layoutConfigChanged = MagicMock()
@@ -118,7 +129,10 @@ def mock_project_controller():
 @pytest.fixture
 def mock_layout_controller():
     """Fixture for a mock LayoutController."""
-    return MagicMock(spec=LayoutController)
+    controller = MagicMock(spec=LayoutController)
+    controller._layout_manager = MagicMock(spec=LayoutManager) # Explicitly mock _layout_manager
+    controller._layout_manager.apply_default_grid_layout = MagicMock() # Mock the method on the nested manager
+    return controller
 
 @pytest.fixture
 def mock_node_controller():
@@ -187,12 +201,51 @@ def mock_layout_ui_factory():
     """Fixture for a mock LayoutUIFactory."""
     return MagicMock(spec=LayoutUIFactory)
 
+from src.ui.widgets.canvas_widget import CanvasWidget
+
 @pytest.fixture
 def mock_properties_ui_factory():
     """Fixture for a mock PropertiesUIFactory."""
     return MagicMock(spec=PropertiesUIFactory)
 
+@pytest.fixture(scope="function")
+def mock_canvas_widget():
+    """Provides a mock CanvasWidget."""
+    canvas_widget = MagicMock(spec=CanvasWidget)
+    mock_figure_canvas = MagicMock()
+    mock_figure_canvas.mpl_connect = MagicMock()
+    mock_figure_canvas.width.return_value = 1000 # Default width for coord conversion tests
+    mock_figure_canvas.height.return_value = 800 # Default height for coord conversion tests
+    canvas_widget.figure_canvas = mock_figure_canvas
+    return canvas_widget
+
 @pytest.fixture
 def mock_canvas_controller():
     """Fixture for a mock CanvasController."""
     return MagicMock(spec=CanvasController)
+
+@pytest.fixture
+def sample_dataframe():
+    """Provides a sample DataFrame with multiple columns."""
+    return pd.DataFrame(
+        {"Time": [1, 2, 3], "Voltage": [10, 20, 15], "Current": [1, 2, 1.5]}
+    )
+
+@pytest.fixture
+def plot_node_empty_props():
+    """Provides a PlotNode with empty plot_properties."""
+    node = PlotNode()
+    return node
+
+@pytest.fixture
+def plot_node_with_mapping():
+    """Provides a PlotNode with an existing plot_mapping."""
+    node = PlotNode()
+    node.plot_properties = LinePlotProperties(
+        title="Existing Title",
+        xlabel="Existing X Label",
+        ylabel="Existing Y Label",
+        plot_mapping=PlotMapping(x="ExistingX", y=["ExistingY"]),
+        axes_limits=AxesLimits(xlim=(0, 1), ylim=(0, 1)),
+    )
+    return node
