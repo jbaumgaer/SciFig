@@ -3,7 +3,6 @@ import logging
 from PySide6.QtCore import QObject, QPointF, QThread
 
 from src.services.commands.command_manager import CommandManager
-from src.shared.constants import LayoutMode
 from src.controllers.layout_controller import LayoutController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
@@ -168,10 +167,6 @@ class CanvasController(QObject):
 
             self.model.modelChanged.emit()
             self.logger.debug(f"modelChanged signal emitted after data load for '{node.name}'.")
-
-            if self._layout_manager.layout_mode == LayoutMode.GRID:
-                self.logger.info("Grid layout mode active. Applying default grid layout for new plot.")
-                self._layout_manager.apply_default_grid_layout()
         else:
             self.logger.warning(f"Data ready for node '{node.name}' (ID: {node.id}) but it's no longer in the scene_root's children. Data not assigned.")
 
