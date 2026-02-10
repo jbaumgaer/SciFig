@@ -55,26 +55,23 @@ class FreeLayoutEngine(LayoutEngine):
             for plot_id, geom in geometries.items():
                 geom[0] = target_x_plus_w - geom[2]
         elif edge == "top":
-            target_y_plus_h = max(g[1] + g[3] for g in geometries.values())
-            for plot_id, geom in geometries.items():
-                geom[1] = target_y_plus_h - geom[3]
-        elif edge == "bottom":
             target_y = min(g[1] for g in geometries.values())
             for plot_id, geom in geometries.items():
                 geom[1] = target_y
+        elif edge == "bottom":
+            target_y_plus_h = max(g[1] + g[3] for g in geometries.values())
+            for plot_id, geom in geometries.items():
+                geom[1] = target_y_plus_h - geom[3]
         elif edge == "h_center":
-            plots_with_geoms = {plot: list(plot.geometry) for plot in plots}
-            center_x = sum(g[0] + g[2] / 2 for g in plots_with_geoms.values()) / len(plots_with_geoms)
-            for plot, geom in plots_with_geoms.items():
+            # Calculate the average center_x of all plots
+            center_x = sum(geom[0] + geom[2] / 2 for geom in geometries.values()) / len(geometries)
+            for plot_id, geom in geometries.items():
                 geom[0] = center_x - geom[2] / 2
-            return {plot.id: tuple(geom) for plot, geom in plots_with_geoms.items()}
-
         elif edge == "v_center":
-            plots_with_geoms = {plot: list(plot.geometry) for plot in plots}
-            center_y = sum(g[1] + g[3] / 2 for g in plots_with_geoms.values()) / len(plots_with_geoms)
-            for plot, geom in plots_with_geoms.items():
+            # Calculate the average center_y of all plots
+            center_y = sum(geom[1] + geom[3] / 2 for geom in geometries.values()) / len(geometries)
+            for plot_id, geom in geometries.items():
                 geom[1] = center_y - geom[3] / 2
-            return {plot.id: tuple(geom) for plot, geom in plots_with_geoms.items()}
         else:
             self.logger.warning(f"Unknown alignment edge: {edge}")
             return {}

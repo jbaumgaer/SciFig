@@ -27,6 +27,7 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-qt",
+    "pytest-cov",
     "pytest-mock",
     "black",
     "ruff",

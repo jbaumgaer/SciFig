@@ -28,8 +28,8 @@ class PlotNode(SceneNode):
         self.logger.debug(f"PlotNode initialized: {self.name} (ID: {self.id})")
 
 
-        # Properties migrated from the old ArtistModel
-        self.geometry: tuple[float, float, float, float] = (0.1, 0.1, 0.8, 0.8)
+        self.geometry: tuple[float, float, float, float] = (0.1, 0.1, 0.8, 0.8) #TODO: This should be set by the layout manager, not hardcoded
+        #TODO: Change this from a tuple to a x, y, width, height dataclass for better readability and maintainability
         self.plot_properties: Optional[BasePlotProperties] = None
         self.data: pd.DataFrame | None = None
         self.axes: matplotlib.axes.Axes | None = None # Store the Matplotlib Axes object

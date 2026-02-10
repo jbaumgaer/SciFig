@@ -345,9 +345,6 @@ class LayoutManager(QObject):
         that directly provide a complete GridConfig object.
         """
         self.logger.info(f"LayoutManager updating grid config to: {new_grid_config}")
-        self.logger.debug(f"Incoming new_grid_config margins: {new_grid_config.margins}")
-        self.logger.debug(f"Incoming new_grid_config gutters: {new_grid_config.gutters}")
-
         self._application_model.current_layout_config = new_grid_config
         self._last_grid_config = new_grid_config # Update stored last grid config for next time
 
@@ -384,7 +381,7 @@ class LayoutManager(QObject):
             return {}
 
         # Ensure the FreeLayoutEngine is used and returns plot ID to Rect mapping
-        return {plot.id: rect for plot, rect in self._free_engine.perform_align(plots, edge).items()}
+        return self._free_engine.perform_align(plots, edge)
 
 
     def perform_distribute(self, plots: list[PlotNode], axis: str) -> dict[PlotID, Rect]:
@@ -397,7 +394,7 @@ class LayoutManager(QObject):
             return {}
 
         # Ensure the FreeLayoutEngine is used and returns plot ID to Rect mapping
-        return {plot.id: rect for plot, rect in self._free_engine.perform_distribute(plots, axis).items()}
+        return self._free_engine.perform_distribute(plots, axis)
 
 
     def infer_grid_parameters(self):

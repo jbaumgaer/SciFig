@@ -34,6 +34,7 @@ class Gutters:
     """
     Represents spacing between subplots (in figure fractions).
     Can be single float for global spacing or lists for per-row/column spacing.
+    TODO: This makes no sense for a 1x1 grid
     """
     hspace: list[float]
     wspace: list[float]

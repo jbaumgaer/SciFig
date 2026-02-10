@@ -13,6 +13,18 @@ from src.services.commands.change_grid_parameters_command import ChangeGridParam
 
 
 class LayoutController(QObject):
+    """
+    Manages user interactions related to layout, translating UI events into
+    commands that modify the ApplicationModel's layout state.
+
+    This controller ensures that all user-initiated layout changes, including
+    modifications to grid parameters, alignment, and distribution, are
+    encapsulated as commands. These commands are then executed via the
+    CommandManager, enabling a consistent and predictable undo/redo history.
+    Even if a parameter change results in the same value (a "no-op" change),
+    a command is still created and pushed to the undo stack to accurately
+    reflect the user's interaction history and maintain undo/redo integrity.
+    """
     def __init__(self, model: ApplicationModel, command_manager: CommandManager, layout_manager: LayoutManager):
         super().__init__()
         self.model = model
@@ -106,6 +118,7 @@ class LayoutController(QObject):
             return
 
         current_grid_config: GridConfig = self._layout_manager._last_grid_config
+        self.logger.debug(f"on_grid_layout_param_changed: current_grid_config (from _last_grid_config) = {current_grid_config}")   
         old_grid_config = current_grid_config # Store for undo
 
         # Initialize new_config_params with current values
@@ -114,13 +127,13 @@ class LayoutController(QObject):
         new_margins = current_grid_config.margins
         new_gutters = current_grid_config.gutters
 
-        changed = False
+
 
         if param_name == "rows":
             try:
                 new_rows = int(value)
                 if new_rows <= 0: raise ValueError("Rows must be positive")
-                changed = new_rows != current_grid_config.rows
+
             except ValueError:
                 self.logger.warning(f"Invalid value for rows: {value}")
                 return
@@ -128,7 +141,7 @@ class LayoutController(QObject):
             try:
                 new_cols = int(value)
                 if new_cols <= 0: raise ValueError("Cols must be positive")
-                changed = new_cols != current_grid_config.cols
+
             except ValueError:
                 self.logger.warning(f"Invalid value for cols: {value}")
                 return
@@ -141,7 +154,7 @@ class LayoutController(QObject):
                 temp_margins_dict = new_margins.to_dict()
                 temp_margins_dict[param_name.replace("margin_", "")] = margin_value
                 new_margins = Margins.from_dict(temp_margins_dict)
-                changed = new_margins != current_grid_config.margins
+
             except ValueError:
                 self.logger.warning(f"Invalid value for {param_name}: {value}")
                 return
@@ -150,7 +163,7 @@ class LayoutController(QObject):
                 # Interpret empty string as empty list for hspace
                 new_hspace = [float(x.strip()) for x in value.split(',') if x.strip()] if value else []
                 new_gutters = new_gutters.from_dict({"hspace": new_hspace, "wspace": new_gutters.wspace})
-                changed = new_gutters.hspace != current_grid_config.gutters.hspace
+
             except ValueError:
                 self.logger.warning(f"Invalid value for hspace: {value}. Must be comma-separated numbers.")
                 return
@@ -159,7 +172,7 @@ class LayoutController(QObject):
                 # Interpret empty string as empty list for wspace
                 new_wspace = [float(x.strip()) for x in value.split(',') if x.strip()] if value else []
                 new_gutters = new_gutters.from_dict({"hspace": new_gutters.hspace, "wspace": new_wspace})
-                changed = new_gutters.wspace != current_grid_config.gutters.wspace
+
             except ValueError:
                 self.logger.warning(f"Invalid value for wspace: {value}. Must be comma-separated numbers.")
                 return
@@ -167,19 +180,16 @@ class LayoutController(QObject):
             self.logger.warning(f"Unknown grid parameter: {param_name}")
             return
 
-        if changed:
-            new_grid_config = GridConfig(
-                rows=new_rows,
-                cols=new_cols,
-                row_ratios=current_grid_config.row_ratios, # Preserve for now
-                col_ratios=current_grid_config.col_ratios, # Preserve for now
-                margins=new_margins,
-                gutters=new_gutters
-            )
-            self.logger.debug(f"Creating ChangeGridParametersCommand with new_grid_config margins: {new_grid_config.margins}")
-            self.logger.debug(f"Creating ChangeGridParametersCommand with new_grid_config gutters: {new_grid_config.gutters}")
-            command = ChangeGridParametersCommand(self.model, self._layout_manager, old_grid_config, new_grid_config)
-            self.command_manager.execute_command(command)
-            self.logger.debug(f"Executed ChangeGridParametersCommand for {param_name} change.")
-        else:
-            self.logger.debug(f"Parameter {param_name} did not change or value was invalid.")
+        new_grid_config = GridConfig(
+            rows=new_rows,
+            cols=new_cols,
+            row_ratios=current_grid_config.row_ratios, # Preserve for now
+            col_ratios=current_grid_config.col_ratios, # Preserve for now
+            margins=new_margins,
+            gutters=new_gutters
+        )
+        self.logger.debug(f"Creating ChangeGridParametersCommand with new_grid_config margins: {new_grid_config.margins}")
+        self.logger.debug(f"Creating ChangeGridParametersCommand with new_grid_config gutters: {new_grid_config.gutters}")
+        command = ChangeGridParametersCommand(self.model, self._layout_manager, old_grid_config, new_grid_config)
+        self.command_manager.execute_command(command)
+        self.logger.debug(f"Executed ChangeGridParametersCommand for {param_name} change.")

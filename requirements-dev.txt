@@ -1,7 +1,0 @@
-pytest
-pytest-qt
-pytest-mock
-black
-ruff
-mypy
-pydantic

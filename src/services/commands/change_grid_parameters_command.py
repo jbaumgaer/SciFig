@@ -29,12 +29,8 @@ class ChangeGridParametersCommand(BaseCommand):
         # Update the layout manager's internal grid config
         # The layout manager will then calculate and apply the new geometries
         new_geometries = self.layout_manager.update_grid_config_and_apply(self.new_grid_config)
-
+        self.logger.debug(f"ChangeGridParametersCommand.execute: After update_grid_config_and_apply, model.current_layout_config.rows: {self.model.current_layout_config.rows}")
         if new_geometries:
-            # Apply the new geometries to the plots. This could also be part of the layout_manager
-            # but for undo/redo purposes, it's good to have it as a command.
-            # Here, we directly apply to the model via a BatchChangePlotGeometryCommand's logic
-            # but without pushing it to the command manager again, to avoid nested commands.
             for plot_id, rect in new_geometries.items():
                 plot_node = self.model.scene_root.find_node_by_id(plot_id)
                 if plot_node:

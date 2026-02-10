@@ -51,8 +51,8 @@ def setup_logging(config_service: ConfigService):
         root_logger.addHandler(file_handler)
 
     # Silence matplotlib's often verbose logging unless debugging
-    logging.getLogger('matplotlib').setLevel(logging.WARNING if log_level < logging.DEBUG else log_level)
-    logging.getLogger('PySide6').setLevel(logging.WARNING if log_level < logging.DEBUG else log_level)
+    logging.getLogger('matplotlib').setLevel(logging.WARNING)
+    logging.getLogger('PySide6').setLevel(logging.WARNING)
 
     # Initial log message to confirm setup
     logging.info(f"Logging configured. Level: {log_level_str}, Console: {console_output}, File: {file_output}")

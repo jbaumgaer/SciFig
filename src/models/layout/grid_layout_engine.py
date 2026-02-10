@@ -1,7 +1,7 @@
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -113,25 +113,11 @@ class GridLayoutEngine(LayoutEngine):
         row_ratios = grid_config.row_ratios if grid_config.row_ratios and len(grid_config.row_ratios) == rows else [1.0] * rows
         col_ratios = grid_config.col_ratios if grid_config.col_ratios and len(grid_config.col_ratios) == cols else [1.0] * cols
 
-        gs_hspace_val = None
-        if grid_config.gutters.hspace: # If the list is not empty
-            if len(grid_config.gutters.hspace) == 1:
-                gs_hspace_val = grid_config.gutters.hspace[0] # Use the single float value
-            elif len(grid_config.gutters.hspace) == (rows - 1):
-                gs_hspace_val = grid_config.gutters.hspace # Use the list
-            else:
-                self.logger.warning(f"Invalid hspace list length ({len(grid_config.gutters.hspace)}) for {rows} rows. Expected 1 or {rows-1}. Using default.")
+        constrained_w_space = self._config_service.get("layout.constrained_w_space", 0.02)
+        constrained_h_space = self._config_service.get("layout.constrained_h_space", 0.02)
 
-        gs_wspace_val = None
-        if grid_config.gutters.wspace: # If the list is not empty
-            if len(grid_config.gutters.wspace) == 1:
-                gs_wspace_val = grid_config.gutters.wspace[0] # Use the single float value
-            elif len(grid_config.gutters.wspace) == (cols - 1):
-                gs_wspace_val = grid_config.gutters.wspace # Use the list
-            else:
-                self.logger.warning(f"Invalid wspace list length ({len(grid_config.gutters.wspace)}) for {cols} cols. Expected 1 or {cols-1}. Using default.")
-        self.logger.debug(f"[apply_matplotlib_grid_layout] gs_hspace_val: {gs_hspace_val}, Type: {type(gs_hspace_val)}")
-        self.logger.debug(f"[apply_matplotlib_grid_layout] gs_wspace_val: {gs_wspace_val}, Type: {type(gs_wspace_val)}")
+        gs_hspace_val = constrained_h_space
+        gs_wspace_val = constrained_w_space
 
         gs = gridspec.GridSpec(
             nrows=rows,
@@ -209,6 +195,42 @@ class GridLayoutEngine(LayoutEngine):
         return mpl_axes_map, final_plot_geometries, calculated_margins, calculated_gutters
 
 
+    def _convert_gutters_to_relative(self, grid_config: GridConfig, rows: int, cols: int,
+                                      plot_area_width: float, plot_area_height: float) -> tuple[Any, Any]:
+        """
+        Converts absolute hspace and wspace values from GridConfig into relative fractions
+        expected by matplotlib.gridspec.GridSpec.
+        """
+        # Default to cols/rows if ratios are not provided or empty to prevent division by zero
+        total_col_ratio = sum(grid_config.col_ratios) if grid_config.col_ratios else cols
+        total_row_ratio = sum(grid_config.row_ratios) if grid_config.row_ratios else rows
+
+        effective_cols = cols if cols > 0 else 1
+        effective_rows = rows if rows > 0 else 1
+
+        avg_subplot_width_fraction = (plot_area_width / total_col_ratio) if total_col_ratio > 0 else 0
+        avg_subplot_height_fraction = (plot_area_height / total_row_ratio) if total_row_ratio > 0 else 0
+
+        gs_hspace_val = None
+        if grid_config.gutters.hspace and avg_subplot_height_fraction > 0:
+            if rows == 1: # Single row, no hspace needed
+                gs_hspace_val = None
+            elif len(grid_config.gutters.hspace) == 1:
+                gs_hspace_val = grid_config.gutters.hspace[0] / avg_subplot_height_fraction
+            elif len(grid_config.gutters.hspace) == (rows - 1):
+                gs_hspace_val = [h / avg_subplot_height_fraction for h in grid_config.gutters.hspace]
+
+        gs_wspace_val = None
+        if grid_config.gutters.wspace and avg_subplot_width_fraction > 0:
+            if cols == 1: # Single col, no wspace needed
+                gs_wspace_val = None
+            elif len(grid_config.gutters.wspace) == 1:
+                gs_wspace_val = grid_config.gutters.wspace[0] / avg_subplot_width_fraction
+            elif len(grid_config.gutters.wspace) == (cols - 1):
+                gs_wspace_val = [w / avg_subplot_width_fraction for w in grid_config.gutters.wspace]
+        
+        return gs_hspace_val, gs_wspace_val
+
     def _apply_fixed_layout(self, figure: Figure, plot_nodes: list[PlotNode], grid_config: GridConfig) -> tuple[dict[PlotID, Axes], dict[PlotID, Rect], Margins, Gutters]:
         """
         Applies a grid layout to the given Matplotlib Figure using GridSpec with fixed fractional margins.
@@ -245,23 +267,11 @@ class GridLayoutEngine(LayoutEngine):
         row_ratios = grid_config.row_ratios if grid_config.row_ratios and len(grid_config.row_ratios) == rows else [1.0] * rows
         col_ratios = grid_config.col_ratios if grid_config.col_ratios and len(grid_config.col_ratios) == cols else [1.0] * cols
 
-        gs_hspace_val = None
-        if grid_config.gutters.hspace:
-            if len(grid_config.gutters.hspace) == 1:
-                gs_hspace_val = grid_config.gutters.hspace[0]
-            elif len(grid_config.gutters.hspace) == (rows - 1):
-                gs_hspace_val = grid_config.gutters.hspace
-            else:
-                self.logger.warning(f"Invalid hspace list length ({len(grid_config.gutters.hspace)}) for {rows} rows. Expected 1 or {rows-1}. Using default.")
-
-        gs_wspace_val = None
-        if grid_config.gutters.wspace:
-            if len(grid_config.gutters.wspace) == 1:
-                gs_wspace_val = grid_config.gutters.wspace[0]
-            elif len(grid_config.gutters.wspace) == (cols - 1):
-                gs_wspace_val = grid_config.gutters.wspace
-            else:
-                self.logger.warning(f"Invalid wspace list length ({len(grid_config.gutters.wspace)}) for {cols} cols. Expected 1 or {cols-1}. Using default.")
+        # Calculate available space for plots, excluding margins
+        plot_area_width = 1.0 - grid_config.margins.left - grid_config.margins.right
+        plot_area_height = 1.0 - grid_config.margins.top - grid_config.margins.bottom
+        
+        gs_hspace_val, gs_wspace_val = self._convert_gutters_to_relative(grid_config, rows, cols, plot_area_width, plot_area_height)
 
         gs = gridspec.GridSpec(
             nrows=rows,

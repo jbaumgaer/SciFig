@@ -1,5 +1,0 @@
-PySide6
-matplotlib
-pandas
-pyarrow
-pyyaml
