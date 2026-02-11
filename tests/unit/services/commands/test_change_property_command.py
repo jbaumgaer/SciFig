@@ -1,12 +1,12 @@
 import pytest
 
-from src.services.commands.change_property_command import ChangePropertyCommand
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import (
     AxesLimits,
     LinePlotProperties,
     PlotMapping,
 )
+from src.services.commands.change_property_command import ChangePropertyCommand
 
 
 @pytest.fixture

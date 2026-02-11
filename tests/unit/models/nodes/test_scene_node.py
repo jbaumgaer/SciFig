@@ -1,9 +1,9 @@
 import pytest
-from typing import Type
+
 from src.models.nodes.scene_node import SceneNode, node_factory
 
-
 # --- Fixtures ---
+
 
 class MockSceneNode(SceneNode):
     """
@@ -40,9 +40,7 @@ class MockSceneNode(SceneNode):
         return d
 
     @classmethod
-    def from_dict(
-        cls, data: dict, parent: SceneNode | None = None
-    ) -> "MockSceneNode":
+    def from_dict(cls, data: dict, parent: SceneNode | None = None) -> "MockSceneNode":
         node = super().from_dict(data, parent)
         node.pos = data.get("pos", (0, 0))
         node.size = data.get("size", (10, 10))
@@ -52,7 +50,7 @@ class MockSceneNode(SceneNode):
 @pytest.fixture
 def root_node():
     """Provides a fresh root SceneNode for tests."""
-    return MockSceneNode(name="root", id="root_id", pos=(0,0), size=(30,30))
+    return MockSceneNode(name="root", id="root_id", pos=(0, 0), size=(30, 30))
 
 
 @pytest.fixture
@@ -65,11 +63,23 @@ def setup_tree(root_node):
     ├── child2 (pos: 10,0, size: 10,10)
     └── child3 (pos: 0,10, size: 10,10, visible: False)
     """
-    child1 = MockSceneNode(parent=root_node, name="child1", id="child1_id", pos=(0, 0), size=(10, 10))
-    MockSceneNode(parent=child1, name="nested_child1_1", id="nested1_1_id", pos=(2, 2), size=(5, 5))
-    MockSceneNode(parent=root_node, name="child2", id="child2_id", pos=(10, 0), size=(10, 10))
-    child3 = MockSceneNode(parent=root_node, name="child3", id="child3_id", pos=(0, 10), size=(10, 10))
-    child3.visible = False # For testing visibility
+    child1 = MockSceneNode(
+        parent=root_node, name="child1", id="child1_id", pos=(0, 0), size=(10, 10)
+    )
+    MockSceneNode(
+        parent=child1,
+        name="nested_child1_1",
+        id="nested1_1_id",
+        pos=(2, 2),
+        size=(5, 5),
+    )
+    MockSceneNode(
+        parent=root_node, name="child2", id="child2_id", pos=(10, 0), size=(10, 10)
+    )
+    child3 = MockSceneNode(
+        parent=root_node, name="child3", id="child3_id", pos=(0, 10), size=(10, 10)
+    )
+    child3.visible = False  # For testing visibility
     return root_node
 
 
@@ -79,12 +89,13 @@ def patch_node_factory_for_mock_scene_node(mocker):
     Patches the node_factory function to use a test-specific node_class_map
     that includes MockSceneNode for testing purposes.
     """
+
     # Define a custom node_factory for testing
     def custom_node_factory(data, parent=None, temp_dir=None):
         import src.models.nodes.group_node
         import src.models.nodes.plot_node
         import src.models.nodes.scene_node
-        
+
         node_type_str = data.get("type")
 
         # Use a test-specific map that includes MockSceneNode
@@ -98,7 +109,9 @@ def patch_node_factory_for_mock_scene_node(mocker):
         cls = _test_node_class_map.get(node_type_str)
 
         if cls is None:
-            raise ValueError(f"Unknown node type '{node_type_str}' for custom_node_factory.")
+            raise ValueError(
+                f"Unknown node type '{node_type_str}' for custom_node_factory."
+            )
 
         if node_type_str == "PlotNode":
             node = cls.from_dict(data, parent=parent, temp_dir=temp_dir)
@@ -107,14 +120,18 @@ def patch_node_factory_for_mock_scene_node(mocker):
 
         child_data = data.get("children", [])
         for child_dict in child_data:
-            custom_node_factory(child_dict, parent=node, temp_dir=temp_dir) # Recursive call uses custom factory
+            custom_node_factory(
+                child_dict, parent=node, temp_dir=temp_dir
+            )  # Recursive call uses custom factory
 
         return node
 
     # Patch the node_factory function that is imported into test_scene_node.py
-    mocker.patch('test_scene_node.node_factory', side_effect=custom_node_factory)
+    mocker.patch("test_scene_node.node_factory", side_effect=custom_node_factory)
+
 
 # --- Tests for SceneNode ---
+
 
 class TestSceneNode:
 
@@ -164,7 +181,7 @@ class TestSceneNode:
         child1 = MockSceneNode(name="child1", parent=root_node)
         child2 = MockSceneNode(name="child2")
         initial_children_count = len(root_node.children)
-        root_node.remove_child(child2) # Try removing child2 which is not in root_node
+        root_node.remove_child(child2)  # Try removing child2 which is not in root_node
         assert len(root_node.children) == initial_children_count
         assert child1 in root_node.children
         assert child2.parent is None
@@ -199,7 +216,7 @@ class TestSceneNode:
         """Test hit_test on a node with no children (should return None as SceneNode is abstract by default)."""
         # For a SceneNode (abstract), hit_test should not return itself unless implemented by a concrete class
         # Here we use MockSceneNode which has a concrete hit_test.
-        assert root_node.hit_test((5, 5)) is root_node # MockSceneNode is hit
+        assert root_node.hit_test((5, 5)) is root_node  # MockSceneNode is hit
 
     def test_hit_test_miss(self, setup_tree):
         """Test a hit test that misses all children (should return root_node for MockSceneNode)."""
@@ -222,18 +239,32 @@ class TestSceneNode:
     def test_hit_test_hits_topmost_child(self, root_node):
         """Test that hit_test returns the topmost child when children overlap."""
         # Children are iterated in reverse order (last added first)
-        MockSceneNode(parent=root_node, name="child_back", id="child_back_id", pos=(0, 0), size=(10, 10))
-        child_front = MockSceneNode(parent=root_node, name="child_front", id="child_front_id", pos=(0, 0), size=(10, 10))
+        MockSceneNode(
+            parent=root_node,
+            name="child_back",
+            id="child_back_id",
+            pos=(0, 0),
+            size=(10, 10),
+        )
+        child_front = MockSceneNode(
+            parent=root_node,
+            name="child_front",
+            id="child_front_id",
+            pos=(0, 0),
+            size=(10, 10),
+        )
         assert root_node.hit_test((5, 5)) == child_front
 
     def test_hit_test_nested_children(self, setup_tree):
         """Test hit testing with nested children."""
         nested_child = setup_tree.find_node_by_id("nested1_1_id")
-        assert setup_tree.hit_test((3, 3)) == nested_child # Should hit nested child
+        assert setup_tree.hit_test((3, 3)) == nested_child  # Should hit nested child
 
     def test_hit_test_invisible_child(self, setup_tree):
         """Test that invisible children are ignored by hit_test."""
-        child3 = setup_tree.find_node_by_id("child3_id") # This child is set to invisible in fixture
+        child3 = setup_tree.find_node_by_id(
+            "child3_id"
+        )  # This child is set to invisible in fixture
         assert child3.visible is False
         assert setup_tree.hit_test((5, 15)) is setup_tree
 
@@ -246,7 +277,7 @@ class TestSceneNode:
         """Test all_descendants on a simple tree structure."""
         descendants = list(setup_tree.all_descendants())
         # Order of children depends on add_child order, but all should be present
-        assert len(descendants) == 5 # root + child1 + nested1_1 + child2 + child3
+        assert len(descendants) == 5  # root + child1 + nested1_1 + child2 + child3
         ids = {node.id for node in descendants}
         assert ids == {"root_id", "child1_id", "nested1_1_id", "child2_id", "child3_id"}
         assert setup_tree in descendants
@@ -261,11 +292,13 @@ class TestSceneNode:
 
         # If we had another type, it should not be included
         class AnotherNode(SceneNode):
-            def hit_test(self, position): return None
-        another_node = AnotherNode(parent=setup_tree.children[0]) # Add it to child1
-        
+            def hit_test(self, position):
+                return None
+
+        another_node = AnotherNode(parent=setup_tree.children[0])  # Add it to child1
+
         filtered_descendants = list(setup_tree.all_descendants(of_type=MockSceneNode))
-        assert len(filtered_descendants) == 5 # AnotherNode should not be included
+        assert len(filtered_descendants) == 5  # AnotherNode should not be included
         assert another_node not in filtered_descendants
 
     def test_find_node_by_id_root(self, setup_tree):
@@ -335,7 +368,7 @@ class TestSceneNode:
             "visible": False,
             "children": [],
             "pos": (1, 1),
-            "size": (5, 5)
+            "size": (5, 5),
         }
         node = node_factory(data)
         assert isinstance(node, MockSceneNode)
@@ -363,7 +396,7 @@ class TestSceneNode:
                     "visible": True,
                     "children": [],
                     "pos": (1, 1),
-                    "size": (5, 5)
+                    "size": (5, 5),
                 },
                 {
                     "id": "child_b_id",
@@ -378,13 +411,13 @@ class TestSceneNode:
                             "visible": True,
                             "children": [],
                             "pos": (2, 2),
-                            "size": (3, 3)
+                            "size": (3, 3),
                         }
                     ],
                     "pos": (10, 10),
-                    "size": (8, 8)
-                }
-            ]
+                    "size": (8, 8),
+                },
+            ],
         }
         root = node_factory(data)
         assert isinstance(root, MockSceneNode)

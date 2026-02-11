@@ -1,6 +1,6 @@
-import pytest
-from src.models.plots.plot_properties import LinePlotProperties, PlotMapping, AxesLimits
+from src.models.plots.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
 from src.models.plots.plot_types import PlotType
+
 
 class TestLinePlotProperties:
     def test_line_plot_properties_initialization_defaults(self):
@@ -31,7 +31,7 @@ class TestLinePlotProperties:
             ylabel="Temperature (C)",
             plot_mapping=custom_mapping,
             axes_limits=custom_limits,
-            plot_type=PlotType.LINE # Explicitly set, though it's the default
+            plot_type=PlotType.LINE,  # Explicitly set, though it's the default
         )
         assert props.title == "Temp Over Time"
         assert props.xlabel == "Time (s)"
@@ -48,13 +48,13 @@ class TestLinePlotProperties:
         data = {
             "title": "Updated Line Title",
             "xlabel": "Updated X",
-            "plot_mapping": {"x": "data_x_col", "y": ["data_y_col"]}
+            "plot_mapping": {"x": "data_x_col", "y": ["data_y_col"]},
         }
         props.update_from_dict(data)
 
         assert props.title == "Updated Line Title"
         assert props.xlabel == "Updated X"
-        assert props.ylabel == "" # Unchanged
+        assert props.ylabel == ""  # Unchanged
         assert props.plot_mapping.x == "data_x_col"
         assert props.plot_mapping.y == ["data_y_col"]
-        assert props.plot_type == PlotType.LINE # Unchanged
+        assert props.plot_type == PlotType.LINE  # Unchanged

@@ -11,6 +11,7 @@ from src.shared.utils import Debouncer
 def q_object_parent():
     return QObject()
 
+
 class TestDebouncer:
     def test_debouncer_single_call(self, qtbot, q_object_parent):
         """
@@ -22,9 +23,9 @@ class TestDebouncer:
         debouncer.debounced.connect(mock_slot)
 
         debouncer.debounce("test_arg", kwarg="test_kwarg")
-        mock_slot.assert_not_called() # Should not be called immediately
+        mock_slot.assert_not_called()  # Should not be called immediately
 
-        qtbot.wait(150) # Wait longer than the debounce delay
+        qtbot.wait(150)  # Wait longer than the debounce delay
         mock_slot.assert_called_once_with(("test_arg",), {"kwarg": "test_kwarg"})
 
     def test_debouncer_multiple_rapid_calls(self, qtbot, q_object_parent):
@@ -39,9 +40,9 @@ class TestDebouncer:
         debouncer.debounce("first_call")
         debouncer.debounce("second_call", value=2)
         debouncer.debounce("last_call", final=True)
-        mock_slot.assert_not_called() # Should not be called immediately
+        mock_slot.assert_not_called()  # Should not be called immediately
 
-        qtbot.wait(150) # Wait longer than the debounce delay
+        qtbot.wait(150)  # Wait longer than the debounce delay
         mock_slot.assert_called_once_with(("last_call",), {"final": True})
 
     def test_debouncer_calls_separated_by_delay(self, qtbot, q_object_parent):
@@ -69,8 +70,9 @@ class TestDebouncer:
         mock_slot = MagicMock()
         debouncer.debounced.connect(mock_slot)
 
-        qtbot.wait(150) # Just wait
+        qtbot.wait(150)  # Just wait
         mock_slot.assert_not_called()
+
 
 # Note: RateLimiter is not a QObject and uses threading.Timer, so it's tested differently.
 # However, the prompt only asks for Debouncer utility test stub for now.

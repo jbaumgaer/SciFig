@@ -1,20 +1,24 @@
-from unittest.mock import MagicMock
 import logging
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
 from PySide6.QtCore import QPointF
 
-from src.shared.constants import LayoutMode
 from src.controllers.canvas_controller import CanvasController
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import LinePlotProperties
+from src.shared.constants import LayoutMode
 
 
 @pytest.fixture
 def canvas_controller(
-    mock_application_model, mock_canvas_widget, mock_tool_manager, mock_command_manager, mock_layout_controller
+    mock_application_model,
+    mock_canvas_widget,
+    mock_tool_manager,
+    mock_command_manager,
+    mock_layout_controller,
 ):
     """Provides a CanvasController instance."""
     return CanvasController(
@@ -61,7 +65,6 @@ class TestCanvasController:
         # Assert modelChanged signal was emitted
         mock_application_model.modelChanged.emit.assert_called_once()
 
-
     def test_on_data_ready_does_not_overwrite_existing_properties(
         self,
         canvas_controller,
@@ -87,7 +90,6 @@ class TestCanvasController:
         # Assert modelChanged signal was emitted
         mock_application_model.modelChanged.emit.assert_called_once()
 
-
     def test_on_data_ready_with_insufficient_columns(
         self, canvas_controller, mock_application_model, plot_node_empty_props
     ):
@@ -108,7 +110,6 @@ class TestCanvasController:
 
         # Assert modelChanged signal was emitted
         mock_application_model.modelChanged.emit.assert_called_once()
-
 
     def test_on_data_ready_node_not_in_scene(
         self,
@@ -136,7 +137,6 @@ class TestCanvasController:
         # Assert modelChanged signal was NOT emitted
         mock_application_model.modelChanged.emit.assert_not_called()
 
-
     def test_on_data_ready_in_free_form_mode(
         self,
         canvas_controller,
@@ -156,7 +156,6 @@ class TestCanvasController:
 
         mock_layout_controller._layout_manager.apply_default_grid_layout.assert_not_called()
         mock_application_model.modelChanged.emit.assert_called_once()
-
 
     def test_on_data_ready_in_grid_mode(
         self,
@@ -178,8 +177,9 @@ class TestCanvasController:
         mock_layout_controller._layout_manager.apply_default_grid_layout.assert_not_called()
         mock_application_model.modelChanged.emit.assert_called_once()
 
-
-        def test_convert_qt_scene_to_mpl_figure_coords_valid(self, canvas_controller, mock_canvas_widget):
+        def test_convert_qt_scene_to_mpl_figure_coords_valid(
+            self, canvas_controller, mock_canvas_widget
+        ):
             """Tests _convert_qt_scene_to_mpl_figure_coords for valid conversions."""
             # Setup mock canvas widget dimensions
             mock_canvas_widget.width.return_value = 1000
@@ -187,7 +187,9 @@ class TestCanvasController:
 
             # Test a point (100, 200) in Qt scene coords
             scene_pos = QPointF(100, 200)
-            fig_coords_x, fig_coords_y = canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            fig_coords_x, fig_coords_y = (
+                canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            )
 
             # Expected: x = 100/1000 = 0.1, y = 1 - (200/800) = 1 - 0.25 = 0.75
             assert fig_coords_x == pytest.approx(0.1)
@@ -195,13 +197,17 @@ class TestCanvasController:
 
             # Test another point (500, 400) - center
             scene_pos = QPointF(500, 400)
-            fig_coords_x, fig_coords_y = canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            fig_coords_x, fig_coords_y = (
+                canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            )
 
             # Expected: x = 500/1000 = 0.5, y = 1 - (400/800) = 1 - 0.5 = 0.5
             assert fig_coords_x == pytest.approx(0.5)
             assert fig_coords_y == pytest.approx(0.5)
 
-    def test_convert_qt_scene_to_mpl_figure_coords_zero_dimensions(self, canvas_controller, mock_canvas_widget, caplog):
+    def test_convert_qt_scene_to_mpl_figure_coords_zero_dimensions(
+        self, canvas_controller, mock_canvas_widget, caplog
+    ):
         """
         Tests _convert_qt_scene_to_mpl_figure_coords when canvas has zero width or height,
         expecting a warning and default return values.
@@ -212,33 +218,50 @@ class TestCanvasController:
         mock_canvas_widget.figure_canvas.width.return_value = 0
         mock_canvas_widget.figure_canvas.height.return_value = 800
         with caplog.at_level(logging.WARNING):
-            fig_coords_x, fig_coords_y = canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            fig_coords_x, fig_coords_y = (
+                canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            )
             assert fig_coords_x == -1.0
             assert fig_coords_y == -1.0
-            assert "Canvas has zero width or height. Cannot convert scene coordinates." in caplog.text
+            assert (
+                "Canvas has zero width or height. Cannot convert scene coordinates."
+                in caplog.text
+            )
         caplog.clear()
 
         # Case 2: Zero height
         mock_canvas_widget.figure_canvas.width.return_value = 1000
         mock_canvas_widget.figure_canvas.height.return_value = 0
         with caplog.at_level(logging.WARNING):
-            fig_coords_x, fig_coords_y = canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            fig_coords_x, fig_coords_y = (
+                canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            )
             assert fig_coords_x == -1.0
             assert fig_coords_y == -1.0
-            assert "Canvas has zero width or height. Cannot convert scene coordinates." in caplog.text
+            assert (
+                "Canvas has zero width or height. Cannot convert scene coordinates."
+                in caplog.text
+            )
         caplog.clear()
 
         # Case 3: Both zero
         mock_canvas_widget.figure_canvas.width.return_value = 0
         mock_canvas_widget.figure_canvas.height.return_value = 0
         with caplog.at_level(logging.WARNING):
-            fig_coords_x, fig_coords_y = canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            fig_coords_x, fig_coords_y = (
+                canvas_controller._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+            )
             assert fig_coords_x == -1.0
             assert fig_coords_y == -1.0
-            assert "Canvas has zero width or height. Cannot convert scene coordinates." in caplog.text
+            assert (
+                "Canvas has zero width or height. Cannot convert scene coordinates."
+                in caplog.text
+            )
         caplog.clear()
 
-    def test_connect_events(self, canvas_controller, mock_canvas_widget, mock_tool_manager):
+    def test_connect_events(
+        self, canvas_controller, mock_canvas_widget, mock_tool_manager
+    ):
         """Verifies that _connect_events correctly connects signals."""
         # Reset mocks to ensure only calls from _connect_events are counted
         mock_canvas_widget.figure_canvas.mpl_connect.reset_mock()
@@ -263,18 +286,32 @@ class TestCanvasController:
             canvas_controller.on_file_dropped
         )
 
-    @pytest.mark.parametrize("file_path, expected_log_level, expected_message_part", [
-        ("data.csv", "INFO", "File dropped"),
-        ("image.png", "WARNING", "Dropped file"),
-        ("data.txt", "WARNING", "Dropped file"),
-    ])
-    def test_on_file_dropped_file_type_check(self, canvas_controller, plot_node_empty_props, mocker, caplog, file_path, expected_log_level, expected_message_part):
+    @pytest.mark.parametrize(
+        "file_path, expected_log_level, expected_message_part",
+        [
+            ("data.csv", "INFO", "File dropped"),
+            ("image.png", "WARNING", "Dropped file"),
+            ("data.txt", "WARNING", "Dropped file"),
+        ],
+    )
+    def test_on_file_dropped_file_type_check(
+        self,
+        canvas_controller,
+        plot_node_empty_props,
+        mocker,
+        caplog,
+        file_path,
+        expected_log_level,
+        expected_message_part,
+    ):
         """Tests on_file_dropped's file type filtering."""
-        mocker.patch.object(canvas_controller.model, 'get_node_at', return_value=plot_node_empty_props)
-        mocker.patch.object(canvas_controller, 'load_data_into_node')
-        
+        mocker.patch.object(
+            canvas_controller.model, "get_node_at", return_value=plot_node_empty_props
+        )
+        mocker.patch.object(canvas_controller, "load_data_into_node")
+
         scene_pos = QPointF(100, 100)
-        
+
         with caplog.at_level(logging.DEBUG):
             canvas_controller.on_file_dropped(file_path, scene_pos)
             assert any(expected_log_level in r.levelname for r in caplog.records)
@@ -283,26 +320,35 @@ class TestCanvasController:
         if expected_log_level == "WARNING":
             canvas_controller.model.get_node_at.assert_not_called()
             canvas_controller.load_data_into_node.assert_not_called()
-        else: # INFO level, meaning CSV
+        else:  # INFO level, meaning CSV
             canvas_controller.model.get_node_at.assert_called_once()
-            canvas_controller.load_data_into_node.assert_called_once_with(file_path, plot_node_empty_props)
+            canvas_controller.load_data_into_node.assert_called_once_with(
+                file_path, plot_node_empty_props
+            )
 
-    @pytest.mark.parametrize("node_at_pos, expected_load_call", [
-        (None, False),
-        (MagicMock(spec=SceneNode), False), # Not a PlotNode
-        (PlotNode(), True),
-    ])
-    def test_on_file_dropped_node_hit_check(self, canvas_controller, mocker, caplog, node_at_pos, expected_load_call):
+    @pytest.mark.parametrize(
+        "node_at_pos, expected_load_call",
+        [
+            (None, False),
+            (MagicMock(spec=SceneNode), False),  # Not a PlotNode
+            (PlotNode(), True),
+        ],
+    )
+    def test_on_file_dropped_node_hit_check(
+        self, canvas_controller, mocker, caplog, node_at_pos, expected_load_call
+    ):
         """Tests on_file_dropped's target node identification logic."""
         test_file_path = "data.csv"
         scene_pos = QPointF(100, 100)
-        
-        mocker.patch.object(canvas_controller.model, 'get_node_at', return_value=node_at_pos)
-        mock_load_data = mocker.patch.object(canvas_controller, 'load_data_into_node')
+
+        mocker.patch.object(
+            canvas_controller.model, "get_node_at", return_value=node_at_pos
+        )
+        mock_load_data = mocker.patch.object(canvas_controller, "load_data_into_node")
 
         with caplog.at_level(logging.DEBUG):
             canvas_controller.on_file_dropped(test_file_path, scene_pos)
-        
+
         canvas_controller.model.get_node_at.assert_called_once()
         if expected_load_call:
             mock_load_data.assert_called_once_with(test_file_path, node_at_pos)

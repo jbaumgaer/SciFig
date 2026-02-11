@@ -1,6 +1,7 @@
 """
 Test suite for the BatchChangePlotGeometryCommand.
 """
+
 from unittest.mock import MagicMock
 
 import pytest

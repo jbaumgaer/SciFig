@@ -4,24 +4,25 @@ import matplotlib.figure
 import pytest
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QApplication, QMenu, QMenuBar, QToolBar
-from src.services.commands.command_manager import CommandManager
-
-from src.ui.builders.menu_bar_builder import MainMenuActions
-from src.ui.builders.tool_bar_builder import ToolBarActions
-from src.services.config_service import ConfigService
 from src.controllers.main_controller import MainController
-from src.services.layout_manager import LayoutManager
+
 from src.models.application_model import ApplicationModel
 from src.models.plots.plot_types import PlotType
+from src.services.commands.command_manager import CommandManager
+from src.services.config_service import ConfigService
+from src.services.layout_manager import LayoutManager
+from src.ui.builders.menu_bar_builder import MainMenuActions
+from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
+from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
 from src.ui.windows.main_window import MainWindow
-from src.ui.factories.properties_ui_factory import PropertiesUIFactory
 
 
 @pytest.fixture
 def mock_main_controller():
     """Fixture for a mock MainController."""
     return MagicMock(spec=MainController)
+
 
 @pytest.fixture
 def mock_config_service():
@@ -32,6 +33,7 @@ def mock_config_service():
         "app_name": "TestApp",
     }.get(key, default)
     return config_service
+
 
 @pytest.fixture
 def mock_layout_manager():
@@ -48,7 +50,13 @@ def mock_layout_ui_factory():
 
 
 @pytest.fixture
-def app_context(qtbot, mock_main_controller, mock_config_service, mock_layout_manager, mock_layout_ui_factory):
+def app_context(
+    qtbot,
+    mock_main_controller,
+    mock_config_service,
+    mock_layout_manager,
+    mock_layout_ui_factory,
+):
     """
     A pytest fixture that sets up the main application window with a real
     model and a mocked command manager, instantiating a real MainWindow.
@@ -99,10 +107,10 @@ def app_context(qtbot, mock_main_controller, mock_config_service, mock_layout_ma
     mock_tool_bar = QToolBar()
     mock_tool_bar_actions = MagicMock(spec=ToolBarActions)
 
-    mock_properties_ui_factory = MagicMock(spec_set=PropertiesUIFactory)
+    mock_properties_ui_factory = MagicMock(spec_set=PlotPropertiesUIFactory)
 
     # Patch QSettings to assert its initialization
-    with patch('src.views.main_window.QSettings') as MockQSettings:
+    with patch("src.views.main_window.QSettings") as MockQSettings:
         main_window = MainWindow(
             model,
             mock_main_controller,
@@ -113,13 +121,12 @@ def app_context(qtbot, mock_main_controller, mock_config_service, mock_layout_ma
             tool_bar=mock_tool_bar,
             tool_bar_actions=mock_tool_bar_actions,
             properties_ui_factory=mock_properties_ui_factory,
-            layout_ui_factory=mock_layout_ui_factory, # Added
+            layout_ui_factory=mock_layout_ui_factory,  # Added
             config_service=mock_config_service,
-            layout_manager=mock_layout_manager # Added
+            layout_manager=mock_layout_manager,  # Added
         )
         # We can add an assertion here, but better in a dedicated test
         # MockQSettings.assert_called_once_with("TestOrg", "TestApp")
-
 
     qtbot.addWidget(main_window)
     main_window.show()
@@ -131,10 +138,11 @@ def app_context(qtbot, mock_main_controller, mock_config_service, mock_layout_ma
         "command_manager": mock_command_manager,
         "main_controller": mock_main_controller,
         "properties_ui_factory": mock_properties_ui_factory,
-        "layout_ui_factory": mock_layout_ui_factory, # Added
-        "layout_manager": mock_layout_manager, # Added
-        "mock_qsettings_class": MockQSettings
+        "layout_ui_factory": mock_layout_ui_factory,  # Added
+        "layout_manager": mock_layout_manager,  # Added
+        "mock_qsettings_class": MockQSettings,
     }
+
 
 # Add new test for QSettings initialization
 def test_main_window_uses_config_for_qsettings(app_context, mock_config_service):
@@ -222,7 +230,9 @@ def test_layout_menu_exists(app_context):
     # assert window.layout_menu.title() == "&Layout"
 
 
-def test_update_layout_menu_free_form_mode(app_context, mock_layout_ui_factory, mock_layout_manager):
+def test_update_layout_menu_free_form_mode(
+    app_context, mock_layout_ui_factory, mock_layout_manager
+):
     """
     Test that _update_layout_menu correctly sets up free form layout controls when in free form mode.
     """
@@ -234,7 +244,9 @@ def test_update_layout_menu_free_form_mode(app_context, mock_layout_ui_factory, 
     # assert window.layout_controls_dock.widget() == mock_layout_ui_factory.build_layout_controls.return_value
 
 
-def test_update_layout_menu_grid_mode(app_context, mock_layout_ui_factory, mock_layout_manager):
+def test_update_layout_menu_grid_mode(
+    app_context, mock_layout_ui_factory, mock_layout_manager
+):
     """
     Test that _update_layout_menu correctly sets up grid layout controls when in grid mode.
     """
@@ -246,7 +258,9 @@ def test_update_layout_menu_grid_mode(app_context, mock_layout_ui_factory, mock_
     # assert window.layout_controls_dock.widget() == mock_layout_ui_factory.build_layout_controls.return_value
 
 
-def test_layout_mode_changed_signal_updates_menu(app_context, mock_layout_manager, mock_layout_ui_factory):
+def test_layout_mode_changed_signal_updates_menu(
+    app_context, mock_layout_manager, mock_layout_ui_factory
+):
     """
     Test that the layoutModeChanged signal from LayoutManager triggers _update_layout_menu.
     """
@@ -256,17 +270,20 @@ def test_layout_mode_changed_signal_updates_menu(app_context, mock_layout_manage
     #     mock_layout_manager.layoutModeChanged.emit(LayoutMode.GRID)
     #     mock_update_menu.assert_called_once()
 
+
 def test_properties_panel_fixed_width(app_context):
     """
     Test that the properties panel has a fixed width.
     """
     pass
 
+
 def test_layout_mode_toggle_initial_state(app_context, mock_layout_manager):
     """
     Test the initial state of the layout mode toggle button in PropertiesView.
     """
     pass
+
 
 def test_layout_mode_toggle_changes_mode(app_context, mock_layout_manager):
     """

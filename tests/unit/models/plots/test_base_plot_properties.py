@@ -1,6 +1,14 @@
 import pytest
-from src.models.plots.plot_properties import BasePlotProperties, PlotMapping, AxesLimits, LinePlotProperties, ScatterPlotProperties
+
+from src.models.plots.plot_properties import (
+    AxesLimits,
+    BasePlotProperties,
+    LinePlotProperties,
+    PlotMapping,
+    ScatterPlotProperties,
+)
 from src.models.plots.plot_types import PlotType
+
 
 class TestBasePlotProperties:
     def test_base_plot_properties_initialization_defaults(self):
@@ -31,7 +39,7 @@ class TestBasePlotProperties:
             ylabel="Custom Y",
             plot_mapping=custom_mapping,
             axes_limits=custom_limits,
-            plot_type=PlotType.SCATTER
+            plot_type=PlotType.SCATTER,
         )
         assert props.title == "Custom Title"
         assert props.xlabel == "Custom X"
@@ -51,7 +59,7 @@ class TestBasePlotProperties:
         assert props.title == "New Title"
         assert props.xlabel == "New X"
         assert props.ylabel == "New Y"
-        assert props.plot_type == PlotType.LINE # Should remain default
+        assert props.plot_type == PlotType.LINE  # Should remain default
 
     def test_base_plot_properties_update_from_dict_nested_properties(self):
         """
@@ -61,7 +69,7 @@ class TestBasePlotProperties:
         props = BasePlotProperties()
         data = {
             "plot_mapping": {"x": "col_A", "y": ["col_B"]},
-            "axes_limits": {"xlim": (0.0, 100.0), "ylim": (-5.0, 5.0)}
+            "axes_limits": {"xlim": (0.0, 100.0), "ylim": (-5.0, 5.0)},
         }
         props.update_from_dict(data)
         assert props.plot_mapping.x == "col_A"
@@ -87,7 +95,7 @@ class TestBasePlotProperties:
         props.update_from_dict(data)
         assert not hasattr(props, "non_existent_prop")
         assert props.title == "New Title"
-        assert props.plot_type == PlotType.LINE # Should remain default
+        assert props.plot_type == PlotType.LINE  # Should remain default
 
     def test_base_plot_properties_update_from_dict_nested_partial_update(self):
         """
@@ -99,22 +107,24 @@ class TestBasePlotProperties:
         props.axes_limits.xlim = (10, 20)
         props.axes_limits.ylim = (-10, 10)
 
-        data = {
-            "plot_mapping": {"x": "updated_x"},
-            "axes_limits": {"ylim": (-5, 5)}
-        }
+        data = {"plot_mapping": {"x": "updated_x"}, "axes_limits": {"ylim": (-5, 5)}}
         props.update_from_dict(data)
 
         assert props.plot_mapping.x == "updated_x"
-        assert props.plot_mapping.y == ["initial_y"] # Should remain unchanged
-        assert props.axes_limits.xlim == (10, 20) # Should remain unchanged
+        assert props.plot_mapping.y == ["initial_y"]  # Should remain unchanged
+        assert props.axes_limits.xlim == (10, 20)  # Should remain unchanged
         assert props.axes_limits.ylim == (-5, 5)
 
-    @pytest.mark.parametrize("new_plot_type, expected_class", [
-        (PlotType.LINE, LinePlotProperties),
-        (PlotType.SCATTER, ScatterPlotProperties)
-    ])
-    def test_create_properties_from_plot_type_no_current_properties(self, new_plot_type, expected_class):
+    @pytest.mark.parametrize(
+        "new_plot_type, expected_class",
+        [
+            (PlotType.LINE, LinePlotProperties),
+            (PlotType.SCATTER, ScatterPlotProperties),
+        ],
+    )
+    def test_create_properties_from_plot_type_no_current_properties(
+        self, new_plot_type, expected_class
+    ):
         """
         Test create_properties_from_plot_type when no current_properties are provided.
         """
@@ -134,11 +144,10 @@ class TestBasePlotProperties:
             title="Line Title",
             xlabel="Line X",
             plot_mapping=PlotMapping(x="data_x", y=["data_y"]),
-            axes_limits=AxesLimits(xlim=(0, 10), ylim=(0, 20))
+            axes_limits=AxesLimits(xlim=(0, 10), ylim=(0, 20)),
         )
         new_props = BasePlotProperties.create_properties_from_plot_type(
-            PlotType.SCATTER,
-            current_properties=current_props
+            PlotType.SCATTER, current_properties=current_props
         )
 
         assert isinstance(new_props, ScatterPlotProperties)
@@ -147,7 +156,7 @@ class TestBasePlotProperties:
         assert new_props.xlabel == "Line X"
         assert new_props.plot_mapping.x == "data_x"
         assert new_props.axes_limits.xlim == (0, 10)
-        assert new_props.marker_size == 10 # Default for ScatterPlotProperties
+        assert new_props.marker_size == 10  # Default for ScatterPlotProperties
 
     def test_create_properties_from_plot_type_with_existing_scatter_to_line(self):
         """
@@ -158,11 +167,10 @@ class TestBasePlotProperties:
             title="Scatter Title",
             ylabel="Scatter Y",
             plot_mapping=PlotMapping(x="other_x", y=["other_y"]),
-            marker_size=25
+            marker_size=25,
         )
         new_props = BasePlotProperties.create_properties_from_plot_type(
-            PlotType.LINE,
-            current_properties=current_props
+            PlotType.LINE, current_properties=current_props
         )
 
         assert isinstance(new_props, LinePlotProperties)
@@ -170,7 +178,9 @@ class TestBasePlotProperties:
         assert new_props.title == "Scatter Title"
         assert new_props.ylabel == "Scatter Y"
         assert new_props.plot_mapping.x == "other_x"
-        assert not hasattr(new_props, "marker_size") # LinePlotProperties does not have marker_size
+        assert not hasattr(
+            new_props, "marker_size"
+        )  # LinePlotProperties does not have marker_size
 
     def test_create_properties_from_plot_type_with_existing_same_type(self):
         """
@@ -179,11 +189,10 @@ class TestBasePlotProperties:
         current_props = LinePlotProperties(
             title="Original Title",
             xlabel="Original X",
-            plot_mapping=PlotMapping(x="x_val", y=["y_val"])
+            plot_mapping=PlotMapping(x="x_val", y=["y_val"]),
         )
         new_props = BasePlotProperties.create_properties_from_plot_type(
-            PlotType.LINE,
-            current_properties=current_props
+            PlotType.LINE, current_properties=current_props
         )
         assert isinstance(new_props, LinePlotProperties)
         assert new_props.title == "Original Title"
@@ -191,7 +200,9 @@ class TestBasePlotProperties:
         assert new_props.plot_mapping.x == "x_val"
         assert new_props.plot_type == PlotType.LINE
 
-    def test_create_properties_from_plot_type_with_existing_scatter_to_scatter_with_marker_size(self):
+    def test_create_properties_from_plot_type_with_existing_scatter_to_scatter_with_marker_size(
+        self,
+    ):
         """
         Test creating ScatterPlotProperties from existing ScatterPlotProperties,
         ensuring marker_size is transferred.
@@ -199,11 +210,10 @@ class TestBasePlotProperties:
         current_props = ScatterPlotProperties(
             title="Original Scatter",
             marker_size=30,
-            plot_mapping=PlotMapping(x="sx", y=["sy"])
+            plot_mapping=PlotMapping(x="sx", y=["sy"]),
         )
         new_props = BasePlotProperties.create_properties_from_plot_type(
-            PlotType.SCATTER,
-            current_properties=current_props
+            PlotType.SCATTER, current_properties=current_props
         )
         assert isinstance(new_props, ScatterPlotProperties)
         assert new_props.title == "Original Scatter"

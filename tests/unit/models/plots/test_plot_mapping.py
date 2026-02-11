@@ -1,5 +1,7 @@
 import pytest
+
 from src.models.plots.plot_properties import PlotMapping
+
 
 class TestPlotMapping:
     def test_plot_mapping_initialization_defaults(self):
@@ -18,13 +20,22 @@ class TestPlotMapping:
         assert mapping.x == "column_A"
         assert mapping.y == ["column_B", "column_C"]
 
-    @pytest.mark.parametrize("data, expected_x, expected_y", [
-        ({"x": "new_col_X", "y": ["new_col_Y1", "new_col_Y2"]}, "new_col_X", ["new_col_Y1", "new_col_Y2"]),
-        ({"x": "only_x"}, "only_x", ["initial_y"]),
-        ({"y": ["only_y1", "only_y2"]}, "initial_x", ["only_y1", "only_y2"]),
-        ({}, "initial_x", ["initial_y"]),
-    ])
-    def test_plot_mapping_update_from_dict_full_and_partial(self, data, expected_x, expected_y):
+    @pytest.mark.parametrize(
+        "data, expected_x, expected_y",
+        [
+            (
+                {"x": "new_col_X", "y": ["new_col_Y1", "new_col_Y2"]},
+                "new_col_X",
+                ["new_col_Y1", "new_col_Y2"],
+            ),
+            ({"x": "only_x"}, "only_x", ["initial_y"]),
+            ({"y": ["only_y1", "only_y2"]}, "initial_x", ["only_y1", "only_y2"]),
+            ({}, "initial_x", ["initial_y"]),
+        ],
+    )
+    def test_plot_mapping_update_from_dict_full_and_partial(
+        self, data, expected_x, expected_y
+    ):
         """
         Test that update_from_dict correctly updates x and y, both fully and partially.
         """

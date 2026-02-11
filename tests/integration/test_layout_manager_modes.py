@@ -1,17 +1,15 @@
 """
 Integration tests for LayoutManager's mode switching and engine activation.
 """
-import pytest
-from unittest.mock import MagicMock
 
-from src.models.application_model import ApplicationModel
-from src.services.layout_manager import LayoutManager
-from src.shared.constants import LayoutMode
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
+from src.shared.constants import LayoutMode
 
 
-def test_layout_mode_switching(real_application_model, real_layout_controller, real_layout_manager):
+def test_layout_mode_switching(
+    real_application_model, real_layout_controller, real_layout_manager
+):
     """
     Integration Test: Layout Mode Switching.
     This test should:

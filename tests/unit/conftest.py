@@ -1,36 +1,37 @@
 # tests/unit/conftest.py
-import pytest
-from unittest.mock import MagicMock, create_autospec, Mock
-import matplotlib.figure
-from PySide6.QtWidgets import QApplication
 import uuid
-import pandas as pd
+from unittest.mock import MagicMock, Mock, create_autospec
 
+import matplotlib.figure
+import pandas as pd
+import pytest
+from PySide6.QtWidgets import QApplication
+
+from src.controllers.canvas_controller import CanvasController
+from src.controllers.layout_controller import LayoutController
+from src.controllers.node_controller import NodeController
+from src.controllers.project_controller import ProjectController
+from src.models.application_model import ApplicationModel
+from src.models.layout.free_layout_engine import FreeLayoutEngine
+from src.models.layout.grid_layout_engine import GridLayoutEngine
+from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import (
     AxesLimits,
     LinePlotProperties,
     PlotMapping,
 )
-from src.services.config_service import ConfigService
-from src.models.application_model import ApplicationModel
-from src.models.nodes.scene_node import SceneNode
-from src.models.nodes.group_node import GroupNode
 from src.services.commands.command_manager import CommandManager
-from src.controllers.layout_controller import LayoutController
-from src.controllers.node_controller import NodeController
-from src.controllers.project_controller import ProjectController
-from src.ui.renderers.renderer import Renderer
-from src.services.tools.selection_tool import SelectionTool
-from src.services.tool_service import ToolService
-from src.ui.windows.main_window import MainWindow
-from src.models.layout.free_layout_engine import FreeLayoutEngine
-from src.models.layout.grid_layout_engine import GridLayoutEngine
+from src.services.config_service import ConfigService
 from src.services.layout_manager import LayoutManager
+from src.services.tool_service import ToolService
+from src.services.tools.selection_tool import SelectionTool
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.factories.properties_ui_factory import PropertiesUIFactory
-from src.controllers.canvas_controller import CanvasController
+from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
+from src.ui.renderers.renderer import Renderer
 from src.ui.widgets.canvas_widget import CanvasWidget
+from src.ui.windows.main_window import MainWindow
 
 
 @pytest.fixture(scope="function")
@@ -38,10 +39,12 @@ def mock_qapplication():
     """Provides a mock QApplication."""
     return MagicMock(spec=QApplication)
 
+
 @pytest.fixture(scope="function")
 def mock_figure():
     """Provides a mock matplotlib figure."""
     return create_autospec(matplotlib.figure.Figure)
+
 
 @pytest.fixture(scope="function")
 def mock_config_service():
@@ -55,7 +58,7 @@ def mock_config_service():
         "figure.default_height": 3.0,
         "figure.default_dpi": 200,
         "figure.default_facecolor": "blue",
-        "tool.default_active_tool": "selection", # Ensure this matches ToolName.SELECTION.value
+        "tool.default_active_tool": "selection",  # Ensure this matches ToolName.SELECTION.value
         "paths.icon_base_dir": "mock/icons",
         "paths.tool_icons.select": "mock_select.svg",
         "paths.tool_icons.direct_select": "mock_direct_select.svg",
@@ -68,7 +71,7 @@ def mock_config_service():
         "layout.default_margin": 0.1,
         "layout.default_gutter": 0.08,
         "layout.max_recent_files": 5,
-        "ui.default_layout_mode": "free_form", # Added for LayoutManager initialization
+        "ui.default_layout_mode": "free_form",  # Added for LayoutManager initialization
     }.get(key, default)
     config_service.get_required.side_effect = lambda key: {
         "figure.default_width": 5.0,
@@ -78,70 +81,87 @@ def mock_config_service():
     }.get(key)
     return config_service
 
+
 @pytest.fixture(scope="function")
-def mock_application_model(): # Renamed from mock_model for clarity
+def mock_application_model():  # Renamed from mock_model for clarity
     """Fixture for a mock ApplicationModel."""
     model = MagicMock(spec=ApplicationModel)
-    model.figure = Mock() # Mock the figure attribute as it's accessed
-    
+    model.figure = Mock()  # Mock the figure attribute as it's accessed
+
     # Mock scene_root to be a MagicMock that has a 'children' attribute which is a list
     mock_scene_root_instance = MagicMock(spec=GroupNode)
-    mock_scene_root_instance.children = [] # This makes it a real list
+    mock_scene_root_instance.children = []  # This makes it a real list
     model.scene_root = mock_scene_root_instance
 
-    model.selection = Mock() # Add selection attribute for _redraw_canvas_callback
+    model.selection = Mock()  # Add selection attribute for _redraw_canvas_callback
     # Mock signals
     model.layoutConfigChanged = MagicMock()
     model.modelChanged = MagicMock()
     model.selectionChanged = MagicMock()
     return model
 
+
 @pytest.fixture
 def mock_command_manager():
     """Fixture for a mock CommandManager."""
     return MagicMock(spec=CommandManager)
+
 
 @pytest.fixture
 def mock_project_controller():
     """Fixture for a mock ProjectController."""
     return MagicMock(spec=ProjectController)
 
+
 @pytest.fixture
 def mock_layout_controller():
     """Fixture for a mock LayoutController."""
     controller = MagicMock(spec=LayoutController)
-    controller._layout_manager = MagicMock(spec=LayoutManager) # Explicitly mock _layout_manager
-    controller._layout_manager.apply_default_grid_layout = MagicMock() # Mock the method on the nested manager
+    controller._layout_manager = MagicMock(
+        spec=LayoutManager
+    )  # Explicitly mock _layout_manager
+    controller._layout_manager.apply_default_grid_layout = (
+        MagicMock()
+    )  # Mock the method on the nested manager
     return controller
+
 
 @pytest.fixture
 def mock_node_controller():
     """Fixture for a mock NodeController."""
     return MagicMock(spec=NodeController)
 
+
 @pytest.fixture
 def mock_renderer():
     """Fixture for a mock Renderer."""
     renderer = MagicMock(spec=Renderer)
-    renderer.plotting_strategies = {'line': Mock()}
+    renderer.plotting_strategies = {"line": Mock()}
     renderer.render = MagicMock()
     return renderer
+
 
 @pytest.fixture
 def mock_selection_tool():
     """Fixture for a mock SelectionTool."""
     return MagicMock(spec=SelectionTool)
 
+
 @pytest.fixture
-def mock_tool_manager(mock_selection_tool): # This fixture depends on mock_selection_tool
+def mock_tool_manager(
+    mock_selection_tool,
+):  # This fixture depends on mock_selection_tool
     """Fixture for a mock ToolManager."""
     tool_manager = MagicMock(spec=ToolService)
     tool_manager._tools = {}
+
     def mock_add_tool(tool):
         tool_manager._tools[tool.name] = tool
+
     tool_manager.add_tool.side_effect = mock_add_tool
     tool_manager.set_active_tool = MagicMock()
     return tool_manager
+
 
 @pytest.fixture
 def mock_main_window():
@@ -159,15 +179,18 @@ def mock_main_window():
     main_window.show_properties_panel = MagicMock()
     return main_window
 
+
 @pytest.fixture
 def mock_free_layout_engine():
     """Fixture for a mock FreeLayoutEngine."""
     return MagicMock(spec=FreeLayoutEngine)
 
+
 @pytest.fixture
 def mock_grid_layout_engine():
     """Fixture for a mock GridLayoutEngine."""
     return MagicMock(spec=GridLayoutEngine)
+
 
 @pytest.fixture
 def mock_layout_manager():
@@ -176,15 +199,18 @@ def mock_layout_manager():
     manager.layoutModeChanged = MagicMock()
     return manager
 
+
 @pytest.fixture
 def mock_layout_ui_factory():
     """Fixture for a mock LayoutUIFactory."""
     return MagicMock(spec=LayoutUIFactory)
 
+
 @pytest.fixture
 def mock_properties_ui_factory():
     """Fixture for a mock PropertiesUIFactory."""
-    return MagicMock(spec=PropertiesUIFactory)
+    return MagicMock(spec=PlotPropertiesUIFactory)
+
 
 @pytest.fixture(scope="function")
 def mock_canvas_widget():
@@ -192,15 +218,21 @@ def mock_canvas_widget():
     canvas_widget = MagicMock(spec=CanvasWidget)
     mock_figure_canvas = MagicMock()
     mock_figure_canvas.mpl_connect = MagicMock()
-    mock_figure_canvas.width.return_value = 1000 # Default width for coord conversion tests
-    mock_figure_canvas.height.return_value = 800 # Default height for coord conversion tests
+    mock_figure_canvas.width.return_value = (
+        1000  # Default width for coord conversion tests
+    )
+    mock_figure_canvas.height.return_value = (
+        800  # Default height for coord conversion tests
+    )
     canvas_widget.figure_canvas = mock_figure_canvas
     return canvas_widget
+
 
 @pytest.fixture
 def mock_canvas_controller():
     """Fixture for a mock CanvasController."""
     return MagicMock(spec=CanvasController)
+
 
 @pytest.fixture
 def sample_dataframe():
@@ -209,14 +241,22 @@ def sample_dataframe():
         {"Time": [1, 2, 3], "Voltage": [10, 20, 15], "Current": [1, 2, 1.5]}
     )
 
+
 @pytest.fixture(scope="function")
 def mock_scene_node():
     """Provides a mock SceneNode."""
     mock = create_autospec(SceneNode, instance=True)
     mock.id = str(uuid.uuid4())
     mock.name = "MockNode"
-    mock.to_dict.return_value = {"id": mock.id, "name": mock.name, "type": "SceneNode", "children": [], "visible": True}
+    mock.to_dict.return_value = {
+        "id": mock.id,
+        "name": mock.name,
+        "type": "SceneNode",
+        "children": [],
+        "visible": True,
+    }
     return mock
+
 
 @pytest.fixture(scope="function")
 def mock_group_node():
@@ -226,24 +266,35 @@ def mock_group_node():
     mock.name = "MockGroup"
     mock.children = []
     mock.add_child.side_effect = lambda node: mock.children.append(node)
-    mock.to_dict.return_value = {"id": mock.id, "name": mock.name, "type": "GroupNode", "children": [], "visible": True}
+    mock.to_dict.return_value = {
+        "id": mock.id,
+        "name": mock.name,
+        "type": "GroupNode",
+        "children": [],
+        "visible": True,
+    }
     mock.hit_test.return_value = None
     return mock
+
 
 @pytest.fixture
 def mock_plot_node():
     plot_node = MagicMock(spec=PlotNode)
     plot_node.id = "test_plot_id"
     plot_node.data = MagicMock(spec=pd.DataFrame)
-    plot_node.plot_properties = MagicMock() # Mock plot_properties object
-    plot_node.plot_properties.to_dict.return_value = {"plot_type": "line"} # Mock this for create_new_layout
+    plot_node.plot_properties = MagicMock()  # Mock plot_properties object
+    plot_node.plot_properties.to_dict.return_value = {
+        "plot_type": "line"
+    }  # Mock this for create_new_layout
     return plot_node
+
 
 @pytest.fixture
 def plot_node_empty_props():
     """Provides a PlotNode with empty plot_properties."""
     node = PlotNode()
     return node
+
 
 @pytest.fixture
 def plot_node_with_mapping():

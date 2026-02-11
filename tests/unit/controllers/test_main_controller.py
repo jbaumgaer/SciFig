@@ -2,31 +2,35 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from src.services.commands.command_manager import CommandManager
-
-from src.services.config_service import ConfigService
 from src.controllers.main_controller import MainController
-from src.services.layout_manager import LayoutManager
+
 from src.models import ApplicationModel
 from src.models.nodes import GroupNode
+from src.services.commands.command_manager import CommandManager
+from src.services.config_service import ConfigService
+from src.services.layout_manager import LayoutManager
 
 
 @pytest.fixture
 def mock_model():
     model = MagicMock(spec=ApplicationModel)
     model.scene_root = GroupNode(name="root_mock")
-    model.scene_root.all_descendants.return_value = [model.scene_root] # Mock initial state
+    model.scene_root.all_descendants.return_value = [
+        model.scene_root
+    ]  # Mock initial state
     model.modelChanged = MagicMock()
     model.selection = []
     # Mock set_scene_root as it's called
     model.set_scene_root = MagicMock()
-    model.clear_scene = MagicMock() # Mock clear_scene
-    model.add_node = MagicMock() # Mock add_node if it's used in error case
+    model.clear_scene = MagicMock()  # Mock clear_scene
+    model.add_node = MagicMock()  # Mock add_node if it's used in error case
     return model
+
 
 @pytest.fixture
 def mock_command_manager():
     return MagicMock(spec=CommandManager)
+
 
 @pytest.fixture
 def mock_config_service():
@@ -40,8 +44,11 @@ def mock_config_service():
         "layout.default_gutter": 0.08,
         "layout.max_recent_files": 5,
     }.get(key, default)
-    config_service.get_specific_setting.return_value = "free_form" # Default for layout mode
+    config_service.get_specific_setting.return_value = (
+        "free_form"  # Default for layout mode
+    )
     return config_service
+
 
 @pytest.fixture
 def mock_layout_manager():
@@ -52,9 +59,14 @@ def mock_layout_manager():
     manager.layoutModeChanged = MagicMock()
     return manager
 
+
 @pytest.fixture
-def main_controller(mock_model, mock_config_service, mock_command_manager, mock_layout_manager):
-    return MainController(mock_model, mock_config_service, mock_command_manager, mock_layout_manager)
+def main_controller(
+    mock_model, mock_config_service, mock_command_manager, mock_layout_manager
+):
+    return MainController(
+        mock_model, mock_config_service, mock_command_manager, mock_layout_manager
+    )
 
 
 @pytest.fixture
@@ -71,30 +83,33 @@ def mock_layout_template_file(tmp_path):
         "geometry": {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0},
         "children": [
             {
-              "type": "PlotNode",
-              "name": "Plot A",
-              "id": "plot_A",
-              "visible": True,
-              "geometry": { "x": 0.0, "y": 0.5, "width": 0.5, "height": 0.5 },
-              "plot_properties": { "plot_type": "line", "title": "Plot A Title" }
+                "type": "PlotNode",
+                "name": "Plot A",
+                "id": "plot_A",
+                "visible": True,
+                "geometry": {"x": 0.0, "y": 0.5, "width": 0.5, "height": 0.5},
+                "plot_properties": {"plot_type": "line", "title": "Plot A Title"},
             },
             {
-              "type": "PlotNode",
-              "name": "Plot B",
-              "id": "plot_B",
-              "visible": True,
-              "geometry": { "x": 0.5, "y": 0.5, "width": 0.5, "height": 0.5 },
-              "plot_properties": { "plot_type": "scatter", "title": "Plot B Title" }
-            }
-        ]
+                "type": "PlotNode",
+                "name": "Plot B",
+                "id": "plot_B",
+                "visible": True,
+                "geometry": {"x": 0.5, "y": 0.5, "width": 0.5, "height": 0.5},
+                "plot_properties": {"plot_type": "scatter", "title": "Plot B Title"},
+            },
+        ],
     }
     file = layout_dir / "test_2x2_layout.json"
     with open(file, "w") as f:
         json.dump(template_content, f)
     return file
 
+
 # Test cases for MainController
-def test_main_controller_init(mock_model, mock_config_service, mock_command_manager, mock_layout_manager):
+def test_main_controller_init(
+    mock_model, mock_config_service, mock_command_manager, mock_layout_manager
+):
     """
     Test MainController initialization, including QSettings setup
     with config values.
@@ -105,7 +120,14 @@ def test_main_controller_init(mock_model, mock_config_service, mock_command_mana
     #     assert controller.model is mock_model
     #     assert controller._config_service is mock_config_service
 
-def test_create_new_layout_loads_template_and_redistributes_plots(main_controller, mock_model, mock_config_service, mock_layout_template_file, tmp_path):
+
+def test_create_new_layout_loads_template_and_redistributes_plots(
+    main_controller,
+    mock_model,
+    mock_config_service,
+    mock_layout_template_file,
+    tmp_path,
+):
     """
     Test create_new_layout:
     - Loads the specified template.
@@ -141,7 +163,10 @@ def test_create_new_layout_loads_template_and_redistributes_plots(main_controlle
     # # assert new_root_node.children[0].plot_properties.title == "Old Title 1"
     # mock_model.modelChanged.emit.assert_called_once() # Called by set_scene_root
 
-def test_create_new_layout_handles_template_not_found(main_controller, mock_model, mock_config_service):
+
+def test_create_new_layout_handles_template_not_found(
+    main_controller, mock_model, mock_config_service
+):
     """
     Test create_new_layout gracefully handles a missing template file.
     """
@@ -159,7 +184,10 @@ def test_create_new_layout_handles_template_not_found(main_controller, mock_mode
     # mock_model.add_node.assert_called_once_with(PlotNode(name="Default Plot")) # Error handling path
     # mock_model.modelChanged.emit.assert_called_once()
 
-def test_create_new_layout_handles_invalid_json(main_controller, mock_model, mock_config_service, tmp_path):
+
+def test_create_new_layout_handles_invalid_json(
+    main_controller, mock_model, mock_config_service, tmp_path
+):
     """
     Test create_new_layout gracefully handles an invalid JSON template file.
     """
@@ -182,4 +210,3 @@ def test_create_new_layout_handles_invalid_json(main_controller, mock_model, moc
     # mock_model.clear_scene.assert_called_once()
     # mock_model.add_node.assert_called_once_with(PlotNode(name="Error Plot")) # Error handling path
     # mock_model.modelChanged.emit.assert_called_once()
-

@@ -15,14 +15,9 @@ from PySide6.QtWidgets import (
     QMenuBar,
     QToolBar,
 )
-
-from src.services.commands.command_manager import CommandManager
-from src.ui.builders.menu_bar_builder import MainMenuActions
-from src.ui.builders.tool_bar_builder import ToolBarActions
-from src.controllers.canvas_controller import CanvasController
 from src.controllers.main_controller import MainController
-from src.services.tool_service import ToolService
-from src.services.tools.selection_tool import SelectionTool
+
+from src.controllers.canvas_controller import CanvasController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import (
@@ -31,13 +26,18 @@ from src.models.plots.plot_properties import (
     PlotMapping,
 )
 from src.models.plots.plot_types import PlotType
-from src.ui.windows.main_window import MainWindow
-from src.ui.factories.properties_ui_factory import (
-    PropertiesUIFactory,
+from src.services.commands.command_manager import CommandManager
+from src.services.tool_service import ToolService
+from src.services.tools.selection_tool import SelectionTool
+from src.ui.builders.menu_bar_builder import MainMenuActions
+from src.ui.builders.tool_bar_builder import ToolBarActions
+from src.ui.factories.plot_properties_ui_factory import (
+    PlotPropertiesUIFactory,
     _build_line_plot_ui_widgets,
     _build_scatter_plot_ui_widgets,
 )
 from src.ui.renderers.renderer import Renderer
+from src.ui.windows.main_window import MainWindow
 
 
 @pytest.fixture
@@ -82,9 +82,13 @@ def app_context(qtbot):
     mock_main_menu_actions.exit_action = MagicMock(spec=QAction)
     mock_main_menu_actions.edit_menu = MagicMock(spec=QMenu)
     mock_main_menu_actions.undo_action = MagicMock(spec=QAction)
-    mock_main_menu_actions.undo_action.trigger.side_effect = command_manager.undo # Use the command_manager from fixture
+    mock_main_menu_actions.undo_action.trigger.side_effect = (
+        command_manager.undo
+    )  # Use the command_manager from fixture
     mock_main_menu_actions.redo_action = MagicMock(spec=QAction)
-    mock_main_menu_actions.redo_action.trigger.side_effect = command_manager.redo # Use the command_manager from fixture
+    mock_main_menu_actions.redo_action.trigger.side_effect = (
+        command_manager.redo
+    )  # Use the command_manager from fixture
     mock_main_menu_actions.cut_action = MagicMock(spec=QAction)
     mock_main_menu_actions.copy_action = MagicMock(spec=QAction)
     mock_main_menu_actions.paste_action = MagicMock(spec=QAction)
@@ -94,9 +98,11 @@ def app_context(qtbot):
     mock_tool_bar = QToolBar()
     mock_tool_bar_actions = MagicMock(spec=ToolBarActions)
 
-    properties_ui_factory = PropertiesUIFactory()
+    properties_ui_factory = PlotPropertiesUIFactory()
     properties_ui_factory.register_builder(PlotType.LINE, _build_line_plot_ui_widgets)
-    properties_ui_factory.register_builder(PlotType.SCATTER, _build_scatter_plot_ui_widgets)
+    properties_ui_factory.register_builder(
+        PlotType.SCATTER, _build_scatter_plot_ui_widgets
+    )
 
     view = MainWindow(
         model,
@@ -124,8 +130,12 @@ def app_context(qtbot):
 
     # The connections are now handled in main.py, so we need to simulate them here for the test context
     view.new_layout_action.triggered.connect(main_controller.create_new_layout)
-    view.save_project_action.triggered.connect(lambda: main_controller.save_project(parent=view))
-    view.open_project_action.triggered.connect(lambda: main_controller.open_project(parent=view))
+    view.save_project_action.triggered.connect(
+        lambda: main_controller.save_project(parent=view)
+    )
+    view.open_project_action.triggered.connect(
+        lambda: main_controller.open_project(parent=view)
+    )
 
     canvas_controller = CanvasController(
         model=model,
@@ -149,14 +159,14 @@ def app_context(qtbot):
         title="Plot One Title",
         xlabel="",
         ylabel="",
-        plot_mapping=PlotMapping(x=None, y=[""]), # Changed to include an empty string
+        plot_mapping=PlotMapping(x=None, y=[""]),  # Changed to include an empty string
         axes_limits=AxesLimits(xlim=(None, None), ylim=(None, None)),
     )
     plot_node2.plot_properties = LinePlotProperties(
         title="Plot Two Title",
         xlabel="",
         ylabel="",
-        plot_mapping=PlotMapping(x=None, y=[""]), # Changed to include an empty string
+        plot_mapping=PlotMapping(x=None, y=[""]),  # Changed to include an empty string
         axes_limits=AxesLimits(xlim=(None, None), ylim=(None, None)),
     )
 
@@ -322,7 +332,7 @@ def test_axis_limits_updates_model(app_context, qtbot):
 
     # 1. Select the plot node to build its UI
     model.set_selection([plot_node])
-    view.properties_view.on_selection_changed() # Manually trigger the UI update
+    view.properties_view.on_selection_changed()  # Manually trigger the UI update
 
     # 2. Wait for the UI to build and find the QLineEdit widgets
     def editors_exist():
@@ -391,7 +401,9 @@ def test_save_project_workflow(populated_plot_node, monkeypatch):
     )
 
     # 2. Patch zipfile.ZipFile to use our in-memory buffer
-    with patch("zipfile.ZipFile", return_value=zipfile.ZipFile(zip_buffer, "w")) as mock_zip:
+    with patch(
+        "zipfile.ZipFile", return_value=zipfile.ZipFile(zip_buffer, "w")
+    ) as mock_zip:
         # 3. Trigger the save action
         main_controller.save_project()
 
@@ -510,21 +522,30 @@ def test_open_recent_projects_workflow(app_context, qtbot, monkeypatch):
 
     # Mock the get_recent_files method of the main_controller
     with monkeypatch.context() as m:
-        m.setattr(main_controller, "get_recent_files", lambda: ["/path/to/project1.sci", "/path/to/project2.sci"])
+        m.setattr(
+            main_controller,
+            "get_recent_files",
+            lambda: ["/path/to/project1.sci", "/path/to/project2.sci"],
+        )
 
         # Move the patch.object block here
         with patch.object(main_controller, "open_project") as mock_open_project:
             mock_action1 = MagicMock(spec=QAction)
             mock_action1.text.return_value = "/path/to/project1.sci"
-            mock_action1.trigger.side_effect = lambda: mock_open_project("/path/to/project1.sci", parent=main_window)
+            mock_action1.trigger.side_effect = lambda: mock_open_project(
+                "/path/to/project1.sci", parent=main_window
+            )
             mock_action2 = MagicMock(spec=QAction)
             mock_action2.text.return_value = "/path/to/project2.sci"
 
-            main_window.open_recent_projects_menu.actions.return_value = [mock_action1, mock_action2]
+            main_window.open_recent_projects_menu.actions.return_value = [
+                mock_action1,
+                mock_action2,
+            ]
 
             # Trigger the aboutToShow signal of the recent projects menu
             main_window.open_recent_projects_menu.aboutToShow.emit()
-            qtbot.wait(10) # Give events a chance to process
+            qtbot.wait(10)  # Give events a chance to process
 
             # Verify menu population
             menu_actions = main_window.open_recent_projects_menu.actions()
@@ -533,17 +554,23 @@ def test_open_recent_projects_workflow(app_context, qtbot, monkeypatch):
             assert menu_actions[1].text() == "/path/to/project2.sci"
 
             menu_actions[0].trigger()
-            mock_open_project.assert_called_once_with("/path/to/project1.sci", parent=main_window) # Also update parent argument
+            mock_open_project.assert_called_once_with(
+                "/path/to/project1.sci", parent=main_window
+            )  # Also update parent argument
         # Test 'No Recent Projects' case
-        m.setattr(main_controller, "get_recent_files", lambda: []) # Reset for this specific case
+        m.setattr(
+            main_controller, "get_recent_files", lambda: []
+        )  # Reset for this specific case
 
         # Create the mock action for "No Recent Projects"
         mock_no_recent_action = MagicMock(spec=QAction)
         mock_no_recent_action.text.return_value = "No Recent Projects"
-        mock_no_recent_action.isEnabled.return_value = False # Explicitly set isEnabled
+        mock_no_recent_action.isEnabled.return_value = False  # Explicitly set isEnabled
 
         # Set the return value of actions() for this specific case
-        main_window.open_recent_projects_menu.actions.return_value = [mock_no_recent_action]
+        main_window.open_recent_projects_menu.actions.return_value = [
+            mock_no_recent_action
+        ]
 
         main_window.open_recent_projects_menu.aboutToShow.emit()
         qtbot.wait(10)

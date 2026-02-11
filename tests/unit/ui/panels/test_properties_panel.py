@@ -4,11 +4,9 @@ import pandas as pd
 import pytest
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import QComboBox, QLineEdit, QWidget
-
-from src.services.commands.command_manager import CommandManager
-from src.shared.constants import LayoutMode
 from src.controllers.main_controller import MainController
-from src.services.layout_manager import LayoutManager
+from src.ui.panels.properties_panel import PropertiesPanel
+
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import (
@@ -18,9 +16,11 @@ from src.models.plots.plot_properties import (
     ScatterPlotProperties,
 )
 from src.models.plots.plot_types import PlotType
+from src.services.commands.command_manager import CommandManager
+from src.services.layout_manager import LayoutManager
+from src.shared.constants import LayoutMode
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.factories.properties_ui_factory import PropertiesUIFactory
-from src.ui.panels.properties_panel import PropertiesPanel
+from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def command_manager(app_model):
 @pytest.fixture
 def properties_ui_factory_mock():
     """Provides a mock PropertiesUIFactory."""
-    mock_factory = MagicMock(spec=PropertiesUIFactory)
+    mock_factory = MagicMock(spec=PlotPropertiesUIFactory)
 
     # Configure the mock build_widgets method to simulate UI creation
     def mock_build_widgets(
@@ -76,6 +76,7 @@ def properties_ui_factory_mock():
     mock_factory.build_widgets.side_effect = mock_build_widgets
     return mock_factory
 
+
 # New fixtures for layout-related mocks
 @pytest.fixture
 def layout_ui_factory_mock():
@@ -85,13 +86,15 @@ def layout_ui_factory_mock():
     mock_factory.build_layout_controls.return_value = QWidget()
     return mock_factory
 
+
 @pytest.fixture
 def layout_manager_mock():
     """Provides a mock LayoutManager."""
     mock_manager = MagicMock(spec=LayoutManager)
-    mock_manager.layout_mode = LayoutMode.FREE_FORM # Default mode
-    mock_manager.layoutModeChanged = Mock() # Mock the signal for connection
+    mock_manager.layout_mode = LayoutMode.FREE_FORM  # Default mode
+    mock_manager.layoutModeChanged = Mock()  # Mock the signal for connection
     return mock_manager
+
 
 @pytest.fixture
 def main_controller_mock(app_model, command_manager, layout_manager_mock):
@@ -99,7 +102,9 @@ def main_controller_mock(app_model, command_manager, layout_manager_mock):
     mock_controller = MagicMock(spec=MainController)
     mock_controller.model = app_model
     mock_controller.command_manager = command_manager
-    mock_controller._layout_manager = layout_manager_mock # Link the layout manager mock
+    mock_controller._layout_manager = (
+        layout_manager_mock  # Link the layout manager mock
+    )
     return mock_controller
 
 
@@ -107,11 +112,21 @@ def main_controller_mock(app_model, command_manager, layout_manager_mock):
 def properties_view(app_model, command_manager, properties_ui_factory_mock):
     """Provides a PropertiesView instance."""
     plot_types = [PlotType.LINE, PlotType.SCATTER]
-    view = PropertiesPanel(app_model, command_manager, plot_types, properties_ui_factory_mock)
+    view = PropertiesPanel(
+        app_model, command_manager, plot_types, properties_ui_factory_mock
+    )
     return view
 
+
 @pytest.fixture
-def properties_view_with_layout_mocks(app_model, command_manager, properties_ui_factory_mock, layout_ui_factory_mock, layout_manager_mock, main_controller_mock):
+def properties_view_with_layout_mocks(
+    app_model,
+    command_manager,
+    properties_ui_factory_mock,
+    layout_ui_factory_mock,
+    layout_manager_mock,
+    main_controller_mock,
+):
     """Provides a PropertiesView instance with new layout-related dependencies."""
     plot_types = [PlotType.LINE, PlotType.SCATTER]
     view = PropertiesPanel(
@@ -119,9 +134,9 @@ def properties_view_with_layout_mocks(app_model, command_manager, properties_ui_
         command_manager,
         plot_types,
         properties_ui_factory_mock,
-        layout_ui_factory_mock, # New
-        layout_manager_mock,    # New
-        main_controller_mock    # New
+        layout_ui_factory_mock,  # New
+        layout_manager_mock,  # New
+        main_controller_mock,  # New
     )
     return view
 
@@ -160,7 +175,9 @@ def test_properties_view_rebuilds_ui_on_plot_type_change(
     plot_type_combo = properties_view.findChild(QComboBox, "plot_type_combo")
     assert plot_type_combo is not None
     plot_type_combo.setCurrentText(PlotType.SCATTER.value)
-    properties_view._on_plot_type_changed(PlotType.SCATTER.value, plot_node) # Manually trigger the slot
+    properties_view._on_plot_type_changed(
+        PlotType.SCATTER.value, plot_node
+    )  # Manually trigger the slot
     qtbot.waitUntil(
         lambda: isinstance(plot_node.plot_properties, ScatterPlotProperties)
     )
@@ -174,13 +191,12 @@ def test_properties_view_rebuilds_ui_on_plot_type_change(
     assert isinstance(plot_node.plot_properties, ScatterPlotProperties)
     assert plot_node.plot_properties.plot_type == PlotType.SCATTER
 
-
     # 4. Change plot type back to LINE using the UI
     plot_type_combo.setCurrentText(PlotType.LINE.value)
-    properties_view._on_plot_type_changed(PlotType.LINE.value, plot_node) # Manually trigger the slot
-    qtbot.waitUntil(
-        lambda: isinstance(plot_node.plot_properties, LinePlotProperties)
-    )
+    properties_view._on_plot_type_changed(
+        PlotType.LINE.value, plot_node
+    )  # Manually trigger the slot
+    qtbot.waitUntil(lambda: isinstance(plot_node.plot_properties, LinePlotProperties))
 
     # 5. Assert UI rebuild for LinePlot (no marker_size_edit)
     qtbot.waitUntil(
@@ -199,32 +215,52 @@ def test_properties_view_displays_layout_controls_by_default(
     """
     pass
 
+
 def test_properties_view_displays_plot_properties_on_single_plot_selection_with_data(
-    qtbot, properties_view_with_layout_mocks, app_model, properties_ui_factory_mock, layout_ui_factory_mock
+    qtbot,
+    properties_view_with_layout_mocks,
+    app_model,
+    properties_ui_factory_mock,
+    layout_ui_factory_mock,
 ):
     """
     Mock a selection of a single PlotNode with data, verify properties_ui_factory.build_properties_ui is called.
     """
     pass
 
+
 def test_properties_view_displays_layout_controls_on_multiple_selection(
-    qtbot, properties_view_with_layout_mocks, app_model, properties_ui_factory_mock, layout_ui_factory_mock
+    qtbot,
+    properties_view_with_layout_mocks,
+    app_model,
+    properties_ui_factory_mock,
+    layout_ui_factory_mock,
 ):
     """
     Mock multiple PlotNode's selected, verify layout_ui_factory.build_layout_controls is called.
     """
     pass
 
+
 def test_properties_view_displays_layout_controls_on_single_plot_selection_no_data(
-    qtbot, properties_view_with_layout_mocks, app_model, properties_ui_factory_mock, layout_ui_factory_mock
+    qtbot,
+    properties_view_with_layout_mocks,
+    app_model,
+    properties_ui_factory_mock,
+    layout_ui_factory_mock,
 ):
     """
     Mock a single PlotNode without data selected, verify layout_ui_factory.build_layout_controls is called.
     """
     pass
 
+
 def test_properties_view_updates_on_layout_mode_change(
-    qtbot, properties_view_with_layout_mocks, app_model, layout_manager_mock, layout_ui_factory_mock
+    qtbot,
+    properties_view_with_layout_mocks,
+    app_model,
+    layout_manager_mock,
+    layout_ui_factory_mock,
 ):
     """
     Mock a layout mode change, verify layout_ui_factory.build_layout_controls is called with the new mode.

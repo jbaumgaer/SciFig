@@ -1,6 +1,14 @@
 import pytest
-from src.models.layout.layout_config import Margins, Gutters, GridConfig, FreeConfig, LayoutMode
+
+from src.models.layout.layout_config import (
+    FreeConfig,
+    GridConfig,
+    Gutters,
+    LayoutMode,
+    Margins,
+)
 from src.shared.constants import LayoutMode
+
 
 class TestLayoutConfig:
     def test_margins_init_requires_all_fields(self):
@@ -13,7 +21,7 @@ class TestLayoutConfig:
             Margins(top=0.1)
         with pytest.raises(TypeError):
             Margins(top=0.1, bottom=0.1, left=0.1)
-        
+
         # Test successful initialization
         margins = Margins(top=0.1, bottom=0.2, left=0.3, right=0.4)
         assert margins.top == 0.1
@@ -46,7 +54,7 @@ class TestLayoutConfig:
             Gutters()
         with pytest.raises(TypeError):
             Gutters(hspace=[0.1])
-        
+
         # Test successful initialization
         gutters = Gutters(hspace=[0.1, 0.2], wspace=[0.3, 0.4])
         assert gutters.hspace == [0.1, 0.2]
@@ -58,7 +66,7 @@ class TestLayoutConfig:
         """
         with pytest.raises(KeyError):
             Gutters.from_dict({"hspace": [0.1]})
-        
+
         # Test successful deserialization
         data = {"hspace": [0.1, 0.2], "wspace": [0.3, 0.4]}
         gutters = Gutters.from_dict(data)
@@ -71,7 +79,7 @@ class TestLayoutConfig:
         """
         with pytest.raises(TypeError):
             GridConfig()
-        
+
         # Minimal valid Margins and Gutters for testing
         minimal_margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
         minimal_gutters = Gutters(hspace=[], wspace=[])
@@ -83,7 +91,7 @@ class TestLayoutConfig:
             row_ratios=[1.0],
             col_ratios=[1.0],
             margins=minimal_margins,
-            gutters=minimal_gutters
+            gutters=minimal_gutters,
         )
         assert config.rows == 1
         assert config.cols == 1
@@ -95,31 +103,37 @@ class TestLayoutConfig:
         """
         # Test missing top-level fields
         with pytest.raises(KeyError):
-            GridConfig.from_dict({"rows": 1, "cols": 1}) # Missing ratios, margins, gutters
+            GridConfig.from_dict(
+                {"rows": 1, "cols": 1}
+            )  # Missing ratios, margins, gutters
 
         # Test missing nested fields in margins
         minimal_gutters = Gutters(hspace=[], wspace=[])
         with pytest.raises(KeyError):
-            GridConfig.from_dict({
-                "rows": 1,
-                "cols": 1,
-                "row_ratios": [1.0],
-                "col_ratios": [1.0],
-                "margins": {"top": 0.1}, # Missing other margin fields
-                "gutters": minimal_gutters.to_dict()
-            })
-        
+            GridConfig.from_dict(
+                {
+                    "rows": 1,
+                    "cols": 1,
+                    "row_ratios": [1.0],
+                    "col_ratios": [1.0],
+                    "margins": {"top": 0.1},  # Missing other margin fields
+                    "gutters": minimal_gutters.to_dict(),
+                }
+            )
+
         # Test missing nested fields in gutters
         minimal_margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
         with pytest.raises(KeyError):
-            GridConfig.from_dict({
-                "rows": 1,
-                "cols": 1,
-                "row_ratios": [1.0],
-                "col_ratios": [1.0],
-                "margins": minimal_margins.to_dict(),
-                "gutters": {"hspace": [0.1]} # Missing wspace
-            })
+            GridConfig.from_dict(
+                {
+                    "rows": 1,
+                    "cols": 1,
+                    "row_ratios": [1.0],
+                    "col_ratios": [1.0],
+                    "margins": minimal_margins.to_dict(),
+                    "gutters": {"hspace": [0.1]},  # Missing wspace
+                }
+            )
 
         # Test successful deserialization
         data = {

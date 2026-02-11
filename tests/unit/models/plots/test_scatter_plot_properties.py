@@ -1,6 +1,10 @@
-import pytest
-from src.models.plots.plot_properties import ScatterPlotProperties, PlotMapping, AxesLimits
+from src.models.plots.plot_properties import (
+    AxesLimits,
+    PlotMapping,
+    ScatterPlotProperties,
+)
 from src.models.plots.plot_types import PlotType
+
 
 class TestScatterPlotProperties:
     def test_scatter_plot_properties_initialization_defaults(self):
@@ -18,7 +22,7 @@ class TestScatterPlotProperties:
         assert isinstance(props.axes_limits, AxesLimits)
         assert props.axes_limits.xlim == (None, None)
         assert props.axes_limits.ylim == (None, None)
-        assert props.plot_type == PlotType.SCATTER # Default for ScatterPlotProperties
+        assert props.plot_type == PlotType.SCATTER  # Default for ScatterPlotProperties
         assert props.marker_size == 10
 
     def test_scatter_plot_properties_initialization_custom_marker_size(self):
@@ -27,9 +31,11 @@ class TestScatterPlotProperties:
         """
         props = ScatterPlotProperties(marker_size=25)
         assert props.marker_size == 25
-        assert props.plot_type == PlotType.SCATTER # Still default
+        assert props.plot_type == PlotType.SCATTER  # Still default
 
-    def test_scatter_plot_properties_initialization_with_custom_base_and_scatter_values(self):
+    def test_scatter_plot_properties_initialization_with_custom_base_and_scatter_values(
+        self,
+    ):
         """
         Test that ScatterPlotProperties initializes correctly with provided custom values
         for both base properties and marker_size.
@@ -42,8 +48,8 @@ class TestScatterPlotProperties:
             ylabel="Data Y",
             plot_mapping=custom_mapping,
             axes_limits=custom_limits,
-            plot_type=PlotType.SCATTER, # Explicitly set
-            marker_size=30
+            plot_type=PlotType.SCATTER,  # Explicitly set
+            marker_size=30,
         )
         assert props.title == "Custom Scatter Plot"
         assert props.xlabel == "Data X"
@@ -72,7 +78,7 @@ class TestScatterPlotProperties:
             "title": "Updated Scatter Title",
             "xlabel": "X Axis",
             "plot_mapping": {"x": "source_x", "y": ["source_y"]},
-            "marker_size": 15
+            "marker_size": 15,
         }
         props.update_from_dict(data)
 
@@ -80,4 +86,4 @@ class TestScatterPlotProperties:
         assert props.xlabel == "X Axis"
         assert props.plot_mapping.x == "source_x"
         assert props.marker_size == 15
-        assert props.plot_type == PlotType.SCATTER # Remains Scatter
+        assert props.plot_type == PlotType.SCATTER  # Remains Scatter

@@ -1,12 +1,17 @@
 """
 Integration tests for the ChangeGridParametersCommand.
 """
-from src.services.commands.change_grid_parameters_command import ChangeGridParametersCommand
-from src.models.layout.layout_config import GridConfig, Margins, Gutters
+
+from src.models.layout.layout_config import GridConfig, Gutters, Margins
+from src.services.commands.change_grid_parameters_command import (
+    ChangeGridParametersCommand,
+)
 from src.shared.constants import LayoutMode
 
 
-def test_change_grid_parameters_command_execute_undo_redo(real_application_model, real_command_manager, real_layout_manager):
+def test_change_grid_parameters_command_execute_undo_redo(
+    real_application_model, real_command_manager, real_layout_manager
+):
     """
     Test that ChangeGridParametersCommand correctly executes, undoes, and redoes changes
     to the GridConfig in the ApplicationModel via the LayoutManager.
@@ -17,7 +22,9 @@ def test_change_grid_parameters_command_execute_undo_redo(real_application_model
 
     # Ensure initial mode is GRID (or set it)
     layout_manager.set_layout_mode(LayoutMode.GRID)
-    initial_config: GridConfig = model.current_layout_config # This is a GridConfig due to set_layout_mode
+    initial_config: GridConfig = (
+        model.current_layout_config
+    )  # This is a GridConfig due to set_layout_mode
 
     # Create a new GridConfig with different parameters
     new_margins = Margins(left=0.2, right=0.2, top=0.2, bottom=0.2)
@@ -28,11 +35,13 @@ def test_change_grid_parameters_command_execute_undo_redo(real_application_model
         row_ratios=[1, 1, 1],
         col_ratios=[1, 1, 1],
         margins=new_margins,
-        gutters=new_gutters
+        gutters=new_gutters,
     )
 
     # 1. Execute Command
-    command = ChangeGridParametersCommand(model, layout_manager, initial_config, new_config)
+    command = ChangeGridParametersCommand(
+        model, layout_manager, initial_config, new_config
+    )
     command_manager.execute_command(command)
 
     # Assert model's current_layout_config is the new_config

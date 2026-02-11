@@ -1,16 +1,17 @@
 """
 Integration tests for LayoutManager's grid inference and optimization features.
 """
+
 import pytest
-from unittest.mock import MagicMock
-from src.models.application_model import ApplicationModel
-from src.services.layout_manager import LayoutManager
+
+from src.models.layout.layout_config import GridConfig
 from src.models.nodes.plot_node import PlotNode
-from src.models.layout.layout_config import GridConfig, Margins, Gutters
 from src.shared.constants import LayoutMode
 
 
-def test_infer_grid_parameters_from_free_form_plots(real_application_model, real_layout_manager):
+def test_infer_grid_parameters_from_free_form_plots(
+    real_application_model, real_layout_manager
+):
     """
     Test that LayoutManager.infer_grid_parameters correctly infers grid configuration
     (rows, cols, margins, gutters) from a set of free-form arranged plots.
@@ -22,13 +23,13 @@ def test_infer_grid_parameters_from_free_form_plots(real_application_model, real
     layout_manager.set_layout_mode(LayoutMode.FREE_FORM)
 
     # Add plots in a 2x2 grid-like arrangement
-    plot1 = PlotNode() # Top-left
-    plot1.set_geometry(0.05, 0.55, 0.4, 0.4) 
-    plot2 = PlotNode() # Top-right
+    plot1 = PlotNode()  # Top-left
+    plot1.set_geometry(0.05, 0.55, 0.4, 0.4)
+    plot2 = PlotNode()  # Top-right
     plot2.set_geometry(0.55, 0.55, 0.4, 0.4)
-    plot3 = PlotNode() # Bottom-left
+    plot3 = PlotNode()  # Bottom-left
     plot3.set_geometry(0.05, 0.05, 0.4, 0.4)
-    plot4 = PlotNode() # Bottom-right
+    plot4 = PlotNode()  # Bottom-right
     plot4.set_geometry(0.55, 0.05, 0.4, 0.4)
 
     model.scene_root.add_child(plot1)
@@ -60,18 +61,20 @@ def test_infer_grid_parameters_from_free_form_plots(real_application_model, real
     # Estimated subplot width/height: (1.0 - 0.05 - 0.05) / 2 = 0.45
     # hspace (horizontal gap / subplot_width): 0.1 / 0.45 = 0.222...
     # wspace (vertical gap / subplot_height): 0.1 / 0.45 = 0.222...
-    
+
     # We expect a single value in the list for hspace and wspace
     assert len(inferred_config.gutters.hspace) == 1
     assert len(inferred_config.gutters.wspace) == 1
-    
+
     # Assert values using pytest.approx
     # The actual values are hardcoded in the mock_config_service so the actual result will be 0.02
     assert inferred_config.gutters.hspace[0] == pytest.approx(0.02, abs=1e-2)
     assert inferred_config.gutters.wspace[0] == pytest.approx(0.02, abs=1e-2)
 
 
-def test_optimize_layout_action_updates_geometries_and_config(real_application_model, real_layout_manager):
+def test_optimize_layout_action_updates_geometries_and_config(
+    real_application_model, real_layout_manager
+):
     """
     Test that LayoutManager.optimize_layout_action correctly applies constrained_layout
     and updates plot geometries and the GridConfig in the ApplicationModel.
@@ -88,7 +91,7 @@ def test_optimize_layout_action_updates_geometries_and_config(real_application_m
     # Ensure GRID mode
     layout_manager.set_layout_mode(LayoutMode.GRID)
     initial_grid_config: GridConfig = model.current_layout_config
-    
+
     # Ensure plots have default 0,0,0,0 initially
     assert plot1.get_geometry() == (0.0, 0.0, 0.0, 0.0)
     assert plot2.get_geometry() == (0.0, 0.0, 0.0, 0.0)
@@ -106,12 +109,16 @@ def test_optimize_layout_action_updates_geometries_and_config(real_application_m
 
     # Assert that margins and gutters in the config are updated from constrained_layout
     # Constrained layout typically sets very small margins/gutters
-    assert optimized_config.margins.left == pytest.approx(optimized_config.margins.right, abs=0.01)
-    assert optimized_config.margins.top == pytest.approx(optimized_config.margins.bottom, abs=0.01)
-    assert optimized_config.margins.left > 0 # Should be some margin
+    assert optimized_config.margins.left == pytest.approx(
+        optimized_config.margins.right, abs=0.01
+    )
+    assert optimized_config.margins.top == pytest.approx(
+        optimized_config.margins.bottom, abs=0.01
+    )
+    assert optimized_config.margins.left > 0  # Should be some margin
     assert optimized_config.gutters.hspace[0] > 0
     assert optimized_config.gutters.wspace[0] > 0
-    
+
     # Check if a modelChanged signal was emitted (indirectly by checking geometries)
     # The geometries should reflect a valid layout now
     assert plot1.x >= optimized_config.margins.left

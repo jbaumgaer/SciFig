@@ -2,16 +2,17 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.services.config_service import ConfigService
-from src.models.layout.layout_engine import FreeLayoutEngine, GridLayoutEngine
 from src.models.layout.layout_config import FreeConfig, GridConfig
+from src.models.layout.layout_engine import FreeLayoutEngine, GridLayoutEngine
 from src.models.nodes import PlotNode
+from src.services.config_service import ConfigService
 
 
 # Fixtures for engines and configs
 @pytest.fixture
 def free_engine():
     return FreeLayoutEngine()
+
 
 @pytest.fixture
 def mock_config_service():
@@ -24,26 +25,31 @@ def mock_config_service():
     }.get(key, default)
     return config
 
+
 @pytest.fixture
 def grid_engine(mock_config_service):
     return GridLayoutEngine(mock_config_service)
+
 
 @pytest.fixture
 def free_config():
     return FreeConfig()
 
+
 @pytest.fixture
 def grid_config():
     return GridConfig(rows=2, cols=2, margin=0.1, gutter=0.05)
 
+
 @pytest.fixture
 def four_plots():
     return [
-        PlotNode(id="p1", geometry=(0.1, 0.6, 0.3, 0.3)), # Top-left
-        PlotNode(id="p2", geometry=(0.5, 0.7, 0.3, 0.2)), # Top-right (higher y)
-        PlotNode(id="p3", geometry=(0.05, 0.1, 0.4, 0.4)), # Bottom-left
-        PlotNode(id="p4", geometry=(0.6, 0.2, 0.35, 0.35)), # Bottom-right
+        PlotNode(id="p1", geometry=(0.1, 0.6, 0.3, 0.3)),  # Top-left
+        PlotNode(id="p2", geometry=(0.5, 0.7, 0.3, 0.2)),  # Top-right (higher y)
+        PlotNode(id="p3", geometry=(0.05, 0.1, 0.4, 0.4)),  # Bottom-left
+        PlotNode(id="p4", geometry=(0.6, 0.2, 0.35, 0.35)),  # Bottom-right
     ]
+
 
 @pytest.fixture
 def two_plots():
@@ -52,13 +58,17 @@ def two_plots():
         PlotNode(id="p_b", geometry=(0.5, 0.5, 0.3, 0.3)),
     ]
 
+
 # Test cases for FreeLayoutEngine
-def test_free_layout_engine_calculate_geometries_passthrough(free_engine, four_plots, free_config):
+def test_free_layout_engine_calculate_geometries_passthrough(
+    free_engine, four_plots, free_config
+):
     """Test calculate_geometries for FreeLayoutEngine returns current geometries."""
     geometries = free_engine.calculate_geometries(four_plots, free_config)
     assert len(geometries) == 4
     for plot in four_plots:
         assert geometries[plot.id] == plot.geometry
+
 
 def test_free_layout_engine_perform_align_left(free_engine, two_plots):
     """Test perform_align aligns plots to the leftmost edge."""
@@ -71,6 +81,7 @@ def test_free_layout_engine_perform_align_left(free_engine, two_plots):
     assert aligned_geometries["p_a"][1:] == two_plots[0].geometry[1:]
     assert aligned_geometries["p_b"][1:] == two_plots[1].geometry[1:]
 
+
 def test_free_layout_engine_perform_align_h_center(free_engine, two_plots):
     """Test perform_align aligns plots to the horizontal center."""
     # p_a: (0.1, 0.1, 0.3, 0.3) -> center_x = 0.1 + 0.3/2 = 0.25
@@ -78,8 +89,13 @@ def test_free_layout_engine_perform_align_h_center(free_engine, two_plots):
     # Average center_x = (0.25 + 0.65) / 2 = 0.45
     aligned_geometries = free_engine.perform_align(two_plots, "h_center")
 
-    assert aligned_geometries["p_a"][0] == pytest.approx(0.45 - two_plots[0].geometry[2] / 2)
-    assert aligned_geometries["p_b"][0] == pytest.approx(0.45 - two_plots[1].geometry[2] / 2)
+    assert aligned_geometries["p_a"][0] == pytest.approx(
+        0.45 - two_plots[0].geometry[2] / 2
+    )
+    assert aligned_geometries["p_b"][0] == pytest.approx(
+        0.45 - two_plots[1].geometry[2] / 2
+    )
+
 
 def test_free_layout_engine_perform_distribute_horizontal(free_engine):
     """Test perform_distribute distributes plots horizontally."""
@@ -97,11 +113,18 @@ def test_free_layout_engine_perform_distribute_horizontal(free_engine):
     distributed_geometries = free_engine.perform_distribute(plots, "horizontal")
 
     assert distributed_geometries["d1"][0] == pytest.approx(0.1)
-    assert distributed_geometries["d2"][0] == pytest.approx(0.1 + 0.1 + 0.2) # min_coord + width1 + spacing
-    assert distributed_geometries["d3"][0] == pytest.approx(0.1 + 0.1 + 0.2 + 0.1 + 0.2) # min_coord + width1 + spacing + width2 + spacing
+    assert distributed_geometries["d2"][0] == pytest.approx(
+        0.1 + 0.1 + 0.2
+    )  # min_coord + width1 + spacing
+    assert distributed_geometries["d3"][0] == pytest.approx(
+        0.1 + 0.1 + 0.2 + 0.1 + 0.2
+    )  # min_coord + width1 + spacing + width2 + spacing
+
 
 # Test cases for GridLayoutEngine.calculate_geometries (new test stubs)
-def test_grid_layout_engine_calculate_geometries_four_plots_2x2_grid(grid_engine, four_plots):
+def test_grid_layout_engine_calculate_geometries_four_plots_2x2_grid(
+    grid_engine, four_plots
+):
     """
     Test GridLayoutEngine.calculate_geometries for 4 plots in a 2x2 grid.
     Verifies intelligent assignment (top-left to bottom-right) and correct geometry calculation
@@ -141,7 +164,12 @@ def test_grid_layout_engine_calculate_geometries_four_plots_2x2_grid(grid_engine
     # Matplotlib's add_axes expects [left, bottom, width, height]
     # Row 0 (top)
     # Col 0 (left) - p2
-    expected_p2_geom = (0.1, 0.1 + 0.375 + 0.05, 0.375, 0.375) # Left, Bottom, Width, Height
+    expected_p2_geom = (
+        0.1,
+        0.1 + 0.375 + 0.05,
+        0.375,
+        0.375,
+    )  # Left, Bottom, Width, Height
     # Col 1 (right) - p1
     expected_p1_geom = (0.1 + 0.375 + 0.05, 0.1 + 0.375 + 0.05, 0.375, 0.375)
     # Row 1 (bottom)
@@ -155,23 +183,31 @@ def test_grid_layout_engine_calculate_geometries_four_plots_2x2_grid(grid_engine
     assert geometries["p4"] == pytest.approx(expected_p4_geom)
     assert geometries["p3"] == pytest.approx(expected_p3_geom)
 
+
 def test_grid_layout_engine_calculate_geometries_zero_plots(grid_engine, grid_config):
     """Test calculate_geometries returns empty dict for zero plots."""
     geometries = grid_engine.calculate_geometries([], grid_config)
     assert geometries == {}
 
-def test_grid_layout_engine_calculate_geometries_unassigned_plots(grid_engine, two_plots):
+
+def test_grid_layout_engine_calculate_geometries_unassigned_plots(
+    grid_engine, two_plots
+):
     """Test calculate_geometries with fewer plots than grid cells."""
-    grid_config = GridConfig(rows=2, cols=2, margin=0.1, gutter=0.05) # 4 cells
+    grid_config = GridConfig(rows=2, cols=2, margin=0.1, gutter=0.05)  # 4 cells
     geometries = grid_engine.calculate_geometries(two_plots, grid_config)
-    assert len(geometries) == 2 # Only 2 plots should have geometries
+    assert len(geometries) == 2  # Only 2 plots should have geometries
     assert "p_a" in geometries
     assert "p_b" in geometries
 
-def test_grid_layout_engine_calculate_geometries_invalid_config_type(grid_engine, four_plots, free_config):
+
+def test_grid_layout_engine_calculate_geometries_invalid_config_type(
+    grid_engine, four_plots, free_config
+):
     """Test calculate_geometries returns empty dict for incompatible config."""
     geometries = grid_engine.calculate_geometries(four_plots, free_config)
     assert geometries == {}
+
 
 def test_grid_layout_engine_calculate_geometries_single_plot_2x2_grid(grid_engine):
     """Test single plot in a 2x2 grid."""
@@ -185,11 +221,20 @@ def test_grid_layout_engine_calculate_geometries_single_plot_2x2_grid(grid_engin
     expected_geom = (0.1, 0.1 + 0.375 + 0.05, 0.375, 0.375)
     assert geometries["single_p"] == pytest.approx(expected_geom)
 
-def test_grid_layout_engine_calculate_geometries_variable_ratios(grid_engine, two_plots):
+
+def test_grid_layout_engine_calculate_geometries_variable_ratios(
+    grid_engine, two_plots
+):
     """Test grid calculation with explicit row and column ratios."""
     # 2 plots, in a 1x2 grid (1 row, 2 cols) with custom ratios
-    grid_config = GridConfig(rows=1, cols=2, margin=0.1, gutter=0.05,
-                             row_ratios=[1.0], col_ratios=[0.25, 0.75])
+    grid_config = GridConfig(
+        rows=1,
+        cols=2,
+        margin=0.1,
+        gutter=0.05,
+        row_ratios=[1.0],
+        col_ratios=[0.25, 0.75],
+    )
 
     # Effective width = 0.8, Effective height = 0.8
     # Total gutter width = 0.05
@@ -210,9 +255,19 @@ def test_grid_layout_engine_calculate_geometries_variable_ratios(grid_engine, tw
     geometries = grid_engine.calculate_geometries(two_plots, grid_config)
 
     # p_b in col 0
-    expected_p_b_geom = (0.1, 0.1, 0.1875, 0.8) # left=margin, bottom=margin, width=col0_width, height=plot_area_height
+    expected_p_b_geom = (
+        0.1,
+        0.1,
+        0.1875,
+        0.8,
+    )  # left=margin, bottom=margin, width=col0_width, height=plot_area_height
     # p_a in col 1
-    expected_p_a_geom = (0.1 + 0.1875 + 0.05, 0.1, 0.5625, 0.8) # left=margin+col0_width+gutter, bottom=margin, width=col1_width, height=plot_area_height
+    expected_p_a_geom = (
+        0.1 + 0.1875 + 0.05,
+        0.1,
+        0.5625,
+        0.8,
+    )  # left=margin+col0_width+gutter, bottom=margin, width=col1_width, height=plot_area_height
 
     assert geometries["p_b"] == pytest.approx(expected_p_b_geom)
     assert geometries["p_a"] == pytest.approx(expected_p_a_geom)

@@ -4,14 +4,24 @@ from src.controllers.layout_controller import LayoutController
 from src.shared.constants import LayoutMode
 
 
-
 @pytest.fixture
-def layout_controller(mock_application_model, mock_command_manager, mock_layout_manager):
-    return LayoutController(mock_application_model, mock_command_manager, mock_layout_manager)
+def layout_controller(
+    mock_application_model, mock_command_manager, mock_layout_manager
+):
+    return LayoutController(
+        mock_application_model, mock_command_manager, mock_layout_manager
+    )
+
 
 class TestLayoutController:
 
-    def test_layout_controller_initialization(self, layout_controller, mock_application_model, mock_command_manager, mock_layout_manager):
+    def test_layout_controller_initialization(
+        self,
+        layout_controller,
+        mock_application_model,
+        mock_command_manager,
+        mock_layout_manager,
+    ):
         """
         Test that LayoutController initializes correctly and its attributes are set.
         """

@@ -2,19 +2,25 @@
 End-to-End tests for core user workflows, including property editing,
 plot type transformations, and layout manipulations.
 """
-import pytest
+
 from unittest.mock import MagicMock
+
+import pytest
+
 # Fixtures for `initialized_app` (from test_project_lifecycle.py) would be useful here,
 # typically imported or defined in a conftest.py for e2e tests.
+
 
 @pytest.fixture(scope="session")
 def qapp_instance():
     """Provides a QApplication instance for the entire test session."""
     # In a real setup, this would be handled by pytest-qt or similar
     from PySide6.QtWidgets import QApplication
+
     app = QApplication([])
     yield app
     app.quit()
+
 
 @pytest.fixture
 def initialized_app(qapp_instance, tmp_path):
@@ -26,7 +32,7 @@ def initialized_app(qapp_instance, tmp_path):
     # setting up the CompositionRoot with real components.
     from src.core.composition_root import CompositionRoot
     from src.services.config_service import ConfigService
-    
+
     # Mock config service to control paths if needed
     mock_config = MagicMock(spec=ConfigService)
     mock_config.get.side_effect = lambda key, default=None: {
@@ -48,10 +54,11 @@ def initialized_app(qapp_instance, tmp_path):
         "figure.default_facecolor": "blue",
     }.get(key)
 
-
-    root = CompositionRoot(app_name="TestApp", organization="TestOrg", config_service=mock_config)
+    root = CompositionRoot(
+        app_name="TestApp", organization="TestOrg", config_service=mock_config
+    )
     root.assemble()
-    yield root.main_window # Provide the main window for interaction
+    yield root.main_window  # Provide the main window for interaction
     # Cleanup if necessary
 
 
@@ -68,6 +75,7 @@ def test_e2e_property_editing_workflow_docstring(initialized_app):
     """
     pass
 
+
 def test_e2e_plot_type_transformation_workflow_docstring(initialized_app):
     """
     E2E Test: Plot Type Transformation Workflow.
@@ -81,7 +89,10 @@ def test_e2e_plot_type_transformation_workflow_docstring(initialized_app):
     """
     pass
 
-def test_e2e_free_form_layout_alignment_distribution_workflow_docstring(initialized_app):
+
+def test_e2e_free_form_layout_alignment_distribution_workflow_docstring(
+    initialized_app,
+):
     """
     E2E Test: Free-Form Layout Alignment and Distribution Workflow.
     This test should:
@@ -93,6 +104,7 @@ def test_e2e_free_form_layout_alignment_distribution_workflow_docstring(initiali
     6.  Assert that the plots are visually distributed with equal horizontal spacing.
     """
     pass
+
 
 def test_e2e_grid_layout_parameter_change_workflow_docstring(initialized_app):
     """

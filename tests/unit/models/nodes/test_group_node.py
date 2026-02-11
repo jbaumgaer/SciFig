@@ -3,7 +3,7 @@ from src.models.nodes.scene_node import SceneNode
 
 
 class TestGroupNode:
-    
+
     def test_group_node_to_dict(self):
         """Tests the serialization of a GroupNode with children."""
         root = GroupNode(name="root")
@@ -16,7 +16,6 @@ class TestGroupNode:
         assert len(root_dict["children"]) == 2
         assert root_dict["children"][0]["name"] == "child1"
         assert root_dict["children"][1]["name"] == "child2"
-
 
     def test_group_node_from_dict(self):
         """Tests the deserialization of a GroupNode."""

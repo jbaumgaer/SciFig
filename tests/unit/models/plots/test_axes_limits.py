@@ -1,5 +1,7 @@
 import pytest
+
 from src.models.plots.plot_properties import AxesLimits
+
 
 class TestAxesLimits:
     def test_axes_limits_initialization_defaults(self):
@@ -18,13 +20,22 @@ class TestAxesLimits:
         assert limits.xlim == (0.0, 100.0)
         assert limits.ylim == (-5.0, 5.0)
 
-    @pytest.mark.parametrize("data, expected_xlim, expected_ylim", [
-        ({"xlim": (10.0, 90.0), "ylim": (-10.0, 10.0)}, (10.0, 90.0), (-10.0, 10.0)),
-        ({"xlim": (5.0, 95.0)}, (5.0, 95.0), (0.0, 1.0)),
-        ({"ylim": (-1.0, 1.0)}, (0.0, 1.0), (-1.0, 1.0)),
-        ({}, (0.0, 1.0), (0.0, 1.0)),
-    ])
-    def test_axes_limits_update_from_dict_full_and_partial(self, data, expected_xlim, expected_ylim):
+    @pytest.mark.parametrize(
+        "data, expected_xlim, expected_ylim",
+        [
+            (
+                {"xlim": (10.0, 90.0), "ylim": (-10.0, 10.0)},
+                (10.0, 90.0),
+                (-10.0, 10.0),
+            ),
+            ({"xlim": (5.0, 95.0)}, (5.0, 95.0), (0.0, 1.0)),
+            ({"ylim": (-1.0, 1.0)}, (0.0, 1.0), (-1.0, 1.0)),
+            ({}, (0.0, 1.0), (0.0, 1.0)),
+        ],
+    )
+    def test_axes_limits_update_from_dict_full_and_partial(
+        self, data, expected_xlim, expected_ylim
+    ):
         """
         Test that update_from_dict correctly updates xlim and ylim, both fully and partially.
         """
@@ -41,5 +52,5 @@ class TestAxesLimits:
         data = {"unknown_key": "some_value", "xlim": (10.0, 20.0)}
         limits.update_from_dict(data)
         assert limits.xlim == (10.0, 20.0)
-        assert limits.ylim == (0.0, 1.0) # ylim should remain unchanged
+        assert limits.ylim == (0.0, 1.0)  # ylim should remain unchanged
         assert not hasattr(limits, "unknown_key")

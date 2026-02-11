@@ -1,23 +1,23 @@
+from unittest.mock import MagicMock
+
 import matplotlib
 import pytest
-from unittest.mock import MagicMock
 
 from src.controllers.layout_controller import LayoutController
 from src.models.application_model import ApplicationModel
-from src.models.layout.layout_config import GridConfig, Gutters, Margins
-from src.services.commands.command_manager import CommandManager
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
-from src.services.layout_manager import LayoutManager
 from src.models.nodes.scene_node import SceneNode
+from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
-from src.shared.constants import LayoutMode
+from src.services.layout_manager import LayoutManager
 
 
 @pytest.fixture
 def mock_figure():
     """Provides a mock matplotlib.figure.Figure instance."""
     return MagicMock(spec=matplotlib.figure.Figure)
+
 
 @pytest.fixture
 def mock_config_service():
@@ -64,34 +64,54 @@ def mock_config_service():
     }.get(key)
     return config_service
 
+
 @pytest.fixture
 def real_application_model(mock_figure, mock_config_service):
     """Provides a real ApplicationModel instance for integration tests."""
     model = ApplicationModel(figure=mock_figure, config_service=mock_config_service)
-    model.scene_root = SceneNode() # Initialize with a real scene root
+    model.scene_root = SceneNode()  # Initialize with a real scene root
     return model
+
 
 @pytest.fixture
 def real_command_manager(real_application_model):
     """Provides a real CommandManager instance."""
     return CommandManager(model=real_application_model)
 
+
 @pytest.fixture
 def real_grid_layout_engine(mock_config_service):
     """Provides a real GridLayoutEngine instance."""
     return GridLayoutEngine(config_service=mock_config_service)
+
 
 @pytest.fixture
 def real_free_layout_engine():
     """Provides a real FreeLayoutEngine instance."""
     return FreeLayoutEngine()
 
-@pytest.fixture
-def real_layout_manager(real_application_model, real_grid_layout_engine, real_free_layout_engine, mock_config_service):
-    """Provides a real LayoutManager instance."""
-    return LayoutManager(real_application_model, real_free_layout_engine, real_grid_layout_engine, mock_config_service)
 
 @pytest.fixture
-def real_layout_controller(real_application_model, real_command_manager, real_layout_manager):
+def real_layout_manager(
+    real_application_model,
+    real_grid_layout_engine,
+    real_free_layout_engine,
+    mock_config_service,
+):
+    """Provides a real LayoutManager instance."""
+    return LayoutManager(
+        real_application_model,
+        real_free_layout_engine,
+        real_grid_layout_engine,
+        mock_config_service,
+    )
+
+
+@pytest.fixture
+def real_layout_controller(
+    real_application_model, real_command_manager, real_layout_manager
+):
     """Provides a real LayoutController instance for integration tests."""
-    return LayoutController(real_application_model, real_command_manager, real_layout_manager)
+    return LayoutController(
+        real_application_model, real_command_manager, real_layout_manager
+    )
