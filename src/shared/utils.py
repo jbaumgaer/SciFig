@@ -13,7 +13,10 @@ class Debouncer(QObject):
     where rapid changes can lead to performance issues if every change
     triggers an expensive operation.
     """
-    debounced = Signal(object) # Signal emitted after debounce period, carrying the last argument
+
+    debounced = Signal(
+        object
+    )  # Signal emitted after debounce period, carrying the last argument
 
     def __init__(self, delay_ms: int = 300, parent: QObject | None = None):
         super().__init__(parent)
@@ -31,7 +34,7 @@ class Debouncer(QObject):
         """
         self._last_args = args
         self._last_kwargs = kwargs
-        self._timer.stop() # Reset the timer on each call
+        self._timer.stop()  # Reset the timer on each call
         self._timer.start(self._delay_ms)
 
     def _on_timeout(self):
@@ -41,9 +44,10 @@ class Debouncer(QObject):
         if self._last_args is not None:
             # Emit a signal that carries the arguments.
             # The receiver can then unpack these arguments and call the target function.
-            self.debounced.emit(self._last_args) # Emitting args directly
+            self.debounced.emit(self._last_args)  # Emitting args directly
         self._last_args = None
         self._last_kwargs = None
+
 
 class RateLimiter:
     """
@@ -53,6 +57,7 @@ class RateLimiter:
     Unlike Debouncer, it executes the function immediately on the first call,
     then ignores subsequent calls until the interval has passed.
     """
+
     def __init__(self, interval_ms: int):
         self._interval_s = interval_ms / 1000.0
         self._timer = None
@@ -76,5 +81,4 @@ class RateLimiter:
                 self._timer.start()
                 func(*args, **kwargs)
             else:
-                pass # Ignore call if not ready
-
+                pass  # Ignore call if not ready

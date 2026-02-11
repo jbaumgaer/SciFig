@@ -4,16 +4,15 @@ import matplotlib.figure
 import matplotlib.patches as patches
 import pandas as pd
 
-from src.shared.constants import LayoutMode
-from src.services.layout_manager import LayoutManager
 from src.models.application_model import ApplicationModel
-from src.models.nodes.scene_node import SceneNode
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.rectangle_node import RectangleNode
+from src.models.nodes.scene_node import SceneNode
 from src.models.nodes.text_node import TextNode
 from src.models.plots.plot_types import PlotType
-
+from src.services.layout_manager import LayoutManager
+from src.shared.constants import LayoutMode
 from src.ui.renderers.plotting_strategies import LinePlotStrategy, ScatterPlotStrategy
 
 
@@ -22,7 +21,9 @@ class Renderer:
     A class responsible for rendering the scene graph onto a Matplotlib figure.
     """
 
-    def __init__(self, layout_manager: LayoutManager, application_model: ApplicationModel): # Modified signature
+    def __init__(
+        self, layout_manager: LayoutManager, application_model: ApplicationModel
+    ):  # Modified signature
         self._layout_manager = layout_manager
         self._application_model = application_model
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -32,7 +33,9 @@ class Renderer:
             PlotType.LINE: LinePlotStrategy(),
             PlotType.SCATTER: ScatterPlotStrategy(),
         }
-        self.logger.debug(f"Plotting strategies: {list(self.plotting_strategies.keys())}")
+        self.logger.debug(
+            f"Plotting strategies: {list(self.plotting_strategies.keys())}"
+        )
 
         self._render_strategies = {
             # GroupNode rendering will now be handled directly in _render_node or render()
@@ -41,7 +44,6 @@ class Renderer:
             # e.g., TextNode: self._render_text_node
         }
         self.logger.debug(f"Render strategies: {list(self._render_strategies.keys())}")
-
 
     def render(
         self,
@@ -89,7 +91,9 @@ class Renderer:
 
                 if plot_node.plot_properties:
                     props = plot_node.plot_properties
-                    self.logger.debug(f"  PlotType: {props.plot_type}, Title: {props.title}")
+                    self.logger.debug(
+                        f"  PlotType: {props.plot_type}, Title: {props.title}"
+                    )
                     if isinstance(plot_node.data, pd.DataFrame):
                         strategy = self.plotting_strategies.get(props.plot_type)
                         mapping = props.plot_mapping
@@ -99,7 +103,10 @@ class Renderer:
                                 f"  Plotted data using {props.plot_type} strategy for {plot_node.name}."
                             )
                         elif plot_node.data.shape[1] >= 2:
-                            col1, col2 = plot_node.data.columns[0], plot_node.data.columns[1]
+                            col1, col2 = (
+                                plot_node.data.columns[0],
+                                plot_node.data.columns[1],
+                            )
                             ax.plot(plot_node.data[col1], plot_node.data[col2])
                             self.logger.debug(
                                 f"  Plotted default data for {plot_node.name} (cols {col1}, {col2})."
@@ -157,7 +164,9 @@ class Renderer:
         and recursively calling _render_other_nodes for its children if it's a composite node.
         """
         if not node.visible or isinstance(node, PlotNode):  # Skip PlotNodes here
-            self.logger.debug(f"Node {node.name} (ID: {node.id}) is not visible or is a PlotNode. Skipping rendering.")
+            self.logger.debug(
+                f"Node {node.name} (ID: {node.id}) is not visible or is a PlotNode. Skipping rendering."
+            )
             return
 
         render_func = self._render_strategies.get(type(node))
@@ -166,22 +175,26 @@ class Renderer:
         else:
             # For GroupNodes, we need to recursively render children
             if isinstance(node, GroupNode):
-                self.logger.debug(f"Rendering GroupNode: {node.name} (ID: {node.id}), Children: {len(node.children)}")
+                self.logger.debug(
+                    f"Rendering GroupNode: {node.name} (ID: {node.id}), Children: {len(node.children)}"
+                )
                 for child in node.children:
                     self._render_other_nodes(figure, child)  # Recursive call
             else:
-                self.logger.warning(f"No renderer found for node type {type(node).__name__}. Node ID: {node.id}, Name: {node.name}")
+                self.logger.warning(
+                    f"No renderer found for node type {type(node).__name__}. Node ID: {node.id}, Name: {node.name}"
+                )
 
     def _render_group_node(self, figure: matplotlib.figure.Figure, node: GroupNode):
         """
         Renders a GroupNode by recursively rendering its children.
         A GroupNode itself has no direct visual representation.
         """
-        self.logger.debug(f"Rendering GroupNode: {node.name} (ID: {node.id}), Children: {len(node.children)}")
+        self.logger.debug(
+            f"Rendering GroupNode: {node.name} (ID: {node.id}), Children: {len(node.children)}"
+        )
         for child in node.children:
             self._render_node(figure, child)
-
-
 
     def _render_rectangle_node(
         self, figure: matplotlib.figure.Figure, node: "RectangleNode"
@@ -189,7 +202,9 @@ class Renderer:
         """
         Renders a single RectangleNode.
         """
-        self.logger.debug(f"Rendering RectangleNode: {node.name} (ID: {node.id}). (Placeholder)")
+        self.logger.debug(
+            f"Rendering RectangleNode: {node.name} (ID: {node.id}). (Placeholder)"
+        )
         # Placeholder for rendering a rectangle
         pass
 
@@ -197,7 +212,9 @@ class Renderer:
         """
         Renders a single TextNode.
         """
-        self.logger.debug(f"Rendering TextNode: {node.name} (ID: {node.id}). (Placeholder)")
+        self.logger.debug(
+            f"Rendering TextNode: {node.name} (ID: {node.id}). (Placeholder)"
+        )
         # Placeholder for rendering text
         pass
 
@@ -209,7 +226,9 @@ class Renderer:
         "TODO: These default values should be moved to the config
         """
         if selection:
-            self.logger.debug(f"Rendering highlights for {len(selection)} selected nodes.")
+            self.logger.debug(
+                f"Rendering highlights for {len(selection)} selected nodes."
+            )
         for node in selection:
             if isinstance(node, PlotNode):  # For now, we only highlight plots
                 left, bottom, width, height = node.geometry
@@ -226,4 +245,6 @@ class Renderer:
                     zorder=1000,
                 )
                 figure.add_artist(highlight)
-                self.logger.debug(f"  Highlight rendered for PlotNode: {node.name} (ID: {node.id}).")
+                self.logger.debug(
+                    f"  Highlight rendered for PlotNode: {node.name} (ID: {node.id})."
+                )

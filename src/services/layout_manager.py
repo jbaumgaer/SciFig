@@ -1,16 +1,16 @@
 import logging
-from typing import Optional, List, Any
+from typing import List, Optional
 
 from PySide6.QtCore import QObject, Signal
-
+from PySide6.QtWidgets import QLineEdit # New import for QLineEdit used in signature of on_limit_editing_finished
+from src.models.application_model import ApplicationModel
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
+from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
+from src.models.layout.layout_engine import LayoutEngine, Rect
+from src.models.nodes.plot_node import PlotNode
 from src.services.config_service import ConfigService
 from src.shared.constants import LayoutMode
-from src.models.layout.layout_engine import LayoutEngine, Rect
-from src.models.application_model import ApplicationModel
-from src.models.layout.layout_config import FreeConfig, GridConfig, Margins, Gutters
-from src.models.nodes.plot_node import PlotNode
 from src.shared.types import PlotID
 
 
@@ -26,12 +26,13 @@ class LayoutManager(QObject):
     layoutModeChanged = Signal(LayoutMode)
     _ui_selected_layout_mode: LayoutMode = LayoutMode.FREE_FORM
     uiLayoutModeChanged = Signal(LayoutMode)
+    gridConfigParametersChanged = Signal() # New signal to notify UI of grid config parameter changes
 
     @property
     def layout_mode(self) -> LayoutMode:
         """Returns the current layout mode from the application model."""
         return self._application_model.current_layout_config.mode
-    
+
     @property
     def ui_selected_layout_mode(self) -> LayoutMode:
         """Returns the layout mode currently selected in the UI."""
@@ -62,51 +63,72 @@ class LayoutManager(QObject):
         self.logger.info("LayoutManager initialized.")
 
         # Store last used configs for each mode to prevent loss of settings when switching
-        self._last_grid_config: GridConfig | None = None # Changed to None
+        self._last_grid_config: GridConfig | None = None  # Changed to None
         self._last_free_form_config: FreeConfig = FreeConfig()
 
         # Initialize the UI selected mode and the application model's current_layout_config based on config service
-        default_mode_str = self._config_service.get("ui.default_layout_mode", LayoutMode.FREE_FORM.value)
+        default_mode_str = self._config_service.get(
+            "ui.default_layout_mode", LayoutMode.FREE_FORM.value
+        )
         default_mode = LayoutMode(default_mode_str)
-        self._ui_selected_layout_mode = default_mode # Initialize new attribute
-        self.logger.debug(f"Default UI selected layout mode from config: {default_mode.value}")
+        self._ui_selected_layout_mode = default_mode  # Initialize new attribute
+        self.logger.debug(
+            f"Default UI selected layout mode from config: {default_mode.value}"
+        )
 
-        self.set_layout_mode(default_mode) 
+        self.set_layout_mode(default_mode)
 
-        self.logger.info(f"Initial active layout mode set to: {self._application_model.current_layout_config.mode.value}")
+        self.logger.info(
+            f"Initial active layout mode set to: {self._application_model.current_layout_config.mode.value}"
+        )
 
-
-    def _parse_float_list_from_config(self, key: str, default: List[float]) -> List[float]:
+    def _parse_float_list_from_config(
+        self, key: str, default: List[float]
+    ) -> List[float]:
         """Helper to parse a config value that might be a list of floats, a single float, or a string representation."""
         value = self._config_service.get(key, default)
-        self.logger.debug(f"[_parse_float_list_from_config] Key: {key}, Raw Value: {value}, Type: {type(value)}")
+        self.logger.debug(
+            f"[_parse_float_list_from_config] Key: {key}, Raw Value: {value}, Type: {type(value)}"
+        )
 
         if isinstance(value, str):
             try:
                 # Attempt to parse a string like "[0.1, 0.2]" or "0.1, 0.2"
-                if value.startswith('[') and value.endswith(']'):
-                    value = value[1:-1] # Remove brackets
-                
-                parsed_list = [float(x.strip()) for x in value.split(',') if x.strip()]
-                self.logger.debug(f"[_parse_float_list_from_config] Parsed string to list: {parsed_list}")
+                if value.startswith("[") and value.endswith("]"):
+                    value = value[1:-1]  # Remove brackets
+
+                parsed_list = [float(x.strip()) for x in value.split(",") if x.strip()]
+                self.logger.debug(
+                    f"[_parse_float_list_from_config] Parsed string to list: {parsed_list}"
+                )
                 return parsed_list
             except ValueError:
-                self.logger.warning(f"Could not parse '{value}' for config key '{key}' as a list of floats. Using default: {default}")
+                self.logger.warning(
+                    f"Could not parse '{value}' for config key '{key}' as a list of floats. Using default: {default}"
+                )
                 return default
-        elif isinstance(value, (int, float)): # Handle single numeric value
-            self.logger.debug(f"[_parse_float_list_from_config] Wrapped single numeric value in list: {[float(value)]}")
+        elif isinstance(value, (int, float)):  # Handle single numeric value
+            self.logger.debug(
+                f"[_parse_float_list_from_config] Wrapped single numeric value in list: {[float(value)]}"
+            )
             return [float(value)]
         elif isinstance(value, list):
             # Ensure all elements in the list are floats
             try:
                 float_list = [float(x) for x in value]
-                self.logger.debug(f"[_parse_float_list_from_config] Converted list elements to floats: {float_list}")
+                self.logger.debug(
+                    f"[_parse_float_list_from_config] Converted list elements to floats: {float_list}"
+                )
                 return float_list
             except ValueError:
-                self.logger.warning(f"List for config key '{key}' contains non-float elements. Using default: {default}")
+                self.logger.warning(
+                    f"List for config key '{key}' contains non-float elements. Using default: {default}"
+                )
                 return default
-        else: # Fallback for unexpected types
-            self.logger.warning(f"Unexpected type '{type(value).__name__}' for config key '{key}'. Using default: {default}")
+        else:  # Fallback for unexpected types
+            self.logger.warning(
+                f"Unexpected type '{type(value).__name__}' for config key '{key}'. Using default: {default}"
+            )
             return default
 
     def _infer_grid_dimensions(self, num_plots: int) -> tuple[int, int]:
@@ -122,11 +144,11 @@ class LayoutManager(QObject):
         sqrt_n = int(num_plots**0.5)
         for i in range(sqrt_n, 0, -1):
             if num_plots % i == 0:
-                return i, num_plots // i # rows, cols
+                return i, num_plots // i  # rows, cols
 
         # If num_plots is prime or cannot be easily factored, default to num_plots x 1
         return num_plots, 1
-    
+
     def _create_minimal_grid_config(self) -> GridConfig:
         """
         Helper to create a minimal GridConfig instance.
@@ -134,40 +156,39 @@ class LayoutManager(QObject):
         grid layout has been loaded or inferred.
         Values are sourced from ConfigService or reasonable hardcoded defaults.
         """
-        rows = self._config_service.get("layout.default_grid_rows", 1) # Default to 1x1 if config missing
-        cols = self._config_service.get("layout.default_grid_cols", 1) # Default to 1x1 if config missing
-        
+        rows = self._config_service.get(
+            "layout.default_grid_rows", 1
+        )  # Default to 1x1 if config missing
+        cols = self._config_service.get(
+            "layout.default_grid_cols", 1
+        )  # Default to 1x1 if config missing
+
         margin_top = self._config_service.get("layout.grid_margin_top", 0.05)
         margin_bottom = self._config_service.get("layout.grid_margin_bottom", 0.05)
         margin_left = self._config_service.get("layout.grid_margin_left", 0.05)
         margin_right = self._config_service.get("layout.grid_margin_right", 0.05)
-        
+
         hspace = self._parse_float_list_from_config("layout.grid_hspace", [])
         wspace = self._parse_float_list_from_config("layout.grid_wspace", [])
 
         # Construct Margins and Gutters, which no longer have internal defaults
         minimal_margins = Margins(
-            top=margin_top,
-            bottom=margin_bottom,
-            left=margin_left,
-            right=margin_right
+            top=margin_top, bottom=margin_bottom, left=margin_left, right=margin_right
         )
-        minimal_gutters = Gutters(
-            hspace=hspace,
-            wspace=wspace
-        )
+        minimal_gutters = Gutters(hspace=hspace, wspace=wspace)
 
         return GridConfig(
             rows=rows,
             cols=cols,
-            row_ratios=[1.0] * rows, # Default to equal distribution for minimal config
-            col_ratios=[1.0] * cols, # Default to equal distribution for minimal config
+            row_ratios=[1.0] * rows,  # Default to equal distribution for minimal config
+            col_ratios=[1.0] * cols,  # Default to equal distribution for minimal config
             margins=minimal_margins,
-            gutters=minimal_gutters
+            gutters=minimal_gutters,
         )
-    
 
-    def infer_grid_config_from_plots(self, plots: list[PlotNode], base_grid_config: GridConfig | None) -> GridConfig:
+    def infer_grid_config_from_plots(
+        self, plots: list[PlotNode], base_grid_config: GridConfig | None
+    ) -> GridConfig:
         """
         Infers sensible grid rows, columns, margins, and gutters directly from the current
         free-form plot positions without applying any layout engine during inference.
@@ -179,13 +200,21 @@ class LayoutManager(QObject):
         or spatial analysis techniques to infer rows, columns, and optimal spacing.
         The current implementation assumes a generally "grid-like" starting point.
         """
-        self.logger.info(f"Inferring grid config from {len(plots)} plots based on current free-form positions.")
+        self.logger.info(
+            f"Inferring grid config from {len(plots)} plots based on current free-form positions."
+        )
         if not plots:
-            return base_grid_config if base_grid_config is not None else self._create_minimal_grid_config()
+            return (
+                base_grid_config
+                if base_grid_config is not None
+                else self._create_minimal_grid_config()
+            )
 
         # 1. Infer rows and cols (using the helper method)
         num_plots = len(plots)
-        inferred_rows, inferred_cols = self._infer_grid_dimensions(num_plots) # Now calls its own method
+        inferred_rows, inferred_cols = self._infer_grid_dimensions(
+            num_plots
+        )  # Now calls its own method
 
         # 2. Calculate Bounding Box of all plots
         min_x = min(p.geometry[0] for p in plots)
@@ -209,7 +238,7 @@ class LayoutManager(QObject):
             top=inferred_margin_top,
             bottom=inferred_margin_bottom,
             left=inferred_margin_left,
-            right=inferred_margin_right
+            right=inferred_margin_right,
         )
 
         # 4. Infer Gutters (hspace, wspace)
@@ -224,7 +253,10 @@ class LayoutManager(QObject):
         current_row_assign = 0
         current_col_assign = 0
         for plot in sorted_plots:
-            if current_row_assign < inferred_rows and current_col_assign < inferred_cols:
+            if (
+                current_row_assign < inferred_rows
+                and current_col_assign < inferred_cols
+            ):
                 plots_by_row[current_row_assign].append((plot, current_col_assign))
                 plots_by_col[current_col_assign].append((plot, current_row_assign))
                 current_col_assign += 1
@@ -234,42 +266,54 @@ class LayoutManager(QObject):
 
         horizontal_gaps = []
         for row_plots_with_idx in plots_by_row:
-            row_plots_with_idx.sort(key=lambda x: x[1]) # Sort by col_idx to ensure correct order
+            row_plots_with_idx.sort(
+                key=lambda x: x[1]
+            )  # Sort by col_idx to ensure correct order
             for i in range(len(row_plots_with_idx) - 1):
                 p1, _ = row_plots_with_idx[i]
-                p2, _ = row_plots_with_idx[i+1]
+                p2, _ = row_plots_with_idx[i + 1]
                 gap = p2.geometry[0] - (p1.geometry[0] + p1.geometry[2])
-                if gap > 0: # Only positive gaps contribute
+                if gap > 0:  # Only positive gaps contribute
                     horizontal_gaps.append(gap)
 
         vertical_gaps = []
         for col_plots_with_idx in plots_by_col:
-            col_plots_with_idx.sort(key=lambda x: x[1]) # Sort by row_idx to ensure correct order
+            col_plots_with_idx.sort(
+                key=lambda x: x[1]
+            )  # Sort by row_idx to ensure correct order
             for i in range(len(col_plots_with_idx) - 1):
                 p1, _ = col_plots_with_idx[i]
-                p2, _ = col_plots_with_idx[i+1]
+                p2, _ = col_plots_with_idx[i + 1]
                 gap = p2.geometry[1] - (p1.geometry[1] + p1.geometry[3])
-                if gap > 0: # Only positive gaps contribute
+                if gap > 0:  # Only positive gaps contribute
                     vertical_gaps.append(gap)
 
         # Matplotlib hspace/wspace are relative to subplot width/height.
         # Estimate average subplot dimensions to normalize gaps.
-        estimated_subplot_width = (1.0 - inferred_margins.left - inferred_margins.right) / inferred_cols if inferred_cols > 0 else 0
-        estimated_subplot_height = (1.0 - inferred_margins.top - inferred_margins.bottom) / inferred_rows if inferred_rows > 0 else 0
+        estimated_subplot_width = (
+            (1.0 - inferred_margins.left - inferred_margins.right) / inferred_cols
+            if inferred_cols > 0
+            else 0
+        )
+        estimated_subplot_height = (
+            (1.0 - inferred_margins.top - inferred_margins.bottom) / inferred_rows
+            if inferred_rows > 0
+            else 0
+        )
 
         inferred_hspace = []
         if horizontal_gaps and estimated_subplot_width > 0:
             avg_gap_h = sum(horizontal_gaps) / len(horizontal_gaps)
             inferred_hspace = [round(avg_gap_h / estimated_subplot_width, 3)]
-        else: # Default if no gaps or zero width
-            inferred_hspace = [0.02] # Sensible default
+        else:  # Default if no gaps or zero width
+            inferred_hspace = [0.02]  # Sensible default
 
         inferred_wspace = []
         if vertical_gaps and estimated_subplot_height > 0:
             avg_gap_v = sum(vertical_gaps) / len(vertical_gaps)
             inferred_wspace = [round(avg_gap_v / estimated_subplot_height, 3)]
-        else: # Default if no gaps or zero height
-            inferred_wspace = [0.02] # Sensible default
+        else:  # Default if no gaps or zero height
+            inferred_wspace = [0.02]  # Sensible default
 
         inferred_gutters = Gutters(hspace=inferred_hspace, wspace=inferred_wspace)
 
@@ -277,16 +321,15 @@ class LayoutManager(QObject):
         new_inferred_grid_config = GridConfig(
             rows=inferred_rows,
             cols=inferred_cols,
-            row_ratios=[1.0] * inferred_rows, # Default ratios for now
-            col_ratios=[1.0] * inferred_cols, # Default ratios for now
+            row_ratios=[1.0] * inferred_rows,  # Default ratios for now
+            col_ratios=[1.0] * inferred_cols,  # Default ratios for now
             margins=inferred_margins,
-            gutters=inferred_gutters
+            gutters=inferred_gutters,
         )
 
         self.logger.debug(f"Inferred GridConfig: {new_inferred_grid_config}")
         return new_inferred_grid_config
 
-    
     def get_active_engine(self) -> LayoutEngine:
         """Returns the currently active layout engine based on the model's configuration."""
         if self._application_model.current_layout_config.mode == LayoutMode.FREE_FORM:
@@ -294,9 +337,10 @@ class LayoutManager(QObject):
         elif self._application_model.current_layout_config.mode == LayoutMode.GRID:
             return self._grid_engine
         else:
-            self.logger.error(f"Unknown layout mode: {self._application_model.current_layout_config.mode}")
-            return self._free_engine # Fallback
-
+            self.logger.error(
+                f"Unknown layout mode: {self._application_model.current_layout_config.mode}"
+            )
+            return self._free_engine  # Fallback
 
     def set_layout_mode(self, mode: LayoutMode):
         """
@@ -309,22 +353,27 @@ class LayoutManager(QObject):
             self.logger.debug(f"Layout mode already {mode.value}. No change needed.")
             return
 
-        self.logger.info(f"Attempting to switch active layout mode from {current_mode.value} to {mode.value}.")
+        self.logger.info(
+            f"Attempting to switch active layout mode from {current_mode.value} to {mode.value}."
+        )
 
         # Save current config to its respective _last_x_config before switching
         if isinstance(current_config, GridConfig):
             self._last_grid_config = current_config
         elif isinstance(current_config, FreeConfig):
             self._last_free_form_config = current_config
-            
 
         if mode == LayoutMode.GRID:
             # Transition to GRID: ensure _last_grid_config is initialized before setting as current
             if self._last_grid_config is None:
-                self.logger.debug("No last grid config found for active mode, creating minimal grid config.")
+                self.logger.debug(
+                    "No last grid config found for active mode, creating minimal grid config."
+                )
                 self._last_grid_config = self._create_minimal_grid_config()
             self._application_model.current_layout_config = self._last_grid_config
-            self.logger.debug(f"Active layout mode set to GRID with config: {self._last_grid_config}.")
+            self.logger.debug(
+                f"Active layout mode set to GRID with config: {self._last_grid_config}."
+            )
 
         elif mode == LayoutMode.FREE_FORM:
             # Transition to FREE_FORM: use the last known free form config
@@ -333,11 +382,12 @@ class LayoutManager(QObject):
 
         self.layoutModeChanged.emit(mode)
         self.logger.debug("Emitting layoutConfigChanged signal from set_layout_mode.")
-        self._application_model.layoutConfigChanged.emit() # Notify model observers of config change
+        self._application_model.layoutConfigChanged.emit()  # Notify model observers of config change
         self.logger.info(f"Active layout mode successfully switched to {mode.value}.")
 
-
-    def update_grid_config_and_apply(self, new_grid_config: GridConfig) -> dict[PlotID, Rect]:
+    def update_grid_config_and_apply(
+        self, new_grid_config: GridConfig
+    ) -> dict[PlotID, Rect]:
         """
         Updates the current GridConfig in the ApplicationModel and LayoutManager,
         then calculates and returns the new geometries for all plots.
@@ -346,30 +396,39 @@ class LayoutManager(QObject):
         """
         self.logger.info(f"LayoutManager updating grid config to: {new_grid_config}")
         self._application_model.current_layout_config = new_grid_config
-        self._last_grid_config = new_grid_config # Update stored last grid config for next time
+        self._last_grid_config = (
+            new_grid_config  # Update stored last grid config for next time
+        )
 
-        self.layoutModeChanged.emit(LayoutMode.GRID) # Ensure UI updates if needed
+        self.layoutModeChanged.emit(LayoutMode.GRID)  # Ensure UI updates if needed
         self.logger.debug("Emitting layoutConfigChanged signal.")
-        self._application_model.layoutConfigChanged.emit() # Notify model observers
+        self._application_model.layoutConfigChanged.emit()  # Notify model observers
 
-        all_plots = list(self._application_model.scene_root.all_descendants(of_type=PlotNode))
+        all_plots = list(
+            self._application_model.scene_root.all_descendants(of_type=PlotNode)
+        )
         if not all_plots:
             return {}
 
         # Calculate geometries and return Dict[str, Rect]
         # With _apply_fixed_grid_layout, calculated_margins/gutters will now be the input new_grid_config.margins/gutters
-        plot_geometries, _, _ = self._grid_engine.calculate_geometries(all_plots, new_grid_config)
+        plot_geometries, _, _ = self._grid_engine.calculate_geometries(
+            all_plots, new_grid_config
+        )
 
         # The new_grid_config already contains the desired margins and gutters,
         # so we don't need to create a new one using 'calculated' values.
         # This ensures the user's input margins/gutters are retained in the model.
         # The _application_model.current_layout_config and _last_grid_config were already set to new_grid_config earlier.
-        
-        self.logger.debug(f"Final updated_grid_config margins: {new_grid_config.margins}")
-        self.logger.debug(f"Final updated_grid_config gutters: {new_grid_config.gutters}")
-        
-        return plot_geometries
 
+        self.logger.debug(
+            f"Final updated_grid_config margins: {new_grid_config.margins}"
+        )
+        self.logger.debug(
+            f"Final updated_grid_config gutters: {new_grid_config.gutters}"
+        )
+
+        return plot_geometries
 
     def perform_align(self, plots: list[PlotNode], edge: str) -> dict[PlotID, Rect]:
         """
@@ -377,25 +436,29 @@ class LayoutManager(QObject):
         Raises ValueError if not in Free-Form mode.
         """
         if self._application_model.current_layout_config.mode != LayoutMode.FREE_FORM:
-            self.logger.warning("Attempted align operation while not in FREE_FORM mode. Returning empty geometries.")
+            self.logger.warning(
+                "Attempted align operation while not in FREE_FORM mode. Returning empty geometries."
+            )
             return {}
 
         # Ensure the FreeLayoutEngine is used and returns plot ID to Rect mapping
         return self._free_engine.perform_align(plots, edge)
 
-
-    def perform_distribute(self, plots: list[PlotNode], axis: str) -> dict[PlotID, Rect]:
+    def perform_distribute(
+        self, plots: list[PlotNode], axis: str
+    ) -> dict[PlotID, Rect]:
         """
         Performs distribution operation on selected plots using the FreeLayoutEngine.
         Raises ValueError if not in Free-Form mode.
         """
         if self._application_model.current_layout_config.mode != LayoutMode.FREE_FORM:
-            self.logger.warning("Attempted distribute operation while not in FREE_FORM mode. Returning empty geometries.")
+            self.logger.warning(
+                "Attempted distribute operation while not in FREE_FORM mode. Returning empty geometries."
+            )
             return {}
 
         # Ensure the FreeLayoutEngine is used and returns plot ID to Rect mapping
         return self._free_engine.perform_distribute(plots, axis)
-
 
     def infer_grid_parameters(self):
         """
@@ -407,26 +470,29 @@ class LayoutManager(QObject):
 
         # Ensure active layout mode is GRID
         if self._application_model.current_layout_config.mode != LayoutMode.GRID:
-            self.logger.debug("Active layout mode not GRID, switching to GRID before inferring parameters.")
+            self.logger.debug(
+                "Active layout mode not GRID, switching to GRID before inferring parameters."
+            )
             self.set_layout_mode(LayoutMode.GRID)
 
-        all_plots = list(self._application_model.scene_root.all_descendants(of_type=PlotNode))
+        all_plots = list(
+            self._application_model.scene_root.all_descendants(of_type=PlotNode)
+        )
         if not all_plots:
             self.logger.warning("No plots in scene to infer grid from.")
             return
 
         # Infer a new GridConfig based on geometric analysis of free-form plots
         # _last_grid_config is guaranteed to be non-None here because set_layout_mode initializes it.
-        new_inferred_grid_config = self.infer_grid_config_from_plots(all_plots, self._last_grid_config)
+        new_inferred_grid_config = self.infer_grid_config_from_plots(
+            all_plots, self._last_grid_config
+        )
 
-        # Update the model with the inferred config
-        self._application_model.current_layout_config = new_inferred_grid_config
+        # Update _last_grid_config with the inferred config
         self._last_grid_config = new_inferred_grid_config
-        
+
         # Emit signal to update UI fields
-        self.layoutModeChanged.emit(LayoutMode.GRID) # Ensure UI updates if needed
-        self.logger.debug("Emitting layoutConfigChanged signal to update UI with inferred parameters.")
-        self._application_model.layoutConfigChanged.emit()
+        self.gridConfigParametersChanged.emit()
         self.logger.info(f"Inferred grid parameters: {new_inferred_grid_config}")
 
     def optimize_layout_action(self):
@@ -439,21 +505,27 @@ class LayoutManager(QObject):
 
         # Ensure active layout mode is GRID
         if self._application_model.current_layout_config.mode != LayoutMode.GRID:
-            self.logger.debug("Active layout mode not GRID, switching to GRID before optimizing layout.")
+            self.logger.debug(
+                "Active layout mode not GRID, switching to GRID before optimizing layout."
+            )
             self.set_layout_mode(LayoutMode.GRID)
 
         # _last_grid_config is guaranteed to be non-None here because set_layout_mode initializes it.
         current_grid_config: GridConfig = self._last_grid_config
-        
-        all_plots = list(self._application_model.scene_root.all_descendants(of_type=PlotNode))
+
+        all_plots = list(
+            self._application_model.scene_root.all_descendants(of_type=PlotNode)
+        )
         if not all_plots:
             self.logger.warning("No plots in scene to optimize layout for.")
             return
 
         # Use calculate_geometries with constrained optimization
         # This will return the geometries and the *calculated* margins/gutters from constrained_layout
-        plot_geometries, calculated_margins, calculated_gutters = self._grid_engine.calculate_geometries(
-            all_plots, current_grid_config, use_constrained_optimization=True
+        plot_geometries, calculated_margins, calculated_gutters = (
+            self._grid_engine.calculate_geometries(
+                all_plots, current_grid_config, use_constrained_optimization=True
+            )
         )
 
         # Update the grid config with the *actual calculated* margins and gutters from constrained_layout
@@ -463,7 +535,7 @@ class LayoutManager(QObject):
             row_ratios=current_grid_config.row_ratios,
             col_ratios=current_grid_config.col_ratios,
             margins=calculated_margins,
-            gutters=calculated_gutters
+            gutters=calculated_gutters,
         )
 
         # Apply the updated config and geometries
@@ -475,34 +547,50 @@ class LayoutManager(QObject):
                 plot_node = self._application_model.scene_root.find_node_by_id(plot_id)
                 if plot_node:
                     plot_node.geometry = rect
-            self._application_model.modelChanged.emit() # Redraw canvas
+            self._application_model.modelChanged.emit()  # Redraw canvas
 
-        self.layoutModeChanged.emit(LayoutMode.GRID) # Ensure UI updates if needed
-        self.logger.debug("Emitting layoutConfigChanged signal to update UI with optimized parameters.")
+        self.layoutModeChanged.emit(LayoutMode.GRID)  # Ensure UI updates if needed
+        self.logger.debug(
+            "Emitting layoutConfigChanged signal to update UI with optimized parameters."
+        )
         self._application_model.layoutConfigChanged.emit()
         self.logger.info(f"Optimized layout applied with config: {updated_grid_config}")
 
-    def update_grid_layout_parameters(self, rows: Optional[int] = None, cols: Optional[int] = None,
-                                        margin: Optional[float] = None, gutter: Optional[float] = None,
-                                        margin_top: Optional[float] = None, margin_bottom: Optional[float] = None,
-                                        margin_left: Optional[float] = None, margin_right: Optional[float] = None,
-                                        hspace_str: Optional[str] = None, wspace_str: Optional[str] = None) -> dict[PlotID, Rect]:
+    def update_grid_layout_parameters(
+        self,
+        rows: Optional[int] = None,
+        cols: Optional[int] = None,
+        margin: Optional[float] = None,
+        gutter: Optional[float] = None,
+        margin_top: Optional[float] = None,
+        margin_bottom: Optional[float] = None,
+        margin_left: Optional[float] = None,
+        margin_right: Optional[float] = None,
+        hspace_str: Optional[str] = None,
+        wspace_str: Optional[str] = None,
+    ) -> dict[PlotID, Rect]:
         """
         Updates the current GridConfig with new parameters and applies the layout.
         If rows or cols are None, they will be inferred from the number of plots.
         This method always uses the last known GridConfig as its base for updates.
         It can update old single margin/gutter values or new granular margin/gutter values.
         """
-        self.logger.info(f"Updating grid layout parameters: rows={rows}, cols={cols}, "
-                          f"margin_old={margin}, gutter_old={gutter}, "
-                          f"margin_top={margin_top}, margin_bottom={margin_bottom}, "
-                          f"margin_left={margin_left}, margin_right={margin_right}, "
-                          f"hspace_str='{hspace_str}', wspace_str='{wspace_str}'")
-        self.logger.debug(f"Current _last_grid_config before update: {self._last_grid_config}")
+        self.logger.info(
+            f"Updating grid layout parameters: rows={rows}, cols={cols}, "
+            f"margin_old={margin}, gutter_old={gutter}, "
+            f"margin_top={margin_top}, margin_bottom={margin_bottom}, "
+            f"margin_left={margin_left}, margin_right={margin_right}, "
+            f"hspace_str='{hspace_str}', wspace_str='{wspace_str}'"
+        )
+        self.logger.debug(
+            f"Current _last_grid_config before update: {self._last_grid_config}"
+        )
 
         # Ensure active layout mode is GRID
         if self._application_model.current_layout_config.mode != LayoutMode.GRID:
-            self.logger.debug("Active layout mode not GRID, switching to GRID before updating parameters.")
+            self.logger.debug(
+                "Active layout mode not GRID, switching to GRID before updating parameters."
+            )
             self.set_layout_mode(LayoutMode.GRID)
 
         # _last_grid_config is guaranteed to be non-None here because set_layout_mode initializes it.
@@ -517,7 +605,9 @@ class LayoutManager(QObject):
         effective_margins = base_grid_config.margins
         final_margins = Margins(
             top=margin_top if margin_top is not None else effective_margins.top,
-            bottom=margin_bottom if margin_bottom is not None else effective_margins.bottom,
+            bottom=(
+                margin_bottom if margin_bottom is not None else effective_margins.bottom
+            ),
             left=margin_left if margin_left is not None else effective_margins.left,
             right=margin_right if margin_right is not None else effective_margins.right,
         )
@@ -525,23 +615,31 @@ class LayoutManager(QObject):
         # Handle granular gutters
         effective_gutters = base_grid_config.gutters
         final_gutters = Gutters(
-            hspace=effective_gutters.hspace,
-            wspace=effective_gutters.wspace
+            hspace=effective_gutters.hspace, wspace=effective_gutters.wspace
         )
 
         if hspace_str is not None:
             try:
-                final_gutters.hspace = [float(x.strip()) for x in hspace_str.split(',') if x.strip()]
+                final_gutters.hspace = [
+                    float(x.strip()) for x in hspace_str.split(",") if x.strip()
+                ]
             except ValueError:
-                self.logger.warning(f"Invalid hspace_str format: '{hspace_str}'. Keeping old hspace.")
+                self.logger.warning(
+                    f"Invalid hspace_str format: '{hspace_str}'. Keeping old hspace."
+                )
         if wspace_str is not None:
             try:
-                final_gutters.wspace = [float(x.strip()) for x in wspace_str.split(',') if x.strip()]
+                final_gutters.wspace = [
+                    float(x.strip()) for x in wspace_str.split(",") if x.strip()
+                ]
             except ValueError:
-                self.logger.warning(f"Invalid wspace_str format: '{wspace_str}'. Keeping old wspace.")
+                self.logger.warning(
+                    f"Invalid wspace_str format: '{wspace_str}'. Keeping old wspace."
+                )
 
-
-        all_plots = list(self._application_model.scene_root.all_descendants(of_type=PlotNode))
+        all_plots = list(
+            self._application_model.scene_root.all_descendants(of_type=PlotNode)
+        )
         num_plots = len(all_plots)
 
         # Infer rows/cols if not provided or set to a special sentinel (e.g., 0)
@@ -551,7 +649,9 @@ class LayoutManager(QObject):
                 rows = inferred_rows
             if cols is None or cols == 0:
                 cols = inferred_cols
-            self.logger.debug(f"Inferred grid dimensions: {rows}x{cols} for {num_plots} plots.")
+            self.logger.debug(
+                f"Inferred grid dimensions: {rows}x{cols} for {num_plots} plots."
+            )
 
         # Apply updates, preferring new values over effective values
         final_rows = rows if rows is not None else effective_rows
@@ -569,12 +669,15 @@ class LayoutManager(QObject):
         # Call the new method to update config and apply layout
         return self.update_grid_config_and_apply(new_grid_config)
 
-
-    def get_current_layout_geometries(self, plots: list[PlotNode]) -> dict[PlotID, Rect]:
+    def get_current_layout_geometries(
+        self, plots: list[PlotNode]
+    ) -> dict[PlotID, Rect]:
         """
         Returns the calculated geometries for the given plots based on the
         currently active layout engine and configuration.
         """
         active_engine = self.get_active_engine()
-        geometries_dict, _, _ = active_engine.calculate_geometries(plots, self._application_model.current_layout_config)
+        geometries_dict, _, _ = active_engine.calculate_geometries(
+            plots, self._application_model.current_layout_config
+        )
         return geometries_dict

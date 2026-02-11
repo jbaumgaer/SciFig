@@ -1,4 +1,5 @@
 from typing import TypeAlias, Union
+
 from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,

@@ -2,8 +2,9 @@ import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide6.QtCore import QPointF, Qt, Signal
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QPainter, QMouseEvent
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
+
 
 # Ensure the backend is set for PySide6
 matplotlib.use("QtAgg")
@@ -19,6 +20,7 @@ class CanvasWidget(QGraphicsView):
     # Signal emitted when a file is dropped onto the canvas
     # Emits file path (str) and drop position (QPointF) in scene coordinates.
     fileDropped = Signal(str, QPointF)
+    canvasDoubleClicked = Signal(QPointF)  # New Signal
 
     def __init__(self, figure: Figure, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -38,6 +40,28 @@ class CanvasWidget(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setInteractive(True)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        """
+        Overrides the mouse double-click event to perform hit-testing on PlotNodes
+        and update the application model's selection.
+        """
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Convert mouse position from widget coordinates to scene coordinates
+            scene_pos = self.mapToScene(event.position().toPoint())
+
+            # The CanvasController or a Tool (e.g., SelectionTool) is responsible for model interaction.
+            # We'll emit a signal that the CanvasController can connect to.
+            # For now, let's assume the CanvasController (or tool) will query the model.
+            # This widget's role is primarily to emit the event with necessary info.
+
+            # This signal will be connected to CanvasController.handle_canvas_double_click
+            self.canvasDoubleClicked.emit(scene_pos)
+
+            # We also need to call the parent's event to allow default behavior (e.g., zooming if interactive)
+            super().mouseDoubleClickEvent(event)
+        else:
+            super().mouseDoubleClickEvent(event)
 
     def dragEnterEvent(self, event):
         """Handles the event when a drag enters the widget."""

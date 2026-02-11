@@ -5,19 +5,25 @@ from typing import Any, TypeVar
 from src.shared.constants import LayoutMode
 
 # Using a TypeVar for the static method's return type hint
-T = TypeVar('T', bound='LayoutConfig')
+T = TypeVar("T", bound="LayoutConfig")
 
 
 @dataclass(frozen=True)
 class Margins:
     """Represents figure margins (in figure fractions)."""
+
     top: float
     bottom: float
     left: float
     right: float
 
     def to_dict(self) -> dict[str, Any]:
-        return {"top": self.top, "bottom": self.bottom, "left": self.left, "right": self.right}
+        return {
+            "top": self.top,
+            "bottom": self.bottom,
+            "left": self.left,
+            "right": self.right,
+        }
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> "Margins":
@@ -25,7 +31,7 @@ class Margins:
             top=data["top"],
             bottom=data["bottom"],
             left=data["left"],
-            right=data["right"]
+            right=data["right"],
         )
 
 
@@ -36,6 +42,7 @@ class Gutters:
     Can be single float for global spacing or lists for per-row/column spacing.
     TODO: This makes no sense for a 1x1 grid
     """
+
     hspace: list[float]
     wspace: list[float]
 
@@ -44,10 +51,7 @@ class Gutters:
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> "Gutters":
-        return Gutters(
-            hspace=data["hspace"],
-            wspace=data["wspace"]
-        )
+        return Gutters(hspace=data["hspace"], wspace=data["wspace"])
 
 
 class LayoutConfig(ABC):
@@ -70,28 +74,29 @@ class LayoutConfig(ABC):
         pass
 
     @staticmethod
-    def from_dict(data: dict[str, Any]) -> T: # Modified to use TypeVar
+    def from_dict(data: dict[str, Any]) -> T:  # Modified to use TypeVar
         """Deserializes a dictionary into a concrete LayoutConfig instance."""
         mode_str = data.get("mode")
         if not mode_str:
             raise ValueError("LayoutConfig data is missing 'mode' field.")
 
-        mode = LayoutMode(mode_str) # Convert string to Enum
+        mode = LayoutMode(mode_str)  # Convert string to Enum
 
         if mode == LayoutMode.FREE_FORM:
-            return FreeConfig.from_dict(data) # Delegate to concrete class
+            return FreeConfig.from_dict(data)  # Delegate to concrete class
         elif mode == LayoutMode.GRID:
-            return GridConfig.from_dict(data) # Delegate to concrete class
+            return GridConfig.from_dict(data)  # Delegate to concrete class
         else:
             raise ValueError(f"Unknown LayoutMode '{mode_str}' during deserialization.")
 
 
-@dataclass(frozen=True) # frozen=True makes it immutable, good for configs
+@dataclass(frozen=True)  # frozen=True makes it immutable, good for configs
 class FreeConfig(LayoutConfig):
     """
     Configuration for free-form layout mode.
     Minimal state, as plots manage their own geometries independently.
     """
+
     mode: LayoutMode = field(default=LayoutMode.FREE_FORM, init=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -99,14 +104,15 @@ class FreeConfig(LayoutConfig):
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> "FreeConfig":
-        return FreeConfig() # No additional state to deserialize
+        return FreeConfig()  # No additional state to deserialize
 
 
-@dataclass(frozen=True) # frozen=True makes it immutable, good for configs
+@dataclass(frozen=True)  # frozen=True makes it immutable, good for configs
 class GridConfig(LayoutConfig):
     """
     Configuration for grid-based layout mode.
     """
+
     rows: int
     cols: int
     row_ratios: list[float]
@@ -138,7 +144,7 @@ class GridConfig(LayoutConfig):
             gutters=Gutters.from_dict(data["gutters"]),
         )
 
+
 # Sentinel values for Margins and Gutters when they are not applicable or empty
 NO_MARGINS = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
 NO_GUTTERS = Gutters(hspace=[], wspace=[])
-

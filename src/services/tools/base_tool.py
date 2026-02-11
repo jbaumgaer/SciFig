@@ -14,9 +14,10 @@ from PySide6.QtGui import QKeyEvent, QMouseEvent, QPainter
 class ToolMeta(type(QObject), ABCMeta):
     pass
 
+
 if TYPE_CHECKING:  # Avoid circular imports during type checking
-    from src.services.commands.command_manager import CommandManager
     from src.models.application_model import ApplicationModel
+    from src.services.commands.command_manager import CommandManager
     from src.ui.widgets.canvas_widget import CanvasWidget
 
 

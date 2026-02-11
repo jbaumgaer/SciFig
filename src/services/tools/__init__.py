@@ -6,7 +6,10 @@ from .base_tool import BaseTool
 
 class MockTool(BaseTool):
     """A mock tool for testing and placeholder purposes."""
-    def __init__(self, name: str, icon_path: str, model, command_manager, canvas_widget):
+
+    def __init__(
+        self, name: str, icon_path: str, model, command_manager, canvas_widget
+    ):
         super().__init__(model, command_manager, canvas_widget)
         self._name = name
         self._icon_path = icon_path

@@ -6,8 +6,8 @@ from PySide6.QtGui import QKeyEvent, QMouseEvent, QPainter
 from src.services.tools.base_tool import BaseTool
 
 if TYPE_CHECKING:
-    from src.services.commands.command_manager import CommandManager
     from src.models.application_model import ApplicationModel
+    from src.services.commands.command_manager import CommandManager
 
 
 class ToolService(QObject):

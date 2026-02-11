@@ -24,8 +24,8 @@ class SceneNode(QObject):
         self._children: list[SceneNode] = []
         self.name = name
         self.visible = True
+        self.locked = False  # New attribute
         self.logger.debug(f"SceneNode initialized: {self.name} (ID: {self.id})")
-
 
         if parent:
             parent.add_child(self)
@@ -37,7 +37,9 @@ class SceneNode(QObject):
     @parent.setter
     def parent(self, new_parent: SceneNode | None):
         """Sets a new parent for this node."""
-        self.logger.debug(f"Setting parent for {self.name} (ID: {self.id}) from {self._parent.name if self._parent else 'None'} to {new_parent.name if new_parent else 'None'}.")
+        self.logger.debug(
+            f"Setting parent for {self.name} (ID: {self.id}) from {self._parent.name if self._parent else 'None'} to {new_parent.name if new_parent else 'None'}."
+        )
         if self._parent:
             self._parent._children.remove(self)
         self._parent = new_parent
@@ -53,44 +55,56 @@ class SceneNode(QObject):
         if node not in self._children:
             self._children.append(node)
             node._parent = self
-            self.logger.debug(f"Added child {node.name} (ID: {node.id}) to {self.name} (ID: {self.id}).")
+            self.logger.debug(
+                f"Added child {node.name} (ID: {node.id}) to {self.name} (ID: {self.id})."
+            )
 
     def remove_child(self, node: SceneNode):
         """Removes a child node."""
         if node in self._children:
             self._children.remove(node)
             node._parent = None
-            self.logger.debug(f"Removed child {node.name} (ID: {node.id}) from {self.name} (ID: {self.id}).")
+            self.logger.debug(
+                f"Removed child {node.name} (ID: {node.id}) from {self.name} (ID: {self.id})."
+            )
 
     def hit_test(self, position: tuple[float, float]) -> SceneNode | None:
         """
         Abstract method to check if a position hits this node or any of its children.
         Must be implemented by subclasses.
         """
-        self.logger.debug(f"Performing hit test on {self.name} (ID: {self.id}) at position {position}.")
+        self.logger.debug(
+            f"Performing hit test on {self.name} (ID: {self.id}) at position {position}."
+        )
         # Default implementation iterates backwards (top-to-bottom) through children
         for child in reversed(self.children):
             if child.visible:
                 hit = child.hit_test(position)
                 if hit:
-                    self.logger.debug(f"Hit test on {self.name} (ID: {self.id}): Child {child.name} (ID: {child.id}) hit.")
+                    self.logger.debug(
+                        f"Hit test on {self.name} (ID: {self.id}): Child {child.name} (ID: {child.id}) hit."
+                    )
                     return hit
         self.logger.debug(f"Hit test on {self.name} (ID: {self.id}): No child hit.")
         return None
 
-    def all_descendants(self, of_type: Type[SceneNode] | None = None) -> Generator[SceneNode, None, None]:
+    def all_descendants(
+        self, of_type: Type[SceneNode] | None = None
+    ) -> Generator[SceneNode, None, None]:
         """
         A generator that yields all nodes in the subtree, including this node.
         If 'of_type' is provided, only nodes of that type (or subclasses) are yielded.
         """
-        self.logger.debug(f"Getting all descendants starting from {self.name} (ID: {self.id}).")
+        self.logger.debug(
+            f"Getting all descendants starting from {self.name} (ID: {self.id})."
+        )
 
         # Yield self if it matches the type or no type is specified
         if of_type is None or isinstance(self, of_type):
             yield self
 
         for child in self.children:
-            yield from child.all_descendants(of_type) # Pass of_type recursively
+            yield from child.all_descendants(of_type)  # Pass of_type recursively
 
     def find_node_by_id(self, node_id: str) -> SceneNode | None:
         """
@@ -108,12 +122,15 @@ class SceneNode(QObject):
         """Serializes the node to a dictionary."""
         node_dict = {
             "id": self.id,
-            "type": self.__class__.__name__, # Changed class_name to type for consistency
+            "type": self.__class__.__name__,  # Changed class_name to type for consistency
             "name": self.name,
             "visible": self.visible,
+            "locked": self.locked,  # New attribute
             "children": [child.to_dict() for child in self.children],
         }
-        self.logger.debug(f"SceneNode '{self.name}' (ID: {self.id}) serialized to dict.")
+        self.logger.debug(
+            f"SceneNode '{self.name}' (ID: {self.id}) serialized to dict."
+        )
         return node_dict
 
     @classmethod
@@ -121,7 +138,10 @@ class SceneNode(QObject):
         """Creates a node from a dictionary."""
         node = cls(parent=parent, name=data["name"], id=data["id"])
         node.visible = data["visible"]
-        node.logger.debug(f"SceneNode.from_dict: Created node {node.name} (ID: {node.id}).")
+        node.locked = data.get("locked", False)  # New attribute with default
+        node.logger.debug(
+            f"SceneNode.from_dict: Created node {node.name} (ID: {node.id})."
+        )
         # Children are handled by the factory
         return node
 
@@ -139,7 +159,6 @@ def node_factory(
     logger = logging.getLogger(__name__)
     logger.debug(f"node_factory: Attempting to create node of type: '{node_type_str}'")
 
-
     node_class_map = {
         "GroupNode": GroupNode,
         "PlotNode": PlotNode,
@@ -148,8 +167,12 @@ def node_factory(
 
     # Get the class based on "type" field, with SceneNode as a fallback
     cls = node_class_map.get(node_type_str, SceneNode)
-    if cls == SceneNode and node_type_str not in node_class_map: # Check if fallback was used for unknown type
-        logger.warning(f"node_factory: Unknown node type '{node_type_str}'. Falling back to SceneNode.")
+    if (
+        cls == SceneNode and node_type_str not in node_class_map
+    ):  # Check if fallback was used for unknown type
+        logger.warning(
+            f"node_factory: Unknown node type '{node_type_str}'. Falling back to SceneNode."
+        )
 
     # Pass temp_dir only if the class method accepts it (i.e., for PlotNode)
     if node_type_str == "PlotNode":
@@ -157,13 +180,16 @@ def node_factory(
     else:
         node = cls.from_dict(data, parent=parent)
 
-    logger.debug(f"node_factory: Created node {node.name} (ID: {node.id}) of type {type(node).__name__}.")
-
+    logger.debug(
+        f"node_factory: Created node {node.name} (ID: {node.id}) of type {type(node).__name__}."
+    )
 
     # Recursively create children
     child_data = data.get("children", [])
     if child_data:
-        logger.debug(f"node_factory: Recursively creating {len(child_data)} children for {node.name}.")
+        logger.debug(
+            f"node_factory: Recursively creating {len(child_data)} children for {node.name}."
+        )
     for child_dict in child_data:
         node_factory(child_dict, parent=node, temp_dir=temp_dir)
 

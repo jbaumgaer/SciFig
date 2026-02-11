@@ -4,10 +4,9 @@ from dataclasses import dataclass
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QMenu, QMenuBar
 
-from src.services.commands import CommandManager
-from src.controllers.project_controller import ProjectController
 from src.controllers.layout_controller import LayoutController
-
+from src.controllers.project_controller import ProjectController
+from src.services.commands import CommandManager
 
 
 @dataclass
@@ -54,19 +53,21 @@ class MenuBarBuilder:
         self._layout_controller = layout_controller
         self._command_manager = command_manager
 
-    def _update_recent_projects_menu(self, menu: QMenu): # Removed parent_window argument
+    def _update_recent_projects_menu(
+        self, menu: QMenu
+    ):  # Removed parent_window argument
         """Clears and repopulates the recent projects menu."""
         menu.clear()
         recent_files = self._project_controller.get_recent_files()
 
         if not recent_files:
-            action = QAction("No Recent Projects", menu) # Parent is the menu itself
+            action = QAction("No Recent Projects", menu)  # Parent is the menu itself
             action.setEnabled(False)
             menu.addAction(action)
             return
 
         for file_path in recent_files:
-            action = QAction(file_path, menu) # Parent is the menu itself
+            action = QAction(file_path, menu)  # Parent is the menu itself
             action.triggered.connect(
                 functools.partial(
                     self._project_controller.open_project,
@@ -221,7 +222,7 @@ class MenuBarBuilder:
         )
 
     def build(self) -> MainMenuActions:
-        menu_bar = QMenuBar() # Create QMenuBar explicitly here
+        menu_bar = QMenuBar()  # Create QMenuBar explicitly here
 
         (
             file_menu,

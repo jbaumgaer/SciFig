@@ -2,7 +2,6 @@ import logging
 
 from PySide6.QtCore import QObject, QPointF, QThread
 
-from src.services.commands.command_manager import CommandManager
 from src.controllers.layout_controller import LayoutController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
@@ -11,9 +10,9 @@ from src.models.plots.plot_properties import (
     PlotMapping,
 )
 from src.processing.data_loader import DataLoader
-from src.ui.widgets.canvas_widget import CanvasWidget
-
+from src.services.commands.command_manager import CommandManager
 from src.services.tool_service import ToolService
+from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 class CanvasController(QObject):
@@ -36,11 +35,12 @@ class CanvasController(QObject):
         self.view = canvas_widget
         self.tool_manager = tool_manager
         self.command_manager = command_manager
-        self._layout_manager = layout_controller._layout_manager # Access via layout_controller
+        self._layout_manager = (
+            layout_controller._layout_manager
+        )  # Access via layout_controller
         self.canvas = self.view.figure_canvas
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("CanvasController initialized.")
-
 
         self.thread = None
         self.worker = None
@@ -65,11 +65,9 @@ class CanvasController(QObject):
         )
         self.logger.debug("Connected Matplotlib events to ToolManager.")
 
-
         # Connect data-related events
         self.view.fileDropped.connect(self.on_file_dropped)
         self.logger.debug("Connected fileDropped signal to on_file_dropped.")
-
 
     # --- Data Loading ---
 
@@ -79,12 +77,16 @@ class CanvasController(QObject):
         canvas_width = self.canvas.width()
         canvas_height = self.canvas.height()
         if canvas_width == 0 or canvas_height == 0:
-            self.logger.warning("Canvas has zero width or height. Cannot convert scene coordinates.")
+            self.logger.warning(
+                "Canvas has zero width or height. Cannot convert scene coordinates."
+            )
             return -1.0, -1.0
         x_ratio = scene_pos.x() / canvas_width
         y_ratio_from_top = scene_pos.y() / canvas_height
         y_ratio_from_bottom = 1.0 - y_ratio_from_top
-        self.logger.debug(f"Converted scene_pos {scene_pos} to figure coords ({x_ratio}, {y_ratio_from_bottom}).")
+        self.logger.debug(
+            f"Converted scene_pos {scene_pos} to figure coords ({x_ratio}, {y_ratio_from_bottom})."
+        )
         return (x_ratio, y_ratio_from_bottom)
 
     def on_file_dropped(self, file_path: str, scene_pos: QPointF):
@@ -101,26 +103,32 @@ class CanvasController(QObject):
         node = self.model.get_node_at(fig_coords)
 
         if node and isinstance(node, PlotNode):
-            self.logger.info(f"Dropped file '{file_path}' onto PlotNode '{node.name}' (ID: {node.id}).")
+            self.logger.info(
+                f"Dropped file '{file_path}' onto PlotNode '{node.name}' (ID: {node.id})."
+            )
             self.load_data_into_node(file_path, node)
         else:
-            self.logger.warning(f"Dropped file '{file_path}' did not hit a PlotNode at figure coordinates {fig_coords}. Ignoring.")
-
+            self.logger.warning(
+                f"Dropped file '{file_path}' did not hit a PlotNode at figure coordinates {fig_coords}. Ignoring."
+            )
 
     def load_data_into_node(self, file_path: str, node: PlotNode):
         """
         Loads data from a file into a specific PlotNode using a background thread.
         This method is separate from the drop event handler to improve testability.
         """
-        self.logger.info(f"Starting background data load for '{file_path}' into PlotNode '{node.name}' (ID: {node.id}).")
+        self.logger.info(
+            f"Starting background data load for '{file_path}' into PlotNode '{node.name}' (ID: {node.id})."
+        )
         self.thread = QThread()
         self.worker = DataLoader()
         self.worker.moveToThread(self.thread)
 
         # Pass the file path and the target node to the worker
         self.thread.started.connect(lambda: self.worker.process_data(file_path, node))
-        self.logger.debug(f"DataLoader worker assigned to thread for file: {file_path}.")
-
+        self.logger.debug(
+            f"DataLoader worker assigned to thread for file: {file_path}."
+        )
 
         self.worker.dataReady.connect(self.on_data_ready)
         self.worker.errorOccurred.connect(self.on_data_load_error)
@@ -133,21 +141,26 @@ class CanvasController(QObject):
         self.thread.start()
         self.logger.debug("Data loading thread started.")
 
-
     def on_data_ready(self, dataframe, node: PlotNode):
         """
         Slot to receive the loaded data and update the model.
         Also sets a default plot mapping, updating existing properties if necessary.
         """
-        self.logger.info(f"Data ready for PlotNode '{node.name}' (ID: {node.id}). DataFrame shape: {dataframe.shape}.")
+        self.logger.info(
+            f"Data ready for PlotNode '{node.name}' (ID: {node.id}). DataFrame shape: {dataframe.shape}."
+        )
         if node in self.model.scene_root.children:
             node.data = dataframe
             self.logger.debug(f"Data assigned to PlotNode '{node.name}'.")
 
             # Ensure plot_properties exist, creating defaults if necessary
             if not node.plot_properties:
-                node.plot_properties = LinePlotProperties(title=node.name) # Create a basic one if not existing
-                self.logger.debug(f"Created basic PlotProperties for '{node.name}' as none existed.")
+                node.plot_properties = LinePlotProperties(
+                    title=node.name
+                )  # Create a basic one if not existing
+                self.logger.debug(
+                    f"Created basic PlotProperties for '{node.name}' as none existed."
+                )
 
             # Now, update plot_properties with default column mappings if the dataframe has enough columns
             if dataframe.shape[1] >= 2:
@@ -155,21 +168,33 @@ class CanvasController(QObject):
                 col2 = dataframe.columns[1]
 
                 # Check if plot_mapping is already set or if it's the default empty one
-                if node.plot_properties.plot_mapping.x is None and not node.plot_properties.plot_mapping.y:
+                if (
+                    node.plot_properties.plot_mapping.x is None
+                    and not node.plot_properties.plot_mapping.y
+                ):
                     node.plot_properties.plot_mapping = PlotMapping(x=col1, y=[col2])
                     node.plot_properties.xlabel = col1
                     node.plot_properties.ylabel = col2
-                    self.logger.info(f"Default plot mapping set for '{col1}' and '{col2}' on '{node.name}'.")
+                    self.logger.info(
+                        f"Default plot mapping set for '{col1}' and '{col2}' on '{node.name}'."
+                    )
                 else:
-                    self.logger.debug(f"PlotNode '{node.name}' already has a custom plot mapping. Skipping default mapping.")
+                    self.logger.debug(
+                        f"PlotNode '{node.name}' already has a custom plot mapping. Skipping default mapping."
+                    )
             else:
-                self.logger.warning(f"PlotNode '{node.name}' has insufficient columns ({dataframe.shape[1]}) for default plot mapping.")
+                self.logger.warning(
+                    f"PlotNode '{node.name}' has insufficient columns ({dataframe.shape[1]}) for default plot mapping."
+                )
 
             self.model.modelChanged.emit()
-            self.logger.debug(f"modelChanged signal emitted after data load for '{node.name}'.")
+            self.logger.debug(
+                f"modelChanged signal emitted after data load for '{node.name}'."
+            )
         else:
-            self.logger.warning(f"Data ready for node '{node.name}' (ID: {node.id}) but it's no longer in the scene_root's children. Data not assigned.")
-
+            self.logger.warning(
+                f"Data ready for node '{node.name}' (ID: {node.id}) but it's no longer in the scene_root's children. Data not assigned."
+            )
 
     def on_data_load_error(self, error_message):
         self.logger.error(f"Error loading data: {error_message}", exc_info=True)
