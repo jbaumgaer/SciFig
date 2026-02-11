@@ -1,4 +1,5 @@
 from typing import Optional
+from src.models.layout.layout_protocols import FreeFormLayoutCapabilities # Import the new protocol
 
 from src.models.layout.layout_config import FreeConfig, Gutters, LayoutConfig, Margins
 from src.models.layout.layout_engine import LayoutEngine
@@ -6,7 +7,7 @@ from src.models.nodes import PlotNode
 from src.shared.types import PlotID, Rect
 
 
-class FreeLayoutEngine(LayoutEngine):
+class FreeLayoutEngine(LayoutEngine, FreeFormLayoutCapabilities): # Inherit from both
     """
     A layout engine for free-form mode.
     Plots maintain their explicit geometries. Provides methods for alignment and distribution.

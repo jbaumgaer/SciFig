@@ -2,16 +2,18 @@ import logging
 from typing import List, Optional
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QLineEdit # New import for QLineEdit used in signature of on_limit_editing_finished
+from PySide6.QtWidgets import QLineEdit
 from src.models.application_model import ApplicationModel
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
-from src.models.layout.layout_engine import LayoutEngine, Rect
+from src.models.layout.layout_engine import LayoutEngine
 from src.models.nodes.plot_node import PlotNode
 from src.services.config_service import ConfigService
 from src.shared.constants import LayoutMode
-from src.shared.types import PlotID
+from src.shared.types import PlotID, Rect # Corrected Rect import
+
+from src.models.layout.layout_protocols import FreeFormLayoutCapabilities # Added import
 
 
 class LayoutManager(QObject):
@@ -45,6 +47,22 @@ class LayoutManager(QObject):
             self.logger.info(f"UI selected layout mode changed to: {mode.value}")
             self._ui_selected_layout_mode = mode
             self.uiLayoutModeChanged.emit(mode)
+
+    def get_last_grid_config(self) -> GridConfig | None:
+        """
+        Returns the last used GridConfig. Can be None if no grid config has been set yet.
+        """
+        return self._last_grid_config
+
+    def reset_cached_configs(self):
+        """
+        Resets any cached layout configurations to ensure that when a new project
+        is loaded, or a new layout is created, previous settings do not persist
+        incorrectly.
+        """
+        self.logger.info("LayoutManager: Resetting cached layout configurations.")
+        self._last_grid_config = None
+        # self._last_free_form_config = FreeConfig() # No need to reset, FreeConfig is stateless for now
 
     def __init__(
         self,
@@ -441,8 +459,11 @@ class LayoutManager(QObject):
             )
             return {}
 
-        # Ensure the FreeLayoutEngine is used and returns plot ID to Rect mapping
-        return self._free_engine.perform_align(plots, edge)
+        if isinstance(self._free_engine, FreeFormLayoutCapabilities):
+            return self._free_engine.perform_align(plots, edge)
+        else:
+            self.logger.error("FreeLayoutEngine does not support FreeFormLayoutCapabilities as expected for perform_align.")
+            return {}
 
     def perform_distribute(
         self, plots: list[PlotNode], axis: str
@@ -457,8 +478,11 @@ class LayoutManager(QObject):
             )
             return {}
 
-        # Ensure the FreeLayoutEngine is used and returns plot ID to Rect mapping
-        return self._free_engine.perform_distribute(plots, axis)
+        if isinstance(self._free_engine, FreeFormLayoutCapabilities):
+            return self._free_engine.perform_distribute(plots, axis)
+        else:
+            self.logger.error("FreeLayoutEngine does not support FreeFormLayoutCapabilities as expected for perform_distribute.")
+            return {}
 
     def infer_grid_parameters(self):
         """

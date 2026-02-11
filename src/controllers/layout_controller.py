@@ -69,6 +69,13 @@ class LayoutController(QObject):
             self.set_layout_mode(LayoutMode.FREE_FORM)
             self.logger.info("UI selected layout mode toggled to FREE_FORM.")
 
+    def get_ui_selected_layout_mode(self) -> LayoutMode:
+        """
+        Returns the layout mode currently selected in the UI, as managed by the LayoutManager.
+        This provides a public getter for the View components.
+        """
+        return self._layout_manager.ui_selected_layout_mode
+
     def align_selected_plots(self, edge: str):
         """
         Aligns the currently selected plots.
@@ -147,13 +154,13 @@ class LayoutController(QObject):
         """
         self.logger.debug(f"Grid layout param changed: {param_name} = {value}")
 
-        if self._layout_manager._last_grid_config is None:
+        if self._layout_manager.get_last_grid_config() is None:
             self.logger.warning(
                 "on_grid_layout_param_changed called when _last_grid_config is None. This should not happen in GRID mode."
             )
             return
 
-        current_grid_config: GridConfig = self._layout_manager._last_grid_config
+        current_grid_config: GridConfig = self._layout_manager.get_last_grid_config()
         self.logger.debug(
             f"on_grid_layout_param_changed: current_grid_config (from _last_grid_config) = {current_grid_config}"
         )
@@ -256,3 +263,19 @@ class LayoutController(QObject):
         self.logger.debug(
             f"Executed ChangeGridParametersCommand for {param_name} change."
         )
+
+    def infer_grid_parameters_action(self):
+        """
+        Triggers the LayoutManager to infer grid parameters from the current free-form plot positions.
+        This action is typically called by a UI button.
+        """
+        self.logger.info("LayoutController received request to infer grid parameters.")
+        self._layout_manager.infer_grid_parameters()
+
+    def optimize_layout_action(self):
+        """
+        Triggers the LayoutManager to optimize the current grid layout.
+        This action is typically called by a UI button.
+        """
+        self.logger.info("LayoutController received request to optimize layout.")
+        self._layout_manager.optimize_layout_action()

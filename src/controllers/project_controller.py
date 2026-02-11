@@ -139,6 +139,7 @@ class ProjectController(QObject):
         self.logger.info(
             f"New layout applied to model. Scene root: {new_layout_root_node.name}."
         )
+        self._layout_manager.reset_cached_configs() # Reset cached layout configs
 
     def save_project(self, parent: QWidget):
         """Saves the current project to a .sci file."""
@@ -230,6 +231,7 @@ class ProjectController(QObject):
 
             self._add_to_recent_files(file_path)
             self.logger.info(f"Project loaded from {file_path}")
+            self._layout_manager.reset_cached_configs() # Reset cached layout configs
 
         except (
             zipfile.BadZipFile,

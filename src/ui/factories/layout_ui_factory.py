@@ -243,7 +243,7 @@ class LayoutUIFactory:
         form_layout = QFormLayout()
         form_layout.setContentsMargins(0, 0, 0, 0)
 
-        current_grid_config = self._layout_manager._last_grid_config
+        current_grid_config = self._layout_manager.get_last_grid_config()
 
         # Rows
         line_rows = self._create_parameter_line_edit(
@@ -333,7 +333,7 @@ class LayoutUIFactory:
         btn_infer_grid.setToolTip(
             "Infer grid parameters (rows, cols, margins, gutters) from current free-form plot positions."
         )
-        btn_infer_grid.clicked.connect(self._layout_manager.infer_grid_parameters)
+        btn_infer_grid.clicked.connect(layout_controller.infer_grid_parameters_action) # Changed connection
         overall_container_layout.addWidget(btn_infer_grid)
 
         # Optimize Layout Button (formerly Snap to Grid)
@@ -344,7 +344,7 @@ class LayoutUIFactory:
         btn_optimize_layout.setToolTip(
             "Optimize layout using current grid parameters and Matplotlib's constrained layout."
         )
-        btn_optimize_layout.clicked.connect(self._layout_manager.optimize_layout_action)
+        btn_optimize_layout.clicked.connect(layout_controller.optimize_layout_action) # Changed connection
         overall_container_layout.addWidget(btn_optimize_layout)
 
         overall_container_layout.addStretch()
@@ -376,7 +376,7 @@ class LayoutUIFactory:
                     f"LayoutUIFactory: Input for {param_name} ('{raw_value}') is not acceptable (state: {state}). Not processing."
                 )
                 # Restore the original text if validation fails
-                current_grid_config = self._layout_manager._last_grid_config
+                current_grid_config = self._layout_manager.get_last_grid_config()
                 if current_grid_config is not None:
                     if param_name.startswith("margin"):
                         if param_name == "margin_top":

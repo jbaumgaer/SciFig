@@ -107,9 +107,7 @@ class CompositionRoot:
 
         # Instantiate layout components
         self._free_layout_engine = FreeLayoutEngine()
-        self._grid_layout_engine = GridLayoutEngine(
-            config_service=self._config_service
-        )  # TODO: Having a default grid size in the config is a bit weird. It should just initialize to empty
+        self._grid_layout_engine = GridLayoutEngine()  # TODO: Having a default grid size in the config is a bit weird. It should just initialize to empty
         self._layout_manager = LayoutManager(
             application_model=self._model,
             free_engine=self._free_layout_engine,

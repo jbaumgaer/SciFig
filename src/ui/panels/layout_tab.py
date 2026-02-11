@@ -46,9 +46,7 @@ class LayoutTab(QWidget):
         )  # TODO: magic number
 
         # Set initial state and text
-        initial_ui_layout_mode = (
-            self.layout_controller._layout_manager.ui_selected_layout_mode
-        )
+        initial_ui_layout_mode = self.layout_controller.get_ui_selected_layout_mode()
         self._layout_mode_toggle_button.setChecked(
             initial_ui_layout_mode == LayoutMode.GRID
         )
@@ -69,6 +67,7 @@ class LayoutTab(QWidget):
         self._main_layout.addStretch()
 
         # Connect signals
+        # Note: These signals are directly from LayoutManager, which is acceptable for View to react to Model changes.
         self.layout_controller._layout_manager.uiLayoutModeChanged.connect(
             self._update_content
         )
@@ -96,7 +95,7 @@ class LayoutTab(QWidget):
         # If ui_layout_mode is not provided (e.g., when called by a signal that doesn't pass args),
         # use the currently active UI selected layout mode from the layout manager.
         if ui_layout_mode is None:
-            ui_layout_mode = self.layout_controller._layout_manager.ui_selected_layout_mode
+            ui_layout_mode = self.layout_controller.get_ui_selected_layout_mode()
         
         self.logger.debug(
             f"LayoutTab: Updating content for UI layout mode: {ui_layout_mode.value}"

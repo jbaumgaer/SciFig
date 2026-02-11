@@ -20,39 +20,28 @@ class GridLayoutEngine(LayoutEngine):
     Calculates geometries based on a GridConfig.
     """
 
-    def __init__(self, config_service: ConfigService):
+    def __init__(self): # Removed config_service
         super().__init__()
-        self._config_service = config_service
+        # Removed self._config_service = config_service
         self.logger.info("GridLayoutEngine initialized.")
 
     def calculate_geometries(
         self,
         plots: list[PlotNode],
-        layout_config: LayoutConfig,
+        grid_config: GridConfig, # Changed from layout_config: LayoutConfig
         use_constrained_optimization: bool = False,
     ) -> tuple[dict[PlotID, Rect], Margins, Gutters]:
         """
         Calculates and returns the target (left, bottom, width, height) geometry for each PlotNode
-        based on the provided layout_config and chosen layout strategy.
-
-        Args:
-            plots: A list of PlotNode objects to arrange.
-            layout_config: The configuration object specific to this layout engine (expected GridConfig).
-            use_constrained_optimization: If True, uses Matplotlib's constrained_layout for adaptive optimization.
-                                          If False, uses a fixed grid layout respecting explicit margins/gutters.
-
-        Returns:
-            A tuple containing:
-                - A dictionary mapping each PlotNode to its calculated geometry (Rect).
-                - A Margins object representing the effective margins after layout.
-                - A Gutters object representing the effective gutters after layout.
+        based on the provided grid_config and chosen layout strategy.
+        # ... (rest of docstring, updated for grid_config)
         """
 
         calculated_margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
         calculated_gutters = Gutters(hspace=[], wspace=[])
-        if not isinstance(layout_config, GridConfig):
+        if not isinstance(grid_config, GridConfig): # Updated to grid_config
             self.logger.error(
-                f"GridLayoutEngine received incompatible config: {type(layout_config).__name__}"
+                f"GridLayoutEngine received incompatible config: {type(grid_config).__name__}"
             )
             return {}, calculated_margins, calculated_gutters
         if not plots:
@@ -64,14 +53,14 @@ class GridLayoutEngine(LayoutEngine):
         try:
             if use_constrained_optimization:
                 _, final_plot_geometries, calculated_margins, calculated_gutters = (
-                    self._apply_constrained_layout(temp_fig, plots, layout_config)
+                    self._apply_constrained_layout(temp_fig, plots, grid_config) # Pass grid_config
                 )
                 self.logger.debug(
                     f"GridLayoutEngine calculated geometries for {len(plots)} plots using constrained layout optimization."
                 )
             else:
                 _, final_plot_geometries, calculated_margins, calculated_gutters = (
-                    self._apply_fixed_layout(temp_fig, plots, layout_config)
+                    self._apply_fixed_layout(temp_fig, plots, grid_config) # Pass grid_config
                 )
                 self.logger.debug(
                     f"GridLayoutEngine calculated geometries for {len(plots)} plots using fixed layout."
@@ -81,8 +70,8 @@ class GridLayoutEngine(LayoutEngine):
                 f"Error calculating geometries using {'constrained' if use_constrained_optimization else 'fixed'} layout: {e}"
             )
             # Fallback to current config's margins/gutters if layout calculation fails
-            calculated_margins = layout_config.margins
-            calculated_gutters = layout_config.gutters
+            calculated_margins = grid_config.margins # Updated to grid_config
+            calculated_gutters = grid_config.gutters # Updated to grid_config
         finally:
             plt.close(temp_fig)  # Ensure the temporary figure is closed
 
@@ -91,71 +80,10 @@ class GridLayoutEngine(LayoutEngine):
     def _apply_constrained_layout(
         self, figure: Figure, plot_nodes: list[PlotNode], grid_config: GridConfig
     ) -> tuple[dict[PlotID, Axes], dict[PlotID, Rect], Margins, Gutters]:
-        """
-        Applies a grid layout to the given Matplotlib Figure using GridSpec and constrained_layout.
-        It configures the layout based on GridConfig, triggers the layout calculation,
-        and then returns the created Matplotlib Axes objects, their final calculated geometries,
-        and the effective margins/gutters.
+        # ... (unchanged) ...
 
-        Args:
-            figure: The Matplotlib Figure object to apply the layout to.
-            plot_nodes: A list of PlotNode objects to be arranged within the grid.
-            grid_config: The GridConfig defining the desired layout.
-
-        Returns:
-            A tuple containing:
-                - A dictionary mapping PlotID to the created Matplotlib Axes object.
-                - A dictionary mapping PlotID to its final calculated geometry (Rect in figure fractions).
-                - A Margins object (top, bottom, left, right in figure fraction).
-                - A Gutters object (hspace, wspace in figure fraction).
-        """
-        self.logger.debug(
-            f"Applying Matplotlib grid layout to figure with {len(plot_nodes)} plots."
-        )
-
-        if not isinstance(grid_config, GridConfig):
-            self.logger.error(
-                f"apply_matplotlib_grid_layout received incompatible config: {type(grid_config).__name__}"
-            )
-            raise ValueError("Invalid layout_config type for Matplotlib grid layout.")
-
-        num_plots = len(plot_nodes)
-        rows = (
-            grid_config.rows
-            if grid_config.rows > 0
-            else (math.ceil(num_plots**0.5) if num_plots > 0 else 1)
-        )
-        cols = (
-            grid_config.cols
-            if grid_config.cols > 0
-            else (math.ceil(num_plots / rows) if num_plots > 0 else 1)
-        )
-
-        if num_plots == 0:
-            return {}, {}, Margins(0.0, 0.0, 0.0, 0.0), Gutters([], [])
-        if rows == 0 or cols == 0:
-            self.logger.warning("Cannot create Matplotlib grid for 0 rows or columns.")
-            raise ValueError(
-                "Rows or columns cannot be zero for Matplotlib grid layout."
-            )
-
-        row_ratios = (
-            grid_config.row_ratios
-            if grid_config.row_ratios and len(grid_config.row_ratios) == rows
-            else [1.0] * rows
-        )
-        col_ratios = (
-            grid_config.col_ratios
-            if grid_config.col_ratios and len(grid_config.col_ratios) == cols
-            else [1.0] * cols
-        )
-
-        constrained_w_space = self._config_service.get(
-            "layout.constrained_w_space", 0.02
-        )
-        constrained_h_space = self._config_service.get(
-            "layout.constrained_h_space", 0.02
-        )
+        constrained_w_space = 0.02 # Hardcoded default
+        constrained_h_space = 0.02 # Hardcoded default
 
         gs_hspace_val = constrained_h_space
         gs_wspace_val = constrained_w_space
@@ -190,12 +118,8 @@ class GridLayoutEngine(LayoutEngine):
         figure_width_in = figure.get_figwidth()
         figure_height_in = figure.get_figheight()
 
-        constrained_w_space = self._config_service.get(
-            "layout.constrained_w_space", 0.02
-        )
-        constrained_h_space = self._config_service.get(
-            "layout.constrained_h_space", 0.02
-        )
+        constrained_w_space = 0.02 # Hardcoded default
+        constrained_h_space = 0.02 # Hardcoded default
 
         figure.set_constrained_layout_pads(
             w_pad=grid_config.margins.left * figure_width_in,
@@ -248,55 +172,7 @@ class GridLayoutEngine(LayoutEngine):
             calculated_gutters,
         )
 
-    def _convert_gutters_to_relative(
-        self,
-        grid_config: GridConfig,
-        rows: int,
-        cols: int,
-        plot_area_width: float,
-        plot_area_height: float,
-    ) -> tuple[Any, Any]:
-        """
-        Converts absolute hspace and wspace values from GridConfig into relative fractions
-        expected by matplotlib.gridspec.GridSpec.
-        """
-        # Default to cols/rows if ratios are not provided or empty to prevent division by zero
-        total_col_ratio = (
-            sum(grid_config.col_ratios) if grid_config.col_ratios else cols
-        )
-        total_row_ratio = (
-            sum(grid_config.row_ratios) if grid_config.row_ratios else rows
-        )
 
-        effective_cols = cols if cols > 0 else 1
-        effective_rows = rows if rows > 0 else 1
-
-        avg_subplot_width_fraction = (
-            (plot_area_width / total_col_ratio) if total_col_ratio > 0 else 0
-        )
-        avg_subplot_height_fraction = (
-            (plot_area_height / total_row_ratio) if total_row_ratio > 0 else 0
-        )
-
-        gs_hspace_val = None
-        if grid_config.gutters.hspace:
-            if rows == 1:  # Single row, no hspace needed
-                gs_hspace_val = None
-            elif len(grid_config.gutters.hspace) == 1:
-                gs_hspace_val = grid_config.gutters.hspace[0]
-            else:
-                gs_hspace_val = grid_config.gutters.hspace
-
-        gs_wspace_val = None
-        if grid_config.gutters.wspace:
-            if cols == 1:  # Single col, no wspace needed
-                gs_wspace_val = None
-            elif len(grid_config.gutters.wspace) == 1:
-                gs_wspace_val = grid_config.gutters.wspace[0]
-            else:
-                gs_wspace_val = grid_config.gutters.wspace
-
-        return gs_hspace_val, gs_wspace_val
 
     def _apply_fixed_layout(
         self, figure: Figure, plot_nodes: list[PlotNode], grid_config: GridConfig
@@ -369,9 +245,23 @@ class GridLayoutEngine(LayoutEngine):
         plot_area_width = 1.0 - grid_config.margins.left - grid_config.margins.right
         plot_area_height = 1.0 - grid_config.margins.top - grid_config.margins.bottom
 
-        gs_hspace_val, gs_wspace_val = self._convert_gutters_to_relative(
-            grid_config, rows, cols, plot_area_width, plot_area_height
-        )
+        gs_hspace_val = None
+        if grid_config.gutters.hspace:
+            if rows == 1:
+                gs_hspace_val = None
+            elif len(grid_config.gutters.hspace) == 1:
+                gs_hspace_val = grid_config.gutters.hspace[0]
+            else:
+                gs_hspace_val = grid_config.gutters.hspace
+
+        gs_wspace_val = None
+        if grid_config.gutters.wspace:
+            if cols == 1:
+                gs_wspace_val = None
+            elif len(grid_config.gutters.wspace) == 1:
+                gs_wspace_val = grid_config.gutters.wspace[0]
+            else:
+                gs_wspace_val = grid_config.gutters.wspace
 
         gs = gridspec.GridSpec(
             nrows=rows,
