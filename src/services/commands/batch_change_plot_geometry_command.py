@@ -1,7 +1,6 @@
-from src.services.commands.base_command import BaseCommand
-
 from src.models import ApplicationModel
 from src.models.nodes import PlotNode
+from src.services.commands.base_command import BaseCommand
 from src.shared.types import PlotID, Rect
 
 
@@ -11,7 +10,12 @@ class BatchChangePlotGeometryCommand(BaseCommand):
     supporting undo/redo.
     """
 
-    def __init__(self, model: ApplicationModel, new_geometries: dict[PlotID, Rect], description: str):
+    def __init__(
+        self,
+        model: ApplicationModel,
+        new_geometries: dict[PlotID, Rect],
+        description: str,
+    ):
         super().__init__(description)
         self._model = model
         self._new_geometries = new_geometries
@@ -22,29 +26,38 @@ class BatchChangePlotGeometryCommand(BaseCommand):
             if isinstance(node, PlotNode) and node.id in self._new_geometries:
                 self._old_geometries[node.id] = node.geometry
 
-        self.logger.debug(f"BatchChangePlotGeometryCommand initialized for {len(new_geometries)} plots. Captured {len(self._old_geometries)} old geometries.")
+        self.logger.debug(
+            f"BatchChangePlotGeometryCommand initialized for {len(new_geometries)} plots. Captured {len(self._old_geometries)} old geometries."
+        )
 
     def execute(self):
         """
         Applies the new geometries to the PlotNodes.
         The _old_geometries are already captured in __init__.
         """
-        self.logger.info(f"Executing BatchChangePlotGeometryCommand: {self.description}")
+        self.logger.info(
+            f"Executing BatchChangePlotGeometryCommand: {self.description}"
+        )
         # No need to reset _old_geometries here, it was captured in __init__
 
         # Iterate over the plots for which we have new geometries
         for plot_id, new_rect in self._new_geometries.items():
             # Find the actual PlotNode object by its ID
-            target_node = self._model.scene_root.find_node_by_id(plot_id) # Assuming find_node_by_id exists
+            target_node = self._model.scene_root.find_node_by_id(
+                plot_id
+            )  # Assuming find_node_by_id exists
             if isinstance(target_node, PlotNode):
-                target_node.geometry = new_rect # Apply new geometry
-                self.logger.debug(f"  PlotNode {target_node.name} (ID: {target_node.id}) geometry changed to {target_node.geometry}")
+                target_node.geometry = new_rect  # Apply new geometry
+                self.logger.debug(
+                    f"  PlotNode {target_node.name} (ID: {target_node.id}) geometry changed to {target_node.geometry}"
+                )
             else:
-                self.logger.warning(f"  Could not find PlotNode with ID {plot_id} to apply new geometry.")
+                self.logger.warning(
+                    f"  Could not find PlotNode with ID {plot_id} to apply new geometry."
+                )
 
-        self._model.modelChanged.emit() # Notify observers of changes
+        self._model.modelChanged.emit()  # Notify observers of changes
         self.logger.debug("BatchChangePlotGeometryCommand executed. Model updated.")
-
 
     def undo(self):
         """
@@ -57,8 +70,10 @@ class BatchChangePlotGeometryCommand(BaseCommand):
 
         for node in self._model.scene_root.all_descendants():
             if isinstance(node, PlotNode) and node.id in self._old_geometries:
-                node.geometry = self._old_geometries[node.id] # Restore old geometry
-                self.logger.debug(f"  PlotNode {node.name} (ID: {node.id}) geometry reverted to {node.geometry}")
+                node.geometry = self._old_geometries[node.id]  # Restore old geometry
+                self.logger.debug(
+                    f"  PlotNode {node.name} (ID: {node.id}) geometry reverted to {node.geometry}"
+                )
 
-        self._model.modelChanged.emit() # Notify observers of changes
+        self._model.modelChanged.emit()  # Notify observers of changes
         self.logger.debug("BatchChangePlotGeometryCommand undone. Model reverted.")

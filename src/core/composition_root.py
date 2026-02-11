@@ -3,32 +3,32 @@ import logging
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import QApplication, QMenuBar, QToolBar
 
-from src.ui.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
-from src.ui.builders.tool_bar_builder import ToolBarActions, ToolBarBuilder
-from src.services.commands.command_manager import CommandManager
-from src.services.config_service import ConfigService
-from src.shared.constants import IconPath, ToolName
 from src.controllers.canvas_controller import CanvasController
-from src.controllers.project_controller import ProjectController
 from src.controllers.layout_controller import LayoutController
 from src.controllers.node_controller import NodeController
+from src.controllers.project_controller import ProjectController
+from src.core.application_components import ApplicationComponents
+from src.models.application_model import ApplicationModel
+from src.models.layout.free_layout_engine import FreeLayoutEngine
+from src.models.layout.grid_layout_engine import GridLayoutEngine
+from src.models.plots.plot_types import PlotType
+from src.services.commands.command_manager import CommandManager
+from src.services.config_service import ConfigService
+from src.services.layout_manager import LayoutManager
 from src.services.tool_service import ToolService
 from src.services.tools import MockTool
 from src.services.tools.selection_tool import SelectionTool
-from src.core.application_components import ApplicationComponents
-from src.models.layout.free_layout_engine import FreeLayoutEngine
-from src.models.layout.grid_layout_engine import GridLayoutEngine
-from src.services.layout_manager import LayoutManager
-from src.models.application_model import ApplicationModel
-from src.models.plots.plot_types import PlotType
+from src.shared.constants import IconPath, ToolName
+from src.ui.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
+from src.ui.builders.tool_bar_builder import ToolBarActions, ToolBarBuilder
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.windows.main_window import MainWindow
-from src.ui.factories.properties_ui_factory import (
-    PropertiesUIFactory,
+from src.ui.factories.plot_properties_ui_factory import (  # Renamed import
+    PlotPropertiesUIFactory,  # Renamed class
     _build_line_plot_ui_widgets,
     _build_scatter_plot_ui_widgets,
 )
 from src.ui.renderers.renderer import Renderer
+from src.ui.windows.main_window import MainWindow
 
 
 class CompositionRoot:
@@ -51,7 +51,9 @@ class CompositionRoot:
 
         # Models
         self._model: ApplicationModel | None = None
-        self._plot_types: list = [] #TODO: Why do plot_types have to be initialized already now? And do they really have to be owned as attributed by the Composition Root?
+        self._plot_types: list = (
+            []
+        )  # TODO: Why do plot_types have to be initialized already now? And do they really have to be owned as attributed by the Composition Root?
         self._free_layout_engine: FreeLayoutEngine | None = None
         self._grid_layout_engine: GridLayoutEngine | None = None
 
@@ -62,7 +64,9 @@ class CompositionRoot:
         self._tool_bar_actions: ToolBarActions | None = None
         self._view: MainWindow | None = None
         self._layout_ui_factory: LayoutUIFactory | None = None
-        self._properties_ui_factory: PropertiesUIFactory | None = None
+        self._plot_properties_ui_factory: PlotPropertiesUIFactory | None = (
+            None  # Renamed type hint
+        )
 
         # Services
         self._config_service = config_service
@@ -71,26 +75,41 @@ class CompositionRoot:
         self._selection_tool: SelectionTool | None = None
         self._layout_manager: LayoutManager | None = None
 
-        self.logger.debug(f"ConfigService provided with path: {self._config_service.get('config_path', 'Not Provided')}")
+        self.logger.debug(
+            f"ConfigService provided with path: {self._config_service.get('config_path', 'Not Provided')}"
+        )
         IconPath.set_config_service(self._config_service)
 
     def _assemble_core_components(self):
         """Assemble core models, managers, and controllers.
-        Instead, require them to be set in the config and throw an error if they are missing."""
-        self.logger.info("Assembling core components: Model, CommandManager, MainController, Renderer.")
+        Instead, require them to be set in the config and throw an error if they are missing.
+        """
+        self.logger.info(
+            "Assembling core components: Model, CommandManager, MainController, Renderer."
+        )
         figure_width = self._config_service.get_required("figure.default_width")
         figure_height = self._config_service.get_required("figure.default_height")
         figure_dpi = self._config_service.get_required("figure.default_dpi")
         figure_facecolor = self._config_service.get_required("figure.default_facecolor")
-        figure = Figure(figsize=(figure_width, figure_height), dpi=figure_dpi, facecolor=figure_facecolor)
-        self.logger.debug(f"Figure created with dimensions: {figure_width}x{figure_height} @ {figure_dpi}dpi, Facecolor: {figure_facecolor}")
+        figure = Figure(
+            figsize=(figure_width, figure_height),
+            dpi=figure_dpi,
+            facecolor=figure_facecolor,
+        )
+        self.logger.debug(
+            f"Figure created with dimensions: {figure_width}x{figure_height} @ {figure_dpi}dpi, Facecolor: {figure_facecolor}"
+        )
 
-        self._model = ApplicationModel(figure=figure, config_service=self._config_service)
+        self._model = ApplicationModel(
+            figure=figure, config_service=self._config_service
+        )
         self._command_manager = CommandManager(model=self._model)
 
         # Instantiate layout components
         self._free_layout_engine = FreeLayoutEngine()
-        self._grid_layout_engine = GridLayoutEngine(config_service=self._config_service) #TODO: Having a default grid size in the config is a bit weird. It should just initialize to empty
+        self._grid_layout_engine = GridLayoutEngine(
+            config_service=self._config_service
+        )  # TODO: Having a default grid size in the config is a bit weird. It should just initialize to empty
         self._layout_manager = LayoutManager(
             application_model=self._model,
             free_engine=self._free_layout_engine,
@@ -99,23 +118,40 @@ class CompositionRoot:
         )
 
         # Instantiate new controllers
-        self._project_controller = ProjectController(model=self._model, command_manager=self._command_manager, config_service=self._config_service, layout_manager=self._layout_manager)
-        self._layout_controller = LayoutController(model=self._model, command_manager=self._command_manager, layout_manager=self._layout_manager)
-        self._node_controller = NodeController(model=self._model, command_manager=self._command_manager)
+        self._project_controller = ProjectController(
+            model=self._model,
+            command_manager=self._command_manager,
+            config_service=self._config_service,
+            layout_manager=self._layout_manager,
+        )
+        self._layout_controller = LayoutController(
+            model=self._model,
+            command_manager=self._command_manager,
+            layout_manager=self._layout_manager,
+        )
+        self._node_controller = NodeController(
+            model=self._model,
+            command_manager=self._command_manager,
+            project_controller=self._project_controller,
+        )
 
         self._layout_ui_factory = LayoutUIFactory(
             config_service=self._config_service,
             layout_manager=self._layout_manager,
         )
-        self._renderer = Renderer(layout_manager=self._layout_manager, application_model=self._model)
+        self._renderer = Renderer(
+            layout_manager=self._layout_manager, application_model=self._model
+        )
         self._plot_types = list(self._renderer.plotting_strategies.keys())
-        self._properties_ui_factory = PropertiesUIFactory(node_controller=self._node_controller)
+        self._plot_properties_ui_factory = PlotPropertiesUIFactory(
+            node_controller=self._node_controller
+        )  # Renamed instantiation
 
         # Register plot-specific UI builders
-        self._properties_ui_factory.register_builder(
+        self._plot_properties_ui_factory.register_builder(  # Renamed factory instance
             PlotType.LINE, _build_line_plot_ui_widgets
         )
-        self._properties_ui_factory.register_builder(
+        self._plot_properties_ui_factory.register_builder(  # Renamed factory instance
             PlotType.SCATTER, _build_scatter_plot_ui_widgets
         )
 
@@ -148,14 +184,18 @@ class CompositionRoot:
         self._tool_manager.add_tool(self._selection_tool)
 
         # Use config for default active tool
-        default_active_tool_name = self._config_service.get("tool.default_active_tool", ToolName.SELECTION.value)
+        default_active_tool_name = self._config_service.get(
+            "tool.default_active_tool", ToolName.SELECTION.value
+        )
         self._tool_manager.set_active_tool(default_active_tool_name)
         self.logger.debug(f"Default active tool set to: {default_active_tool_name}")
 
         # Placeholder tools for toolbar (not yet implemented)
         self._tool_manager.add_tool(
             MockTool(
-                self._config_service.get("tool.direct_selection.name", ToolName.DIRECT_SELECTION.value),
+                self._config_service.get(
+                    "tool.direct_selection.name", ToolName.DIRECT_SELECTION.value
+                ),
                 IconPath.get_path("tool_icons.direct_select"),
                 self._model,
                 self._command_manager,
@@ -164,7 +204,9 @@ class CompositionRoot:
         )
         self._tool_manager.add_tool(
             MockTool(
-                self._config_service.get("tool.eyedropper.name", ToolName.EYEDROPPER.value),
+                self._config_service.get(
+                    "tool.eyedropper.name", ToolName.EYEDROPPER.value
+                ),
                 IconPath.get_path("tool_icons.eyedropper"),
                 self._model,
                 self._command_manager,
@@ -217,7 +259,7 @@ class CompositionRoot:
             main_menu_actions=self._main_menu_actions,
             tool_bar=self._tool_bar,
             tool_bar_actions=self._tool_bar_actions,
-            properties_ui_factory=self._properties_ui_factory,
+            plot_properties_ui_factory=self._plot_properties_ui_factory,  # Renamed
             config_service=self._config_service,
             layout_ui_factory=self._layout_ui_factory,
         )
@@ -258,7 +300,7 @@ class CompositionRoot:
         self._model.layoutConfigChanged.connect(self._redraw_canvas_callback)
 
         # Tool-specific signals
-        self._selection_tool.plot_double_clicked.connect(self._view.show_properties_panel)
+        self._selection_tool.plot_double_clicked.connect(self._view.show_side_panel)
 
     def _redraw_canvas_callback(self):
         """Callback to trigger canvas redraw."""

@@ -51,7 +51,9 @@ class BasePlotProperties:
             # geometry is not part of BasePlotProperties
             if hasattr(self, key):
                 current_attr = getattr(self, key)
-                if isinstance(current_attr, (PlotMapping, AxesLimits)) and isinstance(value, dict):
+                if isinstance(current_attr, (PlotMapping, AxesLimits)) and isinstance(
+                    value, dict
+                ):
                     current_attr.update_from_dict(value)
                 elif key == "plot_type":
                     setattr(self, key, PlotType(value))
@@ -100,7 +102,7 @@ class LinePlotProperties(BasePlotProperties):
 class ScatterPlotProperties(BasePlotProperties):
     """Properties specific to a scatter plot."""
 
-    marker_size: int = 10 #TODO: Move into config
+    marker_size: int = 10  # TODO: Move into config
     plot_type: PlotType = PlotType.SCATTER
 
 

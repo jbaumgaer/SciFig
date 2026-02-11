@@ -4,10 +4,10 @@ from pathlib import Path
 import matplotlib.figure
 from PySide6.QtCore import QObject, Signal
 
-from src.services.config_service import ConfigService
 from src.models.layout.layout_config import FreeConfig, LayoutConfig
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.scene_node import SceneNode, node_factory
+from src.services.config_service import ConfigService
 
 
 class ApplicationModel(QObject):
@@ -18,7 +18,7 @@ class ApplicationModel(QObject):
 
     modelChanged = Signal()
     selectionChanged = Signal()
-    layoutConfigChanged = Signal() # Replaced autoLayoutChanged
+    layoutConfigChanged = Signal()  # Replaced autoLayoutChanged
 
     def __init__(self, figure: matplotlib.figure.Figure, config_service: ConfigService):
         super().__init__()
@@ -30,7 +30,9 @@ class ApplicationModel(QObject):
 
         # Layout configuration property
         # Initialize from config or default to FreeConfig
-        self._current_layout_config: LayoutConfig = FreeConfig() # Default to FreeConfig
+        self._current_layout_config: LayoutConfig = (
+            FreeConfig()
+        )  # Default to FreeConfig
 
     @property
     def current_layout_config(self) -> LayoutConfig:
@@ -42,7 +44,7 @@ class ApplicationModel(QObject):
             self._current_layout_config = config
             self.logger.info(f"Layout config changed to mode: {config.mode.value}")
             self.layoutConfigChanged.emit()
-            self.modelChanged.emit() # Also trigger a general model change for redraw
+            self.modelChanged.emit()  # Also trigger a general model change for redraw
 
     def add_node(self, node: SceneNode, parent: SceneNode | None = None):
         """Adds a node to the scene graph."""
@@ -65,7 +67,7 @@ class ApplicationModel(QObject):
     def set_scene_root(self, new_root: SceneNode):
         """Sets a new root for the scene graph."""
         self.scene_root = new_root
-        self.set_selection([]) # Clear selection when root changes
+        self.set_selection([])  # Clear selection when root changes
         self.modelChanged.emit()
 
     def get_node_at(self, position: tuple[float, float]) -> SceneNode | None:
@@ -77,21 +79,23 @@ class ApplicationModel(QObject):
         return {
             "version": "1.0",
             "scene_root": self.scene_root.to_dict(),
-            "layout_config": self.current_layout_config.to_dict() # Serialize layout config
+            "layout_config": self.current_layout_config.to_dict(),  # Serialize layout config
         }
 
     def load_from_dict(self, data: dict, temp_dir: Path):
         """Loads the application model from a dictionary."""
         # Version check can be added here in the future
-        #TODO: This method emits two modelChanged signals, one from clear_scene and one at the end. Consider optimizing to emit only once.
+        # TODO: This method emits two modelChanged signals, one from clear_scene and one at the end. Consider optimizing to emit only once.
         self.clear_scene()
         self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
 
         # Deserialize layout config
         layout_config_data = data.get("layout_config")
         if layout_config_data:
-            self.current_layout_config = LayoutConfig.from_dict(layout_config_data) # Use LayoutConfig.from_dict
+            self.current_layout_config = LayoutConfig.from_dict(
+                layout_config_data
+            )  # Use LayoutConfig.from_dict
         else:
-            self.current_layout_config = FreeConfig() # Default if not found
+            self.current_layout_config = FreeConfig()  # Default if not found
 
         self.modelChanged.emit()

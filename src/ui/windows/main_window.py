@@ -8,19 +8,19 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
-from src.ui.builders.menu_bar_builder import MainMenuActions
-from src.ui.builders.tool_bar_builder import ToolBarActions
-from src.services.commands import CommandManager
-from src.services.config_service import ConfigService
-from src.controllers.project_controller import ProjectController
 from src.controllers.layout_controller import LayoutController
 from src.controllers.node_controller import NodeController
+from src.controllers.project_controller import ProjectController
 from src.models.application_model import ApplicationModel
 from src.models.plots.plot_types import PlotType
-from src.ui.widgets.canvas_widget import CanvasWidget
+from src.services.commands import CommandManager
+from src.services.config_service import ConfigService
+from src.ui.builders.menu_bar_builder import MainMenuActions
+from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.factories.properties_ui_factory import PropertiesUIFactory
-from src.ui.panels.properties_panel import PropertiesPanel
+from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
+from src.ui.panels.side_panel import SidePanel
+from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 class MainWindow(QMainWindow):
@@ -35,20 +35,20 @@ class MainWindow(QMainWindow):
         project_controller: ProjectController,
         layout_controller: LayoutController,
         node_controller: NodeController,
-        command_manager: CommandManager, # Still needed for undo/redo actions, but not directly passed to PropertiesPanel
+        command_manager: CommandManager,  # Still needed for undo/redo actions, but not directly passed to PropertiesPanel
         plot_types: list[PlotType],
         menu_bar: QMenuBar,
         main_menu_actions: MainMenuActions,
         tool_bar: QToolBar,
         tool_bar_actions: ToolBarActions,
-        properties_ui_factory: PropertiesUIFactory,
+        plot_properties_ui_factory: PlotPropertiesUIFactory,
         config_service: ConfigService,
         layout_ui_factory: LayoutUIFactory,
         # layout_manager: LayoutManager, # Removed, now accessed via layout_controller
     ):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
-        self.setGeometry(50, 50, 800, 600) #TODO: Put into config
+        self.setGeometry(50, 50, 800, 600)  # TODO: Put into config
 
         self.model = model
         self.project_controller = project_controller
@@ -56,16 +56,18 @@ class MainWindow(QMainWindow):
         self.node_controller = node_controller
         self.command_manager = command_manager
         self.plot_types = plot_types
-        self.properties_ui_factory = properties_ui_factory
+        self.plot_properties_ui_factory = plot_properties_ui_factory
         self._config_service = config_service
         self._layout_ui_factory = layout_ui_factory
-        self._layout_manager = layout_controller._layout_manager # Access via layout_controller
+        self._layout_manager = (
+            layout_controller._layout_manager
+        )  # Access via layout_controller
 
         # Now create the UI components
         self.canvas_widget = self._create_canvas()
         self.setCentralWidget(self.canvas_widget)
 
-        self.properties_view, self.properties_dock = self._create_properties_dock()
+        self.side_panel_view, self.side_panel_dock = self._create_side_panel()
 
         # Store pre-built menu bar and actions
         self.menu_bar = menu_bar
@@ -110,34 +112,28 @@ class MainWindow(QMainWindow):
         self.colors_action: QAction = self.main_menu_actions.colors_action
         self.settings_action: QAction = self.main_menu_actions.settings_action
 
-
-
-
     def _create_canvas(self) -> CanvasWidget:
         canvas = CanvasWidget(figure=self.model.figure, parent=self)
         return canvas
 
-    def _create_properties_dock(self) -> tuple[PropertiesPanel, QDockWidget]:
-        properties_view = PropertiesPanel(
+    def _create_side_panel(self) -> tuple[SidePanel, QDockWidget]:
+        side_panel = SidePanel(
             model=self.model,
             node_controller=self.node_controller,
             layout_controller=self.layout_controller,
-            properties_ui_factory=self.properties_ui_factory,
+            plot_properties_ui_factory=self.plot_properties_ui_factory,  # Will be PlotPropertiesUIFactory
             layout_ui_factory=self._layout_ui_factory,
+            project_controller=self.project_controller,  # New dependency
+            config_service=self._config_service,  # New dependency
         )
-        dock = QDockWidget("Properties", self)
-        dock.setObjectName("Properties")
-        dock.setWidget(properties_view)
+        dock = QDockWidget(self)  # Renaming dock title to "Side Panel" would be more accurate but keep as "Properties" for now
+        dock.setObjectName("SidePanel")  # Update object name
+        dock.setWidget(side_panel)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-        return properties_view, dock
+        return side_panel, dock
 
-
-    def show_properties_panel(self):
-        """Makes the properties dock widget visible and raises it to the top."""
-        if self.properties_dock:
-            self.properties_dock.show()
-            self.properties_dock.raise_()
-
-
-
-
+    def show_side_panel(self):
+        """Makes the side panel dock widget visible and raises it to the top."""
+        if self.side_panel_dock:
+            self.side_panel_dock.show()
+            self.side_panel_dock.raise_()

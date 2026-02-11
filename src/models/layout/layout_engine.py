@@ -2,10 +2,9 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.models.layout.layout_config import LayoutConfig, Margins, Gutters
+from src.models.layout.layout_config import Gutters, LayoutConfig, Margins
 from src.models.nodes import PlotNode
 from src.shared.types import PlotID, Rect
-
 
 
 class LayoutEngine(ABC):
@@ -18,7 +17,9 @@ class LayoutEngine(ABC):
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
-    def calculate_geometries(self, plots: list[PlotNode], layout_config: LayoutConfig) -> tuple[dict[PlotID, Rect], Optional[Margins], Optional[Gutters]]:
+    def calculate_geometries(
+        self, plots: list[PlotNode], layout_config: LayoutConfig
+    ) -> tuple[dict[PlotID, Rect], Optional[Margins], Optional[Gutters]]:
         """
         Calculates and returns the target (left, bottom, width, height) geometry for each PlotNode.
         This method is stateless; all necessary parameters are passed via layout_config.
