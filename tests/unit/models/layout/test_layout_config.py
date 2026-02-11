@@ -3,7 +3,7 @@ from src.models.layout.layout_config import Margins, Gutters, GridConfig, FreeCo
 from src.shared.constants import LayoutMode
 
 class TestLayoutConfig:
-    def test_margins_init_requires_all_fields():
+    def test_margins_init_requires_all_fields(self):
         """
         Test that Margins cannot be initialized without all required fields.
         """
@@ -21,7 +21,7 @@ class TestLayoutConfig:
         assert margins.left == 0.3
         assert margins.right == 0.4
 
-    def test_margins_from_dict_requires_all_fields():
+    def test_margins_from_dict_requires_all_fields(self):
         """
         Test that Margins.from_dict requires all fields in the input dictionary.
         """
@@ -38,7 +38,7 @@ class TestLayoutConfig:
         assert margins.left == 0.3
         assert margins.right == 0.4
 
-    def test_gutters_init_requires_all_fields():
+    def test_gutters_init_requires_all_fields(self):
         """
         Test that Gutters cannot be initialized without all required fields.
         """
@@ -52,7 +52,7 @@ class TestLayoutConfig:
         assert gutters.hspace == [0.1, 0.2]
         assert gutters.wspace == [0.3, 0.4]
 
-    def test_gutters_from_dict_requires_all_fields():
+    def test_gutters_from_dict_requires_all_fields(self):
         """
         Test that Gutters.from_dict requires all fields in the input dictionary.
         """
@@ -65,7 +65,7 @@ class TestLayoutConfig:
         assert gutters.hspace == [0.1, 0.2]
         assert gutters.wspace == [0.3, 0.4]
 
-    def test_gridconfig_init_requires_all_fields():
+    def test_gridconfig_init_requires_all_fields(self):
         """
         Test that GridConfig cannot be initialized without all required fields.
         """
@@ -89,7 +89,7 @@ class TestLayoutConfig:
         assert config.cols == 1
         assert config.mode == LayoutMode.GRID
 
-    def test_gridconfig_from_dict_requires_all_fields():
+    def test_gridconfig_from_dict_requires_all_fields(self):
         """
         Test that GridConfig.from_dict requires all fields in the input dictionary.
         """
@@ -137,7 +137,7 @@ class TestLayoutConfig:
         assert config.margins.top == 0.1
         assert config.gutters.hspace == [0.05]
 
-    def test_freeconfig_from_dict():
+    def test_freeconfig_from_dict(self):
         """
         Test that FreeConfig.from_dict works as expected (no changes needed for it).
         """
