@@ -3,10 +3,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from matplotlib.figure import Figure
 from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
-from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QWheelEvent
+from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QWheelEvent, QMouseEvent
 from PySide6.QtWidgets import QGraphicsView, QScrollBar
 
 from src.ui.widgets.canvas_widget import CanvasWidget
+from src.models.application_model import ApplicationModel
+from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.group_node import GroupNode
+from src.models.nodes.scene_node import SceneNode
 
 
 @pytest.fixture
@@ -18,11 +22,27 @@ def mock_figure():
 
 @pytest.fixture
 def canvas_widget(qtbot, mock_figure):
-    """Provides a CanvasWidget instance for tests."""
-    widget = CanvasWidget(figure=mock_figure)
+    """Provides a CanvasWidget instance for tests. Deprecated for tests requiring model."""
+    widget = CanvasWidget(figure=mock_figure, model=MagicMock(spec=ApplicationModel)) # Provide dummy model
     qtbot.addWidget(widget)
     widget.show()  # Ensure widget is shown for event processing
     return widget
+
+
+@pytest.fixture
+def canvas_widget_with_model(qtbot, mock_figure, mocker):
+    """Provides a CanvasWidget instance with a mocked ApplicationModel for tests."""
+    model = mocker.Mock(spec=ApplicationModel)
+    model.selectionChanged = mocker.Mock()
+    model.selection = []
+    
+    # Mock get_node_at for hit-testing scenarios
+    model.get_node_at.return_value = None # Default to no node hit
+    
+    widget = CanvasWidget(figure=mock_figure, model=model)
+    qtbot.addWidget(widget)
+    widget.show()
+    return widget, model # Return both for testing purposes
 
 
 @pytest.fixture
@@ -123,6 +143,85 @@ def test_drop_event_without_urls(canvas_widget, mock_mime_data_without_urls):
         canvas_widget.dropEvent(mock_event)
         super_drop_event.assert_called_once_with(mock_event)
         mock_event.acceptProposedAction.assert_not_called()
+
+
+# --- Test Double-Click Events ---
+
+def test_double_click_on_plotnode_updates_model_selection(canvas_widget_with_model, mocker):
+    """
+    Verify that double-clicking on a PlotNode updates the ApplicationModel's selection
+    and triggers the selectionChanged signal.
+    """
+    widget, model = canvas_widget_with_model
+    
+    # Create a mock PlotNode and configure model.get_node_at to return it
+    mock_plot_node = mocker.Mock(spec=PlotNode, id="plot_id_1")
+    model.get_node_at.return_value = mock_plot_node
+    
+    # Simulate a mouse double-click event
+    # The actual position doesn't matter much for this unit test, as get_node_at is mocked
+    mock_event = mocker.Mock(spec=QMouseEvent)
+    mock_event.button.return_value = Qt.MouseButton.LeftButton
+    mock_event.position.return_value = QPointF(50.0, 50.0)
+    
+    # Simulate mapToScene conversion (return some scene position)
+    mocker.patch.object(widget, 'mapToScene', return_value=QPointF(10.0, 10.0))
+    
+    widget.mouseDoubleClickEvent(mock_event)
+    
+    model.get_node_at.assert_called_once()
+    model.set_selection.assert_called_once_with([mock_plot_node])
+    model.selectionChanged.emit.assert_called_once() # Verify signal emitted
+
+def test_double_click_on_empty_space_clears_model_selection(canvas_widget_with_model, mocker):
+    """
+    Verify that double-clicking on empty space clears the ApplicationModel's selection.
+    """
+    widget, model = canvas_widget_with_model
+    
+    # Ensure no node is returned by get_node_at
+    model.get_node_at.return_value = None
+    
+    # Simulate an existing selection that should be cleared
+    model.selection = [mocker.Mock(spec=PlotNode)]
+    
+    mock_event = mocker.Mock(spec=QMouseEvent)
+    mock_event.button.return_value = Qt.MouseButton.LeftButton
+    mock_event.position.return_value = QPointF(50.0, 50.0)
+    mocker.patch.object(widget, 'mapToScene', return_value=QPointF(10.0, 10.0))
+    
+    widget.mouseDoubleClickEvent(mock_event)
+    
+    model.get_node_at.assert_called_once()
+    model.set_selection.assert_called_once_with([]) # Expect empty selection
+    model.selectionChanged.emit.assert_called_once()
+
+def test_double_click_on_non_plotnode_does_not_select(canvas_widget_with_model, mocker):
+    """
+    Verify that double-clicking on a non-PlotNode (e.g., GroupNode) does not
+    update the model's selection.
+    """
+    widget, model = canvas_widget_with_model
+    
+    # Create a mock GroupNode and configure model.get_node_at to return it
+    mock_group_node = mocker.Mock(spec=GroupNode, id="group_id_1")
+    model.get_node_at.return_value = mock_group_node
+    
+    # Simulate an existing selection that should NOT be cleared or changed by non-PlotNode
+    initial_selection = [mocker.Mock(spec=PlotNode)]
+    model.selection = initial_selection
+    
+    mock_event = mocker.Mock(spec=QMouseEvent)
+    mock_event.button.return_value = Qt.MouseButton.LeftButton
+    mock_event.position.return_value = QPointF(50.0, 50.0)
+    mocker.patch.object(widget, 'mapToScene', return_value=QPointF(10.0, 10.0))
+    
+    widget.mouseDoubleClickEvent(mock_event)
+    
+    model.get_node_at.assert_called_once()
+    # Expect selection to remain unchanged if it's not a PlotNode
+    model.set_selection.assert_not_called()
+    model.selectionChanged.emit.assert_not_called()
 
 
 # --- Test Wheel Events ---

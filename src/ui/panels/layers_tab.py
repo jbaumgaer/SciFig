@@ -24,6 +24,10 @@ from src.shared.constants import IconPath  # New Import
 
 
 class LayersTab(QWidget):
+    # Column indices
+    COL_NAME = 0
+    COL_TYPE = 1
+
     # Drag and Drop MIME type
     _NODE_MIME_TYPE = "application/x-scifig-node-id"
 
@@ -126,10 +130,10 @@ class LayersTab(QWidget):
             return
 
         item = QTreeWidgetItem(parent_item)
-        item.setText(0, node.name)
-        item.setText(1, type(node).__name__)
+        item.setText(self.COL_NAME, node.name)
+        item.setText(self.COL_TYPE, type(node).__name__)
         item.setData(
-            0, Qt.UserRole, node.id
+            self.COL_NAME, Qt.UserRole, node.id
         )  # Store node ID in UserRole for easy retrieval
         item.setFlags(
             item.flags()
@@ -141,14 +145,14 @@ class LayersTab(QWidget):
 
         # Visibility Checkbox/Icon
         item.setCheckState(
-            0, Qt.Checked if node.visible else Qt.Unchecked
+            self.COL_NAME, Qt.Checked if node.visible else Qt.Unchecked
         )  # Checkbox in first column
         # item.setIcon(0, QIcon(IconPath.get_path("visible_icon" if node.visible else "hidden_icon"))) # Alternative: icon
 
         # Lock Icon/State
         if node.locked:
             item.setIcon(
-                1, QIcon(IconPath.get_path("lock_icon"))
+                self.COL_TYPE, QIcon(IconPath.get_path("lock_icon"))
             )  # Lock icon in second column
             item.setFlags(
                 item.flags() & ~Qt.ItemIsEditable & ~Qt.ItemIsDragEnabled
@@ -161,7 +165,7 @@ class LayersTab(QWidget):
         """
         Handles changes to a QTreeWidgetItem (e.g., checkbox state, text edit).
         """
-        node_id = item.data(0, Qt.UserRole)
+        node_id = item.data(self.COL_NAME, Qt.UserRole)
         if not node_id:
             return
 
@@ -169,14 +173,14 @@ class LayersTab(QWidget):
         if not node:
             return
 
-        if column == 0:  # Name or Visibility
-            if item.checkState(0) != (Qt.Checked if node.visible else Qt.Unchecked):
+        if column == self.COL_NAME:  # Name or Visibility
+            if item.checkState(self.COL_NAME) != (Qt.Checked if node.visible else Qt.Unchecked):
                 # Visibility changed
-                new_visibility = item.checkState(0) == Qt.Checked
+                new_visibility = item.checkState(self.COL_NAME) == Qt.Checked
                 self.node_controller.set_node_visibility(node_id, new_visibility)
-            elif item.text(0) != node.name:
+            elif item.text(self.COL_NAME) != node.name:
                 # Name changed
-                new_name = item.text(0)
+                new_name = item.text(self.COL_NAME)
                 self.node_controller.rename_node(node_id, new_name)
         # TODO: Handle lock icon/state change in column 1 if implemented as checkbox
 
@@ -186,10 +190,10 @@ class LayersTab(QWidget):
         Could be used for in-place renaming or opening properties.
         """
         # For now, allow in-place renaming on double-click if not locked
-        node_id = item.data(0, Qt.UserRole)
+        node_id = item.data(self.COL_NAME, Qt.UserRole)
         node = self.model.scene_root.find_node_by_id(node_id)
         if node and not node.locked:
-            self._tree_widget.editItem(item, 0)  # Start editing the name column
+            self._tree_widget.editItem(item, self.COL_NAME)  # Start editing the name column
 
     def _update_selection_in_tree(self):
         """Ensures the selection in the QTreeWidget matches the model's selection."""
@@ -201,11 +205,11 @@ class LayersTab(QWidget):
 
         for selected_node in self.model.selection:
             items = self._tree_widget.findItems(
-                selected_node.id, Qt.UserRole | Qt.MatchRecursive, column=0
+                selected_node.id, Qt.UserRole | Qt.MatchRecursive, column=self.COL_NAME
             )
             for item in items:
                 if (
-                    item.data(0, Qt.UserRole) == selected_node.id
+                    item.data(self.COL_NAME, Qt.UserRole) == selected_node.id
                 ):  # Ensure correct item by ID
                     item.setSelected(True)
                     self._tree_widget.scrollToItem(item)
@@ -215,9 +219,9 @@ class LayersTab(QWidget):
     def _group_selected_nodes(self):
         """Triggers grouping action for currently selected nodes."""
         selected_node_ids = [
-            item.data(0, Qt.UserRole)
+            item.data(self.COL_NAME, Qt.UserRole)
             for item in self._tree_widget.selectedItems()
-            if item.data(0, Qt.UserRole)
+            if item.data(self.COL_NAME, Qt.UserRole)
         ]
         if len(selected_node_ids) > 1:
             self.node_controller.group_nodes(selected_node_ids)
@@ -230,7 +234,7 @@ class LayersTab(QWidget):
         """Triggers ungrouping action for a selected GroupNode."""
         selected_items = self._tree_widget.selectedItems()
         if len(selected_items) == 1:
-            node_id = selected_items[0].data(0, Qt.UserRole)
+            node_id = selected_items[0].data(self.COL_NAME, Qt.UserRole)
             node = self.model.scene_root.find_node_by_id(node_id)
             if isinstance(node, GroupNode):
                 self.node_controller.ungroup_node(node_id)
@@ -250,7 +254,7 @@ class LayersTab(QWidget):
 
         ungroup_enabled = False
         if len(selected_items) == 1:
-            node_id = selected_items[0].data(0, Qt.UserRole)
+            node_id = selected_items[0].data(self.COL_NAME, Qt.UserRole)
             node = self.model.scene_root.find_node_by_id(node_id)
             if isinstance(node, GroupNode):
                 ungroup_enabled = True

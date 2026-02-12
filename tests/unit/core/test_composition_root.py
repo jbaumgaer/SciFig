@@ -32,7 +32,7 @@ def composition_root(
     mock_grid_layout_engine,
     mock_layout_manager,
     mock_layout_ui_factory,
-    mock_properties_ui_factory,
+    mock_plot_properties_ui_factory,
     mock_canvas_controller,
     mocker,  # Add mocker fixture for patching
 ):
@@ -76,8 +76,8 @@ def composition_root(
     mock_LayoutUIFactory_class_patch = mocker.patch(
         "src.core.composition_root.LayoutUIFactory"
     )
-    mock_PropertiesUIFactory_class_patch = mocker.patch(
-        "src.core.composition_root.PropertiesUIFactory"
+    mock_PlotPropertiesUIFactory_class_patch = mocker.patch(
+        "src.core.composition_root.PlotPropertiesUIFactory"
     )
     mock_Renderer_class_patch = mocker.patch("src.core.composition_root.Renderer")
     mock_ToolService_class_patch = mocker.patch("src.core.composition_root.ToolService")
@@ -120,7 +120,7 @@ def composition_root(
     mock_FreeLayoutEngine_class_patch.return_value = mock_free_layout_engine
     mock_GridLayoutEngine_class_patch.return_value = mock_grid_layout_engine
     mock_LayoutUIFactory_class_patch.return_value = mock_layout_ui_factory
-    mock_PropertiesUIFactory_class_patch.return_value = mock_properties_ui_factory
+    mock_PlotPropertiesUIFactory_class_patch.return_value = mock_plot_properties_ui_factory
     mock_Renderer_class_patch.return_value = mock_renderer
     mock_ToolService_class_patch.return_value = mock_tool_manager
     mock_SelectionTool_class_patch.return_value = mock_selection_tool
@@ -159,7 +159,7 @@ def composition_root(
     composition_root_instance._free_layout_engine = mock_free_layout_engine
     composition_root_instance._grid_layout_engine = mock_grid_layout_engine
     composition_root_instance._layout_ui_factory = mock_layout_ui_factory
-    composition_root_instance._properties_ui_factory = mock_properties_ui_factory
+    composition_root_instance._plot_properties_ui_factory = mock_plot_properties_ui_factory
     composition_root_instance._canvas_controller = mock_canvas_controller
     composition_root_instance._tool_manager = mock_tool_manager
     composition_root_instance._selection_tool = mock_selection_tool
@@ -200,8 +200,8 @@ def composition_root(
     composition_root_instance._mock_LayoutUIFactory_class = (
         mock_LayoutUIFactory_class_patch
     )
-    composition_root_instance._mock_PropertiesUIFactory_class = (
-        mock_PropertiesUIFactory_class_patch
+    composition_root_instance._mock_PlotPropertiesUIFactory_class = (
+        mock_PlotPropertiesUIFactory_class_patch
     )
     composition_root_instance._mock_Renderer_class = mock_Renderer_class_patch
     composition_root_instance._mock_ToolService_class = mock_ToolService_class_patch
@@ -336,7 +336,7 @@ class TestCompositionRoot:
             main_menu_actions=composition_root._main_menu_actions,
             tool_bar=composition_root._tool_bar,
             tool_bar_actions=composition_root._tool_bar_actions,
-            properties_ui_factory=composition_root._properties_ui_factory,
+            plot_properties_ui_factory=composition_root._plot_properties_ui_factory,
             config_service=mock_config_service,
             layout_ui_factory=composition_root._layout_ui_factory,
         )
@@ -540,23 +540,23 @@ class TestCompositionRoot:
         # Verify figure_canvas.draw is called
         mock_main_window.canvas_widget.figure_canvas.draw.assert_called_once()
 
-    def test_properties_ui_factory_registers_builders(
-        self, composition_root, mock_properties_ui_factory
+    def test_plot_properties_ui_factory_registers_builders(
+        self, composition_root, mock_plot_properties_ui_factory
     ):
         """
-        Test that PropertiesUIFactory.register_builder is called for PlotType.LINE and PlotType.SCATTER.
+        Test that PlotPropertiesUIFactory.register_builder is called for PlotType.LINE and PlotType.SCATTER.
         """
         # Assemble core components to trigger the registration calls
         composition_root._assemble_core_components()
 
         # Verify register_builder calls
-        mock_properties_ui_factory.register_builder.assert_any_call(
+        mock_plot_properties_ui_factory.register_builder.assert_any_call(
             PlotType.LINE, composition_root._mock_build_line_plot_ui_widgets_func
         )
-        mock_properties_ui_factory.register_builder.assert_any_call(
+        mock_plot_properties_ui_factory.register_builder.assert_any_call(
             PlotType.SCATTER, composition_root._mock_build_scatter_plot_ui_widgets_func
         )
-        assert mock_properties_ui_factory.register_builder.call_count == 2
+        assert mock_plot_properties_ui_factory.register_builder.call_count == 2
 
     def test_composition_root_layout_component_wiring(
         self,
