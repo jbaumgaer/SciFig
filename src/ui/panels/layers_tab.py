@@ -6,21 +6,20 @@ from PySide6.QtGui import (
     QIcon,
 )  # QIcon for icons, QMouseEvent for drag, QDrag for drag/drop
 from PySide6.QtWidgets import (
-    QHBoxLayout,  # New Import for button layout
+    QHBoxLayout,
     QMessageBox,  # For user feedback
-    QToolButton,  # New Import for buttons
-    QTreeWidget,  # New Import
-    QTreeWidgetItem,  # New Import
+    QToolButton,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from src.controllers.node_controller import NodeController
 from src.models.application_model import ApplicationModel
-from src.models.nodes.group_node import GroupNode  # New Import
-from src.models.nodes.scene_node import SceneNode  # New Import
-from src.services.config_service import ConfigService
-from src.shared.constants import IconPath  # New Import
+from src.models.nodes.group_node import GroupNode
+from src.models.nodes.scene_node import SceneNode
+from src.shared.constants import IconPath
 
 
 class LayersTab(QWidget):
@@ -35,13 +34,11 @@ class LayersTab(QWidget):
         self,
         model: ApplicationModel,
         node_controller: NodeController,
-        config_service: ConfigService,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.model = model
         self.node_controller = node_controller
-        self.config_service = config_service
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayersTab initialized.")
 

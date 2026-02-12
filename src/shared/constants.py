@@ -34,6 +34,7 @@ class IconPath:
     """
     Provides a centralized way to access icon file paths,
     retrieving them from the ConfigService.
+    TODO: Maybe create an icon registry instead so that the config_service isn't injected through a different method
     """
 
     _config_service: "ConfigService" = None

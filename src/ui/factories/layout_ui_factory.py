@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
 )
 
 from src.controllers.layout_controller import LayoutController
-from src.services.config_service import ConfigService
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import IconPath, LayoutMode
 
@@ -26,9 +25,8 @@ class LayoutUIFactory:
     related to layout management, based on the current layout mode.
     """
 
-    def __init__(self, config_service: ConfigService, layout_manager: LayoutManager):
-        self._config_service = config_service
-        self._layout_manager = layout_manager  # Store LayoutManager instance
+    def __init__(self, layout_manager: LayoutManager):
+        self._layout_manager = layout_manager
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutUIFactory initialized.")
 

@@ -21,8 +21,7 @@ from src.ui.panels.layout_tab import LayoutTab
 
 # New Tab Imports
 from src.ui.panels.properties_tab import PropertiesTab
-from src.controllers.project_controller import ProjectController # New import
-from src.services.config_service import ConfigService # New import
+from src.controllers.project_controller import ProjectController
 
 
 class SidePanel(QTabWidget):
@@ -36,10 +35,9 @@ class SidePanel(QTabWidget):
         model: ApplicationModel,
         node_controller: NodeController,
         layout_controller: LayoutController,
-        plot_properties_ui_factory: PlotPropertiesUIFactory, # Renamed
+        plot_properties_ui_factory: PlotPropertiesUIFactory,
         layout_ui_factory: LayoutUIFactory,
-        project_controller: ProjectController, # Added
-        config_service: ConfigService, # Added
+        project_controller: ProjectController,
         parent: QWidget | None = None,
     ):
         super().__init__(parent)
@@ -48,10 +46,9 @@ class SidePanel(QTabWidget):
         self.model = model
         self.node_controller = node_controller
         self.layout_controller = layout_controller
-        self.plot_properties_ui_factory = plot_properties_ui_factory # Renamed
+        self.plot_properties_ui_factory = plot_properties_ui_factory
         self._layout_ui_factory = layout_ui_factory
         self._project_controller = project_controller
-        self._config_service = config_service
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("SidePanel initialized.")
@@ -67,9 +64,8 @@ class SidePanel(QTabWidget):
         self.properties_tab = PropertiesTab(
             model=self.model,
             node_controller=self.node_controller,
-            plot_properties_ui_factory=self.plot_properties_ui_factory, # Renamed
+            plot_properties_ui_factory=self.plot_properties_ui_factory,
             project_controller=self._project_controller,
-            config_service=self._config_service,
             parent=self,
         )
         self.layout_tab = LayoutTab(
@@ -81,7 +77,6 @@ class SidePanel(QTabWidget):
         self.layers_tab = LayersTab(
             model=self.model,
             node_controller=self.node_controller,
-            config_service=self._config_service,
             parent=self,
         )
 

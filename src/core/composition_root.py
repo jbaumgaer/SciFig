@@ -50,7 +50,7 @@ class CompositionRoot:
         self._node_controller: NodeController | None = None
 
         # Models
-        self._model: ApplicationModel | None = None
+        self._application_model: ApplicationModel | None = None
         self._plot_types: list = (
             []
         )  # TODO: Why do plot_types have to be initialized already now? And do they really have to be owned as attributed by the Composition Root?
@@ -100,16 +100,14 @@ class CompositionRoot:
             f"Figure created with dimensions: {figure_width}x{figure_height} @ {figure_dpi}dpi, Facecolor: {figure_facecolor}"
         )
 
-        self._model = ApplicationModel(
-            figure=figure, config_service=self._config_service
-        )
-        self._command_manager = CommandManager(model=self._model)
+        self._application_model = ApplicationModel(figure=figure)
+        self._command_manager = CommandManager(model=self._application_model)
 
         # Instantiate layout components
         self._free_layout_engine = FreeLayoutEngine()
         self._grid_layout_engine = GridLayoutEngine()  # TODO: Having a default grid size in the config is a bit weird. It should just initialize to empty
         self._layout_manager = LayoutManager(
-            application_model=self._model,
+            application_model=self._application_model,
             free_engine=self._free_layout_engine,
             grid_engine=self._grid_layout_engine,
             config_service=self._config_service,
@@ -117,28 +115,27 @@ class CompositionRoot:
 
         # Instantiate new controllers
         self._project_controller = ProjectController(
-            model=self._model,
+            model=self._application_model,
             command_manager=self._command_manager,
             config_service=self._config_service,
             layout_manager=self._layout_manager,
         )
         self._layout_controller = LayoutController(
-            model=self._model,
+            model=self._application_model,
             command_manager=self._command_manager,
             layout_manager=self._layout_manager,
         )
         self._node_controller = NodeController(
-            model=self._model,
+            model=self._application_model,
             command_manager=self._command_manager,
             project_controller=self._project_controller,
         )
 
         self._layout_ui_factory = LayoutUIFactory(
-            config_service=self._config_service,
             layout_manager=self._layout_manager,
         )
         self._renderer = Renderer(
-            layout_manager=self._layout_manager, application_model=self._model
+            layout_manager=self._layout_manager, application_model=self._application_model
         )
         self._plot_types = list(self._renderer.plotting_strategies.keys())
         self._plot_properties_ui_factory = PlotPropertiesUIFactory(
@@ -169,12 +166,12 @@ class CompositionRoot:
         self.logger.info("Assembling tooling: ToolManager, SelectionTool, MockTools.")
 
         self._tool_manager = ToolService(
-            model=self._model, command_manager=self._command_manager
+            model=self._application_model, command_manager=self._command_manager
         )
 
         # Create SelectionTool
         self._selection_tool = SelectionTool(
-            model=self._model,
+            model=self._application_model,
             command_manager=self._command_manager,
             canvas_widget=None,  # Will be set after MainWindow is available
             # ConfigService might be needed here if tool defaults are loaded from config
@@ -195,7 +192,7 @@ class CompositionRoot:
                     "tool.direct_selection.name", ToolName.DIRECT_SELECTION.value
                 ),
                 IconPath.get_path("tool_icons.direct_select"),
-                self._model,
+                self._application_model,
                 self._command_manager,
                 None,
             )
@@ -206,7 +203,7 @@ class CompositionRoot:
                     "tool.eyedropper.name", ToolName.EYEDROPPER.value
                 ),
                 IconPath.get_path("tool_icons.eyedropper"),
-                self._model,
+                self._application_model,
                 self._command_manager,
                 None,
             )
@@ -215,7 +212,7 @@ class CompositionRoot:
             MockTool(
                 self._config_service.get("tool.plot.name", ToolName.PLOT.value),
                 IconPath.get_path("tool_icons.plot"),
-                self._model,
+                self._application_model,
                 self._command_manager,
                 None,
             )
@@ -224,7 +221,7 @@ class CompositionRoot:
             MockTool(
                 self._config_service.get("tool.text.name", ToolName.TEXT.value),
                 IconPath.get_path("tool_icons.text"),
-                self._model,
+                self._application_model,
                 self._command_manager,
                 None,
             )
@@ -233,7 +230,7 @@ class CompositionRoot:
             MockTool(
                 self._config_service.get("tool.zoom.name", ToolName.ZOOM.value),
                 IconPath.get_path("tool_icons.zoom"),
-                self._model,
+                self._application_model,
                 self._command_manager,
                 None,
             )
@@ -247,7 +244,7 @@ class CompositionRoot:
         """Assemble the main application window."""
         self.logger.info("Assembling main window.")
         self._view = MainWindow(
-            model=self._model,
+            model=self._application_model,
             project_controller=self._project_controller,
             layout_controller=self._layout_controller,
             node_controller=self._node_controller,
@@ -257,8 +254,7 @@ class CompositionRoot:
             main_menu_actions=self._main_menu_actions,
             tool_bar=self._tool_bar,
             tool_bar_actions=self._tool_bar_actions,
-            plot_properties_ui_factory=self._plot_properties_ui_factory,  # Renamed
-            config_service=self._config_service,
+            plot_properties_ui_factory=self._plot_properties_ui_factory,
             layout_ui_factory=self._layout_ui_factory,
         )
 
@@ -271,7 +267,7 @@ class CompositionRoot:
     def _assemble_canvas_controller(self):
         """Assemble the canvas controller."""
         self._canvas_controller = CanvasController(
-            model=self._model,
+            model=self._application_model,
             canvas_widget=self._view.canvas_widget,
             tool_manager=self._tool_manager,
             command_manager=self._command_manager,
@@ -293,9 +289,9 @@ class CompositionRoot:
         )
 
         # Model changes to redraw
-        self._model.modelChanged.connect(self._redraw_canvas_callback)
-        self._model.selectionChanged.connect(self._redraw_canvas_callback)
-        self._model.layoutConfigChanged.connect(self._redraw_canvas_callback)
+        self._application_model.modelChanged.connect(self._redraw_canvas_callback)
+        self._application_model.selectionChanged.connect(self._redraw_canvas_callback)
+        self._application_model.layoutConfigChanged.connect(self._redraw_canvas_callback)
 
         # Tool-specific signals
         self._selection_tool.plot_double_clicked.connect(self._view.show_side_panel)
@@ -305,8 +301,8 @@ class CompositionRoot:
         self.logger.debug("ApplicationAssembler._redraw_canvas_callback called")
         self._renderer.render(
             self._view.canvas_widget.figure,
-            self._model.scene_root,
-            self._model.selection,
+            self._application_model.scene_root,
+            self._application_model.selection,
         )
         self._view.canvas_widget.figure_canvas.draw()
 
@@ -324,7 +320,7 @@ class CompositionRoot:
 
         return ApplicationComponents(
             app=self._app,
-            model=self._model,
+            application_model=self._application_model,
             command_manager=self._command_manager,
             project_controller=self._project_controller,
             layout_controller=self._layout_controller,

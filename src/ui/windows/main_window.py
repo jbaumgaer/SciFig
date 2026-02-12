@@ -14,7 +14,6 @@ from src.controllers.project_controller import ProjectController
 from src.models.application_model import ApplicationModel
 from src.models.plots.plot_types import PlotType
 from src.services.commands import CommandManager
-from src.services.config_service import ConfigService
 from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
@@ -42,7 +41,6 @@ class MainWindow(QMainWindow):
         tool_bar: QToolBar,
         tool_bar_actions: ToolBarActions,
         plot_properties_ui_factory: PlotPropertiesUIFactory,
-        config_service: ConfigService,
         layout_ui_factory: LayoutUIFactory,
         # layout_manager: LayoutManager, # Removed, now accessed via layout_controller
     ):
@@ -57,7 +55,6 @@ class MainWindow(QMainWindow):
         self.command_manager = command_manager
         self.plot_types = plot_types
         self.plot_properties_ui_factory = plot_properties_ui_factory
-        self._config_service = config_service
         self._layout_ui_factory = layout_ui_factory
         self._layout_manager = (
             layout_controller._layout_manager
@@ -123,8 +120,7 @@ class MainWindow(QMainWindow):
             layout_controller=self.layout_controller,
             plot_properties_ui_factory=self.plot_properties_ui_factory,  # Will be PlotPropertiesUIFactory
             layout_ui_factory=self._layout_ui_factory,
-            project_controller=self.project_controller,  # New dependency
-            config_service=self._config_service,  # New dependency
+            project_controller=self.project_controller,
         )
         dock = QDockWidget(self)  # Renaming dock title to "Side Panel" would be more accurate but keep as "Properties" for now
         dock.setObjectName("SidePanel")  # Update object name

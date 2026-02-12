@@ -7,7 +7,6 @@ from PySide6.QtCore import QObject, Signal
 from src.models.layout.layout_config import FreeConfig, LayoutConfig
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.scene_node import SceneNode, node_factory
-from src.services.config_service import ConfigService
 
 
 class ApplicationModel(QObject):
@@ -20,11 +19,10 @@ class ApplicationModel(QObject):
     selectionChanged = Signal()
     layoutConfigChanged = Signal()  # Replaced autoLayoutChanged
 
-    def __init__(self, figure: matplotlib.figure.Figure, config_service: ConfigService):
+    def __init__(self, figure: matplotlib.figure.Figure):
         super().__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.figure = figure
-        self._config_service = config_service
         self.scene_root = GroupNode(name="root")
         self.selection: list[SceneNode] = []
 

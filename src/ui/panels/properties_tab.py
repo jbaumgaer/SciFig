@@ -1,26 +1,25 @@
 import logging
-from typing import List, Optional  # New Import
+from typing import List, Optional
 
 from PySide6.QtCore import QObject  # Qt for Alignment - Removed Qt as not directly used in this version
 from PySide6.QtWidgets import (
-    QComboBox,  # New Import
-    QFormLayout,  # New Import
-    QGroupBox,  # New Import
-    QHBoxLayout,  # New Import
+    QComboBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
     QLabel,
-    QLineEdit,  # New Import
-    QPushButton,  # New Import
+    QLineEdit,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
 from src.controllers.node_controller import NodeController
-from src.controllers.project_controller import ProjectController  # New Import
+from src.controllers.project_controller import ProjectController
 from src.models.application_model import ApplicationModel
-from src.models.nodes.plot_node import PlotNode  # New Import
-from src.services.config_service import ConfigService  # New Import
+from src.models.nodes.plot_node import PlotNode
 from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
-from src.models.plots.plot_types import PlotType # New Import
+from src.models.plots.plot_types import PlotType
 
 
 class PropertiesTab(QWidget):
@@ -30,7 +29,6 @@ class PropertiesTab(QWidget):
         node_controller: NodeController,
         plot_properties_ui_factory: PlotPropertiesUIFactory,
         project_controller: ProjectController,
-        config_service: ConfigService,
         parent: QWidget | None = None,
     ):
         super().__init__(parent)
@@ -38,7 +36,6 @@ class PropertiesTab(QWidget):
         self.node_controller = node_controller
         self.plot_properties_ui_factory = plot_properties_ui_factory
         self.project_controller = project_controller
-        self.config_service = config_service
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("PropertiesTab initialized.")
 

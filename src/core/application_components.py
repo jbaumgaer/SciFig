@@ -26,7 +26,7 @@ class ApplicationComponents:
     """
 
     app: QApplication
-    model: "ApplicationModel"
+    application_model: "ApplicationModel"
     command_manager: "CommandManager"
     project_controller: "ProjectController"
     layout_controller: "LayoutController"
