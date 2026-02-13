@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
 
@@ -17,6 +18,8 @@ from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
 from src.ui.windows.main_window import MainWindow
 
+if TYPE_CHECKING:
+    from src.core.composition_root import CompositionRoot
 
 @dataclass
 class ApplicationComponents:
@@ -25,6 +28,7 @@ class ApplicationComponents:
     This provides a clear, type-hinted return type for the ApplicationAssembler.
     """
 
+    composition_root: "CompositionRoot"
     app: QApplication
     application_model: "ApplicationModel"
     command_manager: "CommandManager"

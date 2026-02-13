@@ -8,110 +8,95 @@ The architecture must support a highly interactive, non-modal user experience wh
 
 ## 2. Core Technologies
 
--   **Python 3.10+**
+-   **Python 3.13+**
 -   **PySide6 (Qt 6)**: For the rich graphical user interface.
 -   **Matplotlib**: The primary plotting backend.
 -   **Pandas**: For efficient data handling and manipulation.
 -   **PyYAML**: For externalized configuration management.
 
-## 3. Architectural Design: Layered, Modular, and Extensible
+# 3. Core Architectural Patterns
 
-The application uses a robust architecture centered around a **scene graph**, specialized **controllers**, domain-specific **services**, a **tool-based event system**, and a **pluggable layout engine**. Key principles include **Dependency Injection**, **Strategy Pattern**, and **Factory Pattern** to ensure a clean, stable, predictable, and scalable system.
+This section defines the fundamental architectural patterns that form the foundation of the application. These principles govern how components are structured, how they interact, and how responsibilities are separated. Adherence to these patterns is critical for maintaining the codebase's stability, testability, and scalability.
 
-### 3.1. The Scene Graph: A Hierarchical Model (`src/models/application_model.py`)
+## 3.1. Overall Interaction Pattern: Model-View-Presenter (MVP)
 
-The application's core state is represented by an `ApplicationModel` which acts as the single source of truth. It manages the root of the **scene graph**, a hierarchical tree structure that defines the layering, grouping, and relationships of all objects on the canvas.
+The application employs the **Model-View-Presenter (MVP)** pattern, specifically the **"Passive View"** variant. This pattern enforces a strict separation of concerns between the application's data and business logic (Model), the user interface (View), and the application logic that handles user input (Presenter).
 
--   **`ApplicationModel`**: Located in `src/models/application_model.py`, it manages the root of the scene graph (`SceneNode`), the current selection state, and the application's global layout configuration (`LayoutConfig`). It emits signals (`modelChanged`, `selectionChanged`, `layoutConfigChanged`) to notify dependent components of state changes.
--   **`SceneNode`**: The abstract base class for all objects in the scene (e.g., plots, shapes), located in `src/models/nodes/scene_node.py`. Provides common properties like visibility, ID, and basic hit-testing.
--   **`PlotNode`**: A specialized node for a single subplot, located in `src/models/nodes/plot_node.py`, containing its associated data (as a Pandas DataFrame), plot-specific properties (e.g., `LinePlotProperties`, `ScatterPlotProperties`), and a reference to its Matplotlib `Axes` object.
--   **`GroupNode`**: A container for grouping other nodes, located in `src/models/nodes/group_node.py`, allowing them to be manipulated as a single unit.
+#### Component Responsibilities
 
-### 3.2. Configuration Management (`src/services/config_service.py`)
+*   **Model (`ApplicationModel`):** The single source of truth for all application data and state. It is a "headless" component, containing no UI-specific code. Its responsibilities are limited to managing its internal state, enforcing business rules, and notifying observers when its state changes via signals.
 
-All application-wide defaults, settings, and "magic strings" are externalized into `configs/default_config.yaml`.
+*   **View (`MainWindow`, UI Panels):** A passive component whose sole responsibilities are to display data it is explicitly given and to capture raw user input (e.g., clicks, key presses), which it forwards to the Presenter. The View has no direct knowledge of the Model.
 
--   **`ConfigService`**: Located in `src/services/config_service.py`, this singleton-like service is responsible for loading and providing access to configuration values using dot-separated keys (e.g., `figure.default_width`). It handles default values and gracefully manages missing keys. This decouples settings from code, enhancing flexibility and maintainability.
+*   **Presenter (Controllers):** The mediator between the Model and the View. It contains all application and presentation logic. It responds to user input from the View, manipulates the Model (typically via the Command Pattern), and formats data from the Model to pass to the View for display. In this codebase, the Presenter role is fulfilled by the various **Controllers** (e.g., `ProjectController`, `NodeController`).
 
-### 3.3. Logging (`src/services/logger_service.py`)
+#### Implementation via Interfaces
 
-A centralized logging system is integrated to provide clear insight into application behavior, aid debugging, and track user actions.
+The decoupling between M, V, and P is enforced through abstract interfaces (defined as plain classes to ensure compatibility with Qt's object model). Components do not depend on concrete classes, but on these contracts, which are injected at startup by the Composition Root.
 
--   **`LoggerService` (Renamed from `LoggerConfig`)**: Located in `src/services/logger_service.py`, it configures Python's `logging` module based on settings from `ConfigService` (e.g., log level, console/file output).
+## 3.2. State Management Pattern: The Scene Graph Model
 
-### 3.4. Dynamic Theming (`src/core/theme_manager.py`)
+The application's core data model is not an arbitrary structure; it is specifically a **Scene Graph**—a hierarchical tree of nodes. This is a foundational decision that dictates how all visual elements are managed.
 
-The application's visual theme can be dynamically selected and applied.
+*   **Hierarchy and Grouping:** The tree structure allows complex figures to be composed of simple parts (nodes), which can be grouped and transformed together.
+*   **Rendering Order:** The graph defines the z-order and layering of all visual elements.
+*   **Targeted Updates:** It allows for efficient updates and hit-testing (i.e., determining which object is under the cursor).
 
--   **`ThemeManager`**: Located in `src/core/theme_manager.py`, it is responsible for loading theme definitions (styles and `QPalette` color roles) from `ConfigService` and applying them to the `QApplication` instance at runtime.
+## 3.3. History and Action Pattern: The Command Pattern
 
-### 3.5. Layout Management: Controllers, Services, and Pluggable Engines
+All actions that modify the state of the `ApplicationModel` must be encapsulated in **Command** objects. This is a strict requirement.
 
-This core feature provides flexible control over plot arrangement using a **Strategy Pattern** for layout logic and **Factory/Builder Patterns** for UI adaptation. It is now split between a UI-facing Controller and a domain-specific Manager and Model components.
+*   **Encapsulation:** Each command object contains all information required to perform an action and, crucially, to undo it.
+*   **Undo/Redo:** A central `CommandManager` service executes these commands and maintains undo and redo stacks. This provides a robust, application-wide history mechanism.
+*   **Decoupling:** This pattern decouples the UI components that initiate actions (e.g., menu items, buttons) from the objects that perform the work.
 
--   **`LayoutController` (`src/controllers/layout_controller.py`)**:
-    *   **Role:** Acts as the primary intermediary between the UI and the layout management logic. It handles user interactions related to layout (e.g., button clicks for "Align Left", slider changes for "Grid Gutter", menu selections for "Set Layout Mode").
-    *   **Responsibilities:** Translates UI events into calls to the `LayoutManager` and constructs/executes `BatchChangePlotGeometryCommand`s via the `CommandManager` to ensure undoability.
--   **`LayoutManager` (`src/services/layout_manager.py`)**:
-    *   **Role:** The core domain service for managing the application's layout state and delegating layout calculations. It encapsulates business rules and state related to layout, independent of direct UI interaction.
-    *   **Responsibilities:** Manages the `ApplicationModel`'s `current_layout_config`, orchestrates `LayoutEngine`s, and emits signals when layout state changes.
--   **`LayoutConfig` (Abstract Base Class, `src/models/layout/layout_config.py`):** Represents the state/parameters specific to a layout mode.
-    -   **`FreeConfig`**: Minimal state, signifying free-form.
-    -   **`GridConfig`**: Stores grid parameters (`rows`, `cols`, `row_ratios`, `col_ratios`, `margins`, `gutters`).
--   **`LayoutEngine` (Abstract Base Class, `src/models/layout/layout_engines.py`):** Defines the contract for layout calculation.
-    -   `calculate_geometries(plots: List[PlotNode], config: LayoutConfig) -> Dict[PlotNode, Tuple[float, float, float, float]]`: Takes a list of plots and an engine-specific `LayoutConfig` to return calculated geometries.
--   **`FreeLayoutEngine` (Concrete Strategy, `src/models/layout/layout_engines.py`):** Implements free-form specific operations like "Align" and "Distribute".
--   **`GridLayoutEngine` (Concrete Strategy, `src/models/layout/layout_engines.py`):** Implements grid-based tiling, calculating `(x, y, w, h)` based on `GridConfig`.
--   **`LayoutUIFactory` (`src/ui/factories/layout_ui_factory.py`):**
-    *   Registers builder functions for each layout mode.
-    *   Dynamically creates and updates UI elements (QActions, menus, dialogs) in `MainWindow` or `PropertiesPanel` based on the active `LayoutMode` reported by `LayoutManager`.
+## 3.4. Assembly and Dependency Pattern: The Composition Root
 
-### 3.6. Tool-Based Event Handling (`src/services/tool_management/tool_service.py`)
+The entire application is constructed and wired together in a single, dedicated location: the **`CompositionRoot`**.
 
-A `ToolService` now manages the currently active interactive tool (e.g., `SelectionTool`, `ZoomTool`) and delegates all canvas events (mouse presses, moves, key presses) to it. This design makes it easy to add new interactive tools in the future, each encapsulating its own interaction logic.
+*   **Centralized Construction:** The `CompositionRoot` is the only place in the application that has knowledge of concrete component classes. It is responsible for instantiating all Models, Views, Presenters, and Services.
+*   **Dependency Injection (DI):** By centralizing construction, the `CompositionRoot` enables DI throughout the application. It injects dependencies (typically as abstract interfaces) into each component's constructor, meaning no component is responsible for finding or creating its own dependencies. This is critical for achieving loose coupling and high testability.
 
--   **`ToolService` (Renamed from `ToolManager`)**: Located in `src/services/tool_management/tool_service.py`, it manages the collection of available tools and the currently active tool. It dispatches canvas events (received from `CanvasController`) to the active tool's specific event handlers.
--   **`BaseTool` (`src/services/tool_management/tools/base_tool.py`)**: Abstract base class for all interactive tools, defining the common interface for event handling (e.g., `mouse_press_event`, `mouse_move_event`).
--   **`SelectionTool` (`src/services/tool_management/tools/selection_tool.py`)**: A concrete tool implementation for selecting nodes on the canvas.
+# 4. Key Components and Services
 
-### 3.7. The Properties and Layout Panel (`src/ui/panels/properties_panel.py`)
+This section describes the major *concrete* components that operate within the architecture defined in Section 3. While Section 3 describes the abstract patterns, this section introduces the key players and their specific jobs.
 
-A non-modal `PropertiesPanel` is a permanent part of the main window. It dynamically displays UI elements for both individual node properties and global layout settings, orchestrated by dedicated controllers.
+### 4.1. Domain Logic and Scene Composition
 
--   **`PropertiesPanel` (Renamed from `PropertiesView`)**: Located in `src/ui/panels/properties_panel.py`, this UI container dynamically displays controls based on the application's context (e.g., selected node, active layout mode). It orchestrates UI elements provided by the `NodeController` and `LayoutController`.
--   **`NodeController` (`src/controllers/node_controller.py`)**:
-    *   **Role:** Manages the intrinsic attributes (properties) and specific behaviors of *selected `SceneNode`s*.
-    *   **Responsibilities:** Listens for `ApplicationModel.selectionChanged`, populates the `PropertiesPanel` with UI appropriate for the selected node(s) (using `PropertiesUIFactory`), and executes `ChangePropertyCommand`s.
--   **`PropertiesUIFactory` (`src/ui/factories/properties_ui_factory.py`):**
-    *   Registers builder functions for each `SceneNode` type.
-    *   Dynamically creates and updates the specific UI widgets for editing properties of different node types (e.g., `LinePlotProperties` vs. `ScatterPlotProperties`).
+This section details the key components that make up the application's core domain: the scene and its contents.
 
-### 3.8. The Command & History System: Enabling Undo/Redo (`src/services/commands/command_manager.py`)
+*   **4.1.1. Node Structure (`src/models/nodes/`)**: The building blocks of the scene graph. All objects on the canvas (plots, shapes, text) inherit from a common `SceneNode` base class. Key concrete implementations include `PlotNode`, `GroupNode`, `RectangleNode`, and `TextNode`. This provides a unified, hierarchical way to manage all visual elements.
 
-All actions that modify the application state are encapsulated in `Command` objects. A `CommandManager` executes these commands and maintains an undo/redo stack, providing robust, application-wide history and state management.
+*   **4.1.2. Layout Logic (`src/models/layout/`, `src/services/layout_manager.py`)**: The system for arranging nodes on the canvas. It is a concrete example of the Strategy Pattern.
+    *   **`LayoutManager`**: A domain service that orchestrates layout calculations.
+    *   **`LayoutEngine`s**: Swappable strategies (`GridLayoutEngine`, `FreeLayoutEngine`) that contain the specific mathematical logic for each layout mode.
 
--   **`CommandManager`**: Located in `src/services/commands/command_manager.py`, it executes `BaseCommand` objects and maintains an undo/redo stack.
--   **`BaseCommand`**: Abstract base class for all commands.
+*   **4.1.3. Plotting System (`src/ui/renderers/plotting_strategies.py`, `src/models/plots/`)**: The system for drawing data within a `PlotNode`. This is another application of the Strategy Pattern.
+    *   **`PlottingStrategy`**: An interface for different plot types (e.g., line plot, scatter plot).
+    *   **`PlotProperties`**: Data objects that hold the specific properties for each plot type (e.g., line color, marker style). The main `Renderer` uses the appropriate strategy to draw the plot based on its properties.
 
-### 3.9. Project Management (`src/controllers/project_controller.py`)
+### 4.2. Core Application Services (`src/services/`)
 
-A dedicated controller handles all aspects of project file management.
+This group includes services that provide fundamental, application-wide capabilities.
 
--   **`ProjectController`**: Located in `src/controllers/project_controller.py`, it is responsible for managing all project-related operations, including saving (`.sci`), opening, and maintaining a list of recent files using `QSettings`.
+*   **`ToolService`**: Manages the collection of interactive canvas tools (e.g., `SelectionTool`) and is responsible for dispatching UI events to the currently active tool.
+*   **`CommandManager`**: The concrete implementation of the Command Pattern. It executes all state-changing actions and manages the undo/redo stacks.
 
-### 3.10. Application Assembly: The Composition Root (`src/core/composition_root.py`)
+### 4.3. Configuration-Driven Design
 
-To maintain a clean separation of concerns and enhance testability, the entire application's component graph is constructed and wired together using the **Builder pattern**.
+A core principle of the application is its emphasis on externalized configuration. Hard-coded values, paths, and default settings are avoided wherever possible.
 
--   **`CompositionRoot` (Renamed from `ApplicationAssembler`)**: Located in `src/core/composition_root.py`, this dedicated class is responsible for the entire construction and assembly process of all core application components (Models, Controllers, Services, UI Builders). It instantiates all services, builds the main window and its sub-components (using builders), and wires up all signals and slots.
--   **Decoupled Components**: This approach decouples individual components from their complex instantiation and dependency management, making them simpler, more focused, and easier to test in isolation.
--   **Consistent UI Construction with Builders (`src/ui/builders/`)**: Complex UI elements like `MainWindow`, `PropertiesPanel`, `CanvasWidget`, `QMenuBar`, and `QToolBar` are now constructed by dedicated builder classes (e.g., `main_window_builder.py`, `properties_panel_builder.py`). This ensures a consistent approach to UI construction across the application.
+*   **`ConfigService` (`src/services/config_service.py`):** This is the concrete implementation of this principle. It is an application-wide service responsible for loading all settings from `.yaml` files and providing them to other components. This makes the application flexible and easier to modify without changing code.
 
-## 4. Cross-Cutting Concerns
+### 4.4. UI Construction: Builders and Factories (`src/ui/builders/`, `src/ui/factories/`)
 
--   **Dependency Injection**: Used extensively throughout the architecture. Components receive their dependencies (e.g., `ConfigService`, `ApplicationModel`) through their constructors, promoting loose coupling and testability.
--   **Signals & Slots (PySide6)**: Used for asynchronous communication between components, especially between Models, Views, and Controllers, ensuring responsiveness and decoupling.
--   **Separation of Concerns**: Each class and module has a clearly defined responsibility, minimizing inter-dependencies and enhancing maintainability.
--   **Constants & Types (`src/shared/`)**: Centralized definitions for shared constants and custom types.
--   **Utilities (`src/shared/`)**: General-purpose utility functions.
--   **Static Assets (`assets/`)**: Dedicated location at project root for icons, images, etc.
+This group of components separates the complex task of UI creation from application logic.
+
+*   **UI Builders (`MenuBarBuilder`, `ToolBarBuilder`):** Pure factories responsible for the one-time, static construction of complex UI widgets.
+*   **UI Factories (`LayoutUIFactory`, `PlotPropertiesUIFactory`):** Dynamic factories that build and populate UI panels at runtime based on the application's state.
+
+### 4.5. Rendering Pipeline (`src/ui/renderers/`)
+
+This defines the component responsible for the final visual output.
+
+*   **`Renderer`**: The class responsible for traversing the scene graph (from the `ApplicationModel`) and using the appropriate `PlottingStrategy` to render the model state to the Matplotlib canvas. It is the final bridge between application state and visual representation.

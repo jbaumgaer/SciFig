@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import uuid
 from pathlib import Path
-from typing import Generator, Type
+from typing import Generator, Optional, Type
 
 from PySide6.QtCore import QObject
 
@@ -15,10 +15,10 @@ class SceneNode(QObject):
     """
 
     def __init__(
-        self, parent: SceneNode | None = None, name: str = "", id: str | None = None
+        self, parent: Optional[SceneNode] = None, name: str = "", id: Optional[str] = None
     ):
         super().__init__()
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__) #TODO: Somehow this doesn't format correctly.
         self.id = id or uuid.uuid4().hex
         self._parent = parent
         self._children: list[SceneNode] = []
@@ -31,11 +31,11 @@ class SceneNode(QObject):
             parent.add_child(self)
 
     @property
-    def parent(self) -> SceneNode | None:
+    def parent(self) -> Optional[SceneNode]:
         return self._parent
 
     @parent.setter
-    def parent(self, new_parent: SceneNode | None):
+    def parent(self, new_parent: Optional[SceneNode]):
         """Sets a new parent for this node."""
         self.logger.debug(
             f"Setting parent for {self.name} (ID: {self.id}) from {self._parent.name if self._parent else 'None'} to {new_parent.name if new_parent else 'None'}."
@@ -89,7 +89,7 @@ class SceneNode(QObject):
         return None
 
     def all_descendants(
-        self, of_type: Type[SceneNode] | None = None
+        self, of_type: Optional[Type[SceneNode]] = None
     ) -> Generator[SceneNode, None, None]:
         """
         A generator that yields all nodes in the subtree, including this node.
@@ -106,7 +106,7 @@ class SceneNode(QObject):
         for child in self.children:
             yield from child.all_descendants(of_type)  # Pass of_type recursively
 
-    def find_node_by_id(self, node_id: str) -> SceneNode | None:
+    def find_node_by_id(self, node_id: str) -> Optional[SceneNode]:
         """
         Recursively finds a node within this node's subtree by its ID.
         """
@@ -134,7 +134,7 @@ class SceneNode(QObject):
         return node_dict
 
     @classmethod
-    def from_dict(cls, data: dict, parent: SceneNode | None = None) -> SceneNode:
+    def from_dict(cls, data: dict, parent: Optional[SceneNode] = None) -> SceneNode:
         """Creates a node from a dictionary."""
         node = cls(parent=parent, name=data["name"], id=data["id"])
         node.visible = data["visible"]
@@ -147,7 +147,7 @@ class SceneNode(QObject):
 
 
 def node_factory(
-    data: dict, parent: SceneNode | None = None, temp_dir: "Path | None" = None
+    data: dict, parent: Optional[SceneNode] = None, temp_dir: Optional[Path] = None
 ) -> SceneNode:
     """Factory function to create nodes from a dictionary."""
     from . import GroupNode, PlotNode

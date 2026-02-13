@@ -42,6 +42,7 @@ class ConfigService:
             self._initialized = False  # Not fully initialized
 
     def get(self, key_path: str, default=None):
+        #TODO: Somehow this method is constantly being called together with LayoutTab Updating content for UI layout mode: grid and LayoutUIFactory - DEBUG - Building layout controls for UI selected mode: grid
         self.logger.debug(
             f"Getting config key: '{key_path}' with default: '{default}'."
         )

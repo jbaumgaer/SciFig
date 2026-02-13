@@ -2,18 +2,18 @@ import logging
 from typing import List, Optional
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QLineEdit
 from src.models.application_model import ApplicationModel
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
 from src.models.layout.layout_engine import LayoutEngine
 from src.models.nodes.plot_node import PlotNode
+from src.models.plots.plot_properties import BasePlotProperties
+from src.models.plots.plot_types import PlotType
 from src.services.config_service import ConfigService
 from src.shared.constants import LayoutMode
-from src.shared.types import PlotID, Rect # Corrected Rect import
-
-from src.models.layout.layout_protocols import FreeFormLayoutCapabilities # Added import
+from src.shared.types import PlotID, Rect
+from src.models.layout.layout_protocols import FreeFormLayoutCapabilities
 
 
 class LayoutManager(QObject):
@@ -29,6 +29,42 @@ class LayoutManager(QObject):
     _ui_selected_layout_mode: LayoutMode = LayoutMode.FREE_FORM
     uiLayoutModeChanged = Signal(LayoutMode)
     gridConfigParametersChanged = Signal() # New signal to notify UI of grid config parameter changes
+
+    def __init__(
+        self,
+        application_model: ApplicationModel,
+        free_engine: FreeLayoutEngine,
+        grid_engine: GridLayoutEngine,
+        config_service: ConfigService,
+        parent: Optional[QObject] = None,
+    ):
+        super().__init__(parent)
+        self._application_model = application_model
+        self._free_engine = free_engine
+        self._grid_engine = grid_engine
+        self._config_service = config_service
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info("LayoutManager initialized.")
+
+        # Store last used configs for each mode to prevent loss of settings when switching
+        self._last_grid_config: Optional[GridConfig] = None  # Changed to None
+        self._last_free_form_config: Optional[FreeConfig] = None  # Changed to None
+
+        # Initialize the UI selected mode and the application model's current_layout_config based on config service
+        default_mode_str = self._config_service.get(
+            "ui.default_layout_mode", LayoutMode.FREE_FORM.value
+        )
+        default_mode = LayoutMode(default_mode_str)
+        self._ui_selected_layout_mode = default_mode  # Initialize new attribute
+        self.logger.debug(
+            f"Default UI selected layout mode from config: {default_mode.value}"
+        )
+
+        self.set_layout_mode(default_mode)
+
+        self.logger.info(
+            f"Initial active layout mode set to: {self._application_model.current_layout_config.mode.value}"
+        )
 
     @property
     def layout_mode(self) -> LayoutMode:
@@ -47,6 +83,14 @@ class LayoutManager(QObject):
             self.logger.info(f"UI selected layout mode changed to: {mode.value}")
             self._ui_selected_layout_mode = mode
             self.uiLayoutModeChanged.emit(mode)
+    
+    def on_model_reset(self) -> None:
+        """
+        Public slot to be connected to a signal indicating a major model reset
+        (e.g., loading a new project or template).
+        """
+        self.logger.info("Model has been reset, clearing layout caches.")
+        self.reset_cached_configs()
 
     def get_last_grid_config(self) -> GridConfig | None:
         """
@@ -62,147 +106,36 @@ class LayoutManager(QObject):
         """
         self.logger.info("LayoutManager: Resetting cached layout configurations.")
         self._last_grid_config = None
+        self._last_free_form_config = None
         # self._last_free_form_config = FreeConfig() # No need to reset, FreeConfig is stateless for now
 
-    def __init__(
-        self,
-        application_model: ApplicationModel,
-        free_engine: FreeLayoutEngine,
-        grid_engine: GridLayoutEngine,
-        config_service: ConfigService,
-        parent: QObject | None = None,
-    ):
-        super().__init__(parent)
-        self._application_model = application_model
-        self._free_engine = free_engine
-        self._grid_engine = grid_engine
-        self._config_service = config_service
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info("LayoutManager initialized.")
-
-        # Store last used configs for each mode to prevent loss of settings when switching
-        self._last_grid_config: GridConfig | None = None  # Changed to None
-        self._last_free_form_config: FreeConfig = FreeConfig()
-
-        # Initialize the UI selected mode and the application model's current_layout_config based on config service
-        default_mode_str = self._config_service.get(
-            "ui.default_layout_mode", LayoutMode.FREE_FORM.value
-        )
-        default_mode = LayoutMode(default_mode_str)
-        self._ui_selected_layout_mode = default_mode  # Initialize new attribute
-        self.logger.debug(
-            f"Default UI selected layout mode from config: {default_mode.value}"
-        )
-
-        self.set_layout_mode(default_mode)
-
-        self.logger.info(
-            f"Initial active layout mode set to: {self._application_model.current_layout_config.mode.value}"
-        )
-
-    def _parse_float_list_from_config(
-        self, key: str, default: List[float]
-    ) -> List[float]:
-        """Helper to parse a config value that might be a list of floats, a single float, or a string representation."""
-        value = self._config_service.get(key, default)
-        self.logger.debug(
-            f"[_parse_float_list_from_config] Key: {key}, Raw Value: {value}, Type: {type(value)}"
-        )
-
-        if isinstance(value, str):
-            try:
-                # Attempt to parse a string like "[0.1, 0.2]" or "0.1, 0.2"
-                if value.startswith("[") and value.endswith("]"):
-                    value = value[1:-1]  # Remove brackets
-
-                parsed_list = [float(x.strip()) for x in value.split(",") if x.strip()]
-                self.logger.debug(
-                    f"[_parse_float_list_from_config] Parsed string to list: {parsed_list}"
-                )
-                return parsed_list
-            except ValueError:
-                self.logger.warning(
-                    f"Could not parse '{value}' for config key '{key}' as a list of floats. Using default: {default}"
-                )
-                return default
-        elif isinstance(value, (int, float)):  # Handle single numeric value
-            self.logger.debug(
-                f"[_parse_float_list_from_config] Wrapped single numeric value in list: {[float(value)]}"
-            )
-            return [float(value)]
-        elif isinstance(value, list):
-            # Ensure all elements in the list are floats
-            try:
-                float_list = [float(x) for x in value]
-                self.logger.debug(
-                    f"[_parse_float_list_from_config] Converted list elements to floats: {float_list}"
-                )
-                return float_list
-            except ValueError:
-                self.logger.warning(
-                    f"List for config key '{key}' contains non-float elements. Using default: {default}"
-                )
-                return default
-        else:  # Fallback for unexpected types
-            self.logger.warning(
-                f"Unexpected type '{type(value).__name__}' for config key '{key}'. Using default: {default}"
-            )
-            return default
-
-    def _infer_grid_dimensions(self, num_plots: int) -> tuple[int, int]:
+    def apply_layout_template(self, template_root) -> None:
         """
-        Infers sensible grid rows and columns based on the number of plots.
-        Aims for a square-ish layout.
+        Applies a new layout template, preserving and redistributing
+        existing plot data from the current model.
         """
-        if num_plots <= 0:
-            return 1, 1
+        self.logger.info(f"Applying new layout template: {template_root.name}")
+        plot_states = self._application_model.extract_plot_states()
+        self._redistribute_plot_states(template_root, plot_states)
+        self._application_model.set_scene_root(template_root)
 
-        # Try to find two factors that are close to each other
-        # Start from sqrt and work down
-        sqrt_n = int(num_plots**0.5)
-        for i in range(sqrt_n, 0, -1):
-            if num_plots % i == 0:
-                return i, num_plots // i  # rows, cols
+    def _redistribute_plot_states(self, new_root, plot_states: list[dict]):
+        """Populates the new layout's plot nodes with the extracted plot states."""
+        old_plot_index = 0
+        for new_slot_node in new_root.all_descendants():
+            if isinstance(new_slot_node, PlotNode):
+                if old_plot_index >= len(plot_states):
+                    continue
+                old_state = plot_states[old_plot_index]
+                new_slot_node.data = old_state["data"]
+                if new_slot_node.plot_properties:
+                    new_slot_node.plot_properties.update_from_dict(old_state["plot_properties_dict"])
+                else:
+                    old_type = old_state["plot_properties_dict"].get("plot_type", "line") #TODO: Don't hardcode default type, need a more robust way to handle missing plot type
+                    new_slot_node.plot_properties = BasePlotProperties.create_properties_from_plot_type(PlotType(old_type))
+                    new_slot_node.plot_properties.update_from_dict(old_state["plot_properties_dict"])
 
-        # If num_plots is prime or cannot be easily factored, default to num_plots x 1
-        return num_plots, 1
-
-    def _create_minimal_grid_config(self) -> GridConfig:
-        """
-        Helper to create a minimal GridConfig instance.
-        This serves as the initial/fallback grid configuration when no specific
-        grid layout has been loaded or inferred.
-        Values are sourced from ConfigService or reasonable hardcoded defaults.
-        """
-        rows = self._config_service.get(
-            "layout.default_grid_rows", 1
-        )  # Default to 1x1 if config missing
-        cols = self._config_service.get(
-            "layout.default_grid_cols", 1
-        )  # Default to 1x1 if config missing
-
-        margin_top = self._config_service.get("layout.grid_margin_top", 0.05)
-        margin_bottom = self._config_service.get("layout.grid_margin_bottom", 0.05)
-        margin_left = self._config_service.get("layout.grid_margin_left", 0.05)
-        margin_right = self._config_service.get("layout.grid_margin_right", 0.05)
-
-        hspace = self._parse_float_list_from_config("layout.grid_hspace", [])
-        wspace = self._parse_float_list_from_config("layout.grid_wspace", [])
-
-        # Construct Margins and Gutters, which no longer have internal defaults
-        minimal_margins = Margins(
-            top=margin_top, bottom=margin_bottom, left=margin_left, right=margin_right
-        )
-        minimal_gutters = Gutters(hspace=hspace, wspace=wspace)
-
-        return GridConfig(
-            rows=rows,
-            cols=cols,
-            row_ratios=[1.0] * rows,  # Default to equal distribution for minimal config
-            col_ratios=[1.0] * cols,  # Default to equal distribution for minimal config
-            margins=minimal_margins,
-            gutters=minimal_gutters,
-        )
+                old_plot_index += 1
 
     def infer_grid_config_from_plots(
         self, plots: list[PlotNode], base_grid_config: GridConfig | None
@@ -705,3 +638,107 @@ class LayoutManager(QObject):
             plots, self._application_model.current_layout_config
         )
         return geometries_dict
+
+    def _parse_float_list_from_config(
+        self, key: str, default: List[float]
+    ) -> List[float]:
+        """Helper to parse a config value that might be a list of floats, a single float, or a string representation."""
+        value = self._config_service.get(key, default)
+        self.logger.debug(
+            f"[_parse_float_list_from_config] Key: {key}, Raw Value: {value}, Type: {type(value)}"
+        )
+
+        if isinstance(value, str):
+            try:
+                # Attempt to parse a string like "[0.1, 0.2]" or "0.1, 0.2"
+                if value.startswith("[") and value.endswith("]"):
+                    value = value[1:-1]  # Remove brackets
+
+                parsed_list = [float(x.strip()) for x in value.split(",") if x.strip()]
+                self.logger.debug(
+                    f"[_parse_float_list_from_config] Parsed string to list: {parsed_list}"
+                )
+                return parsed_list
+            except ValueError:
+                self.logger.warning(
+                    f"Could not parse '{value}' for config key '{key}' as a list of floats. Using default: {default}"
+                )
+                return default
+        elif isinstance(value, (int, float)):  # Handle single numeric value
+            self.logger.debug(
+                f"[_parse_float_list_from_config] Wrapped single numeric value in list: {[float(value)]}"
+            )
+            return [float(value)]
+        elif isinstance(value, list):
+            # Ensure all elements in the list are floats
+            try:
+                float_list = [float(x) for x in value]
+                self.logger.debug(
+                    f"[_parse_float_list_from_config] Converted list elements to floats: {float_list}"
+                )
+                return float_list
+            except ValueError:
+                self.logger.warning(
+                    f"List for config key '{key}' contains non-float elements. Using default: {default}"
+                )
+                return default
+        else:  # Fallback for unexpected types
+            self.logger.warning(
+                f"Unexpected type '{type(value).__name__}' for config key '{key}'. Using default: {default}"
+            )
+            return default
+
+    def _infer_grid_dimensions(self, num_plots: int) -> tuple[int, int]:
+        """
+        Infers sensible grid rows and columns based on the number of plots.
+        Aims for a square-ish layout.
+        """
+        if num_plots <= 0:
+            return 1, 1
+
+        # Try to find two factors that are close to each other
+        # Start from sqrt and work down
+        sqrt_n = int(num_plots**0.5)
+        for i in range(sqrt_n, 0, -1):
+            if num_plots % i == 0:
+                return i, num_plots // i  # rows, cols
+
+        # If num_plots is prime or cannot be easily factored, default to num_plots x 1
+        return num_plots, 1
+
+    def _create_minimal_grid_config(self) -> GridConfig:
+        """
+        Helper to create a minimal GridConfig instance.
+        This serves as the initial/fallback grid configuration when no specific
+        grid layout has been loaded or inferred.
+        Values are sourced from ConfigService or reasonable hardcoded defaults.
+        """
+        rows = self._config_service.get(
+            "layout.default_grid_rows", 1
+        )  # Default to 1x1 if config missing
+        cols = self._config_service.get(
+            "layout.default_grid_cols", 1
+        )  # Default to 1x1 if config missing
+
+        margin_top = self._config_service.get("layout.grid_margin_top", 0.05)
+        margin_bottom = self._config_service.get("layout.grid_margin_bottom", 0.05)
+        margin_left = self._config_service.get("layout.grid_margin_left", 0.05)
+        margin_right = self._config_service.get("layout.grid_margin_right", 0.05)
+
+        hspace = self._parse_float_list_from_config("layout.grid_hspace", [])
+        wspace = self._parse_float_list_from_config("layout.grid_wspace", [])
+
+        # Construct Margins and Gutters, which no longer have internal defaults
+        minimal_margins = Margins(
+            top=margin_top, bottom=margin_bottom, left=margin_left, right=margin_right
+        )
+        minimal_gutters = Gutters(hspace=hspace, wspace=wspace)
+
+        return GridConfig(
+            rows=rows,
+            cols=cols,
+            row_ratios=[1.0] * rows,  # Default to equal distribution for minimal config
+            col_ratios=[1.0] * cols,  # Default to equal distribution for minimal config
+            margins=minimal_margins,
+            gutters=minimal_gutters,
+        )

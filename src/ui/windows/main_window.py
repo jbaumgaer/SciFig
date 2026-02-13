@@ -1,7 +1,11 @@
+from pathlib import Path
+from typing import Optional
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QDockWidget,
+    QFileDialog,
     QMainWindow,
     QMenu,
     QMenuBar,
@@ -11,6 +15,7 @@ from PySide6.QtWidgets import (
 from src.controllers.layout_controller import LayoutController
 from src.controllers.node_controller import NodeController
 from src.controllers.project_controller import ProjectController
+from src.interfaces.project_io import ProjectActions, ProjectIOView
 from src.models.application_model import ApplicationModel
 from src.models.plots.plot_types import PlotType
 from src.services.commands import CommandManager
@@ -22,19 +27,21 @@ from src.ui.panels.side_panel import SidePanel
 from src.ui.widgets.canvas_widget import CanvasWidget
 
 
-class MainWindow(QMainWindow):
+class MainWindow(QMainWindow, ProjectIOView):
     """
     The main application window (View). It acts as the primary container for
-    the application's UI components, including the canvas and properties panel.
+    the application's UI components and implements the ProjectIOView protocol
+    to provide UI services for file operations.
     """
 
     def __init__(
         self,
         model: ApplicationModel,
-        project_controller: ProjectController,
+        project_actions: ProjectActions,
+        project_controller: ProjectController, # TODO: Remove this once SidePanel is refactored
         layout_controller: LayoutController,
         node_controller: NodeController,
-        command_manager: CommandManager,  # Still needed for undo/redo actions, but not directly passed to PropertiesPanel
+        command_manager: CommandManager,
         plot_types: list[PlotType],
         menu_bar: QMenuBar,
         main_menu_actions: MainMenuActions,
@@ -42,13 +49,16 @@ class MainWindow(QMainWindow):
         tool_bar_actions: ToolBarActions,
         plot_properties_ui_factory: PlotPropertiesUIFactory,
         layout_ui_factory: LayoutUIFactory,
-        # layout_manager: LayoutManager, # Removed, now accessed via layout_controller
     ):
         super().__init__()
         self.setWindowTitle("SciFig - Data Analysis GUI")
-        self.setGeometry(50, 50, 800, 600)  # TODO: Put into config
+        self.setGeometry(50, 50, 800, 600)
 
+        # --- Store Dependencies ---
         self.model = model
+        self.project_actions = project_actions
+        # The concrete project_controller is temporarily kept for legacy
+        # dependencies like SidePanel. It will be removed in a future refactoring.
         self.project_controller = project_controller
         self.layout_controller = layout_controller
         self.node_controller = node_controller
@@ -56,29 +66,25 @@ class MainWindow(QMainWindow):
         self.plot_types = plot_types
         self.plot_properties_ui_factory = plot_properties_ui_factory
         self._layout_ui_factory = layout_ui_factory
-        self._layout_manager = (
-            layout_controller._layout_manager
-        )  # Access via layout_controller
+        self._layout_manager = layout_controller._layout_manager
 
-        # Now create the UI components
+        # --- Create UI Components ---
         self.canvas_widget = self._create_canvas()
         self.setCentralWidget(self.canvas_widget)
 
         self.side_panel_view, self.side_panel_dock = self._create_side_panel()
 
-        # Store pre-built menu bar and actions
         self.menu_bar = menu_bar
         self.main_menu_actions = main_menu_actions
         self.setMenuBar(self.menu_bar)
 
-        # Store pre-built toolbar and actions
         self.tool_bar = tool_bar
         self.tool_bar_actions = tool_bar_actions
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.tool_bar)
 
-        # Assign menu components as direct attributes for easier access
+        # --- Assign menu components for easier access ---
         self.file_menu: QMenu = self.main_menu_actions.file_menu
-        self.new_layout_action: QAction = self.main_menu_actions.new_layout_action
+        # self.new_layout_action: QAction = self.main_menu_actions.new_layout_action
         self.new_file_action: QAction = self.main_menu_actions.new_file_action
         self.new_file_from_template_action: QAction = (
             self.main_menu_actions.new_file_from_template_action
@@ -109,6 +115,40 @@ class MainWindow(QMainWindow):
         self.colors_action: QAction = self.main_menu_actions.colors_action
         self.settings_action: QAction = self.main_menu_actions.settings_action
 
+    # --- Protocol Implementation: ProjectIOView ---
+
+    def ask_for_open_path(self) -> Optional[Path]:
+        """Opens the system 'Open File' dialog and returns the selected path."""
+        file_path_str, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Project",
+            "",
+            "SciFig Project (*.sci)",
+        )
+        return Path(file_path_str) if file_path_str else None
+
+    def ask_for_save_path(self) -> Optional[Path]:
+        """Opens the system 'Save As' dialog and returns the selected path."""
+        file_path_str, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Project As",
+            "",
+            "SciFig Project (*.sci)",
+        )
+        return Path(file_path_str) if file_path_str else None
+
+    def ask_for_template_path(self, template_dir: Path) -> Optional[Path]:
+        """Opens a file dialog to select a layout template."""
+        file_path_str, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Layout Template",
+            str(template_dir),
+            "JSON Layouts (*.json);;All Files (*)",
+        )
+        return Path(file_path_str) if file_path_str else None
+
+    # --- Private UI Creation Methods ---
+
     def _create_canvas(self) -> CanvasWidget:
         canvas = CanvasWidget(figure=self.model.figure, parent=self)
         return canvas
@@ -118,12 +158,12 @@ class MainWindow(QMainWindow):
             model=self.model,
             node_controller=self.node_controller,
             layout_controller=self.layout_controller,
-            plot_properties_ui_factory=self.plot_properties_ui_factory,  # Will be PlotPropertiesUIFactory
+            plot_properties_ui_factory=self.plot_properties_ui_factory,
             layout_ui_factory=self._layout_ui_factory,
-            project_controller=self.project_controller,
+            project_controller=self.project_controller, # Still uses the old concrete controller
         )
-        dock = QDockWidget(self)  # Renaming dock title to "Side Panel" would be more accurate but keep as "Properties" for now
-        dock.setObjectName("SidePanel")  # Update object name
+        dock = QDockWidget(self)
+        dock.setObjectName("SidePanel")
         dock.setWidget(side_panel)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         return side_panel, dock

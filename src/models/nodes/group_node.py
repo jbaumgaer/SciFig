@@ -1,3 +1,4 @@
+from typing import Optional
 from src.models.nodes.scene_node import SceneNode
 
 
@@ -9,9 +10,9 @@ class GroupNode(SceneNode):
 
     def __init__(
         self,
-        parent: SceneNode | None = None,
+        parent: Optional[SceneNode] = None,
         name: str = "Group",
-        id: str | None = None,
+        id: Optional[str] = None,
     ):
         super().__init__(parent, name, id)
 
@@ -23,7 +24,7 @@ class GroupNode(SceneNode):
         return super().to_dict()
 
     @classmethod
-    def from_dict(cls, data: dict, parent: SceneNode | None = None) -> "GroupNode":
+    def from_dict(cls, data: dict, parent: Optional[SceneNode] = None) -> "GroupNode":
         """Creates a GroupNode from a dictionary."""
         # For now, GroupNode has no special properties, so we just call the base implementation.
         return super().from_dict(data, parent)

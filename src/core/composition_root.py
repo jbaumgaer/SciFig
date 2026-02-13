@@ -1,5 +1,6 @@
 import logging
-
+from functools import partial
+from pathlib import Path
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import QApplication, QMenuBar, QToolBar
 
@@ -22,8 +23,8 @@ from src.shared.constants import IconPath, ToolName
 from src.ui.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
 from src.ui.builders.tool_bar_builder import ToolBarActions, ToolBarBuilder
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.factories.plot_properties_ui_factory import (  # Renamed import
-    PlotPropertiesUIFactory,  # Renamed class
+from src.ui.factories.plot_properties_ui_factory import (
+    PlotPropertiesUIFactory,
     _build_line_plot_ui_widgets,
     _build_scatter_plot_ui_widgets,
 )
@@ -42,35 +43,20 @@ class CompositionRoot:
         self.logger.info("CompositionRoot initialized.")
 
         self._app = app
-
-        # Controllers
-        self._canvas_controller: CanvasController | None = None
+        self._config_service = config_service
+        self._application_model: ApplicationModel | None = None
+        self._command_manager: CommandManager | None = None
         self._project_controller: ProjectController | None = None
         self._layout_controller: LayoutController | None = None
         self._node_controller: NodeController | None = None
-
-        # Models
-        self._application_model: ApplicationModel | None = None
-        self._plot_types: list = (
-            []
-        )  # TODO: Why do plot_types have to be initialized already now? And do they really have to be owned as attributed by the Composition Root?
-        self._free_layout_engine: FreeLayoutEngine | None = None
-        self._grid_layout_engine: GridLayoutEngine | None = None
-
-        # UI components
+        self._canvas_controller: CanvasController | None = None
+        self._view: MainWindow | None = None
         self._menu_bar: QMenuBar | None = None
         self._main_menu_actions: MainMenuActions | None = None
         self._tool_bar: QToolBar | None = None
         self._tool_bar_actions: ToolBarActions | None = None
-        self._view: MainWindow | None = None
         self._layout_ui_factory: LayoutUIFactory | None = None
-        self._plot_properties_ui_factory: PlotPropertiesUIFactory | None = (
-            None  # Renamed type hint
-        )
-
-        # Services
-        self._config_service = config_service
-        self._command_manager: CommandManager | None = None
+        self._plot_properties_ui_factory: PlotPropertiesUIFactory | None = None
         self._tool_manager: ToolService | None = None
         self._selection_tool: SelectionTool | None = None
         self._layout_manager: LayoutManager | None = None
@@ -81,9 +67,7 @@ class CompositionRoot:
         IconPath.set_config_service(self._config_service)
 
     def _assemble_core_components(self):
-        """Assemble core models, managers, and controllers.
-        Instead, require them to be set in the config and throw an error if they are missing.
-        """
+        """Assemble core models, managers, and controllers."""
         self.logger.info(
             "Assembling core components: Model, CommandManager, MainController, Renderer."
         )
@@ -103,22 +87,21 @@ class CompositionRoot:
         self._application_model = ApplicationModel(figure=figure)
         self._command_manager = CommandManager(model=self._application_model)
 
-        # Instantiate layout components
-        self._free_layout_engine = FreeLayoutEngine()
-        self._grid_layout_engine = GridLayoutEngine()  # TODO: Having a default grid size in the config is a bit weird. It should just initialize to empty
         self._layout_manager = LayoutManager(
             application_model=self._application_model,
-            free_engine=self._free_layout_engine,
-            grid_engine=self._grid_layout_engine,
+            free_engine=FreeLayoutEngine(),
+            grid_engine=GridLayoutEngine(),
             config_service=self._config_service,
         )
-
-        # Instantiate new controllers
+        # CHANGE: Pass template_dir to ProjectController
+        template_dir_path = Path(self._config_service.get_required("paths.layout_templates_dir"))
+        max_recent_files = self._config_service.get_required("layout.max_recent_files")
         self._project_controller = ProjectController(
-            model=self._application_model,
+            lifecycle=self._application_model,
             command_manager=self._command_manager,
-            config_service=self._config_service,
             layout_manager=self._layout_manager,
+            template_dir=template_dir_path,
+            max_recent_files=max_recent_files,
         )
         self._layout_controller = LayoutController(
             model=self._application_model,
@@ -140,13 +123,12 @@ class CompositionRoot:
         self._plot_types = list(self._renderer.plotting_strategies.keys())
         self._plot_properties_ui_factory = PlotPropertiesUIFactory(
             node_controller=self._node_controller
-        )  # Renamed instantiation
+        )
 
-        # Register plot-specific UI builders
-        self._plot_properties_ui_factory.register_builder(  # Renamed factory instance
+        self._plot_properties_ui_factory.register_builder(
             PlotType.LINE, _build_line_plot_ui_widgets
         )
-        self._plot_properties_ui_factory.register_builder(  # Renamed factory instance
+        self._plot_properties_ui_factory.register_builder(
             PlotType.SCATTER, _build_scatter_plot_ui_widgets
         )
 
@@ -154,97 +136,35 @@ class CompositionRoot:
         """Assemble the menu bar and its actions."""
         self.logger.info("Assembling menus.")
         menu_builder = MenuBarBuilder(
-            project_controller=self._project_controller,
-            layout_controller=self._layout_controller,
-            command_manager=self._command_manager,
+            recent_files_provider=self._project_controller
         )
-        self._menu_bar, assembled_menu_actions = menu_builder.build()
-        self._main_menu_actions = assembled_menu_actions
+        self._menu_bar, self._main_menu_actions = menu_builder.build()
 
     def _assemble_tooling(self):
         """Assemble the tool manager, individual tools, and the toolbar."""
         self.logger.info("Assembling tooling: ToolManager, SelectionTool, MockTools.")
-
-        self._tool_manager = ToolService(
-            model=self._application_model, command_manager=self._command_manager
-        )
-
-        # Create SelectionTool
-        self._selection_tool = SelectionTool(
-            model=self._application_model,
-            command_manager=self._command_manager,
-            canvas_widget=None,  # Will be set after MainWindow is available
-            # ConfigService might be needed here if tool defaults are loaded from config
-        )
+        self._tool_manager = ToolService(model=self._application_model, command_manager=self._command_manager)
+        self._selection_tool = SelectionTool(model=self._application_model, command_manager=self._command_manager, canvas_widget=None)
         self._tool_manager.add_tool(self._selection_tool)
-
-        # Use config for default active tool
-        default_active_tool_name = self._config_service.get(
-            "tool.default_active_tool", ToolName.SELECTION.value
-        )
+        default_active_tool_name = self._config_service.get("tool.default_active_tool", ToolName.SELECTION.value)
         self._tool_manager.set_active_tool(default_active_tool_name)
         self.logger.debug(f"Default active tool set to: {default_active_tool_name}")
-
-        # Placeholder tools for toolbar (not yet implemented)
-        self._tool_manager.add_tool(
-            MockTool(
-                self._config_service.get(
-                    "tool.direct_selection.name", ToolName.DIRECT_SELECTION.value
-                ),
-                IconPath.get_path("tool_icons.direct_select"),
-                self._application_model,
-                self._command_manager,
-                None,
-            )
-        )
-        self._tool_manager.add_tool(
-            MockTool(
-                self._config_service.get(
-                    "tool.eyedropper.name", ToolName.EYEDROPPER.value
-                ),
-                IconPath.get_path("tool_icons.eyedropper"),
-                self._application_model,
-                self._command_manager,
-                None,
-            )
-        )
-        self._tool_manager.add_tool(
-            MockTool(
-                self._config_service.get("tool.plot.name", ToolName.PLOT.value),
-                IconPath.get_path("tool_icons.plot"),
-                self._application_model,
-                self._command_manager,
-                None,
-            )
-        )
-        self._tool_manager.add_tool(
-            MockTool(
-                self._config_service.get("tool.text.name", ToolName.TEXT.value),
-                IconPath.get_path("tool_icons.text"),
-                self._application_model,
-                self._command_manager,
-                None,
-            )
-        )
-        self._tool_manager.add_tool(
-            MockTool(
-                self._config_service.get("tool.zoom.name", ToolName.ZOOM.value),
-                IconPath.get_path("tool_icons.zoom"),
-                self._application_model,
-                self._command_manager,
-                None,
-            )
-        )
-
-        # Build the toolbar
+        self._tool_manager.add_tool(MockTool(self._config_service.get("tool.direct_selection.name", ToolName.DIRECT_SELECTION.value), IconPath.get_path("tool_icons.direct_select"), self._application_model, self._command_manager, None))
+        self._tool_manager.add_tool(MockTool(self._config_service.get("tool.eyedropper.name", ToolName.EYEDROPPER.value), IconPath.get_path("tool_icons.eyedropper"), self._application_model, self._command_manager, None))
+        self._tool_manager.add_tool(MockTool(self._config_service.get("tool.plot.name", ToolName.PLOT.value), IconPath.get_path("tool_icons.plot"), self._application_model, self._command_manager, None))
+        self._tool_manager.add_tool(MockTool(self._config_service.get("tool.text.name", ToolName.TEXT.value), IconPath.get_path("tool_icons.text"), self._application_model, self._command_manager, None))
+        self._tool_manager.add_tool(MockTool(self._config_service.get("tool.zoom.name", ToolName.ZOOM.value), IconPath.get_path("tool_icons.zoom"), self._application_model, self._command_manager, None))
         tool_bar_builder = ToolBarBuilder(tool_manager=self._tool_manager)
         self._tool_bar, self._tool_bar_actions = tool_bar_builder.build()
 
     def _assemble_main_window(self):
         """Assemble the main application window."""
         self.logger.info("Assembling main window.")
+        # The instantiation of MainWindow and the setter injection
+        # remain the same as the previous, correct step.
         self._view = MainWindow(
             model=self._application_model,
+            project_actions=self._project_controller,
             project_controller=self._project_controller,
             layout_controller=self._layout_controller,
             node_controller=self._node_controller,
@@ -257,11 +177,10 @@ class CompositionRoot:
             plot_properties_ui_factory=self._plot_properties_ui_factory,
             layout_ui_factory=self._layout_ui_factory,
         )
+        self._project_controller.set_view(self._view)
 
-        # Now that MainWindow exists, set its canvas_widget for tools
         self._selection_tool._canvas_widget = self._view.canvas_widget
-        for tool_name, tool in self._tool_manager._tools.items():
-            # Update canvas_widget for all tools
+        for tool in self._tool_manager._tools.values():
             tool._canvas_widget = self._view.canvas_widget
 
     def _assemble_canvas_controller(self):
@@ -277,23 +196,29 @@ class CompositionRoot:
     def _connect_signals(self):
         """Connect all application-wide signals to their slots."""
         self.logger.debug("Connecting signals.")
-        # Main Window actions to Main Controller
-        self._view.new_layout_action.triggered.connect(
-            self._project_controller.create_new_layout
+        main_menu = self._view.main_menu_actions
+        
+        # Original I/O connections are now correctly pointed at the new handlers
+        main_menu.new_file_action.triggered.connect(self._project_controller.handle_new_project)
+        main_menu.new_file_from_template_action.triggered.connect(
+            self._project_controller.handle_new_from_template # No partial needed anymore
         )
-        self._view.save_project_action.triggered.connect(
-            lambda: self._project_controller.save_project(self._view)
-        )
-        self._view.open_project_action.triggered.connect(
-            lambda: self._project_controller.open_project(parent=self._view)
-        )
+        main_menu.open_project_action.triggered.connect(self._project_controller.handle_open_project)
+        main_menu.save_project_action.triggered.connect(self._project_controller.handle_save_project)
+        main_menu.save_copy_action.triggered.connect(self._project_controller.handle_save_as_project)
+        
+        # Add connections for Edit Menu actions, now that the builder is decoupled
+        main_menu.undo_action.triggered.connect(self._command_manager.undo)
+        main_menu.redo_action.triggered.connect(self._command_manager.redo)
 
-        # Model changes to redraw
+        # Presenter slot for model changes
+        self._application_model.modelChanged.connect(self._project_controller.on_model_changed)
+        self._application_model.projectReset.connect(self._layout_manager.on_model_reset)
+
+        # Original connections for redraw and tools
         self._application_model.modelChanged.connect(self._redraw_canvas_callback)
         self._application_model.selectionChanged.connect(self._redraw_canvas_callback)
-        self._application_model.layoutConfigChanged.connect(self._redraw_canvas_callback)
-
-        # Tool-specific signals
+        self._application_model.layoutConfigChanged.connect(self._redraw_canvas_callback) #TODO: Consider if this is necessary or if specific layout changes should trigger redraws instead of all config changes.
         self._selection_tool.plot_double_clicked.connect(self._view.show_side_panel)
 
     def _redraw_canvas_callback(self):
@@ -307,9 +232,7 @@ class CompositionRoot:
         self._view.canvas_widget.figure_canvas.draw()
 
     def assemble(self) -> ApplicationComponents:
-        """
-        Assembles and wires all components of the application.
-        """
+        """Assembles and wires all components of the application."""
         self._assemble_core_components()
         self._assemble_menus()
         self._assemble_tooling()
@@ -319,6 +242,7 @@ class CompositionRoot:
         self.logger.info("Application assembly complete.")
 
         return ApplicationComponents(
+            composition_root=self,
             app=self._app,
             application_model=self._application_model,
             command_manager=self._command_manager,

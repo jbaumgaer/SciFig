@@ -11,6 +11,7 @@ class LayoutEngine(ABC, LayoutEngineProtocol): # Inherit from the protocol
     """
     Abstract base class for all layout engines.
     Defines the interface for calculating plot geometries based on a layout configuration.
+    TODO: This is redundant with LayoutEngineProtocol. Decide on one approach, and then put it into the interfaces folder
     """
 
     def __init__(self):
