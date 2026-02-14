@@ -8,6 +8,7 @@ class CommandManager:
     """
     Manages the execution, undo, and redo of commands.
     The model itself is responsible for emitting signals when its state changes.
+    TODO: The command manager somehow doesn't undo things like plot changes anymore
     """
 
     def __init__(self, model: ApplicationModel):

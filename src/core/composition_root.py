@@ -28,7 +28,10 @@ from src.ui.factories.plot_properties_ui_factory import (
     _build_line_plot_ui_widgets,
     _build_scatter_plot_ui_widgets,
 )
+from src.ui.panels.side_panel import SidePanel
 from src.ui.renderers.renderer import Renderer
+from src.ui.widgets.canvas_widget import CanvasWidget
+from src.ui.widgets.canvas_widget import CanvasWidget
 from src.ui.windows.main_window import MainWindow
 
 
@@ -113,23 +116,8 @@ class CompositionRoot:
             command_manager=self._command_manager,
             project_controller=self._project_controller,
         )
-
-        self._layout_ui_factory = LayoutUIFactory(
-            layout_manager=self._layout_manager,
-        )
         self._renderer = Renderer(
             layout_manager=self._layout_manager, application_model=self._application_model
-        )
-        self._plot_types = list(self._renderer.plotting_strategies.keys())
-        self._plot_properties_ui_factory = PlotPropertiesUIFactory(
-            node_controller=self._node_controller
-        )
-
-        self._plot_properties_ui_factory.register_builder(
-            PlotType.LINE, _build_line_plot_ui_widgets
-        )
-        self._plot_properties_ui_factory.register_builder(
-            PlotType.SCATTER, _build_scatter_plot_ui_widgets
         )
 
     def _assemble_menus(self):
@@ -157,6 +145,32 @@ class CompositionRoot:
         tool_bar_builder = ToolBarBuilder(tool_manager=self._tool_manager)
         self._tool_bar, self._tool_bar_actions = tool_bar_builder.build()
 
+    def _assemble_side_panel(self):
+        """Assemble the side panel. TODO: This is currently not used and should be integrated into the MainWindow assembly once refactored."""
+        self.logger.info("Assembling side panel.")
+        self._layout_ui_factory = LayoutUIFactory(
+            layout_manager=self._layout_manager,
+        )
+        self._plot_types = list(self._renderer.plotting_strategies.keys())
+        self._plot_properties_ui_factory = PlotPropertiesUIFactory(
+            node_controller=self._node_controller
+        )
+
+        self._plot_properties_ui_factory.register_builder(
+            PlotType.LINE, _build_line_plot_ui_widgets
+        )
+        self._plot_properties_ui_factory.register_builder(
+            PlotType.SCATTER, _build_scatter_plot_ui_widgets
+        )
+        self._side_panel = SidePanel(
+            model=self._application_model,
+            node_controller=self._node_controller,
+            layout_controller=self._layout_controller,
+            plot_properties_ui_factory=self._plot_properties_ui_factory,
+            layout_ui_factory=self._layout_ui_factory,
+            project_controller=self._project_controller, # Still uses the old concrete controller
+        )
+
     def _assemble_main_window(self):
         """Assemble the main application window."""
         self.logger.info("Assembling main window.")
@@ -165,21 +179,19 @@ class CompositionRoot:
         self._view = MainWindow(
             model=self._application_model,
             project_actions=self._project_controller,
-            project_controller=self._project_controller,
-            layout_controller=self._layout_controller,
-            node_controller=self._node_controller,
-            command_manager=self._command_manager,
-            plot_types=self._plot_types,
             menu_bar=self._menu_bar,
             main_menu_actions=self._main_menu_actions,
             tool_bar=self._tool_bar,
             tool_bar_actions=self._tool_bar_actions,
-            plot_properties_ui_factory=self._plot_properties_ui_factory,
-            layout_ui_factory=self._layout_ui_factory,
+            side_panel=self._side_panel,
         )
         self._project_controller.set_view(self._view)
 
-        self._selection_tool._canvas_widget = self._view.canvas_widget
+    def _assemble_canvas_widget(self):
+        """Assemble the canvas widget."""
+        self._canvas_widget = CanvasWidget(figure=self._application_model.figure, parent=self._view)
+        self._selection_tool._canvas_widget = self._canvas_widget #TODO: Why is the canvas_widget having these tool?
+        self._view.set_canvas_widget(self._canvas_widget)
         for tool in self._tool_manager._tools.values():
             tool._canvas_widget = self._view.canvas_widget
 
@@ -219,8 +231,7 @@ class CompositionRoot:
         self._application_model.modelChanged.connect(self._redraw_canvas_callback)
         self._application_model.selectionChanged.connect(self._redraw_canvas_callback)
         self._application_model.layoutConfigChanged.connect(self._redraw_canvas_callback) #TODO: Consider if this is necessary or if specific layout changes should trigger redraws instead of all config changes.
-        self._selection_tool.plot_double_clicked.connect(self._view.show_side_panel)
-
+        
     def _redraw_canvas_callback(self):
         """Callback to trigger canvas redraw."""
         self.logger.debug("ApplicationAssembler._redraw_canvas_callback called")
@@ -236,10 +247,13 @@ class CompositionRoot:
         self._assemble_core_components()
         self._assemble_menus()
         self._assemble_tooling()
+        self._assemble_side_panel()
         self._assemble_main_window()
+        self._assemble_canvas_widget()
         self._assemble_canvas_controller()
         self._connect_signals()
         self.logger.info("Application assembly complete.")
+        #TODO: Check which of these components I need to return to keep in scope and which ones not, like maybe the side panel
 
         return ApplicationComponents(
             composition_root=self,

@@ -203,7 +203,7 @@ class LayersTab(QWidget):
 
         for selected_node in self.model.selection:
             items = self._tree_widget.findItems(
-                selected_node.id, Qt.UserRole | Qt.MatchRecursive, column=self.COL_NAME
+                selected_node.id, Qt.UserRole | Qt.MatchRecursive, column=self.COL_NAME # TODO: This throws an error somehow
             )
             for item in items:
                 if (

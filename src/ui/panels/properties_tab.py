@@ -49,7 +49,7 @@ class PropertiesTab(QWidget):
 
         self._subplot_selector_combo = QComboBox(self)
         self._subplot_selector_combo.setObjectName("subplot_selector_combo")
-        self._subplot_selection_layout.addRow("Subplot:", self._subplot_selector_combo)
+        self._subplot_selection_layout.addRow("Subplot:", self._subplot_selector_combo) #TODO: This doesn't work somehow. I can't select the y axis anymore
 
         self._data_file_path_edit = QLineEdit(self)
         self._data_file_path_edit.setPlaceholderText("No data file loaded")
