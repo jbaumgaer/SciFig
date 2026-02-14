@@ -24,6 +24,7 @@ class LayoutTab(QWidget):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
+        # TODO: Check if I even pass a parent
         self.model = model
         self.layout_controller = layout_controller
         self.layout_ui_factory = layout_ui_factory

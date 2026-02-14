@@ -1,13 +1,15 @@
-from typing import Protocol, Any, Optional
+from typing import Protocol, Optional
 from src.shared.types import PlotID, Rect
 from src.models.layout.layout_config import Margins, Gutters
 from src.models.nodes.plot_node import PlotNode # Import specific type if it's the one used
+
+#TODO: This should go into the interfaces folder because the freeformlyoutcapabilities will later become important for any group of free form objects
 
 class LayoutEngineProtocol(Protocol):
     def calculate_geometries(
         self,
         plots: list[PlotNode],
-        layout_config: Any
+        layout_config: any
     ) -> tuple[dict[PlotID, Rect], Optional[Margins], Optional[Gutters]]:
         ...
 

@@ -1,4 +1,5 @@
 import threading
+from typing import Optional
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
@@ -18,8 +19,9 @@ class Debouncer(QObject):
         object
     )  # Signal emitted after debounce period, carrying the last argument
 
-    def __init__(self, delay_ms: int = 300, parent: QObject | None = None):
+    def __init__(self, delay_ms: int = 300, parent: Optional[QObject] = None):
         super().__init__(parent)
+        # TODO: Check if I even pass a parent
         self._delay_ms = delay_ms
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)

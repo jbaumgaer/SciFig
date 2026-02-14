@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
 from src.models.application_model import ApplicationModel
@@ -39,6 +39,7 @@ class LayoutManager(QObject):
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
+        # TODO: Check if I even pass a parent
         self._application_model = application_model
         self._free_engine = free_engine
         self._grid_engine = grid_engine
@@ -92,7 +93,7 @@ class LayoutManager(QObject):
         self.logger.info("Model has been reset, clearing layout caches.")
         self.reset_cached_configs()
 
-    def get_last_grid_config(self) -> GridConfig | None:
+    def get_last_grid_config(self) -> Optional[GridConfig]:
         """
         Returns the last used GridConfig. Can be None if no grid config has been set yet.
         """
@@ -138,7 +139,7 @@ class LayoutManager(QObject):
                 old_plot_index += 1
 
     def infer_grid_config_from_plots(
-        self, plots: list[PlotNode], base_grid_config: GridConfig | None
+        self, plots: list[PlotNode], base_grid_config: Optional[GridConfig]
     ) -> GridConfig:
         """
         Infers sensible grid rows, columns, margins, and gutters directly from the current
@@ -640,8 +641,8 @@ class LayoutManager(QObject):
         return geometries_dict
 
     def _parse_float_list_from_config(
-        self, key: str, default: List[float]
-    ) -> List[float]:
+        self, key: str, default: list[float]
+    ) -> list[float]:
         """Helper to parse a config value that might be a list of floats, a single float, or a string representation."""
         value = self._config_service.get(key, default)
         self.logger.debug(

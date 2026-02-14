@@ -1,6 +1,7 @@
 import logging
 
 from PySide6.QtCore import QObject, QPointF, QThread
+from typing import Optional
 
 from src.controllers.layout_controller import LayoutController
 from src.models.application_model import ApplicationModel
@@ -28,9 +29,10 @@ class CanvasController(QObject):
         tool_manager: ToolService,
         command_manager: CommandManager,
         layout_controller: LayoutController,
-        parent: QObject | None = None,
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
+        # TODO: Check if I even pass a parent
         self.model = model
         self.view = canvas_widget
         self.tool_manager = tool_manager

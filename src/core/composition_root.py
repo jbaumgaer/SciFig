@@ -1,6 +1,6 @@
 import logging
-from functools import partial
 from pathlib import Path
+from typing import Optional
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import QApplication, QMenuBar, QToolBar
 
@@ -44,22 +44,22 @@ class CompositionRoot:
 
         self._app = app
         self._config_service = config_service
-        self._application_model: ApplicationModel | None = None
-        self._command_manager: CommandManager | None = None
-        self._project_controller: ProjectController | None = None
-        self._layout_controller: LayoutController | None = None
-        self._node_controller: NodeController | None = None
-        self._canvas_controller: CanvasController | None = None
-        self._view: MainWindow | None = None
-        self._menu_bar: QMenuBar | None = None
-        self._main_menu_actions: MainMenuActions | None = None
-        self._tool_bar: QToolBar | None = None
-        self._tool_bar_actions: ToolBarActions | None = None
-        self._layout_ui_factory: LayoutUIFactory | None = None
-        self._plot_properties_ui_factory: PlotPropertiesUIFactory | None = None
-        self._tool_manager: ToolService | None = None
-        self._selection_tool: SelectionTool | None = None
-        self._layout_manager: LayoutManager | None = None
+        self._application_model: Optional[ApplicationModel] = None
+        self._command_manager: Optional[CommandManager] = None
+        self._project_controller: Optional[ProjectController] = None
+        self._layout_controller: Optional[LayoutController] = None
+        self._node_controller: Optional[NodeController] = None
+        self._canvas_controller: Optional[CanvasController] = None
+        self._view: Optional[MainWindow] = None
+        self._menu_bar: Optional[QMenuBar] = None
+        self._main_menu_actions: Optional[MainMenuActions] = None
+        self._tool_bar: Optional[QToolBar] = None
+        self._tool_bar_actions: Optional[ToolBarActions] = None
+        self._layout_ui_factory: Optional[LayoutUIFactory] = None
+        self._plot_properties_ui_factory: Optional[PlotPropertiesUIFactory] = None
+        self._tool_manager: Optional[ToolService] = None
+        self._selection_tool: Optional[SelectionTool] = None
+        self._layout_manager: Optional[LayoutManager] = None
 
         self.logger.debug(
             f"ConfigService provided with path: {self._config_service.get('config_path', 'Not Provided')}"
@@ -184,7 +184,7 @@ class CompositionRoot:
             tool._canvas_widget = self._view.canvas_widget
 
     def _assemble_canvas_controller(self):
-        """Assemble the canvas controller."""
+        """Assemble the canvas controller. TODO: It makes no sense that this gets its own method"""
         self._canvas_controller = CanvasController(
             model=self._application_model,
             canvas_widget=self._view.canvas_widget,

@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path  # New Import
-from typing import List, Optional
+from typing import Optional
 
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import (
@@ -153,7 +153,7 @@ class NodeController(QObject):
         if not node:
             return
 
-        def _parse_or_none(text: str) -> float | None:
+        def _parse_or_none(text: str) -> Optional[float]:
             try:
                 return float(text)
             except (ValueError, TypeError):
@@ -265,7 +265,7 @@ class NodeController(QObject):
                 f"NodeController: Could not reorder node {node_id} in parent {parent_id}."
             )
 
-    def group_nodes(self, node_ids: List[str]):
+    def group_nodes(self, node_ids: list[str]):
         """
         Groups selected nodes under a new GroupNode.
         """

@@ -68,7 +68,7 @@ class SceneNode(QObject):
                 f"Removed child {node.name} (ID: {node.id}) from {self.name} (ID: {self.id})."
             )
 
-    def hit_test(self, position: tuple[float, float]) -> SceneNode | None:
+    def hit_test(self, position: tuple[float, float]) -> Optional[SceneNode]:
         """
         Abstract method to check if a position hits this node or any of its children.
         Must be implemented by subclasses.

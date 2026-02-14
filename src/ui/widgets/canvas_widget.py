@@ -1,3 +1,4 @@
+from typing import Optional
 import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -22,7 +23,8 @@ class CanvasWidget(QGraphicsView):
     fileDropped = Signal(str, QPointF)
     canvasDoubleClicked = Signal(QPointF)  # New Signal
 
-    def __init__(self, figure: Figure, parent: QWidget | None = None) -> None:
+    def __init__(self, figure: Figure, parent: Optional[QWidget] = None) -> None:
+        #TODO: Check if I actually initiate this with a parent
         super().__init__(parent)
 
         self.scene = QGraphicsScene(self)

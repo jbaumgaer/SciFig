@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from PySide6.QtCore import QObject  # Qt for Alignment - Removed Qt as not directly used in this version
 from PySide6.QtWidgets import (
@@ -29,9 +29,10 @@ class PropertiesTab(QWidget):
         node_controller: NodeController,
         plot_properties_ui_factory: PlotPropertiesUIFactory,
         project_controller: ProjectController,
-        parent: QWidget | None = None,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
+        # TODO: Check if I even pass a parent
         self.model = model
         self.node_controller = node_controller
         self.plot_properties_ui_factory = plot_properties_ui_factory
@@ -60,10 +61,12 @@ class PropertiesTab(QWidget):
 
         self._apply_data_button = QPushButton("Apply", self)
         self._apply_data_button.setObjectName("apply_data_button")
+        # TODO: I get a Failed to load data, project controller has no attribute data_loader error here
 
         h_layout_data_buttons = QHBoxLayout()
         h_layout_data_buttons.addWidget(self._select_file_button)
         h_layout_data_buttons.addWidget(self._apply_data_button)
+        #TODO: What is this h_layout? Where is the epy
 
         self._subplot_selection_layout.addRow("Data File:", self._data_file_path_edit)
         self._subplot_selection_layout.addRow(
@@ -97,7 +100,7 @@ class PropertiesTab(QWidget):
         self._x_combo: QComboBox = QComboBox(self)
         self._y_combo: QComboBox = QComboBox(self)
 
-        # Connect signals
+        # Connect signals TODO: This connection should not happen here, I think, but in the composotion root
         self.model.modelChanged.connect(
             self._update_content
         )  # For changes that affect list of plots or properties
@@ -144,7 +147,7 @@ class PropertiesTab(QWidget):
         self._update_plot_type_selector_ui(selected_nodes) # New call
         self._update_node_specific_properties_ui(selected_nodes)
 
-    def _update_subplot_selection_ui(self, selected_nodes: List[QObject]):
+    def _update_subplot_selection_ui(self, selected_nodes: list[QObject]):
         """
         Populates the subplot selector combo box and updates the data file path display.
         """
@@ -197,6 +200,7 @@ class PropertiesTab(QWidget):
                     if selected_plot_node.data_file_path
                     else ""
                 )
+                # TODO: The data file path is not actaully being updated right now. Also, that should be a separate method
                 self._select_file_button.setEnabled(True)
                 self._apply_data_button.setEnabled(True)
             else:
@@ -219,7 +223,7 @@ class PropertiesTab(QWidget):
 
         self._subplot_selector_combo.blockSignals(False)
 
-    def _update_plot_type_selector_ui(self, selected_nodes: List[QObject]):
+    def _update_plot_type_selector_ui(self, selected_nodes: list[QObject]):
         """
         Updates the plot type selector combo box based on the selected plot's properties.
         """
@@ -303,7 +307,7 @@ class PropertiesTab(QWidget):
                 f"PropertiesTab: Could not find PlotNode with ID {selected_plot_id} for 'Apply' action."
             )
 
-    def _update_node_specific_properties_ui(self, selected_nodes: List[QObject]):
+    def _update_node_specific_properties_ui(self, selected_nodes: list[QObject]):
         """
         Clears and rebuilds the plot-specific properties UI based on the selected node.
         """

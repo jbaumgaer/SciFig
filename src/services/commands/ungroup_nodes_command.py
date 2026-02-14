@@ -1,5 +1,4 @@
-from typing import List
-
+from typing import Optional
 from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode  # New Import
 from src.services.commands.base_command import BaseCommand
@@ -14,9 +13,9 @@ class UngroupNodesCommand(BaseCommand):
     def __init__(self, model: ApplicationModel, group_id: str):
         super().__init__(model)
         self.group_id = group_id
-        self.ungrouped_children_ids: List[str] = []
-        self.original_parent_id: str | None = None
-        self.original_group_index: int | None = (
+        self.ungrouped_children_ids: list[str] = []
+        self.original_parent_id: Optional[str] = None
+        self.original_group_index: Optional[int] = (
             None  # To restore group's original position
         )
         self.description = f"Ungroup node {group_id}"

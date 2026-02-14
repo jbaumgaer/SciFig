@@ -23,7 +23,8 @@ class ApplicationModel(QObject, ProjectLifecycle):
     selectionChanged = Signal()
     layoutConfigChanged = Signal()
 
-    def __init__(self, figure: matplotlib.figure.Figure):
+    def __init__(self, figure: matplotlib.figure.Figure): 
+        #TODO: Why do we need the figure here?
         super().__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.figure = figure
@@ -97,7 +98,7 @@ class ApplicationModel(QObject, ProjectLifecycle):
             self.layoutConfigChanged.emit()
             self._set_modified()
 
-    def add_node(self, node: SceneNode, parent: SceneNode | None = None):
+    def add_node(self, node: SceneNode, parent: Optional[SceneNode] = None):
         """Adds a node to the scene graph."""
         if parent is None:
             parent = self.scene_root
@@ -119,7 +120,7 @@ class ApplicationModel(QObject, ProjectLifecycle):
         self.logger.debug(f"Extracted {len(existing_plot_states)} existing plot states.")
         return existing_plot_states
 
-    def get_node_at(self, position: tuple[float, float]) -> SceneNode | None:
+    def get_node_at(self, position: tuple[float, float]) -> Optional[SceneNode]:
         """Finds the topmost node at the given figure coordinates."""
         return self.scene_root.hit_test(position)
 

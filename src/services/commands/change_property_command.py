@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Optional
 
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import BasePlotProperties
@@ -16,8 +16,8 @@ class ChangePropertyCommand(BaseCommand):
         self,
         node: SceneNode,
         property_name: str,
-        new_value: Any,
-        property_dict_name: str | None = None,
+        new_value: any,
+        property_dict_name: Optional[str] = None,
     ):
         description = (
             f"Change property '{property_name}' of node '{node.name}' to '{new_value}'"
@@ -27,7 +27,7 @@ class ChangePropertyCommand(BaseCommand):
         self.property_name = property_name
         self.new_value = new_value
         self.property_dict_name = property_dict_name
-        self.old_value = None  # Will be stored on execute #TODO: What is this for?
+        self.old_value: Optional[any] = None  # Will be stored on execute #TODO: What is this for?
 
         # Special handling for plot_type changes, which alter the type of plot_properties
         self._is_plot_type_change = (

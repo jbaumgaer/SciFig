@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from PySide6.QtWidgets import (
     QSizePolicy,
@@ -38,9 +39,10 @@ class SidePanel(QTabWidget):
         plot_properties_ui_factory: PlotPropertiesUIFactory,
         layout_ui_factory: LayoutUIFactory,
         project_controller: ProjectController,
-        parent: QWidget | None = None,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
+        # TODO: Check if I even pass a parent
         # self.setFixedWidth(250) # Removed - Managed by QDockWidget
         # self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred) # Removed - Managed by QDockWidget
         self.model = model
@@ -92,7 +94,7 @@ class SidePanel(QTabWidget):
         self._on_selection_changed() # Initial call to set up tab state
 
     # _clear_layout is no longer strictly needed in SidePanel, but kept for consistency if tabs need it internally
-    def _clear_layout(self, layout: QVBoxLayout): # Changed type hint to QVBoxLayout
+    def _clear_layout(self, layout: Optional[QVBoxLayout]): # Changed type hint to Optional[QVBoxLayout]
         """Recursively clears all widgets and sub-layouts."""
         if layout is None:
             return

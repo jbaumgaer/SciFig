@@ -21,7 +21,7 @@ class PlotNode(SceneNode):
     """
 
     def __init__(
-        self, parent: SceneNode | None = None, name: str = "Plot", id: str | None = None
+        self, parent: Optional[SceneNode] = None, name: str = "Plot", id: Optional[str] = None
     ):
         super().__init__(parent, name, id)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -35,13 +35,11 @@ class PlotNode(SceneNode):
         )  # TODO: This should be set by the layout manager, not hardcoded
         # TODO: Change this from a tuple to a x, y, width, height dataclass for better readability and maintainability
         self.plot_properties: Optional[BasePlotProperties] = None
-        self.data: pd.DataFrame | None = None
-        self.axes: matplotlib.axes.Axes | None = (
-            None  # Store the Matplotlib Axes object
-        )
+        self.data: Optional[pd.DataFrame] = None
+        self.axes: Optional[matplotlib.axes.Axes] = None  # Store the Matplotlib Axes object
         self.data_file_path: Optional[Path] = None  # New attribute
 
-    def hit_test(self, position: tuple[float, float]) -> SceneNode | None:
+    def hit_test(self, position: tuple[float, float]) -> Optional[SceneNode]:
         """
         Checks if the given position (in figure coordinates, 0-1) is within
         the bounds of this plot's *rendered* axes.
@@ -104,7 +102,7 @@ class PlotNode(SceneNode):
 
     @classmethod
     def from_dict(
-        cls, data: dict, parent: SceneNode | None = None, temp_dir: Path | None = None
+        cls, data: dict, parent: Optional[SceneNode] = None, temp_dir: Optional[Path] = None
     ) -> "PlotNode":
         """Creates a PlotNode from a dictionary."""
         node = super().from_dict(data, parent)

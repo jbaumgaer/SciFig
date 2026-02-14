@@ -1,6 +1,6 @@
 import logging
 from functools import partial
-from typing import Any, Callable
+from typing import Callable, Optional
 
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QIcon, QIntValidator, QValidator
@@ -36,7 +36,7 @@ class LayoutUIFactory:
         tooltip: str,
         command: Callable,
         parent: QWidget,
-        object_name: str | None = None,
+        object_name: Optional[str] = None,
     ) -> QPushButton:
         """
         Helper to create an icon-only QPushButton with a tooltip and connected command.
@@ -51,11 +51,11 @@ class LayoutUIFactory:
     def _create_parameter_line_edit(
         self,
         param_name: str,
-        initial_value: Any,
-        validator: QValidator | None,
+        initial_value: any,
+        validator: Optional[QValidator],
         container: QWidget,
         layout_controller: LayoutController,
-        placeholder_text: str | None = None,
+        placeholder_text: Optional[str] = None,
         is_list_param: bool = False,  # Flag to indicate if the parameter is a list (e.g., hspace, wspace)
     ) -> QLineEdit:
         """
@@ -83,7 +83,7 @@ class LayoutUIFactory:
         return line_edit
 
     def build_layout_controls(
-        self, layout_controller: LayoutController, parent: QObject
+        self, layout_controller: LayoutController, parent: Optional[QObject]
     ) -> QWidget:
         """
         Builds and returns a QWidget containing controls relevant to the currently UI-selected layout mode.

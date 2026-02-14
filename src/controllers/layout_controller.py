@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from PySide6.QtCore import QObject
 
@@ -146,10 +145,11 @@ class LayoutController(QObject):
         self._layout_manager.set_layout_mode(LayoutMode.GRID)
         self.logger.debug("Switched layout mode to GRID to snap plots.")
 
-    def on_grid_layout_param_changed(self, param_name: str, value: Any):
+    def on_grid_layout_param_changed(self, param_name: str, value: any):
         """
         Handles changes from granular UI controls for grid layout parameters.
         Collects changes and dispatches a ChangeGridParametersCommand.
+        TODO: The type hint any is pointless. Be specific
         TODO: This is doing redundante work to some of the validators in other parts of the program because I'm also validating input here
         """
         self.logger.debug(f"Grid layout param changed: {param_name} = {value}")

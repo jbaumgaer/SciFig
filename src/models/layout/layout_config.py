@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from src.shared.constants import LayoutMode
 
@@ -17,7 +17,7 @@ class Margins:
     left: float
     right: float
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, float]:
         return {
             "top": self.top,
             "bottom": self.bottom,
@@ -26,7 +26,7 @@ class Margins:
         }
 
     @staticmethod
-    def from_dict(data: dict[str, Any]) -> "Margins":
+    def from_dict(data: dict[str, float]) -> "Margins":
         return Margins(
             top=data["top"],
             bottom=data["bottom"],
@@ -46,11 +46,11 @@ class Gutters:
     hspace: list[float]
     wspace: list[float]
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, list[float]]:
         return {"hspace": self.hspace, "wspace": self.wspace}
 
     @staticmethod
-    def from_dict(data: dict[str, Any]) -> "Gutters":
+    def from_dict(data: dict[str, list[float]]) -> "Gutters":
         return Gutters(hspace=data["hspace"], wspace=data["wspace"])
 
 
@@ -69,12 +69,12 @@ class LayoutConfig(ABC):
         pass
 
     @abstractmethod
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, str]:
         """Serializes the LayoutConfig to a dictionary."""
         pass
 
     @staticmethod
-    def from_dict(data: dict[str, Any]) -> T:  # Modified to use TypeVar
+    def from_dict(data: dict[str, any]) -> T:  # Modified to use TypeVar
         """Deserializes a dictionary into a concrete LayoutConfig instance."""
         mode_str = data.get("mode")
         if not mode_str:
@@ -99,12 +99,13 @@ class FreeConfig(LayoutConfig):
 
     mode: LayoutMode = field(default=LayoutMode.FREE_FORM, init=False)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, any]:
         return {"mode": self.mode.value}
 
     @staticmethod
-    def from_dict(data: dict[str, Any]) -> "FreeConfig":
+    def from_dict(data: dict[str, any]) -> "FreeConfig":
         return FreeConfig()  # No additional state to deserialize
+        # TODO: There's no input needed here
 
 
 @dataclass(frozen=True)  # frozen=True makes it immutable, good for configs
@@ -122,7 +123,7 @@ class GridConfig(LayoutConfig):
 
     mode: LayoutMode = field(default=LayoutMode.GRID, init=False)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, any]:
         return {
             "mode": self.mode.value,
             "rows": self.rows,
@@ -134,7 +135,7 @@ class GridConfig(LayoutConfig):
         }
 
     @staticmethod
-    def from_dict(data: dict[str, Any]) -> "GridConfig":
+    def from_dict(data: dict[str, any]) -> "GridConfig":
         return GridConfig(
             rows=data["rows"],
             cols=data["cols"],

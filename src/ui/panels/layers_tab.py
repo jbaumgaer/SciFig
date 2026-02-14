@@ -37,6 +37,7 @@ class LayersTab(QWidget):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
+        # TODO: Check if I even pass a parent
         self.model = model
         self.node_controller = node_controller
         self.logger = logging.getLogger(self.__class__.__name__)

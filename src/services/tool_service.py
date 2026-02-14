@@ -1,13 +1,11 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QPainter
 
 from src.services.tools.base_tool import BaseTool
-
-if TYPE_CHECKING:
-    from src.models.application_model import ApplicationModel
-    from src.services.commands.command_manager import CommandManager
+from src.models.application_model import ApplicationModel
+from src.services.commands.command_manager import CommandManager
 
 
 class ToolService(QObject):
@@ -23,18 +21,19 @@ class ToolService(QObject):
 
     def __init__(
         self,
-        model: "ApplicationModel",
-        command_manager: "CommandManager",
-        parent: QObject | None = None,
+        model: ApplicationModel,
+        command_manager: CommandManager,
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
+        # TODO: Check if I even pass a parent
         self._model = model
         self._command_manager = command_manager
         self._tools: dict[str, BaseTool] = {}
-        self._active_tool_name: str | None = None
+        self._active_tool_name: Optional[str] = None
 
     @property
-    def active_tool(self) -> BaseTool | None:
+    def active_tool(self) -> Optional[BaseTool]:
         """Returns the instance of the currently active tool."""
         if self._active_tool_name:
             return self._tools.get(self._active_tool_name)

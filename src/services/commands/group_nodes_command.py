@@ -1,5 +1,4 @@
-from typing import List
-
+from typing import Optional
 from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode  # New Import
 from src.models.nodes.scene_node import SceneNode
@@ -12,17 +11,17 @@ class GroupNodesCommand(BaseCommand):
     """
 
     def __init__(
-        self, model: ApplicationModel, node_ids: List[str], group_name: str = "Group"
+        self, model: ApplicationModel, node_ids: list[str], group_name: str = "Group"
     ):
         super().__init__(model)
         self.node_ids = node_ids
         self.group_name = group_name
-        self.group_id: str | None = None  # Will be set during execute
+        self.group_id: Optional[str] = None  # Will be set during execute
         self.original_parents: dict[str, str] = {}  # Store original parent IDs
         self.description = f"Group nodes: {', '.join(node_ids)}"
 
     def execute(self):
-        nodes_to_group: List[SceneNode] = []
+        nodes_to_group: list[SceneNode] = []
         for node_id in self.node_ids:
             node = self.model.scene_root.find_node_by_id(node_id)
             if node:
