@@ -50,7 +50,8 @@ class MenuBarBuilder:
         self._recent_files_provider = recent_files_provider
 
     def _update_recent_projects_menu(self, menu: QMenu):
-        """Clears and repopulates the recent projects menu using the provider."""
+        """Clears and repopulates the recent projects menu using the provider.
+        TODO: I'm not sure if this is an action that should be connected here"""
         menu.clear()
         recent_files = self._recent_files_provider.get_recent_files()
 

@@ -96,16 +96,6 @@ class CompositionRoot:
             grid_engine=GridLayoutEngine(),
             config_service=self._config_service,
         )
-        # CHANGE: Pass template_dir to ProjectController
-        template_dir_path = Path(self._config_service.get_required("paths.layout_templates_dir"))
-        max_recent_files = self._config_service.get_required("layout.max_recent_files")
-        self._project_controller = ProjectController(
-            lifecycle=self._application_model,
-            command_manager=self._command_manager,
-            layout_manager=self._layout_manager,
-            template_dir=template_dir_path,
-            max_recent_files=max_recent_files,
-        )
         self._layout_controller = LayoutController(
             model=self._application_model,
             command_manager=self._command_manager,
@@ -178,14 +168,12 @@ class CompositionRoot:
         # remain the same as the previous, correct step.
         self._view = MainWindow(
             model=self._application_model,
-            project_actions=self._project_controller,
             menu_bar=self._menu_bar,
             main_menu_actions=self._main_menu_actions,
             tool_bar=self._tool_bar,
             tool_bar_actions=self._tool_bar_actions,
             side_panel=self._side_panel,
         )
-        self._project_controller.set_view(self._view)
 
     def _assemble_canvas_widget(self):
         """Assemble the canvas widget."""
@@ -203,6 +191,19 @@ class CompositionRoot:
             tool_manager=self._tool_manager,
             command_manager=self._command_manager,
             layout_controller=self._layout_controller,
+        )
+
+    def _assemble_project_controller(self):
+        """Assemble the project controller."""
+        template_dir_path = Path(self._config_service.get_required("paths.layout_templates_dir"))
+        max_recent_files = self._config_service.get_required("layout.max_recent_files")
+        self._project_controller = ProjectController(
+            lifecycle=self._application_model,
+            view=self._view,
+            command_manager=self._command_manager,
+            layout_manager=self._layout_manager,
+            template_dir=template_dir_path,
+            max_recent_files=max_recent_files,
         )
 
     def _connect_signals(self):
@@ -251,6 +252,7 @@ class CompositionRoot:
         self._assemble_main_window()
         self._assemble_canvas_widget()
         self._assemble_canvas_controller()
+        self._assemble_project_controller()
         self._connect_signals()
         self.logger.info("Application assembly complete.")
         #TODO: Check which of these components I need to return to keep in scope and which ones not, like maybe the side panel

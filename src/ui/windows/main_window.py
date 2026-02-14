@@ -2,25 +2,18 @@ from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QDockWidget,
     QFileDialog,
     QMainWindow,
-    QMenu,
     QMenuBar,
     QToolBar,
 )
 
-from src.interfaces.project_io import ProjectActions, ProjectIOView
+from src.interfaces.project_io import ProjectIOView
 from src.models.application_model import ApplicationModel
-from src.models.plots.plot_types import PlotType
-from src.services.commands import CommandManager
 from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
-from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
-from src.ui.panels import side_panel
 from src.ui.panels.side_panel import SidePanel
 from src.ui.widgets.canvas_widget import CanvasWidget
 
@@ -35,7 +28,6 @@ class MainWindow(QMainWindow, ProjectIOView):
     def __init__(
         self,
         model: ApplicationModel,
-        project_actions: ProjectActions,
         menu_bar: QMenuBar,
         main_menu_actions: MainMenuActions,
         tool_bar: QToolBar,
@@ -47,9 +39,7 @@ class MainWindow(QMainWindow, ProjectIOView):
         self.setGeometry(50, 50, 800, 600) #TODO: Inject these from the config service
 
         self.model = model
-        self.project_actions = project_actions
-
-        # --- Create UI Components ---
+        # self.project_actions = project_actions
 
         self.side_panel_view, self.side_panel_dock = self._add_side_panel(side_panel)
 
@@ -97,8 +87,6 @@ class MainWindow(QMainWindow, ProjectIOView):
             "JSON Layouts (*.json);;All Files (*)",
         )
         return Path(file_path_str) if file_path_str else None
-
-    # --- Private UI Creation Methods ---
 
     def _add_side_panel(self, side_panel: SidePanel):
         """Makes the side panel dock widget visible and raises it to the top."""

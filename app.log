@@ -6961,3 +6961,1488 @@
 2026-02-14 17:51:46 - CommandManager - INFO - Undid ChangePropertyCommand, Redo stack size: 2
 2026-02-14 17:51:50 - CommandManager - INFO - Undo stack is empty. Nothing to undo.
 2026-02-14 17:51:51 - CommandManager - INFO - Undo stack is empty. Nothing to undo.
+2026-02-14 18:37:20 - root - INFO - Logging configured. Level: DEBUG, Console: True, File: True
+2026-02-14 18:37:20 - src.app - INFO - Application starting...
+2026-02-14 18:37:20 - CompositionRoot - INFO - CompositionRoot initialized.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'config_path' with default: 'Not Provided'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'config_path'. Result: 'configs\default_config.yaml'.
+2026-02-14 18:37:20 - CompositionRoot - DEBUG - ConfigService provided with path: configs\default_config.yaml
+2026-02-14 18:37:20 - CompositionRoot - INFO - Assembling core components: Model, CommandManager, MainController, Renderer.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting required config key: 'figure.default_width'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_width'. Result: '8.5'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting required config key: 'figure.default_height'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_height'. Result: '6'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting required config key: 'figure.default_dpi'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_dpi'. Result: '150'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting required config key: 'figure.default_facecolor'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_facecolor'. Result: 'white'.
+2026-02-14 18:37:20 - CompositionRoot - DEBUG - Figure created with dimensions: 8.5x6 @ 150dpi, Facecolor: white
+2026-02-14 18:37:20 - GroupNode - DEBUG - SceneNode initialized: root (ID: 8faf2d5567014952a49fdcf1d993eeee)
+2026-02-14 18:37:20 - CommandManager - INFO - CommandManager initialized.
+2026-02-14 18:37:20 - FreeLayoutEngine - INFO - FreeLayoutEngine initialized.
+2026-02-14 18:37:20 - GridLayoutEngine - INFO - GridLayoutEngine initialized.
+2026-02-14 18:37:20 - LayoutManager - INFO - LayoutManager initialized.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'ui.default_layout_mode' with default: 'free_form'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_layout_mode'. Result: 'free_form'.
+2026-02-14 18:37:20 - LayoutManager - DEBUG - Default UI selected layout mode from config: free_form
+2026-02-14 18:37:20 - LayoutManager - DEBUG - Layout mode already free_form. No change needed.
+2026-02-14 18:37:20 - LayoutManager - INFO - Initial active layout mode set to: free_form
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting required config key: 'paths.layout_templates_dir'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved required config key 'paths.layout_templates_dir'. Result: 'templates/layouts'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting required config key: 'layout.max_recent_files'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved required config key 'layout.max_recent_files'. Result: '10'.
+2026-02-14 18:37:20 - ProjectController - INFO - ProjectController initialized.
+2026-02-14 18:37:20 - LayoutController - INFO - LayoutController initialized.
+2026-02-14 18:37:20 - NodeController - INFO - NodeController initialized.
+2026-02-14 18:37:20 - Renderer - INFO - Renderer initialized.
+2026-02-14 18:37:20 - Renderer - DEBUG - Plotting strategies: [<PlotType.LINE: 'line'>, <PlotType.SCATTER: 'scatter'>]
+2026-02-14 18:37:20 - Renderer - DEBUG - Render strategies: []
+2026-02-14 18:37:20 - CompositionRoot - INFO - Assembling menus.
+2026-02-14 18:37:20 - CompositionRoot - INFO - Assembling tooling: ToolManager, SelectionTool, MockTools.
+2026-02-14 18:37:20 - SelectionTool - INFO - SelectionTool initialized.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'tool.default_active_tool' with default: 'selection'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'tool.default_active_tool'. Result: 'selection'.
+2026-02-14 18:37:20 - SelectionTool - INFO - SelectionTool activated.
+2026-02-14 18:37:20 - CompositionRoot - DEBUG - Default active tool set to: selection
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'tool.direct_selection.name' with default: 'direct_selection'.
+2026-02-14 18:37:20 - ConfigService - WARNING - Config key 'tool.direct_selection.name' not found. Returning default: 'direct_selection'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'tool.eyedropper.name' with default: 'eyedropper'.
+2026-02-14 18:37:20 - ConfigService - WARNING - Config key 'tool.eyedropper.name' not found. Returning default: 'eyedropper'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'tool.plot.name' with default: 'plot'.
+2026-02-14 18:37:20 - ConfigService - WARNING - Config key 'tool.plot.name' not found. Returning default: 'plot'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'tool.text.name' with default: 'text'.
+2026-02-14 18:37:20 - ConfigService - WARNING - Config key 'tool.text.name' not found. Returning default: 'text'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'tool.zoom.name' with default: 'zoom'.
+2026-02-14 18:37:20 - ConfigService - WARNING - Config key 'tool.zoom.name' not found. Returning default: 'zoom'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.select' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.select'. Result: 'toolbar/Select.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 18:37:20 - CompositionRoot - INFO - Assembling side panel.
+2026-02-14 18:37:20 - LayoutUIFactory - INFO - LayoutUIFactory initialized.
+2026-02-14 18:37:20 - SidePanel - INFO - SidePanel initialized.
+2026-02-14 18:37:20 - PropertiesTab - INFO - PropertiesTab initialized.
+2026-02-14 18:37:20 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:37:20 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:37:20 - GroupNode - DEBUG - Getting all descendants starting from root (ID: 8faf2d5567014952a49fdcf1d993eeee).
+2026-02-14 18:37:20 - PropertiesTab - DEBUG - PropertiesTab: No plots available, UI disabled.
+2026-02-14 18:37:20 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:37:20 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:37:20 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:37:20 - LayoutTab - INFO - LayoutTab initialized.
+2026-02-14 18:37:20 - LayoutTab - DEBUG - LayoutTab: Updating content for UI layout mode: free_form
+2026-02-14 18:37:20 - LayoutUIFactory - DEBUG - Building layout controls for UI selected mode: free_form
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_left' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_left'. Result: 'properties/alignment/align_horizontal_left_24dp_E3E3E3.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_center' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_center'. Result: 'properties/alignment/align_horizontal_center_24dp_E3E3E3.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_right' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_right'. Result: 'properties/alignment/align_horizontal_right_24dp_E3E3E3.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_top' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_top'. Result: 'properties/alignment/align_vertical_top_24dp_E3E3E3.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_center' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_center'. Result: 'properties/alignment/align_vertical_center_24dp_E3E3E3.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_bottom' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_bottom'. Result: 'properties/alignment/align_vertical_bottom_24dp_E3E3E3.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.horizontal_distribute' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.horizontal_distribute'. Result: 'properties/distribute/horizontal_distribute_24dp_E3E3E3.svg'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.vertical_distribute' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.vertical_distribute'. Result: 'properties/distribute/vertical_distribute_24dp_E3E3E3.svg'.
+2026-02-14 18:37:20 - LayersTab - INFO - LayersTab initialized.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.group' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - WARNING - Config key 'paths.toolbar.group' not found. Returning default: 'None'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:37:20 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.ungroup' with default: 'None'.
+2026-02-14 18:37:20 - ConfigService - WARNING - Config key 'paths.toolbar.ungroup' not found. Returning default: 'None'.
+2026-02-14 18:37:20 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:37:20 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:37:20 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:37:20 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 18:37:20 - CompositionRoot - INFO - Assembling main window.
+2026-02-14 18:38:03 - root - INFO - Logging configured. Level: DEBUG, Console: True, File: True
+2026-02-14 18:38:03 - src.app - INFO - Application starting...
+2026-02-14 18:38:03 - CompositionRoot - INFO - CompositionRoot initialized.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'config_path' with default: 'Not Provided'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'config_path'. Result: 'configs\default_config.yaml'.
+2026-02-14 18:38:03 - CompositionRoot - DEBUG - ConfigService provided with path: configs\default_config.yaml
+2026-02-14 18:38:03 - CompositionRoot - INFO - Assembling core components: Model, CommandManager, MainController, Renderer.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting required config key: 'figure.default_width'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_width'. Result: '8.5'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting required config key: 'figure.default_height'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_height'. Result: '6'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting required config key: 'figure.default_dpi'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_dpi'. Result: '150'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting required config key: 'figure.default_facecolor'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_facecolor'. Result: 'white'.
+2026-02-14 18:38:03 - CompositionRoot - DEBUG - Figure created with dimensions: 8.5x6 @ 150dpi, Facecolor: white
+2026-02-14 18:38:03 - GroupNode - DEBUG - SceneNode initialized: root (ID: 69ae62c55ce948ed95ca84d0b1ea6397)
+2026-02-14 18:38:03 - CommandManager - INFO - CommandManager initialized.
+2026-02-14 18:38:03 - FreeLayoutEngine - INFO - FreeLayoutEngine initialized.
+2026-02-14 18:38:03 - GridLayoutEngine - INFO - GridLayoutEngine initialized.
+2026-02-14 18:38:03 - LayoutManager - INFO - LayoutManager initialized.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'ui.default_layout_mode' with default: 'free_form'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_layout_mode'. Result: 'free_form'.
+2026-02-14 18:38:03 - LayoutManager - DEBUG - Default UI selected layout mode from config: free_form
+2026-02-14 18:38:03 - LayoutManager - DEBUG - Layout mode already free_form. No change needed.
+2026-02-14 18:38:03 - LayoutManager - INFO - Initial active layout mode set to: free_form
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting required config key: 'paths.layout_templates_dir'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved required config key 'paths.layout_templates_dir'. Result: 'templates/layouts'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting required config key: 'layout.max_recent_files'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved required config key 'layout.max_recent_files'. Result: '10'.
+2026-02-14 18:38:03 - ProjectController - INFO - ProjectController initialized.
+2026-02-14 18:38:03 - LayoutController - INFO - LayoutController initialized.
+2026-02-14 18:38:03 - NodeController - INFO - NodeController initialized.
+2026-02-14 18:38:03 - Renderer - INFO - Renderer initialized.
+2026-02-14 18:38:03 - Renderer - DEBUG - Plotting strategies: [<PlotType.LINE: 'line'>, <PlotType.SCATTER: 'scatter'>]
+2026-02-14 18:38:03 - Renderer - DEBUG - Render strategies: []
+2026-02-14 18:38:03 - CompositionRoot - INFO - Assembling menus.
+2026-02-14 18:38:03 - CompositionRoot - INFO - Assembling tooling: ToolManager, SelectionTool, MockTools.
+2026-02-14 18:38:03 - SelectionTool - INFO - SelectionTool initialized.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'tool.default_active_tool' with default: 'selection'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'tool.default_active_tool'. Result: 'selection'.
+2026-02-14 18:38:03 - SelectionTool - INFO - SelectionTool activated.
+2026-02-14 18:38:03 - CompositionRoot - DEBUG - Default active tool set to: selection
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'tool.direct_selection.name' with default: 'direct_selection'.
+2026-02-14 18:38:03 - ConfigService - WARNING - Config key 'tool.direct_selection.name' not found. Returning default: 'direct_selection'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'tool.eyedropper.name' with default: 'eyedropper'.
+2026-02-14 18:38:03 - ConfigService - WARNING - Config key 'tool.eyedropper.name' not found. Returning default: 'eyedropper'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'tool.plot.name' with default: 'plot'.
+2026-02-14 18:38:03 - ConfigService - WARNING - Config key 'tool.plot.name' not found. Returning default: 'plot'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'tool.text.name' with default: 'text'.
+2026-02-14 18:38:03 - ConfigService - WARNING - Config key 'tool.text.name' not found. Returning default: 'text'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'tool.zoom.name' with default: 'zoom'.
+2026-02-14 18:38:03 - ConfigService - WARNING - Config key 'tool.zoom.name' not found. Returning default: 'zoom'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.select' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.select'. Result: 'toolbar/Select.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 18:38:03 - CompositionRoot - INFO - Assembling side panel.
+2026-02-14 18:38:03 - LayoutUIFactory - INFO - LayoutUIFactory initialized.
+2026-02-14 18:38:03 - SidePanel - INFO - SidePanel initialized.
+2026-02-14 18:38:03 - PropertiesTab - INFO - PropertiesTab initialized.
+2026-02-14 18:38:03 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:38:03 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:38:03 - GroupNode - DEBUG - Getting all descendants starting from root (ID: 69ae62c55ce948ed95ca84d0b1ea6397).
+2026-02-14 18:38:03 - PropertiesTab - DEBUG - PropertiesTab: No plots available, UI disabled.
+2026-02-14 18:38:03 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:38:03 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:38:03 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:38:03 - LayoutTab - INFO - LayoutTab initialized.
+2026-02-14 18:38:03 - LayoutTab - DEBUG - LayoutTab: Updating content for UI layout mode: free_form
+2026-02-14 18:38:03 - LayoutUIFactory - DEBUG - Building layout controls for UI selected mode: free_form
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_left' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_left'. Result: 'properties/alignment/align_horizontal_left_24dp_E3E3E3.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_center' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_center'. Result: 'properties/alignment/align_horizontal_center_24dp_E3E3E3.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_right' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_right'. Result: 'properties/alignment/align_horizontal_right_24dp_E3E3E3.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_top' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_top'. Result: 'properties/alignment/align_vertical_top_24dp_E3E3E3.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_center' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_center'. Result: 'properties/alignment/align_vertical_center_24dp_E3E3E3.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_bottom' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_bottom'. Result: 'properties/alignment/align_vertical_bottom_24dp_E3E3E3.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.horizontal_distribute' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.horizontal_distribute'. Result: 'properties/distribute/horizontal_distribute_24dp_E3E3E3.svg'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.vertical_distribute' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.vertical_distribute'. Result: 'properties/distribute/vertical_distribute_24dp_E3E3E3.svg'.
+2026-02-14 18:38:03 - LayersTab - INFO - LayersTab initialized.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.group' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - WARNING - Config key 'paths.toolbar.group' not found. Returning default: 'None'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:38:03 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.ungroup' with default: 'None'.
+2026-02-14 18:38:03 - ConfigService - WARNING - Config key 'paths.toolbar.ungroup' not found. Returning default: 'None'.
+2026-02-14 18:38:03 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:38:03 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:38:03 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:38:03 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 18:38:03 - CompositionRoot - INFO - Assembling main window.
+2026-02-14 18:38:04 - CanvasController - INFO - CanvasController initialized.
+2026-02-14 18:38:04 - CanvasController - DEBUG - Connecting canvas events.
+2026-02-14 18:38:04 - CanvasController - DEBUG - Connected Matplotlib events to ToolManager.
+2026-02-14 18:38:04 - CanvasController - DEBUG - Connected fileDropped signal to on_file_dropped.
+2026-02-14 18:38:04 - CompositionRoot - DEBUG - Connecting signals.
+2026-02-14 18:38:04 - CompositionRoot - INFO - Application assembly complete.
+2026-02-14 18:38:04 - ThemeManager - INFO - ThemeManager initialized.
+2026-02-14 18:38:04 - ConfigService - DEBUG - Getting config key: 'ui.default_theme' with default: 'dark'.
+2026-02-14 18:38:04 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_theme'. Result: 'dark'.
+2026-02-14 18:38:04 - ThemeManager - INFO - Attempting to apply theme: 'dark'
+2026-02-14 18:38:04 - ConfigService - DEBUG - Getting config key: 'themes.dark' with default: 'None'.
+2026-02-14 18:38:04 - ConfigService - DEBUG - Successfully retrieved config key 'themes.dark'. Result: '{'style': 'Fusion', 'palette': {'Window': [53, 53, 53], 'WindowText': [255, 255, 255], 'Base': [25, 25, 25], 'AlternateBase': [53, 53, 53], 'ToolTipBase': [255, 255, 255], 'ToolTipText': [255, 255, 255], 'Text': [255, 255, 255], 'Button': [53, 53, 53], 'ButtonText': [255, 255, 255], 'BrightText': [255, 0, 0], 'Link': [42, 130, 218], 'Highlight': [42, 130, 218], 'HighlightedText': [0, 0, 0], 'PlaceholderText': [160, 160, 160]}}'.
+2026-02-14 18:38:04 - ThemeManager - DEBUG - Applied Qt style: 'Fusion'
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'Window' to RGB: [53, 53, 53]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'WindowText' to RGB: [255, 255, 255]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'Base' to RGB: [25, 25, 25]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'AlternateBase' to RGB: [53, 53, 53]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'ToolTipBase' to RGB: [255, 255, 255]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'ToolTipText' to RGB: [255, 255, 255]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'Text' to RGB: [255, 255, 255]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'Button' to RGB: [53, 53, 53]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'ButtonText' to RGB: [255, 255, 255]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'BrightText' to RGB: [255, 0, 0]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'Link' to RGB: [42, 130, 218]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'Highlight' to RGB: [42, 130, 218]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'HighlightedText' to RGB: [0, 0, 0]
+2026-02-14 18:38:04 - ThemeManager - DEBUG -   Set palette role 'PlaceholderText' to RGB: [160, 160, 160]
+2026-02-14 18:38:04 - ThemeManager - INFO - Theme 'dark' applied successfully.
+2026-02-14 18:38:04 - src.app - INFO - Application stopping...
+2026-02-14 18:38:07 - ProjectController - INFO - Handling 'New from Template' action.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'GroupNode'
+2026-02-14 18:38:11 - GroupNode - DEBUG - SceneNode initialized: 2x2 Layout (ID: layout_root_001)
+2026-02-14 18:38:11 - GroupNode - DEBUG - SceneNode.from_dict: Created node 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Created node 2x2 Layout (ID: layout_root_001) of type GroupNode.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Recursively creating 4 children for 2x2 Layout.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:38:11 - PlotNode - DEBUG - SceneNode initialized: Top-Left Plot (ID: plot_001)
+2026-02-14 18:38:11 - GroupNode - DEBUG - Added child Top-Left Plot (ID: plot_001) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode initialized: Top-Left Plot (ID: plot_001)
+2026-02-14 18:38:11 - PlotNode - DEBUG - SceneNode.from_dict: Created node Top-Left Plot (ID: plot_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Top-Left Plot'.
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:38:11 - PlotNode - DEBUG - Plot properties for 'Top-Left Plot' updated from dict.
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode 'Top-Left Plot': No data file path specified.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Top-Left Plot (ID: plot_001) of type PlotNode.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:38:11 - PlotNode - DEBUG - SceneNode initialized: Top-Right Plot (ID: plot_002)
+2026-02-14 18:38:11 - GroupNode - DEBUG - Added child Top-Right Plot (ID: plot_002) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode initialized: Top-Right Plot (ID: plot_002)
+2026-02-14 18:38:11 - PlotNode - DEBUG - SceneNode.from_dict: Created node Top-Right Plot (ID: plot_002).
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Top-Right Plot'.
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:38:11 - PlotNode - DEBUG - Plot properties for 'Top-Right Plot' updated from dict.
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode 'Top-Right Plot': No data file path specified.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Top-Right Plot (ID: plot_002) of type PlotNode.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:38:11 - PlotNode - DEBUG - SceneNode initialized: Bottom-Left Plot (ID: plot_003)
+2026-02-14 18:38:11 - GroupNode - DEBUG - Added child Bottom-Left Plot (ID: plot_003) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode initialized: Bottom-Left Plot (ID: plot_003)
+2026-02-14 18:38:11 - PlotNode - DEBUG - SceneNode.from_dict: Created node Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Bottom-Left Plot'.
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.SCATTER
+2026-02-14 18:38:11 - PlotNode - DEBUG - Plot properties for 'Bottom-Left Plot' updated from dict.
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode 'Bottom-Left Plot': No data file path specified.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Bottom-Left Plot (ID: plot_003) of type PlotNode.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:38:11 - PlotNode - DEBUG - SceneNode initialized: Bottom-Right Plot (ID: plot_004)
+2026-02-14 18:38:11 - GroupNode - DEBUG - Added child Bottom-Right Plot (ID: plot_004) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode initialized: Bottom-Right Plot (ID: plot_004)
+2026-02-14 18:38:11 - PlotNode - DEBUG - SceneNode.from_dict: Created node Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Bottom-Right Plot'.
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:38:11 - PlotNode - DEBUG - Plot properties for 'Bottom-Right Plot' updated from dict.
+2026-02-14 18:38:11 - PlotNode - DEBUG - PlotNode 'Bottom-Right Plot': No data file path specified.
+2026-02-14 18:38:11 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Bottom-Right Plot (ID: plot_004) of type PlotNode.
+2026-02-14 18:38:11 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:38:11 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:38:11 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:38:11 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:38:11 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:38:11 - PropertiesTab - DEBUG - PropertiesTab: No specific plot selected, default combo box selection.
+2026-02-14 18:38:11 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:38:11 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:38:11 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:38:11 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:38:11 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 18:38:11 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 18:38:11 - Renderer - INFO - Rendering scene graph.
+2026-02-14 18:38:11 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:38:11 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:38:11 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:38:11 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:38:11 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 4 plots (pass-through).
+2026-02-14 18:38:11 - Renderer - DEBUG - Rendering PlotNode: Top-Left Plot (ID: plot_001), Geometry: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:38:11 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:38:11 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Left Plot.
+2026-02-14 18:38:11 - Renderer - DEBUG - Rendering PlotNode: Top-Right Plot (ID: plot_002), Geometry: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:38:11 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:38:11 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Right Plot.
+2026-02-14 18:38:11 - Renderer - DEBUG - Rendering PlotNode: Bottom-Left Plot (ID: plot_003), Geometry: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:38:11 - Renderer - DEBUG -   PlotType: PlotType.SCATTER, Title: 
+2026-02-14 18:38:11 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Left Plot.
+2026-02-14 18:38:11 - Renderer - DEBUG - Rendering PlotNode: Bottom-Right Plot (ID: plot_004), Geometry: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:38:11 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:38:11 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Right Plot.
+2026-02-14 18:38:11 - Renderer - DEBUG - Rendering GroupNode: 2x2 Layout (ID: layout_root_001), Children: 4
+2026-02-14 18:38:11 - Renderer - DEBUG - Node Top-Left Plot (ID: plot_001) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:38:11 - Renderer - DEBUG - Node Top-Right Plot (ID: plot_002) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:38:11 - Renderer - DEBUG - Node Bottom-Left Plot (ID: plot_003) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:38:11 - Renderer - DEBUG - Node Bottom-Right Plot (ID: plot_004) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:38:11 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 18:38:12 - ApplicationModel - DEBUG - Scene root set to: 2x2 Layout (ID: layout_root_001). Selection cleared.
+2026-02-14 18:38:12 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:38:12 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:38:12 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:12 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:38:12 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:38:12 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:38:12 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:38:12 - PropertiesTab - DEBUG - PropertiesTab: No specific plot selected, default combo box selection.
+2026-02-14 18:38:12 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:38:12 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:38:12 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:38:12 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:38:12 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:38:12 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:38:12 - ProjectController - DEBUG - Model changed signal received in ProjectController. Currently not doing anything.
+2026-02-14 18:38:12 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 18:38:12 - Renderer - INFO - Rendering scene graph.
+2026-02-14 18:38:12 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:38:12 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:38:12 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:38:12 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:38:12 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:38:12 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 4 plots (pass-through).
+2026-02-14 18:38:12 - Renderer - DEBUG - Rendering PlotNode: Top-Left Plot (ID: plot_001), Geometry: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:38:12 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:38:12 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Left Plot.
+2026-02-14 18:38:12 - Renderer - DEBUG - Rendering PlotNode: Top-Right Plot (ID: plot_002), Geometry: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:38:12 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:38:12 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Right Plot.
+2026-02-14 18:38:12 - Renderer - DEBUG - Rendering PlotNode: Bottom-Left Plot (ID: plot_003), Geometry: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:38:12 - Renderer - DEBUG -   PlotType: PlotType.SCATTER, Title: 
+2026-02-14 18:38:12 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Left Plot.
+2026-02-14 18:38:12 - Renderer - DEBUG - Rendering PlotNode: Bottom-Right Plot (ID: plot_004), Geometry: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:38:12 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:38:12 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Right Plot.
+2026-02-14 18:38:12 - Renderer - DEBUG - Rendering GroupNode: 2x2 Layout (ID: layout_root_001), Children: 4
+2026-02-14 18:38:12 - Renderer - DEBUG - Node Top-Left Plot (ID: plot_001) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:38:12 - Renderer - DEBUG - Node Top-Right Plot (ID: plot_002) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:38:12 - Renderer - DEBUG - Node Bottom-Left Plot (ID: plot_003) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:38:12 - Renderer - DEBUG - Node Bottom-Right Plot (ID: plot_004) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:38:12 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 18:38:16 - ProjectController - INFO - Handling save project action.
+2026-02-14 18:38:16 - ProjectController - INFO - Handling save as project action.
+2026-02-14 18:38:32 - ProjectController - INFO - Saving project to: D:\Dokumente\Python\Data_Analysis_GUI\data\test_2.sci
+2026-02-14 18:38:32 - PlotNode - DEBUG - SceneNode 'Top-Left Plot' (ID: plot_001) serialized to dict.
+2026-02-14 18:38:32 - PlotNode - DEBUG - PlotNode 'Top-Left Plot' (ID: plot_001) serialized to dict. Exclude geometry: False
+2026-02-14 18:38:32 - PlotNode - DEBUG - SceneNode 'Top-Right Plot' (ID: plot_002) serialized to dict.
+2026-02-14 18:38:32 - PlotNode - DEBUG - PlotNode 'Top-Right Plot' (ID: plot_002) serialized to dict. Exclude geometry: False
+2026-02-14 18:38:32 - PlotNode - DEBUG - SceneNode 'Bottom-Left Plot' (ID: plot_003) serialized to dict.
+2026-02-14 18:38:32 - PlotNode - DEBUG - PlotNode 'Bottom-Left Plot' (ID: plot_003) serialized to dict. Exclude geometry: False
+2026-02-14 18:38:32 - PlotNode - DEBUG - SceneNode 'Bottom-Right Plot' (ID: plot_004) serialized to dict.
+2026-02-14 18:38:32 - PlotNode - DEBUG - PlotNode 'Bottom-Right Plot' (ID: plot_004) serialized to dict. Exclude geometry: False
+2026-02-14 18:38:32 - GroupNode - DEBUG - SceneNode '2x2 Layout' (ID: layout_root_001) serialized to dict.
+2026-02-14 18:38:32 - ProjectController - ERROR - Error saving project to 'D:\Dokumente\Python\Data_Analysis_GUI\data\test_2.sci': 'ProjectController' object has no attribute 'settings'
+Traceback (most recent call last):
+  File "d:\Dokumente\Python\Data_Analysis_GUI\src\controllers\project_controller.py", line 228, in _save_to_path
+    self._add_to_recent_files(path)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "d:\Dokumente\Python\Data_Analysis_GUI\src\controllers\project_controller.py", line 251, in _add_to_recent_files
+    recent_files = self.get_recent_files()
+  File "d:\Dokumente\Python\Data_Analysis_GUI\src\controllers\project_controller.py", line 208, in get_recent_files
+    return self.settings.value(RECENT_FILES_KEY, [])
+           ^^^^^^^^^^^^^
+AttributeError: 'ProjectController' object has no attribute 'settings'
+2026-02-14 18:48:59 - ProjectController - INFO - Handling 'Open...' project action.
+2026-02-14 18:49:06 - ProjectController - INFO - Opening project from: D:\Dokumente\Python\Data_Analysis_GUI\data\test_2.sci
+2026-02-14 18:49:06 - GroupNode - DEBUG - SceneNode initialized: root (ID: 87d62b2e734c4ec0a7e502e51f0a5a3e)
+2026-02-14 18:49:06 - LayoutManager - INFO - Model has been reset, clearing layout caches.
+2026-02-14 18:49:06 - LayoutManager - INFO - LayoutManager: Resetting cached layout configurations.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:49:06 - GroupNode - DEBUG - Getting all descendants starting from root (ID: 87d62b2e734c4ec0a7e502e51f0a5a3e).
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: No plots available, UI disabled.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:49:06 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:49:06 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:49:06 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:49:06 - ProjectController - DEBUG - Model changed signal received in ProjectController. Currently not doing anything.
+2026-02-14 18:49:06 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 18:49:06 - Renderer - INFO - Rendering scene graph.
+2026-02-14 18:49:06 - GroupNode - DEBUG - Getting all descendants starting from root (ID: 87d62b2e734c4ec0a7e502e51f0a5a3e).
+2026-02-14 18:49:06 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 0 plots (pass-through).
+2026-02-14 18:49:06 - Renderer - DEBUG - Rendering GroupNode: root (ID: 87d62b2e734c4ec0a7e502e51f0a5a3e), Children: 0
+2026-02-14 18:49:06 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:49:06 - GroupNode - DEBUG - Getting all descendants starting from root (ID: 87d62b2e734c4ec0a7e502e51f0a5a3e).
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: No plots available, UI disabled.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:49:06 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:49:06 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 18:49:06 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 18:49:06 - Renderer - INFO - Rendering scene graph.
+2026-02-14 18:49:06 - GroupNode - DEBUG - Getting all descendants starting from root (ID: 87d62b2e734c4ec0a7e502e51f0a5a3e).
+2026-02-14 18:49:06 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 0 plots (pass-through).
+2026-02-14 18:49:06 - Renderer - DEBUG - Rendering GroupNode: root (ID: 87d62b2e734c4ec0a7e502e51f0a5a3e), Children: 0
+2026-02-14 18:49:06 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'GroupNode'
+2026-02-14 18:49:06 - GroupNode - DEBUG - SceneNode initialized: 2x2 Layout (ID: layout_root_001)
+2026-02-14 18:49:06 - GroupNode - DEBUG - SceneNode.from_dict: Created node 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Created node 2x2 Layout (ID: layout_root_001) of type GroupNode.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Recursively creating 4 children for 2x2 Layout.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:49:06 - PlotNode - DEBUG - SceneNode initialized: Top-Left Plot (ID: plot_001)
+2026-02-14 18:49:06 - GroupNode - DEBUG - Added child Top-Left Plot (ID: plot_001) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode initialized: Top-Left Plot (ID: plot_001)
+2026-02-14 18:49:06 - PlotNode - DEBUG - SceneNode.from_dict: Created node Top-Left Plot (ID: plot_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Top-Left Plot'.
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:49:06 - PlotNode - DEBUG - Plot properties for 'Top-Left Plot' updated from dict.
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode 'Top-Left Plot': No data file path specified.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Top-Left Plot (ID: plot_001) of type PlotNode.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:49:06 - PlotNode - DEBUG - SceneNode initialized: Top-Right Plot (ID: plot_002)
+2026-02-14 18:49:06 - GroupNode - DEBUG - Added child Top-Right Plot (ID: plot_002) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode initialized: Top-Right Plot (ID: plot_002)
+2026-02-14 18:49:06 - PlotNode - DEBUG - SceneNode.from_dict: Created node Top-Right Plot (ID: plot_002).
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Top-Right Plot'.
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:49:06 - PlotNode - DEBUG - Plot properties for 'Top-Right Plot' updated from dict.
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode 'Top-Right Plot': No data file path specified.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Top-Right Plot (ID: plot_002) of type PlotNode.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:49:06 - PlotNode - DEBUG - SceneNode initialized: Bottom-Left Plot (ID: plot_003)
+2026-02-14 18:49:06 - GroupNode - DEBUG - Added child Bottom-Left Plot (ID: plot_003) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode initialized: Bottom-Left Plot (ID: plot_003)
+2026-02-14 18:49:06 - PlotNode - DEBUG - SceneNode.from_dict: Created node Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Bottom-Left Plot'.
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.SCATTER
+2026-02-14 18:49:06 - PlotNode - DEBUG - Plot properties for 'Bottom-Left Plot' updated from dict.
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode 'Bottom-Left Plot': No data file path specified.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Bottom-Left Plot (ID: plot_003) of type PlotNode.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:49:06 - PlotNode - DEBUG - SceneNode initialized: Bottom-Right Plot (ID: plot_004)
+2026-02-14 18:49:06 - GroupNode - DEBUG - Added child Bottom-Right Plot (ID: plot_004) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode initialized: Bottom-Right Plot (ID: plot_004)
+2026-02-14 18:49:06 - PlotNode - DEBUG - SceneNode.from_dict: Created node Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Bottom-Right Plot'.
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:49:06 - PlotNode - DEBUG - Plot properties for 'Bottom-Right Plot' updated from dict.
+2026-02-14 18:49:06 - PlotNode - DEBUG - PlotNode 'Bottom-Right Plot': No data file path specified.
+2026-02-14 18:49:06 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Bottom-Right Plot (ID: plot_004) of type PlotNode.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:49:06 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:49:06 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:49:06 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: No specific plot selected, default combo box selection.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:49:06 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:49:06 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:49:06 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:49:06 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:49:06 - ProjectController - DEBUG - Model changed signal received in ProjectController. Currently not doing anything.
+2026-02-14 18:49:06 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 18:49:06 - Renderer - INFO - Rendering scene graph.
+2026-02-14 18:49:06 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:49:06 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:49:06 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:49:06 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:49:06 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 4 plots (pass-through).
+2026-02-14 18:49:06 - Renderer - DEBUG - Rendering PlotNode: Top-Left Plot (ID: plot_001), Geometry: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:49:06 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:49:06 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Left Plot.
+2026-02-14 18:49:06 - Renderer - DEBUG - Rendering PlotNode: Top-Right Plot (ID: plot_002), Geometry: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:49:06 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:49:06 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Right Plot.
+2026-02-14 18:49:06 - Renderer - DEBUG - Rendering PlotNode: Bottom-Left Plot (ID: plot_003), Geometry: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:49:06 - Renderer - DEBUG -   PlotType: PlotType.SCATTER, Title: 
+2026-02-14 18:49:06 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Left Plot.
+2026-02-14 18:49:06 - Renderer - DEBUG - Rendering PlotNode: Bottom-Right Plot (ID: plot_004), Geometry: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:49:06 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:49:06 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Right Plot.
+2026-02-14 18:49:06 - Renderer - DEBUG - Rendering GroupNode: 2x2 Layout (ID: layout_root_001), Children: 4
+2026-02-14 18:49:06 - Renderer - DEBUG - Node Top-Left Plot (ID: plot_001) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:49:06 - Renderer - DEBUG - Node Top-Right Plot (ID: plot_002) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:49:06 - Renderer - DEBUG - Node Bottom-Left Plot (ID: plot_003) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:49:06 - Renderer - DEBUG - Node Bottom-Right Plot (ID: plot_004) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:49:06 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 18:49:07 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:49:07 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:49:07 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:07 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:49:07 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:49:07 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:49:07 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:49:07 - PropertiesTab - DEBUG - PropertiesTab: No specific plot selected, default combo box selection.
+2026-02-14 18:49:07 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:49:07 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:49:07 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:49:07 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:49:07 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:49:07 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:49:07 - ProjectController - DEBUG - Model changed signal received in ProjectController. Currently not doing anything.
+2026-02-14 18:49:07 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 18:49:07 - Renderer - INFO - Rendering scene graph.
+2026-02-14 18:49:07 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:49:07 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:49:07 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:49:07 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:49:07 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:49:07 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 4 plots (pass-through).
+2026-02-14 18:49:07 - Renderer - DEBUG - Rendering PlotNode: Top-Left Plot (ID: plot_001), Geometry: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:49:07 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:49:07 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Left Plot.
+2026-02-14 18:49:07 - Renderer - DEBUG - Rendering PlotNode: Top-Right Plot (ID: plot_002), Geometry: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:49:07 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:49:07 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Right Plot.
+2026-02-14 18:49:07 - Renderer - DEBUG - Rendering PlotNode: Bottom-Left Plot (ID: plot_003), Geometry: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:49:07 - Renderer - DEBUG -   PlotType: PlotType.SCATTER, Title: 
+2026-02-14 18:49:07 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Left Plot.
+2026-02-14 18:49:07 - Renderer - DEBUG - Rendering PlotNode: Bottom-Right Plot (ID: plot_004), Geometry: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:49:07 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:49:07 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Right Plot.
+2026-02-14 18:49:07 - Renderer - DEBUG - Rendering GroupNode: 2x2 Layout (ID: layout_root_001), Children: 4
+2026-02-14 18:49:07 - Renderer - DEBUG - Node Top-Left Plot (ID: plot_001) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:49:07 - Renderer - DEBUG - Node Top-Right Plot (ID: plot_002) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:49:07 - Renderer - DEBUG - Node Bottom-Left Plot (ID: plot_003) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:49:07 - Renderer - DEBUG - Node Bottom-Right Plot (ID: plot_004) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:49:07 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 18:53:20 - root - INFO - Logging configured. Level: DEBUG, Console: True, File: True
+2026-02-14 18:53:20 - src.app - INFO - Application starting...
+2026-02-14 18:53:20 - CompositionRoot - INFO - CompositionRoot initialized.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'config_path' with default: 'Not Provided'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'config_path'. Result: 'configs\default_config.yaml'.
+2026-02-14 18:53:20 - CompositionRoot - DEBUG - ConfigService provided with path: configs\default_config.yaml
+2026-02-14 18:53:20 - CompositionRoot - INFO - Assembling core components: Model, CommandManager, MainController, Renderer.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting required config key: 'figure.default_width'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_width'. Result: '8.5'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting required config key: 'figure.default_height'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_height'. Result: '6'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting required config key: 'figure.default_dpi'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_dpi'. Result: '150'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting required config key: 'figure.default_facecolor'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_facecolor'. Result: 'white'.
+2026-02-14 18:53:20 - CompositionRoot - DEBUG - Figure created with dimensions: 8.5x6 @ 150dpi, Facecolor: white
+2026-02-14 18:53:20 - GroupNode - DEBUG - SceneNode initialized: root (ID: 8e425d06d2dd4f6a886b8896c4f072eb)
+2026-02-14 18:53:20 - CommandManager - INFO - CommandManager initialized.
+2026-02-14 18:53:20 - FreeLayoutEngine - INFO - FreeLayoutEngine initialized.
+2026-02-14 18:53:20 - GridLayoutEngine - INFO - GridLayoutEngine initialized.
+2026-02-14 18:53:20 - LayoutManager - INFO - LayoutManager initialized.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'ui.default_layout_mode' with default: 'free_form'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_layout_mode'. Result: 'free_form'.
+2026-02-14 18:53:20 - LayoutManager - DEBUG - Default UI selected layout mode from config: free_form
+2026-02-14 18:53:20 - LayoutManager - DEBUG - Layout mode already free_form. No change needed.
+2026-02-14 18:53:20 - LayoutManager - INFO - Initial active layout mode set to: free_form
+2026-02-14 18:53:20 - LayoutController - INFO - LayoutController initialized.
+2026-02-14 18:53:20 - NodeController - INFO - NodeController initialized.
+2026-02-14 18:53:20 - Renderer - INFO - Renderer initialized.
+2026-02-14 18:53:20 - Renderer - DEBUG - Plotting strategies: [<PlotType.LINE: 'line'>, <PlotType.SCATTER: 'scatter'>]
+2026-02-14 18:53:20 - Renderer - DEBUG - Render strategies: []
+2026-02-14 18:53:20 - CompositionRoot - INFO - Assembling menus.
+2026-02-14 18:53:20 - CompositionRoot - INFO - Assembling tooling: ToolManager, SelectionTool, MockTools.
+2026-02-14 18:53:20 - SelectionTool - INFO - SelectionTool initialized.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'tool.default_active_tool' with default: 'selection'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'tool.default_active_tool'. Result: 'selection'.
+2026-02-14 18:53:20 - SelectionTool - INFO - SelectionTool activated.
+2026-02-14 18:53:20 - CompositionRoot - DEBUG - Default active tool set to: selection
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'tool.direct_selection.name' with default: 'direct_selection'.
+2026-02-14 18:53:20 - ConfigService - WARNING - Config key 'tool.direct_selection.name' not found. Returning default: 'direct_selection'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'tool.eyedropper.name' with default: 'eyedropper'.
+2026-02-14 18:53:20 - ConfigService - WARNING - Config key 'tool.eyedropper.name' not found. Returning default: 'eyedropper'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'tool.plot.name' with default: 'plot'.
+2026-02-14 18:53:20 - ConfigService - WARNING - Config key 'tool.plot.name' not found. Returning default: 'plot'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'tool.text.name' with default: 'text'.
+2026-02-14 18:53:20 - ConfigService - WARNING - Config key 'tool.text.name' not found. Returning default: 'text'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'tool.zoom.name' with default: 'zoom'.
+2026-02-14 18:53:20 - ConfigService - WARNING - Config key 'tool.zoom.name' not found. Returning default: 'zoom'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.select' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.select'. Result: 'toolbar/Select.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 18:53:20 - CompositionRoot - INFO - Assembling side panel.
+2026-02-14 18:53:20 - LayoutUIFactory - INFO - LayoutUIFactory initialized.
+2026-02-14 18:53:20 - SidePanel - INFO - SidePanel initialized.
+2026-02-14 18:53:20 - PropertiesTab - INFO - PropertiesTab initialized.
+2026-02-14 18:53:20 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:53:20 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:53:20 - GroupNode - DEBUG - Getting all descendants starting from root (ID: 8e425d06d2dd4f6a886b8896c4f072eb).
+2026-02-14 18:53:20 - PropertiesTab - DEBUG - PropertiesTab: No plots available, UI disabled.
+2026-02-14 18:53:20 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:53:20 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:53:20 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:53:20 - LayoutTab - INFO - LayoutTab initialized.
+2026-02-14 18:53:20 - LayoutTab - DEBUG - LayoutTab: Updating content for UI layout mode: free_form
+2026-02-14 18:53:20 - LayoutUIFactory - DEBUG - Building layout controls for UI selected mode: free_form
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_left' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_left'. Result: 'properties/alignment/align_horizontal_left_24dp_E3E3E3.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_center' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_center'. Result: 'properties/alignment/align_horizontal_center_24dp_E3E3E3.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_right' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_right'. Result: 'properties/alignment/align_horizontal_right_24dp_E3E3E3.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_top' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_top'. Result: 'properties/alignment/align_vertical_top_24dp_E3E3E3.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_center' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_center'. Result: 'properties/alignment/align_vertical_center_24dp_E3E3E3.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_bottom' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_bottom'. Result: 'properties/alignment/align_vertical_bottom_24dp_E3E3E3.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.horizontal_distribute' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.horizontal_distribute'. Result: 'properties/distribute/horizontal_distribute_24dp_E3E3E3.svg'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.vertical_distribute' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.vertical_distribute'. Result: 'properties/distribute/vertical_distribute_24dp_E3E3E3.svg'.
+2026-02-14 18:53:20 - LayersTab - INFO - LayersTab initialized.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.group' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - WARNING - Config key 'paths.toolbar.group' not found. Returning default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.ungroup' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - WARNING - Config key 'paths.toolbar.ungroup' not found. Returning default: 'None'.
+2026-02-14 18:53:20 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:53:20 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:53:20 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:53:20 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 18:53:20 - CompositionRoot - INFO - Assembling main window.
+2026-02-14 18:53:20 - CanvasController - INFO - CanvasController initialized.
+2026-02-14 18:53:20 - CanvasController - DEBUG - Connecting canvas events.
+2026-02-14 18:53:20 - CanvasController - DEBUG - Connected Matplotlib events to ToolManager.
+2026-02-14 18:53:20 - CanvasController - DEBUG - Connected fileDropped signal to on_file_dropped.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting required config key: 'paths.layout_templates_dir'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved required config key 'paths.layout_templates_dir'. Result: 'templates/layouts'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting required config key: 'layout.max_recent_files'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved required config key 'layout.max_recent_files'. Result: '10'.
+2026-02-14 18:53:20 - ProjectController - INFO - ProjectController initialized.
+2026-02-14 18:53:20 - CompositionRoot - DEBUG - Connecting signals.
+2026-02-14 18:53:20 - CompositionRoot - INFO - Application assembly complete.
+2026-02-14 18:53:20 - ThemeManager - INFO - ThemeManager initialized.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'ui.default_theme' with default: 'dark'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_theme'. Result: 'dark'.
+2026-02-14 18:53:20 - ThemeManager - INFO - Attempting to apply theme: 'dark'
+2026-02-14 18:53:20 - ConfigService - DEBUG - Getting config key: 'themes.dark' with default: 'None'.
+2026-02-14 18:53:20 - ConfigService - DEBUG - Successfully retrieved config key 'themes.dark'. Result: '{'style': 'Fusion', 'palette': {'Window': [53, 53, 53], 'WindowText': [255, 255, 255], 'Base': [25, 25, 25], 'AlternateBase': [53, 53, 53], 'ToolTipBase': [255, 255, 255], 'ToolTipText': [255, 255, 255], 'Text': [255, 255, 255], 'Button': [53, 53, 53], 'ButtonText': [255, 255, 255], 'BrightText': [255, 0, 0], 'Link': [42, 130, 218], 'Highlight': [42, 130, 218], 'HighlightedText': [0, 0, 0], 'PlaceholderText': [160, 160, 160]}}'.
+2026-02-14 18:53:20 - ThemeManager - DEBUG - Applied Qt style: 'Fusion'
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'Window' to RGB: [53, 53, 53]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'WindowText' to RGB: [255, 255, 255]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'Base' to RGB: [25, 25, 25]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'AlternateBase' to RGB: [53, 53, 53]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'ToolTipBase' to RGB: [255, 255, 255]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'ToolTipText' to RGB: [255, 255, 255]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'Text' to RGB: [255, 255, 255]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'Button' to RGB: [53, 53, 53]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'ButtonText' to RGB: [255, 255, 255]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'BrightText' to RGB: [255, 0, 0]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'Link' to RGB: [42, 130, 218]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'Highlight' to RGB: [42, 130, 218]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'HighlightedText' to RGB: [0, 0, 0]
+2026-02-14 18:53:20 - ThemeManager - DEBUG -   Set palette role 'PlaceholderText' to RGB: [160, 160, 160]
+2026-02-14 18:53:20 - ThemeManager - INFO - Theme 'dark' applied successfully.
+2026-02-14 18:53:20 - src.app - INFO - Application stopping...
+2026-02-14 18:53:29 - root - INFO - Logging configured. Level: DEBUG, Console: True, File: True
+2026-02-14 18:53:29 - src.app - INFO - Application starting...
+2026-02-14 18:53:29 - CompositionRoot - INFO - CompositionRoot initialized.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'config_path' with default: 'Not Provided'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'config_path'. Result: 'configs\default_config.yaml'.
+2026-02-14 18:53:29 - CompositionRoot - DEBUG - ConfigService provided with path: configs\default_config.yaml
+2026-02-14 18:53:29 - CompositionRoot - INFO - Assembling core components: Model, CommandManager, MainController, Renderer.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting required config key: 'figure.default_width'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_width'. Result: '8.5'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting required config key: 'figure.default_height'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_height'. Result: '6'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting required config key: 'figure.default_dpi'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_dpi'. Result: '150'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting required config key: 'figure.default_facecolor'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_facecolor'. Result: 'white'.
+2026-02-14 18:53:29 - CompositionRoot - DEBUG - Figure created with dimensions: 8.5x6 @ 150dpi, Facecolor: white
+2026-02-14 18:53:29 - GroupNode - DEBUG - SceneNode initialized: root (ID: d813240923f74a80b773908dc3917ab1)
+2026-02-14 18:53:29 - CommandManager - INFO - CommandManager initialized.
+2026-02-14 18:53:29 - FreeLayoutEngine - INFO - FreeLayoutEngine initialized.
+2026-02-14 18:53:29 - GridLayoutEngine - INFO - GridLayoutEngine initialized.
+2026-02-14 18:53:29 - LayoutManager - INFO - LayoutManager initialized.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'ui.default_layout_mode' with default: 'free_form'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_layout_mode'. Result: 'free_form'.
+2026-02-14 18:53:29 - LayoutManager - DEBUG - Default UI selected layout mode from config: free_form
+2026-02-14 18:53:29 - LayoutManager - DEBUG - Layout mode already free_form. No change needed.
+2026-02-14 18:53:29 - LayoutManager - INFO - Initial active layout mode set to: free_form
+2026-02-14 18:53:29 - LayoutController - INFO - LayoutController initialized.
+2026-02-14 18:53:29 - NodeController - INFO - NodeController initialized.
+2026-02-14 18:53:29 - Renderer - INFO - Renderer initialized.
+2026-02-14 18:53:29 - Renderer - DEBUG - Plotting strategies: [<PlotType.LINE: 'line'>, <PlotType.SCATTER: 'scatter'>]
+2026-02-14 18:53:29 - Renderer - DEBUG - Render strategies: []
+2026-02-14 18:53:29 - CompositionRoot - INFO - Assembling menus.
+2026-02-14 18:53:29 - CompositionRoot - INFO - Assembling tooling: ToolManager, SelectionTool, MockTools.
+2026-02-14 18:53:29 - SelectionTool - INFO - SelectionTool initialized.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'tool.default_active_tool' with default: 'selection'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'tool.default_active_tool'. Result: 'selection'.
+2026-02-14 18:53:29 - SelectionTool - INFO - SelectionTool activated.
+2026-02-14 18:53:29 - CompositionRoot - DEBUG - Default active tool set to: selection
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'tool.direct_selection.name' with default: 'direct_selection'.
+2026-02-14 18:53:29 - ConfigService - WARNING - Config key 'tool.direct_selection.name' not found. Returning default: 'direct_selection'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'tool.eyedropper.name' with default: 'eyedropper'.
+2026-02-14 18:53:29 - ConfigService - WARNING - Config key 'tool.eyedropper.name' not found. Returning default: 'eyedropper'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'tool.plot.name' with default: 'plot'.
+2026-02-14 18:53:29 - ConfigService - WARNING - Config key 'tool.plot.name' not found. Returning default: 'plot'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'tool.text.name' with default: 'text'.
+2026-02-14 18:53:29 - ConfigService - WARNING - Config key 'tool.text.name' not found. Returning default: 'text'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'tool.zoom.name' with default: 'zoom'.
+2026-02-14 18:53:29 - ConfigService - WARNING - Config key 'tool.zoom.name' not found. Returning default: 'zoom'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.select' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.select'. Result: 'toolbar/Select.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 18:53:29 - CompositionRoot - INFO - Assembling side panel.
+2026-02-14 18:53:29 - LayoutUIFactory - INFO - LayoutUIFactory initialized.
+2026-02-14 18:53:29 - SidePanel - INFO - SidePanel initialized.
+2026-02-14 18:53:29 - PropertiesTab - INFO - PropertiesTab initialized.
+2026-02-14 18:53:29 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:53:29 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:53:29 - GroupNode - DEBUG - Getting all descendants starting from root (ID: d813240923f74a80b773908dc3917ab1).
+2026-02-14 18:53:29 - PropertiesTab - DEBUG - PropertiesTab: No plots available, UI disabled.
+2026-02-14 18:53:29 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:53:29 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:53:29 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:53:29 - LayoutTab - INFO - LayoutTab initialized.
+2026-02-14 18:53:29 - LayoutTab - DEBUG - LayoutTab: Updating content for UI layout mode: free_form
+2026-02-14 18:53:29 - LayoutUIFactory - DEBUG - Building layout controls for UI selected mode: free_form
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_left' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_left'. Result: 'properties/alignment/align_horizontal_left_24dp_E3E3E3.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_center' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_center'. Result: 'properties/alignment/align_horizontal_center_24dp_E3E3E3.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_right' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_right'. Result: 'properties/alignment/align_horizontal_right_24dp_E3E3E3.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_top' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_top'. Result: 'properties/alignment/align_vertical_top_24dp_E3E3E3.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_center' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_center'. Result: 'properties/alignment/align_vertical_center_24dp_E3E3E3.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_bottom' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_bottom'. Result: 'properties/alignment/align_vertical_bottom_24dp_E3E3E3.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.horizontal_distribute' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.horizontal_distribute'. Result: 'properties/distribute/horizontal_distribute_24dp_E3E3E3.svg'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.vertical_distribute' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.vertical_distribute'. Result: 'properties/distribute/vertical_distribute_24dp_E3E3E3.svg'.
+2026-02-14 18:53:29 - LayersTab - INFO - LayersTab initialized.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.group' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - WARNING - Config key 'paths.toolbar.group' not found. Returning default: 'None'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 18:53:29 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.ungroup' with default: 'None'.
+2026-02-14 18:53:29 - ConfigService - WARNING - Config key 'paths.toolbar.ungroup' not found. Returning default: 'None'.
+2026-02-14 18:53:29 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:53:29 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:53:29 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:53:29 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 18:53:29 - CompositionRoot - INFO - Assembling main window.
+2026-02-14 18:53:30 - CanvasController - INFO - CanvasController initialized.
+2026-02-14 18:53:30 - CanvasController - DEBUG - Connecting canvas events.
+2026-02-14 18:53:30 - CanvasController - DEBUG - Connected Matplotlib events to ToolManager.
+2026-02-14 18:53:30 - CanvasController - DEBUG - Connected fileDropped signal to on_file_dropped.
+2026-02-14 18:53:30 - ConfigService - DEBUG - Getting required config key: 'paths.layout_templates_dir'.
+2026-02-14 18:53:30 - ConfigService - DEBUG - Successfully retrieved required config key 'paths.layout_templates_dir'. Result: 'templates/layouts'.
+2026-02-14 18:53:30 - ConfigService - DEBUG - Getting required config key: 'layout.max_recent_files'.
+2026-02-14 18:53:30 - ConfigService - DEBUG - Successfully retrieved required config key 'layout.max_recent_files'. Result: '10'.
+2026-02-14 18:53:30 - ProjectController - INFO - ProjectController initialized.
+2026-02-14 18:53:30 - CompositionRoot - DEBUG - Connecting signals.
+2026-02-14 18:53:30 - CompositionRoot - INFO - Application assembly complete.
+2026-02-14 18:53:30 - ThemeManager - INFO - ThemeManager initialized.
+2026-02-14 18:53:30 - ConfigService - DEBUG - Getting config key: 'ui.default_theme' with default: 'dark'.
+2026-02-14 18:53:30 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_theme'. Result: 'dark'.
+2026-02-14 18:53:30 - ThemeManager - INFO - Attempting to apply theme: 'dark'
+2026-02-14 18:53:30 - ConfigService - DEBUG - Getting config key: 'themes.dark' with default: 'None'.
+2026-02-14 18:53:30 - ConfigService - DEBUG - Successfully retrieved config key 'themes.dark'. Result: '{'style': 'Fusion', 'palette': {'Window': [53, 53, 53], 'WindowText': [255, 255, 255], 'Base': [25, 25, 25], 'AlternateBase': [53, 53, 53], 'ToolTipBase': [255, 255, 255], 'ToolTipText': [255, 255, 255], 'Text': [255, 255, 255], 'Button': [53, 53, 53], 'ButtonText': [255, 255, 255], 'BrightText': [255, 0, 0], 'Link': [42, 130, 218], 'Highlight': [42, 130, 218], 'HighlightedText': [0, 0, 0], 'PlaceholderText': [160, 160, 160]}}'.
+2026-02-14 18:53:30 - ThemeManager - DEBUG - Applied Qt style: 'Fusion'
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'Window' to RGB: [53, 53, 53]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'WindowText' to RGB: [255, 255, 255]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'Base' to RGB: [25, 25, 25]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'AlternateBase' to RGB: [53, 53, 53]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'ToolTipBase' to RGB: [255, 255, 255]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'ToolTipText' to RGB: [255, 255, 255]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'Text' to RGB: [255, 255, 255]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'Button' to RGB: [53, 53, 53]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'ButtonText' to RGB: [255, 255, 255]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'BrightText' to RGB: [255, 0, 0]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'Link' to RGB: [42, 130, 218]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'Highlight' to RGB: [42, 130, 218]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'HighlightedText' to RGB: [0, 0, 0]
+2026-02-14 18:53:30 - ThemeManager - DEBUG -   Set palette role 'PlaceholderText' to RGB: [160, 160, 160]
+2026-02-14 18:53:30 - ThemeManager - INFO - Theme 'dark' applied successfully.
+2026-02-14 18:53:30 - src.app - INFO - Application stopping...
+2026-02-14 18:53:33 - ProjectController - INFO - Handling 'New from Template' action.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'GroupNode'
+2026-02-14 18:53:37 - GroupNode - DEBUG - SceneNode initialized: 2x2 Layout (ID: layout_root_001)
+2026-02-14 18:53:37 - GroupNode - DEBUG - SceneNode.from_dict: Created node 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Created node 2x2 Layout (ID: layout_root_001) of type GroupNode.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Recursively creating 4 children for 2x2 Layout.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:53:37 - PlotNode - DEBUG - SceneNode initialized: Top-Left Plot (ID: plot_001)
+2026-02-14 18:53:37 - GroupNode - DEBUG - Added child Top-Left Plot (ID: plot_001) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode initialized: Top-Left Plot (ID: plot_001)
+2026-02-14 18:53:37 - PlotNode - DEBUG - SceneNode.from_dict: Created node Top-Left Plot (ID: plot_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Top-Left Plot'.
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:53:37 - PlotNode - DEBUG - Plot properties for 'Top-Left Plot' updated from dict.
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode 'Top-Left Plot': No data file path specified.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Top-Left Plot (ID: plot_001) of type PlotNode.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:53:37 - PlotNode - DEBUG - SceneNode initialized: Top-Right Plot (ID: plot_002)
+2026-02-14 18:53:37 - GroupNode - DEBUG - Added child Top-Right Plot (ID: plot_002) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode initialized: Top-Right Plot (ID: plot_002)
+2026-02-14 18:53:37 - PlotNode - DEBUG - SceneNode.from_dict: Created node Top-Right Plot (ID: plot_002).
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Top-Right Plot'.
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:53:37 - PlotNode - DEBUG - Plot properties for 'Top-Right Plot' updated from dict.
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode 'Top-Right Plot': No data file path specified.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Top-Right Plot (ID: plot_002) of type PlotNode.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:53:37 - PlotNode - DEBUG - SceneNode initialized: Bottom-Left Plot (ID: plot_003)
+2026-02-14 18:53:37 - GroupNode - DEBUG - Added child Bottom-Left Plot (ID: plot_003) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode initialized: Bottom-Left Plot (ID: plot_003)
+2026-02-14 18:53:37 - PlotNode - DEBUG - SceneNode.from_dict: Created node Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Bottom-Left Plot'.
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.SCATTER
+2026-02-14 18:53:37 - PlotNode - DEBUG - Plot properties for 'Bottom-Left Plot' updated from dict.
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode 'Bottom-Left Plot': No data file path specified.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Bottom-Left Plot (ID: plot_003) of type PlotNode.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 18:53:37 - PlotNode - DEBUG - SceneNode initialized: Bottom-Right Plot (ID: plot_004)
+2026-02-14 18:53:37 - GroupNode - DEBUG - Added child Bottom-Right Plot (ID: plot_004) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode initialized: Bottom-Right Plot (ID: plot_004)
+2026-02-14 18:53:37 - PlotNode - DEBUG - SceneNode.from_dict: Created node Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Bottom-Right Plot'.
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 18:53:37 - PlotNode - DEBUG - Plot properties for 'Bottom-Right Plot' updated from dict.
+2026-02-14 18:53:37 - PlotNode - DEBUG - PlotNode 'Bottom-Right Plot': No data file path specified.
+2026-02-14 18:53:37 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Bottom-Right Plot (ID: plot_004) of type PlotNode.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:53:37 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: No specific plot selected, default combo box selection.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:53:37 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:53:37 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 18:53:37 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 18:53:37 - Renderer - INFO - Rendering scene graph.
+2026-02-14 18:53:37 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:53:37 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 4 plots (pass-through).
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering PlotNode: Top-Left Plot (ID: plot_001), Geometry: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:53:37 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:53:37 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Left Plot.
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering PlotNode: Top-Right Plot (ID: plot_002), Geometry: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:53:37 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:53:37 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Right Plot.
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering PlotNode: Bottom-Left Plot (ID: plot_003), Geometry: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:53:37 - Renderer - DEBUG -   PlotType: PlotType.SCATTER, Title: 
+2026-02-14 18:53:37 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Left Plot.
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering PlotNode: Bottom-Right Plot (ID: plot_004), Geometry: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:53:37 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:53:37 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Right Plot.
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering GroupNode: 2x2 Layout (ID: layout_root_001), Children: 4
+2026-02-14 18:53:37 - Renderer - DEBUG - Node Top-Left Plot (ID: plot_001) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:53:37 - Renderer - DEBUG - Node Top-Right Plot (ID: plot_002) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:53:37 - Renderer - DEBUG - Node Bottom-Left Plot (ID: plot_003) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:53:37 - Renderer - DEBUG - Node Bottom-Right Plot (ID: plot_004) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:53:37 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 18:53:37 - ApplicationModel - DEBUG - Scene root set to: 2x2 Layout (ID: layout_root_001). Selection cleared.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 18:53:37 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: No specific plot selected, default combo box selection.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 18:53:37 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 18:53:37 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 18:53:37 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 18:53:37 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 18:53:37 - ProjectController - DEBUG - Model changed signal received in ProjectController. Currently not doing anything.
+2026-02-14 18:53:37 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 18:53:37 - Renderer - INFO - Rendering scene graph.
+2026-02-14 18:53:37 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 18:53:37 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 18:53:37 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 4 plots (pass-through).
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering PlotNode: Top-Left Plot (ID: plot_001), Geometry: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 18:53:37 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:53:37 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Left Plot.
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering PlotNode: Top-Right Plot (ID: plot_002), Geometry: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 18:53:37 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:53:37 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Right Plot.
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering PlotNode: Bottom-Left Plot (ID: plot_003), Geometry: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 18:53:37 - Renderer - DEBUG -   PlotType: PlotType.SCATTER, Title: 
+2026-02-14 18:53:37 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Left Plot.
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering PlotNode: Bottom-Right Plot (ID: plot_004), Geometry: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 18:53:37 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 18:53:37 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Right Plot.
+2026-02-14 18:53:37 - Renderer - DEBUG - Rendering GroupNode: 2x2 Layout (ID: layout_root_001), Children: 4
+2026-02-14 18:53:37 - Renderer - DEBUG - Node Top-Left Plot (ID: plot_001) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:53:37 - Renderer - DEBUG - Node Top-Right Plot (ID: plot_002) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:53:37 - Renderer - DEBUG - Node Bottom-Left Plot (ID: plot_003) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:53:37 - Renderer - DEBUG - Node Bottom-Right Plot (ID: plot_004) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 18:53:37 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 22:40:14 - root - INFO - Logging configured. Level: DEBUG, Console: True, File: True
+2026-02-14 22:40:14 - src.app - INFO - Application starting...
+2026-02-14 22:40:14 - CompositionRoot - INFO - CompositionRoot initialized.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'config_path' with default: 'Not Provided'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'config_path'. Result: 'configs\default_config.yaml'.
+2026-02-14 22:40:14 - CompositionRoot - DEBUG - ConfigService provided with path: configs\default_config.yaml
+2026-02-14 22:40:14 - CompositionRoot - INFO - Assembling core components: Model, CommandManager, MainController, Renderer.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting required config key: 'figure.default_width'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_width'. Result: '8.5'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting required config key: 'figure.default_height'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_height'. Result: '6'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting required config key: 'figure.default_dpi'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_dpi'. Result: '150'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting required config key: 'figure.default_facecolor'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved required config key 'figure.default_facecolor'. Result: 'white'.
+2026-02-14 22:40:14 - CompositionRoot - DEBUG - Figure created with dimensions: 8.5x6 @ 150dpi, Facecolor: white
+2026-02-14 22:40:14 - GroupNode - DEBUG - SceneNode initialized: root (ID: 55ae0a148947442280f11ae770926d21)
+2026-02-14 22:40:14 - CommandManager - INFO - CommandManager initialized.
+2026-02-14 22:40:14 - FreeLayoutEngine - INFO - FreeLayoutEngine initialized.
+2026-02-14 22:40:14 - GridLayoutEngine - INFO - GridLayoutEngine initialized.
+2026-02-14 22:40:14 - LayoutManager - INFO - LayoutManager initialized.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'ui.default_layout_mode' with default: 'free_form'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_layout_mode'. Result: 'free_form'.
+2026-02-14 22:40:14 - LayoutManager - DEBUG - Default UI selected layout mode from config: free_form
+2026-02-14 22:40:14 - LayoutManager - DEBUG - Layout mode already free_form. No change needed.
+2026-02-14 22:40:14 - LayoutManager - INFO - Initial active layout mode set to: free_form
+2026-02-14 22:40:14 - LayoutController - INFO - LayoutController initialized.
+2026-02-14 22:40:14 - NodeController - INFO - NodeController initialized.
+2026-02-14 22:40:14 - Renderer - INFO - Renderer initialized.
+2026-02-14 22:40:14 - Renderer - DEBUG - Plotting strategies: [<PlotType.LINE: 'line'>, <PlotType.SCATTER: 'scatter'>]
+2026-02-14 22:40:14 - Renderer - DEBUG - Render strategies: []
+2026-02-14 22:40:14 - CompositionRoot - INFO - Assembling menus.
+2026-02-14 22:40:14 - CompositionRoot - INFO - Assembling tooling: ToolManager, SelectionTool, MockTools.
+2026-02-14 22:40:14 - SelectionTool - INFO - SelectionTool initialized.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'tool.default_active_tool' with default: 'selection'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'tool.default_active_tool'. Result: 'selection'.
+2026-02-14 22:40:14 - SelectionTool - INFO - SelectionTool activated.
+2026-02-14 22:40:14 - CompositionRoot - DEBUG - Default active tool set to: selection
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'tool.direct_selection.name' with default: 'direct_selection'.
+2026-02-14 22:40:14 - ConfigService - WARNING - Config key 'tool.direct_selection.name' not found. Returning default: 'direct_selection'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'tool.eyedropper.name' with default: 'eyedropper'.
+2026-02-14 22:40:14 - ConfigService - WARNING - Config key 'tool.eyedropper.name' not found. Returning default: 'eyedropper'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'tool.plot.name' with default: 'plot'.
+2026-02-14 22:40:14 - ConfigService - WARNING - Config key 'tool.plot.name' not found. Returning default: 'plot'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'tool.text.name' with default: 'text'.
+2026-02-14 22:40:14 - ConfigService - WARNING - Config key 'tool.text.name' not found. Returning default: 'text'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'tool.zoom.name' with default: 'zoom'.
+2026-02-14 22:40:14 - ConfigService - WARNING - Config key 'tool.zoom.name' not found. Returning default: 'zoom'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.select' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.select'. Result: 'toolbar/Select.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.direct_select' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.direct_select'. Result: 'toolbar/Direct_Select.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.eyedropper' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.eyedropper'. Result: 'toolbar/Eyedropper.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.plot' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.plot'. Result: 'toolbar/Plot.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.text' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.text'. Result: 'toolbar/Text.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.tool_icons.zoom' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.tool_icons.zoom'. Result: 'toolbar/Zoom.svg'.
+2026-02-14 22:40:14 - CompositionRoot - INFO - Assembling side panel.
+2026-02-14 22:40:14 - LayoutUIFactory - INFO - LayoutUIFactory initialized.
+2026-02-14 22:40:14 - SidePanel - INFO - SidePanel initialized.
+2026-02-14 22:40:14 - PropertiesTab - INFO - PropertiesTab initialized.
+2026-02-14 22:40:14 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 22:40:14 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 22:40:14 - GroupNode - DEBUG - Getting all descendants starting from root (ID: 55ae0a148947442280f11ae770926d21).
+2026-02-14 22:40:14 - PropertiesTab - DEBUG - PropertiesTab: No plots available, UI disabled.
+2026-02-14 22:40:14 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 22:40:14 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 22:40:14 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 22:40:14 - LayoutTab - INFO - LayoutTab initialized.
+2026-02-14 22:40:14 - LayoutTab - DEBUG - LayoutTab: Updating content for UI layout mode: free_form
+2026-02-14 22:40:14 - LayoutUIFactory - DEBUG - Building layout controls for UI selected mode: free_form
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_left' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_left'. Result: 'properties/alignment/align_horizontal_left_24dp_E3E3E3.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_center' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_center'. Result: 'properties/alignment/align_horizontal_center_24dp_E3E3E3.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_horizontal_right' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_horizontal_right'. Result: 'properties/alignment/align_horizontal_right_24dp_E3E3E3.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_top' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_top'. Result: 'properties/alignment/align_vertical_top_24dp_E3E3E3.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_center' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_center'. Result: 'properties/alignment/align_vertical_center_24dp_E3E3E3.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.properties.alignment.align_vertical_bottom' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.alignment.align_vertical_bottom'. Result: 'properties/alignment/align_vertical_bottom_24dp_E3E3E3.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.horizontal_distribute' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.horizontal_distribute'. Result: 'properties/distribute/horizontal_distribute_24dp_E3E3E3.svg'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.properties.distribute.vertical_distribute' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.properties.distribute.vertical_distribute'. Result: 'properties/distribute/vertical_distribute_24dp_E3E3E3.svg'.
+2026-02-14 22:40:14 - LayersTab - INFO - LayersTab initialized.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.group' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - WARNING - Config key 'paths.toolbar.group' not found. Returning default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.icon_base_dir' with default: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'paths.icon_base_dir'. Result: 'src/assets/icons'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'paths.toolbar.ungroup' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - WARNING - Config key 'paths.toolbar.ungroup' not found. Returning default: 'None'.
+2026-02-14 22:40:14 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 22:40:14 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 22:40:14 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 22:40:14 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 22:40:14 - CompositionRoot - INFO - Assembling main window.
+2026-02-14 22:40:14 - CanvasController - INFO - CanvasController initialized.
+2026-02-14 22:40:14 - CanvasController - DEBUG - Connecting canvas events.
+2026-02-14 22:40:14 - CanvasController - DEBUG - Connected Matplotlib events to ToolManager.
+2026-02-14 22:40:14 - CanvasController - DEBUG - Connected fileDropped signal to on_file_dropped.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting required config key: 'paths.layout_templates_dir'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved required config key 'paths.layout_templates_dir'. Result: 'templates/layouts'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting required config key: 'layout.max_recent_files'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved required config key 'layout.max_recent_files'. Result: '10'.
+2026-02-14 22:40:14 - ProjectController - INFO - ProjectController initialized.
+2026-02-14 22:40:14 - CompositionRoot - DEBUG - Connecting signals.
+2026-02-14 22:40:14 - CompositionRoot - INFO - Application assembly complete.
+2026-02-14 22:40:14 - ThemeManager - INFO - ThemeManager initialized.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'ui.default_theme' with default: 'dark'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'ui.default_theme'. Result: 'dark'.
+2026-02-14 22:40:14 - ThemeManager - INFO - Attempting to apply theme: 'dark'
+2026-02-14 22:40:14 - ConfigService - DEBUG - Getting config key: 'themes.dark' with default: 'None'.
+2026-02-14 22:40:14 - ConfigService - DEBUG - Successfully retrieved config key 'themes.dark'. Result: '{'style': 'Fusion', 'palette': {'Window': [53, 53, 53], 'WindowText': [255, 255, 255], 'Base': [25, 25, 25], 'AlternateBase': [53, 53, 53], 'ToolTipBase': [255, 255, 255], 'ToolTipText': [255, 255, 255], 'Text': [255, 255, 255], 'Button': [53, 53, 53], 'ButtonText': [255, 255, 255], 'BrightText': [255, 0, 0], 'Link': [42, 130, 218], 'Highlight': [42, 130, 218], 'HighlightedText': [0, 0, 0], 'PlaceholderText': [160, 160, 160]}}'.
+2026-02-14 22:40:14 - ThemeManager - DEBUG - Applied Qt style: 'Fusion'
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'Window' to RGB: [53, 53, 53]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'WindowText' to RGB: [255, 255, 255]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'Base' to RGB: [25, 25, 25]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'AlternateBase' to RGB: [53, 53, 53]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'ToolTipBase' to RGB: [255, 255, 255]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'ToolTipText' to RGB: [255, 255, 255]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'Text' to RGB: [255, 255, 255]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'Button' to RGB: [53, 53, 53]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'ButtonText' to RGB: [255, 255, 255]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'BrightText' to RGB: [255, 0, 0]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'Link' to RGB: [42, 130, 218]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'Highlight' to RGB: [42, 130, 218]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'HighlightedText' to RGB: [0, 0, 0]
+2026-02-14 22:40:14 - ThemeManager - DEBUG -   Set palette role 'PlaceholderText' to RGB: [160, 160, 160]
+2026-02-14 22:40:14 - ThemeManager - INFO - Theme 'dark' applied successfully.
+2026-02-14 22:40:14 - src.app - INFO - Application stopping...
+2026-02-14 22:40:18 - ProjectController - INFO - Handling 'New from Template' action.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'GroupNode'
+2026-02-14 22:40:20 - GroupNode - DEBUG - SceneNode initialized: 2x2 Layout (ID: layout_root_001)
+2026-02-14 22:40:20 - GroupNode - DEBUG - SceneNode.from_dict: Created node 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Created node 2x2 Layout (ID: layout_root_001) of type GroupNode.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Recursively creating 4 children for 2x2 Layout.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 22:40:20 - PlotNode - DEBUG - SceneNode initialized: Top-Left Plot (ID: plot_001)
+2026-02-14 22:40:20 - GroupNode - DEBUG - Added child Top-Left Plot (ID: plot_001) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode initialized: Top-Left Plot (ID: plot_001)
+2026-02-14 22:40:20 - PlotNode - DEBUG - SceneNode.from_dict: Created node Top-Left Plot (ID: plot_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Top-Left Plot'.
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 22:40:20 - PlotNode - DEBUG - Plot properties for 'Top-Left Plot' updated from dict.
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode 'Top-Left Plot': No data file path specified.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Top-Left Plot (ID: plot_001) of type PlotNode.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 22:40:20 - PlotNode - DEBUG - SceneNode initialized: Top-Right Plot (ID: plot_002)
+2026-02-14 22:40:20 - GroupNode - DEBUG - Added child Top-Right Plot (ID: plot_002) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode initialized: Top-Right Plot (ID: plot_002)
+2026-02-14 22:40:20 - PlotNode - DEBUG - SceneNode.from_dict: Created node Top-Right Plot (ID: plot_002).
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Top-Right Plot'.
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 22:40:20 - PlotNode - DEBUG - Plot properties for 'Top-Right Plot' updated from dict.
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode 'Top-Right Plot': No data file path specified.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Top-Right Plot (ID: plot_002) of type PlotNode.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 22:40:20 - PlotNode - DEBUG - SceneNode initialized: Bottom-Left Plot (ID: plot_003)
+2026-02-14 22:40:20 - GroupNode - DEBUG - Added child Bottom-Left Plot (ID: plot_003) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode initialized: Bottom-Left Plot (ID: plot_003)
+2026-02-14 22:40:20 - PlotNode - DEBUG - SceneNode.from_dict: Created node Bottom-Left Plot (ID: plot_003).
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Bottom-Left Plot'.
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.SCATTER
+2026-02-14 22:40:20 - PlotNode - DEBUG - Plot properties for 'Bottom-Left Plot' updated from dict.
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode 'Bottom-Left Plot': No data file path specified.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Bottom-Left Plot (ID: plot_003) of type PlotNode.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Attempting to create node of type: 'PlotNode'
+2026-02-14 22:40:20 - PlotNode - DEBUG - SceneNode initialized: Bottom-Right Plot (ID: plot_004)
+2026-02-14 22:40:20 - GroupNode - DEBUG - Added child Bottom-Right Plot (ID: plot_004) to 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode initialized: Bottom-Right Plot (ID: plot_004)
+2026-02-14 22:40:20 - PlotNode - DEBUG - SceneNode.from_dict: Created node Bottom-Right Plot (ID: plot_004).
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Geometry extracted: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Deserializing plot properties for 'Bottom-Right Plot'.
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode.from_dict: Determined plot_type: PlotType.LINE
+2026-02-14 22:40:20 - PlotNode - DEBUG - Plot properties for 'Bottom-Right Plot' updated from dict.
+2026-02-14 22:40:20 - PlotNode - DEBUG - PlotNode 'Bottom-Right Plot': No data file path specified.
+2026-02-14 22:40:20 - src.models.nodes.scene_node - DEBUG - node_factory: Created node Bottom-Right Plot (ID: plot_004) of type PlotNode.
+2026-02-14 22:40:20 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 22:40:20 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 22:40:20 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 22:40:20 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 22:40:20 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 22:40:20 - PropertiesTab - DEBUG - PropertiesTab: No specific plot selected, default combo box selection.
+2026-02-14 22:40:20 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 22:40:20 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 22:40:20 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 22:40:20 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 22:40:20 - SidePanel - DEBUG - SidePanel: Selection changed. Checking for PlotNode selection.
+2026-02-14 22:40:20 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 22:40:20 - Renderer - INFO - Rendering scene graph.
+2026-02-14 22:40:20 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 22:40:20 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 22:40:20 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 22:40:20 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 22:40:20 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 4 plots (pass-through).
+2026-02-14 22:40:20 - Renderer - DEBUG - Rendering PlotNode: Top-Left Plot (ID: plot_001), Geometry: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 22:40:20 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 22:40:20 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Left Plot.
+2026-02-14 22:40:20 - Renderer - DEBUG - Rendering PlotNode: Top-Right Plot (ID: plot_002), Geometry: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 22:40:20 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 22:40:20 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Right Plot.
+2026-02-14 22:40:20 - Renderer - DEBUG - Rendering PlotNode: Bottom-Left Plot (ID: plot_003), Geometry: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 22:40:20 - Renderer - DEBUG -   PlotType: PlotType.SCATTER, Title: 
+2026-02-14 22:40:20 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Left Plot.
+2026-02-14 22:40:20 - Renderer - DEBUG - Rendering PlotNode: Bottom-Right Plot (ID: plot_004), Geometry: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 22:40:20 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 22:40:20 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Right Plot.
+2026-02-14 22:40:20 - Renderer - DEBUG - Rendering GroupNode: 2x2 Layout (ID: layout_root_001), Children: 4
+2026-02-14 22:40:20 - Renderer - DEBUG - Node Top-Left Plot (ID: plot_001) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 22:40:20 - Renderer - DEBUG - Node Top-Right Plot (ID: plot_002) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 22:40:20 - Renderer - DEBUG - Node Bottom-Left Plot (ID: plot_003) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 22:40:20 - Renderer - DEBUG - Node Bottom-Right Plot (ID: plot_004) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 22:40:20 - Renderer - INFO - Scene graph rendering complete.
+2026-02-14 22:40:21 - ApplicationModel - DEBUG - Scene root set to: 2x2 Layout (ID: layout_root_001). Selection cleared.
+2026-02-14 22:40:21 - PropertiesTab - DEBUG - PropertiesTab: Updating content.
+2026-02-14 22:40:21 - PropertiesTab - DEBUG - PropertiesTab: Updating subplot selection UI.
+2026-02-14 22:40:21 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:21 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 22:40:21 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 22:40:21 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 22:40:21 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 22:40:21 - PropertiesTab - DEBUG - PropertiesTab: No specific plot selected, default combo box selection.
+2026-02-14 22:40:21 - PropertiesTab - DEBUG - PropertiesTab: Updating plot type selection UI.
+2026-02-14 22:40:21 - PropertiesTab - DEBUG - PropertiesTab: No plot selected, plot type selector disabled.
+2026-02-14 22:40:21 - PropertiesTab - DEBUG - PropertiesTab: Updating node-specific properties UI.
+2026-02-14 22:40:21 - LayersTab - DEBUG - LayersTab: Updating content of QTreeWidget.
+2026-02-14 22:40:21 - LayersTab - DEBUG - LayersTab: Updating tree selection to match model.
+2026-02-14 22:40:21 - LayersTab - DEBUG - LayersTab: QTreeWidget content updated.
+2026-02-14 22:40:21 - ProjectController - DEBUG - Model changed signal received in ProjectController. Currently not doing anything.
+2026-02-14 22:40:21 - CompositionRoot - DEBUG - ApplicationAssembler._redraw_canvas_callback called
+2026-02-14 22:40:21 - Renderer - INFO - Rendering scene graph.
+2026-02-14 22:40:21 - GroupNode - DEBUG - Getting all descendants starting from 2x2 Layout (ID: layout_root_001).
+2026-02-14 22:40:21 - PlotNode - DEBUG - Getting all descendants starting from Top-Left Plot (ID: plot_001).
+2026-02-14 22:40:21 - PlotNode - DEBUG - Getting all descendants starting from Top-Right Plot (ID: plot_002).
+2026-02-14 22:40:21 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Left Plot (ID: plot_003).
+2026-02-14 22:40:21 - PlotNode - DEBUG - Getting all descendants starting from Bottom-Right Plot (ID: plot_004).
+2026-02-14 22:40:21 - FreeLayoutEngine - DEBUG - FreeLayoutEngine calculated geometries for 4 plots (pass-through).
+2026-02-14 22:40:21 - Renderer - DEBUG - Rendering PlotNode: Top-Left Plot (ID: plot_001), Geometry: (0.07, 0.57, 0.4, 0.4)
+2026-02-14 22:40:21 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 22:40:21 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Left Plot.
+2026-02-14 22:40:21 - Renderer - DEBUG - Rendering PlotNode: Top-Right Plot (ID: plot_002), Geometry: (0.57, 0.57, 0.4, 0.4)
+2026-02-14 22:40:21 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 22:40:21 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Top-Right Plot.
+2026-02-14 22:40:21 - Renderer - DEBUG - Rendering PlotNode: Bottom-Left Plot (ID: plot_003), Geometry: (0.07, 0.08, 0.4, 0.4)
+2026-02-14 22:40:21 - Renderer - DEBUG -   PlotType: PlotType.SCATTER, Title: 
+2026-02-14 22:40:21 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Left Plot.
+2026-02-14 22:40:21 - Renderer - DEBUG - Rendering PlotNode: Bottom-Right Plot (ID: plot_004), Geometry: (0.57, 0.08, 0.4, 0.4)
+2026-02-14 22:40:21 - Renderer - DEBUG -   PlotType: PlotType.LINE, Title: 
+2026-02-14 22:40:21 - Renderer - DEBUG -   Applied title '', xlabel 'X-Axis', ylabel 'Y-Axis' to Bottom-Right Plot.
+2026-02-14 22:40:21 - Renderer - DEBUG - Rendering GroupNode: 2x2 Layout (ID: layout_root_001), Children: 4
+2026-02-14 22:40:21 - Renderer - DEBUG - Node Top-Left Plot (ID: plot_001) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 22:40:21 - Renderer - DEBUG - Node Top-Right Plot (ID: plot_002) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 22:40:21 - Renderer - DEBUG - Node Bottom-Left Plot (ID: plot_003) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 22:40:21 - Renderer - DEBUG - Node Bottom-Right Plot (ID: plot_004) is not visible or is a PlotNode. Skipping rendering.
+2026-02-14 22:40:21 - Renderer - INFO - Scene graph rendering complete.

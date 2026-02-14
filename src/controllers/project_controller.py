@@ -27,11 +27,11 @@ class ProjectController(ProjectActions, RecentFilesProvider):
     def __init__(
         self,
         lifecycle: ProjectLifecycle,
+        view: ProjectIOView,
         command_manager: CommandManager,
         layout_manager: LayoutManager,
         template_dir: Path,
         max_recent_files: int,
-        view: Optional[ProjectIOView] = None,
     ):
         super().__init__()
         self._lifecycle = lifecycle
@@ -42,12 +42,12 @@ class ProjectController(ProjectActions, RecentFilesProvider):
         self._max_recent_files = max_recent_files
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        # self.settings = QSettings("SciFig", "DataAnalysisGUI")
+        # self.settings = QSettings("SciFig", "DataAnalysisGUI") # TODO: This is actually important for setting recent files. I should make this part of the view again
         self.logger.info("ProjectController initialized.")
 
-    def set_view(self, view: ProjectIOView):
-        """Allows for deferred injection of the View to break circular dependencies."""
-        self._view = view
+    # def set_view(self, view: ProjectIOView):
+    #     """Allows for deferred injection of the View to break circular dependencies."""
+    #     self._view = view
 
     def handle_new_project(self) -> None:
         self.logger.info("Handling new project action.")
@@ -205,7 +205,7 @@ class ProjectController(ProjectActions, RecentFilesProvider):
         self._save_to_path(path)
 
     def get_recent_files(self) -> list[str]:
-        return self.settings.value(RECENT_FILES_KEY, [])
+        return self.settings.value(RECENT_FILES_KEY, []) #TODO: This is not implemented properly right now. I would have to write this back to the config
 
     # --- Slots and Private Helpers ---
 

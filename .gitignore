@@ -289,3 +289,4 @@ tests/unit/ui/panels/__pycache__/test_side_panel.cpython-313-pytest-9.0.2.pyc
 src/interfaces/__pycache__/project_io.cpython-313.pyc
 src/interfaces/__pycache__/project_lifecycle_interface.cpython-313.pyc
 src/interfaces/__pycache__/ui_providers.cpython-313.pyc
+data/test_2.sci
