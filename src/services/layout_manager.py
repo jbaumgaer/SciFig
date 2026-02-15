@@ -36,9 +36,8 @@ class LayoutManager(QObject):
         free_engine: FreeLayoutEngine,
         grid_engine: GridLayoutEngine,
         config_service: ConfigService,
-        parent: Optional[QObject] = None,
     ):
-        super().__init__(parent)
+        super().__init__()
         # TODO: Check if I even pass a parent
         self._application_model = application_model
         self._free_engine = free_engine
@@ -52,9 +51,7 @@ class LayoutManager(QObject):
         self._last_free_form_config: Optional[FreeConfig] = None  # Changed to None
 
         # Initialize the UI selected mode and the application model's current_layout_config based on config service
-        default_mode_str = self._config_service.get(
-            "ui.default_layout_mode", LayoutMode.FREE_FORM.value
-        )
+        default_mode_str = self._config_service.get_required("ui.default_layout_mode")
         default_mode = LayoutMode(default_mode_str)
         self._ui_selected_layout_mode = default_mode  # Initialize new attribute
         self.logger.debug(

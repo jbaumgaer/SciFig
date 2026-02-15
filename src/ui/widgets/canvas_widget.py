@@ -23,7 +23,7 @@ class CanvasWidget(QGraphicsView):
     fileDropped = Signal(str, QPointF)
     canvasDoubleClicked = Signal(QPointF)  # New Signal
 
-    def __init__(self, figure: Figure, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, figure: Figure, parent: QWidget) -> None:
         #TODO: Check if I actually initiate this with a parent
         super().__init__(parent)
 
@@ -32,8 +32,7 @@ class CanvasWidget(QGraphicsView):
         self.setAcceptDrops(True)
 
         # Use the figure passed from the model
-        self.figure = figure
-        self.figure_canvas = FigureCanvasQTAgg(self.figure)
+        self.figure_canvas = FigureCanvasQTAgg(figure)
         self.scene.addWidget(self.figure_canvas)
 
         # Configure the Graphics View for better interaction

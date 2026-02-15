@@ -3,22 +3,17 @@ This module defines the abstract base class for all interactive tools in the app
 """
 
 from abc import ABC, ABCMeta, abstractmethod
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QPainter
 
+from src.models.application_model import ApplicationModel
+from src.ui.widgets.canvas_widget import CanvasWidget
 
 # Python 3: metaclass conflict with QObject and ABCMeta
 # Solution: Create a custom metaclass that inherits from both
 class ToolMeta(type(QObject), ABCMeta):
     pass
-
-
-if TYPE_CHECKING:  # Avoid circular imports during type checking
-    from src.models.application_model import ApplicationModel
-    from src.services.commands.command_manager import CommandManager
-    from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 class BaseTool(QObject, ABC, metaclass=ToolMeta):
@@ -31,21 +26,18 @@ class BaseTool(QObject, ABC, metaclass=ToolMeta):
 
     def __init__(
         self,
-        model: "ApplicationModel",
-        command_manager: "CommandManager",
-        canvas_widget: "CanvasWidget",
+        model: ApplicationModel,
+        canvas_widget: CanvasWidget,
     ):
         """
         Initializes the tool.
 
         Args:
-            model: The main application model.
-            command_manager: The command manager for executing commands.
+            model: The application model.
             canvas_widget: The canvas widget the tool will interact with.
         """
         super().__init__()
         self._model = model
-        self._command_manager = command_manager
         self._canvas_widget = canvas_widget
 
     @property

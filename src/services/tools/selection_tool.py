@@ -1,5 +1,4 @@
 import logging
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QPainter
@@ -8,10 +7,7 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.services.tools.base_tool import BaseTool
 from src.shared.constants import IconPath
-
-if TYPE_CHECKING:
-    from src.services.commands.command_manager import CommandManager
-    from src.ui.widgets.canvas_widget import CanvasWidget
+from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 class SelectionTool(BaseTool):
@@ -24,10 +20,9 @@ class SelectionTool(BaseTool):
     def __init__(
         self,
         model: ApplicationModel,
-        command_manager: "CommandManager",
-        canvas_widget: "CanvasWidget",
+        canvas_widget: CanvasWidget,
     ):
-        super().__init__(model, command_manager, canvas_widget)
+        super().__init__(model, canvas_widget)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("SelectionTool initialized.")
 
@@ -41,10 +36,10 @@ class SelectionTool(BaseTool):
         return IconPath.get_path("tool_icons.select")  # Modified to use ConfigService
 
     def on_activated(self):
-        self.logger.info("SelectionTool activated.")  # Changed print to log
+        self.logger.info("SelectionTool activated.")
 
     def on_deactivated(self):
-        self.logger.info("SelectionTool deactivated.")  # Changed print to log
+        self.logger.info("SelectionTool deactivated.")
 
     def mouse_press_event(self, event: QMouseEvent):
         """Handles single clicks to select or deselect nodes."""
@@ -57,6 +52,7 @@ class SelectionTool(BaseTool):
             return
 
         # TODO: Maybe refactor this to a utility function later or give this a more descriptive name
+        # TODO: Should the selection tool really be responsible for this transformation?
         fig_coords = (
             self._canvas_widget.figure_canvas.figure.transFigure.inverted().transform(
                 (event.x, event.y)

@@ -1,9 +1,7 @@
 import logging
 
 from PySide6.QtCore import QObject, QPointF, QThread
-from typing import Optional
 
-from src.controllers.layout_controller import LayoutController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import (
@@ -11,7 +9,6 @@ from src.models.plots.plot_properties import (
     PlotMapping,
 )
 from src.processing.data_loader import DataLoader
-from src.services.commands.command_manager import CommandManager
 from src.services.tool_service import ToolService
 from src.ui.widgets.canvas_widget import CanvasWidget
 
@@ -27,27 +24,20 @@ class CanvasController(QObject):
         model: ApplicationModel,
         canvas_widget: CanvasWidget,
         tool_manager: ToolService,
-        command_manager: CommandManager,
-        layout_controller: LayoutController,
-        parent: Optional[QObject] = None,
     ):
-        super().__init__(parent)
+        super().__init__()
         # TODO: Check if I even pass a parent
         self.model = model
         self.view = canvas_widget
         self.tool_manager = tool_manager
-        self.command_manager = command_manager
-        self._layout_manager = (
-            layout_controller._layout_manager
-        )  # Access via layout_controller
-        self.canvas = self.view.figure_canvas
+        self.canvas = self.view.figure_canvas #TODO: I don't think the canvas controller should have such knowledge of the view's internal representation of a figure
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info("CanvasController initialized.")
 
         self.thread = None
         self.worker = None
 
         self._connect_events()
+        self.logger.info("CanvasController initialized.")
 
     def _connect_events(self):
         """

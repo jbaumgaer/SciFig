@@ -23,11 +23,9 @@ class ApplicationModel(QObject, ProjectLifecycle):
     selectionChanged = Signal()
     layoutConfigChanged = Signal()
 
-    def __init__(self, figure: matplotlib.figure.Figure): 
-        #TODO: Why do we need the figure here?
+    def __init__(self): 
         super().__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.figure = figure
         self.scene_root = GroupNode(name="root")
         self.selection: list[SceneNode] = []
         self._file_path: Optional[Path] = None

@@ -6,14 +6,14 @@ from src.models.application_model import ApplicationModel
 from src.models.layout.layout_config import (
     GridConfig,
     Margins,
-)  # Added import for isinstance check and Margins
+)
 from src.models.nodes.plot_node import PlotNode
 from src.services.commands.batch_change_plot_geometry_command import (
     BatchChangePlotGeometryCommand,
 )
 from src.services.commands.change_grid_parameters_command import (
     ChangeGridParametersCommand,
-)  # Import new command
+) 
 from src.services.commands.command_manager import CommandManager
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import LayoutMode
