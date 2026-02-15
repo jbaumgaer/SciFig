@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
 )
 
 from src.controllers.node_controller import NodeController
-from src.controllers.project_controller import ProjectController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
@@ -28,7 +27,6 @@ class PropertiesTab(QWidget):
         model: ApplicationModel,
         node_controller: NodeController,
         plot_properties_ui_factory: PlotPropertiesUIFactory,
-        project_controller: ProjectController,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -36,9 +34,7 @@ class PropertiesTab(QWidget):
         self.model = model
         self.node_controller = node_controller
         self.plot_properties_ui_factory = plot_properties_ui_factory
-        self.project_controller = project_controller
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info("PropertiesTab initialized.")
 
         self._main_layout = QVBoxLayout(self)
         self._main_layout.setContentsMargins(5, 5, 5, 5)
@@ -118,6 +114,8 @@ class PropertiesTab(QWidget):
 
         self._select_file_button.clicked.connect(self._on_select_file_clicked)
         self._apply_data_button.clicked.connect(self._on_apply_data_clicked)
+        
+        self.logger.info("PropertiesTab initialized.")
 
         self._update_content()  # Initial call
 

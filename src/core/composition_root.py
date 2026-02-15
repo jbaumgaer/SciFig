@@ -161,7 +161,6 @@ class CompositionRoot:
             model=self._application_model,
             node_controller=self._node_controller,
             plot_properties_ui_factory=self._plot_properties_ui_factory,
-            project_controller=self._project_controller,
             parent=self._side_panel,
         )
         layout_tab = LayoutTab(
