@@ -93,6 +93,7 @@ class LayersTab(QWidget):
         self._main_layout.addStretch()
 
         self._drag_start_position = None  # For drag and drop tracking
+        self._node_id_to_tree_item: dict[str, QTreeWidgetItem] = {} # Mapping from node ID to tree item
 
         # Connect model signals
         self.model.modelChanged.connect(self._update_content)
@@ -108,6 +109,7 @@ class LayersTab(QWidget):
         self.logger.debug("LayersTab: Updating content of QTreeWidget.")
         self._tree_widget.blockSignals(True)  # Block signals during rebuild
         self._tree_widget.clear()
+        self._node_id_to_tree_item.clear()
 
         self._add_node_to_tree(
             self.model.scene_root, self._tree_widget.invisibleRootItem()
@@ -133,6 +135,7 @@ class LayersTab(QWidget):
         item.setData(
             self.COL_NAME, Qt.UserRole, node.id
         )  # Store node ID in UserRole for easy retrieval
+        self._node_id_to_tree_item[node.id] = item # Store mapping
         item.setFlags(
             item.flags()
             | Qt.ItemIsEditable
@@ -202,16 +205,12 @@ class LayersTab(QWidget):
         self._tree_widget.clearSelection()
 
         for selected_node in self.model.selection:
-            items = self._tree_widget.findItems(
-                selected_node.id, Qt.UserRole | Qt.MatchRecursive, column=self.COL_NAME # TODO: This throws an error somehow
-            )
-            for item in items:
-                if (
-                    item.data(self.COL_NAME, Qt.UserRole) == selected_node.id
-                ):  # Ensure correct item by ID
-                    item.setSelected(True)
-                    self._tree_widget.scrollToItem(item)
-                    break
+            if selected_node.id in self._node_id_to_tree_item:
+                item = self._node_id_to_tree_item[selected_node.id]
+                item.setSelected(True)
+                self._tree_widget.scrollToItem(item)
+            else:
+                self.logger.warning(f"LayersTab: Item for node ID {selected_node.id} not found in tree map.")
         self._tree_widget.blockSignals(False)
 
     def _group_selected_nodes(self):
