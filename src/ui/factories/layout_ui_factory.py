@@ -1,6 +1,6 @@
 import logging
 from functools import partial
-from typing import Callable, Optional
+from typing import Optional
 
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QIcon, QIntValidator, QValidator
@@ -34,7 +34,7 @@ class LayoutUIFactory:
         self,
         icon_key: str,
         tooltip: str,
-        command: Callable,
+        command: callable,
         parent: QWidget,
         object_name: Optional[str] = None,
     ) -> QPushButton:

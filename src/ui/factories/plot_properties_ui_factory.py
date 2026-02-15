@@ -1,6 +1,6 @@
 import logging
 from functools import partial
-from typing import Callable, Optional
+from typing import Optional
 from pathlib import Path
 
 from PySide6.QtGui import QDoubleValidator
@@ -378,7 +378,7 @@ class PlotPropertiesUIFactory:
         self._builders = {}
         self._node_controller = node_controller
 
-    def register_builder(self, plot_type: PlotType, builder_func: Callable):
+    def register_builder(self, plot_type: PlotType, builder_func: callable):
         self._builders[plot_type] = builder_func
 
     def build_widgets(
