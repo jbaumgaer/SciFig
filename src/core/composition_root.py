@@ -28,6 +28,9 @@ from src.ui.factories.plot_properties_ui_factory import (
     _build_line_plot_ui_widgets,
     _build_scatter_plot_ui_widgets,
 )
+from src.ui.panels.layers_tab import LayersTab
+from src.ui.panels.layout_tab import LayoutTab
+from src.ui.panels.properties_tab import PropertiesTab
 from src.ui.panels.side_panel import SidePanel
 from src.ui.renderers.renderer import Renderer
 from src.ui.widgets.canvas_widget import CanvasWidget
@@ -153,14 +156,28 @@ class CompositionRoot:
         self._plot_properties_ui_factory.register_builder(
             PlotType.SCATTER, _build_scatter_plot_ui_widgets
         )
-        self._side_panel = SidePanel(
+        self._side_panel = SidePanel(model=self._application_model)
+        properties_tab = PropertiesTab(
             model=self._application_model,
             node_controller=self._node_controller,
-            layout_controller=self._layout_controller,
             plot_properties_ui_factory=self._plot_properties_ui_factory,
-            layout_ui_factory=self._layout_ui_factory,
-            project_controller=self._project_controller, # Still uses the old concrete controller
+            project_controller=self._project_controller,
+            parent=self._side_panel,
         )
+        layout_tab = LayoutTab(
+            model=self._application_model,
+            layout_controller=self._layout_controller,
+            layout_ui_factory=self._layout_ui_factory,
+            parent=self._side_panel,
+        )
+        layers_tab = LayersTab(
+            model=self._application_model,
+            node_controller=self._node_controller,
+            parent=self._side_panel,
+        )
+        self._side_panel.add_tab("properties", properties_tab, "Properties")
+        self._side_panel.add_tab("layout", layout_tab, "Layout")
+        self._side_panel.add_tab("layers", layers_tab, "Layers")
 
     def _assemble_main_window(self):
         """Assemble the main application window."""

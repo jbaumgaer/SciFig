@@ -24,7 +24,7 @@ class NodeController(QObject):
         model: ApplicationModel,
         command_manager: CommandManager,
         project_controller: ProjectController,
-    ):  # Added project_controller
+    ):
         super().__init__()
         self.model = model
         self.command_manager = command_manager
