@@ -18,40 +18,37 @@ class ApplicationModel(QObject, ProjectLifecycle):
     holding the state of the scene graph and implementing the ProjectLifecycle protocol.
     """
 
-    projectReset = Signal() #TODO: Maybe call this modelReset to be more general
+    projectReset = Signal()
     modelChanged = Signal()
     selectionChanged = Signal()
     layoutConfigChanged = Signal()
 
-    def __init__(self): 
+    def __init__(self):
         super().__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.scene_root = GroupNode(name="root")
         self.selection: list[SceneNode] = []
         self._file_path: Optional[Path] = None
-        self._is_modified: bool = False
+        self._is_dirty: bool = False
         self._current_layout_config: LayoutConfig = FreeConfig()
 
-    def _set_modified(self, modified: bool = True):
-        """Private helper to set the modified status and emit a signal."""
-        if self._is_modified != modified:
-            self._is_modified = modified
-            # A general model change signal is sufficient, as any UI
-            # concerned with the modified status (like a window title)
-            # will be listening to it.
-            self.modelChanged.emit()
+    def set_dirty(self, is_dirty: bool):
+        """Public method to set the dirty status of the model."""
+        if self._is_dirty != is_dirty:
+            self._is_dirty = is_dirty
+            # The notification for this change is now handled by the EventAggregator,
+            # published by the component that calls this setter.
 
     def reset_state(self):
         """Resets the model to a clean, default state.
         TODO: This is maybe redundant with set_scene_root, which also clears the selection. Decide on one approach and remove the other.
         Also. I manually change the selection without using set_selection, which is a bit hacky. Maybe I should make set_selection private and only
-        use it within the model to ensure the signal is always emitted when the selection changes."""
+        use it within the model to ensure the signal is always emitted when the selection changes"""
         self.scene_root = GroupNode(name="root")
         self.selection = []
-        self.file_path = None
+        self.file_path = None # This will call the setter and set dirty state
         self.current_layout_config = FreeConfig()
-        # Set modified to False *after* all state-clearing actions
-        self._is_modified = False 
+        self.set_dirty(False) # Explicitly set to not dirty after a full reset
         self.projectReset.emit()
         self.modelChanged.emit()
         self.selectionChanged.emit()
@@ -66,13 +63,11 @@ class ApplicationModel(QObject, ProjectLifecycle):
         self.scene_root = new_root
         self.set_selection([])
         self.logger.debug(f"Scene root set to: {new_root.name} (ID: {new_root.id}). Selection cleared.")
-        # self.projectReset.emit() TODO: Decide if this should be emitted here or if it's only relevant for the reset_state method. Maybe we can have a more general signal like sceneGraphChanged that is emitted whenever the structure of the scene graph changes significantly, and then projectReset can be a specific case of that. For now, I'll just emit modelChanged, which is already being listened to by all UI components that care about changes in the model.
-        self._set_modified()
-        # self.modelChanged.emit()
+        self.set_dirty(True)
 
     @property
-    def is_modified(self) -> bool:
-        return self._is_modified
+    def is_dirty(self) -> bool:
+        return self._is_dirty
 
     @property
     def file_path(self) -> Optional[Path]:
@@ -82,7 +77,7 @@ class ApplicationModel(QObject, ProjectLifecycle):
     def file_path(self, path: Optional[Path]) -> None:
         if self._file_path != path:
             self._file_path = path
-            self._set_modified() # Changing the path is a modification
+            self.set_dirty(True)
 
     @property
     def current_layout_config(self) -> LayoutConfig:
@@ -94,14 +89,14 @@ class ApplicationModel(QObject, ProjectLifecycle):
             self._current_layout_config = config
             self.logger.info(f"Layout config changed to mode: {config.mode.value}")
             self.layoutConfigChanged.emit()
-            self._set_modified()
+            self.set_dirty(True)
 
     def add_node(self, node: SceneNode, parent: Optional[SceneNode] = None):
         """Adds a node to the scene graph."""
         if parent is None:
             parent = self.scene_root
         parent.add_child(node)
-        self._set_modified()
+        self.set_dirty(True)
 
     def extract_plot_states(self) -> list[dict]:
         """Extracts data and properties from all existing plot nodes."""
@@ -142,5 +137,5 @@ class ApplicationModel(QObject, ProjectLifecycle):
             self.current_layout_config = FreeConfig()
 
         # After loading, the project is considered unmodified until a change is made
-        self._is_modified = False
+        self.set_dirty(False)
         self.modelChanged.emit()

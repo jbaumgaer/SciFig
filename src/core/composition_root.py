@@ -15,6 +15,8 @@ from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.models.plots.plot_types import PlotType
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 from src.services.layout_manager import LayoutManager
 from src.services.tool_service import ToolService
 from src.services.tools import MockTool
@@ -33,7 +35,6 @@ from src.ui.panels.layout_tab import LayoutTab
 from src.ui.panels.properties_tab import PropertiesTab
 from src.ui.panels.side_panel import SidePanel
 from src.ui.renderers.renderer import Renderer
-from src.ui.widgets.canvas_widget import CanvasWidget
 from src.ui.widgets.canvas_widget import CanvasWidget
 from src.ui.windows.main_window import MainWindow
 
@@ -58,6 +59,7 @@ class CompositionRoot:
         self._canvas_controller: Optional[CanvasController] = None
         self._command_manager: Optional[CommandManager] = None
         self._layout_manager: Optional[LayoutManager] = None
+        self._event_aggregator: Optional[EventAggregator] = None
         self._menu_bar: Optional[QMenuBar] = None
         self._main_menu_actions: Optional[MainMenuActions] = None
         self._tool_bar: Optional[QToolBar] = None
@@ -75,9 +77,10 @@ class CompositionRoot:
 
     def _assemble_core_components(self):
         """Assemble core models, managers, and controllers."""
-        self.logger.info(
-            "Assembling core components: Model, CommandManager, MainController, Renderer."
-        )
+        self.logger.info("Assembling core components.")
+
+        self._event_aggregator = EventAggregator()
+
         figure_width = self._config_service.get_required("figure.default_width")
         figure_height = self._config_service.get_required("figure.default_height")
         figure_dpi = self._config_service.get_required("figure.default_dpi")
@@ -92,8 +95,10 @@ class CompositionRoot:
         )
 
         self._application_model = ApplicationModel()
-        self._command_manager = CommandManager(model=self._application_model)
-    
+        self._command_manager = CommandManager(
+            model=self._application_model, event_aggregator=self._event_aggregator
+        )
+
         self._layout_manager = LayoutManager(
             application_model=self._application_model,
             free_engine=FreeLayoutEngine(),
@@ -108,23 +113,34 @@ class CompositionRoot:
         self._node_controller = NodeController(
             model=self._application_model,
             command_manager=self._command_manager,
-            project_controller=self._project_controller,
+            project_controller=self._project_controller, # This is None here, potential issue
         )
         self._renderer = Renderer(
             layout_manager=self._layout_manager, application_model=self._application_model
         )
 
+    def _assemble_project_controller(self):
+        """Assemble the project controller."""
+        template_dir_path = Path(self._config_service.get_required("paths.layout_templates_dir"))
+        max_recent_files = self._config_service.get_required("layout.max_recent_files")
+        self._project_controller = ProjectController(
+            lifecycle=self._application_model,
+            command_manager=self._command_manager,
+            layout_manager=self._layout_manager,
+            template_dir=template_dir_path,
+            max_recent_files=max_recent_files,
+            event_aggregator=self._event_aggregator,
+        )
+
     def _assemble_menus(self):
         """Assemble the menu bar and its actions."""
         self.logger.info("Assembling menus.")
-        menu_builder = MenuBarBuilder(
-            recent_files_provider=self._project_controller
-        )
+        menu_builder = MenuBarBuilder(event_aggregator=self._event_aggregator)
         self._menu_bar, self._main_menu_actions = menu_builder.build()
 
     def _assemble_tooling(self):
         """Assemble the tool manager, individual tools, and the toolbar."""
-        self.logger.info("Assembling tooling: ToolManager, SelectionTool, MockTools.")
+        self.logger.info("Assembling tooling.")
         self._tool_manager = ToolService()
         self._selection_tool = SelectionTool(model=self._application_model, canvas_widget=None)
         self._tool_manager.add_tool(self._selection_tool)
@@ -181,8 +197,6 @@ class CompositionRoot:
     def _assemble_main_window(self):
         """Assemble the main application window."""
         self.logger.info("Assembling main window.")
-        # The instantiation of MainWindow and the setter injection
-        # remain the same as the previous, correct step.
         self._view = MainWindow(
             model=self._application_model,
             menu_bar=self._menu_bar,
@@ -190,6 +204,7 @@ class CompositionRoot:
             tool_bar=self._tool_bar,
             tool_bar_actions=self._tool_bar_actions,
             side_panel=self._side_panel,
+            event_aggregator=self._event_aggregator,
         )
 
     def _assemble_canvas_widget(self):
@@ -201,56 +216,65 @@ class CompositionRoot:
             tool._canvas_widget = self._canvas_widget
 
     def _assemble_canvas_controller(self):
-        """Assemble the canvas controller. TODO: It makes no sense that this gets its own method"""
+        """Assemble the canvas controller."""
         self._canvas_controller = CanvasController(
             model=self._application_model,
             canvas_widget=self._canvas_widget,
             tool_manager=self._tool_manager,
         )
 
-    def _assemble_project_controller(self):
-        """Assemble the project controller."""
-        template_dir_path = Path(self._config_service.get_required("paths.layout_templates_dir"))
-        max_recent_files = self._config_service.get_required("layout.max_recent_files")
-        self._project_controller = ProjectController(
-            lifecycle=self._application_model,
-            view=self._view,
-            command_manager=self._command_manager,
-            layout_manager=self._layout_manager,
-            template_dir=template_dir_path,
-            max_recent_files=max_recent_files,
-        )
-
     def _connect_signals(self):
-        """Connect all application-wide signals to their slots."""
-        self.logger.debug("Connecting signals.")
-        main_menu = self._view.main_menu_actions
-        
-        # Original I/O connections are now correctly pointed at the new handlers
-        main_menu.new_file_action.triggered.connect(self._project_controller.handle_new_project)
-        main_menu.new_file_from_template_action.triggered.connect(
-            self._project_controller.handle_new_from_template # No partial needed anymore
-        )
-        main_menu.open_project_action.triggered.connect(self._project_controller.handle_open_project)
-        main_menu.save_project_action.triggered.connect(self._project_controller.handle_save_project)
-        main_menu.save_copy_action.triggered.connect(self._project_controller.handle_save_as_project)
-        
-        # Add connections for Edit Menu actions, now that the builder is decoupled
-        main_menu.undo_action.triggered.connect(self._command_manager.undo)
-        main_menu.redo_action.triggered.connect(self._command_manager.redo)
-
-        # Presenter slot for model changes
-        self._application_model.modelChanged.connect(self._project_controller.on_model_changed)
+        """Connect all application-wide Qt signals to their slots."""
+        self.logger.debug("Connecting Qt signals.")
+        # This method is now for Qt-only signals that are not part of the event system (yet).
         self._application_model.projectReset.connect(self._layout_manager.on_model_reset)
-
-        # Original connections for redraw and tools
         self._application_model.modelChanged.connect(self._redraw_canvas_callback)
         self._application_model.selectionChanged.connect(self._redraw_canvas_callback)
-        self._application_model.layoutConfigChanged.connect(self._redraw_canvas_callback) #TODO: Consider if this is necessary or if specific layout changes should trigger redraws instead of all config changes.
-        
+        self._application_model.layoutConfigChanged.connect(self._redraw_canvas_callback)
+        self._main_menu_actions.exit_action.triggered.connect(self._app.quit)
+
+    def _subscribe_to_events(self):
+        """Subscribe handlers to events via the EventAggregator."""
+        self.logger.debug("Subscribing to application events.")
+
+        # --- Project Lifecycle Requests ---
+        self._event_aggregator.subscribe(
+            Events.NEW_PROJECT_REQUESTED, self._project_controller.handle_new_project
+        )
+        self._event_aggregator.subscribe(
+            Events.NEW_PROJECT_FROM_TEMPLATE_REQUESTED, self._project_controller.handle_new_from_template_request
+        )
+        self._event_aggregator.subscribe(
+            Events.OPEN_PROJECT_REQUESTED, self._project_controller.handle_open_project_request
+        )
+        self._event_aggregator.subscribe(
+            Events.SAVE_PROJECT_REQUESTED, self._project_controller.handle_save_project
+        )
+        self._event_aggregator.subscribe(
+            Events.SAVE_PROJECT_AS_REQUESTED, self._project_controller.handle_save_as_project_request
+        )
+        self._event_aggregator.subscribe(
+            Events.OPEN_RECENT_PROJECT_REQUESTED, self._project_controller.handle_open_recent_project
+        )
+
+        # --- UI Dialog Responses ---
+        self._event_aggregator.subscribe(
+            Events.PATH_PROVIDED_FOR_OPEN, self._project_controller.on_open_path_provided
+        )
+        self._event_aggregator.subscribe(
+            Events.PATH_PROVIDED_FOR_SAVE_AS, self._project_controller.on_save_as_path_provided
+        )
+        self._event_aggregator.subscribe(
+            Events.TEMPLATE_PROVIDED_FOR_NEW, self._project_controller.on_template_provided
+        )
+
+        # --- Edit Menu Requests ---
+        self._event_aggregator.subscribe(Events.UNDO_REQUESTED, self._command_manager.undo)
+        self._event_aggregator.subscribe(Events.REDO_REQUESTED, self._command_manager.redo)
+
     def _redraw_canvas_callback(self):
         """Callback to trigger canvas redraw."""
-        self.logger.debug("ApplicationAssembler._redraw_canvas_callback called")
+        self.logger.debug("CompositionRoot._redraw_canvas_callback called")
         self._renderer.render(
             self._figure,
             self._application_model.scene_root,
@@ -261,16 +285,16 @@ class CompositionRoot:
     def assemble(self) -> ApplicationComponents:
         """Assembles and wires all components of the application."""
         self._assemble_core_components()
+        self._assemble_project_controller() # Must be assembled after core, before menus/main_window
         self._assemble_menus()
         self._assemble_tooling()
         self._assemble_side_panel()
         self._assemble_main_window()
         self._assemble_canvas_widget()
         self._assemble_canvas_controller()
-        self._assemble_project_controller()
         self._connect_signals()
+        self._subscribe_to_events()
         self.logger.info("Application assembly complete.")
-        #TODO: Check which of these components I need to return to keep in scope and which ones not, like maybe the side panel
 
         return ApplicationComponents(
             composition_root=self,
@@ -289,4 +313,5 @@ class CompositionRoot:
             config_service=self._config_service,
             layout_manager=self._layout_manager,
             layout_ui_factory=self._layout_ui_factory,
+            event_aggregator=self._event_aggregator,
         )

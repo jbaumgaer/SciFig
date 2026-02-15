@@ -10,6 +10,7 @@ from src.controllers.project_controller import ProjectController
 from src.models.application_model import ApplicationModel
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
+from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
@@ -30,6 +31,7 @@ class ApplicationComponents:
 
     composition_root: "CompositionRoot"
     app: QApplication
+    event_aggregator: "EventAggregator"
     application_model: "ApplicationModel"
     command_manager: "CommandManager"
     project_controller: "ProjectController"

@@ -290,3 +290,5 @@ src/interfaces/__pycache__/project_io.cpython-313.pyc
 src/interfaces/__pycache__/project_lifecycle_interface.cpython-313.pyc
 src/interfaces/__pycache__/ui_providers.cpython-313.pyc
 data/test_2.sci
+src/services/__pycache__/event_aggregator.cpython-313.pyc
+src/shared/__pycache__/events.cpython-313.pyc

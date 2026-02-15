@@ -5,7 +5,8 @@ from pathlib import Path
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QMenu, QMenuBar
 
-from src.interfaces.ui_providers import RecentFilesProvider
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 
 
 @dataclass
@@ -42,18 +43,24 @@ class MainMenuActions:
 
 class MenuBarBuilder:
     """
-    A pure builder for the main menu bar. It constructs the QMenuBar and all
-    its QActions but is not responsible for connecting their signals.
+    Constructs the QMenuBar and connects its actions to publish events
+    via the EventAggregator.
     """
 
-    def __init__(self, recent_files_provider: RecentFilesProvider):
-        self._recent_files_provider = recent_files_provider
+    def __init__(self, event_aggregator: EventAggregator):
+        self._event_aggregator = event_aggregator
+        # TODO: A provider for the recent files list is still needed. This should
+        # be implemented via an event loop (REQUEST_RECENT_PROJECTS_LIST -> RECENT_PROJECTS_LIST_UPDATED)
+        # self._recent_files_provider = recent_files_provider
 
     def _update_recent_projects_menu(self, menu: QMenu):
-        """Clears and repopulates the recent projects menu using the provider.
-        TODO: I'm not sure if this is an action that should be connected here"""
+        """
+        Clears and repopulates the recent projects menu.
+        TODO: This needs to be driven by an event, not a direct provider call.
+        """
         menu.clear()
-        recent_files = self._recent_files_provider.get_recent_files()
+        # recent_files = self._recent_files_provider.get_recent_files()
+        recent_files = [] # Placeholder
 
         if not recent_files:
             action = QAction("No Recent Projects", menu)
@@ -63,9 +70,10 @@ class MenuBarBuilder:
 
         for file_path_str in recent_files:
             action = QAction(file_path_str, menu)
+            # Use a lambda to capture the file_path for the event payload
             action.triggered.connect(
-                functools.partial(
-                    self._recent_files_provider.open_project, Path(file_path_str)
+                lambda checked=False, file_path=Path(file_path_str): self._event_aggregator.publish(
+                    Events.OPEN_RECENT_PROJECT_REQUESTED, file_path=file_path
                 )
             )
             menu.addAction(action)
@@ -75,27 +83,34 @@ class MenuBarBuilder:
 
         new_file_action = file_menu.addAction("&New File...")
         new_file_action.setShortcut(QKeySequence.StandardKey.New)
+        new_file_action.triggered.connect(lambda: self._event_aggregator.publish(Events.NEW_PROJECT_REQUESTED))
+
         new_file_from_template_action = file_menu.addAction("New File from &Template...")
         new_file_from_template_action.setShortcut(QKeySequence("Shift+Ctrl+N"))
+        new_file_from_template_action.triggered.connect(lambda: self._event_aggregator.publish(Events.NEW_PROJECT_FROM_TEMPLATE_REQUESTED))
 
         file_menu.addSeparator()
 
         open_project_action = file_menu.addAction("&Open Project...")
         open_project_action.setShortcut(QKeySequence.StandardKey.Open)
+        open_project_action.triggered.connect(lambda: self._event_aggregator.publish(Events.OPEN_PROJECT_REQUESTED))
 
         open_recent_projects_menu = file_menu.addMenu("Open &Recent Projects")
-        open_recent_projects_menu.aboutToShow.connect(
-            lambda: self._update_recent_projects_menu(open_recent_projects_menu)
-        )
+        # TODO: Re-enable this when the recent files event loop is implemented
+        # open_recent_projects_menu.aboutToShow.connect(
+        #     lambda: self._update_recent_projects_menu(open_recent_projects_menu)
+        # )
         open_recent_projects_menu.menuAction().setShortcut(QKeySequence("Ctrl+Shift+O"))
 
         file_menu.addSeparator()
 
         save_project_action = file_menu.addAction("&Save Project")
         save_project_action.setShortcut(QKeySequence.StandardKey.Save)
+        save_project_action.triggered.connect(lambda: self._event_aggregator.publish(Events.SAVE_PROJECT_REQUESTED))
 
         save_copy_action = file_menu.addAction("Save a &Copy...")
         save_copy_action.setShortcut(QKeySequence.StandardKey.SaveAs)
+        save_copy_action.triggered.connect(lambda: self._event_aggregator.publish(Events.SAVE_PROJECT_AS_REQUESTED))
 
         file_menu.addSeparator()
         close_action = file_menu.addAction("&Close")
@@ -134,9 +149,11 @@ class MenuBarBuilder:
 
         undo_action = edit_menu.addAction("&Undo")
         undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        undo_action.triggered.connect(lambda: self._event_aggregator.publish(Events.UNDO_REQUESTED))
 
         redo_action = edit_menu.addAction("&Redo")
         redo_action.setShortcut(QKeySequence.StandardKey.Redo)
+        redo_action.triggered.connect(lambda: self._event_aggregator.publish(Events.REDO_REQUESTED))
 
         edit_menu.addSeparator()
         cut_action = edit_menu.addAction("Cu&t")
