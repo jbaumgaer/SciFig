@@ -113,7 +113,7 @@ class CompositionRoot:
         self._node_controller = NodeController(
             model=self._application_model,
             command_manager=self._command_manager,
-            project_controller=self._project_controller, # This is None here, potential issue
+            event_aggregator=self._event_aggregator,
         )
         self._renderer = Renderer(
             layout_manager=self._layout_manager, application_model=self._application_model
@@ -163,7 +163,7 @@ class CompositionRoot:
         )
         self._plot_types = list(self._renderer.plotting_strategies.keys())
         self._plot_properties_ui_factory = PlotPropertiesUIFactory(
-            node_controller=self._node_controller
+            event_aggregator=self._event_aggregator,
         )
 
         self._plot_properties_ui_factory.register_builder(
@@ -175,7 +175,7 @@ class CompositionRoot:
         self._side_panel = SidePanel(model=self._application_model)
         properties_tab = PropertiesTab(
             model=self._application_model,
-            node_controller=self._node_controller,
+            event_aggregator=self._event_aggregator,
             plot_properties_ui_factory=self._plot_properties_ui_factory,
             parent=self._side_panel,
         )
@@ -187,7 +187,7 @@ class CompositionRoot:
         )
         layers_tab = LayersTab(
             model=self._application_model,
-            node_controller=self._node_controller,
+            event_aggregator=self._event_aggregator,
             parent=self._side_panel,
         )
         self._side_panel.add_tab("properties", properties_tab, "Properties")
@@ -219,6 +219,7 @@ class CompositionRoot:
         """Assemble the canvas controller."""
         self._canvas_controller = CanvasController(
             model=self._application_model,
+            event_aggregator=self._event_aggregator,
             canvas_widget=self._canvas_widget,
             tool_manager=self._tool_manager,
         )
@@ -228,7 +229,7 @@ class CompositionRoot:
         self.logger.debug("Connecting Qt signals.")
         # This method is now for Qt-only signals that are not part of the event system (yet).
         self._application_model.projectReset.connect(self._layout_manager.on_model_reset)
-        self._application_model.modelChanged.connect(self._redraw_canvas_callback)
+        # self._application_model.modelChanged.connect(self._redraw_canvas_callback) # Removed: Replaced by granular events
         self._application_model.selectionChanged.connect(self._redraw_canvas_callback)
         self._application_model.layoutConfigChanged.connect(self._redraw_canvas_callback)
         self._main_menu_actions.exit_action.triggered.connect(self._app.quit)
@@ -271,6 +272,46 @@ class CompositionRoot:
         # --- Edit Menu Requests ---
         self._event_aggregator.subscribe(Events.UNDO_REQUESTED, self._command_manager.undo)
         self._event_aggregator.subscribe(Events.REDO_REQUESTED, self._command_manager.redo)
+
+        # --- NodeController Request Subscriptions ---
+        self._event_aggregator.subscribe(Events.SUBPLOT_SELECTION_IN_UI_CHANGED, self._node_controller._handle_subplot_selection_changed_request)
+        self._event_aggregator.subscribe(Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED, self._node_controller._handle_select_data_file_request)
+        self._event_aggregator.subscribe(Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, self._node_controller._handle_data_file_path_provided)
+        self._event_aggregator.subscribe(Events.APPLY_DATA_TO_NODE_REQUESTED, self._node_controller._handle_apply_data_request)
+        self._event_aggregator.subscribe(Events.CHANGE_PLOT_TYPE_REQUESTED, self._node_controller._handle_plot_type_change_request)
+        self._event_aggregator.subscribe(Events.CHANGE_PLOT_TITLE_REQUESTED, self._node_controller._handle_generic_property_change_request)
+        self._event_aggregator.subscribe(Events.CHANGE_PLOT_XLABEL_REQUESTED, self._node_controller._handle_generic_property_change_request)
+        self._event_aggregator.subscribe(Events.CHANGE_PLOT_YLABEL_REQUESTED, self._node_controller._handle_generic_property_change_request)
+        self._event_aggregator.subscribe(Events.CHANGE_PLOT_MARKER_SIZE_REQUESTED, self._node_controller._handle_marker_size_change_request)
+        self._event_aggregator.subscribe(Events.CHANGE_PLOT_AXIS_LIMITS_REQUESTED, self._node_controller._handle_limit_editing_request)
+        self._event_aggregator.subscribe(Events.MAP_PLOT_COLUMNS_REQUESTED, self._node_controller._handle_column_mapping_request)
+        self._event_aggregator.subscribe(Events.CHANGE_NODE_VISIBILITY_REQUESTED, self._node_controller._handle_node_visibility_request)
+        self._event_aggregator.subscribe(Events.RENAME_NODE_REQUESTED, self._node_controller._handle_rename_node_request)
+        self._event_aggregator.subscribe(Events.CHANGE_NODE_LOCKED_REQUESTED, self._node_controller._handle_node_locked_request)
+
+        # --- MainWindow Subscriptions (for node data dialogs) ---
+        self._event_aggregator.subscribe(Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, self._view._prompt_for_open_path_for_node_data)
+
+
+        # --- Redraw Canvas Callbacks (Granular Events) ---
+        self._event_aggregator.subscribe(Events.NODE_VISIBILITY_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_POSITION_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_SIZE_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PLOT_TITLE_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PLOT_XLABEL_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PLOT_YLABEL_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PLOT_MARKER_SIZE_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PLOT_AXIS_LIMITS_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PLOT_MAPPING_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PLOT_TYPE_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_DATA_FILE_PATH_UPDATED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_DATA_LOADED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_ADDED_TO_SCENE, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_REMOVED_FROM_SCENE, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_REPARENTED_IN_SCENE, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.NODE_ORDER_CHANGED_IN_SCENE, self._redraw_canvas_callback)
+
 
     def _redraw_canvas_callback(self):
         """Callback to trigger canvas redraw."""
