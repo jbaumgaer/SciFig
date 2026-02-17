@@ -1,13 +1,13 @@
 import logging
 from typing import Optional
 
-from PySide6.QtCore import Qt  # Qt for flags, QMimeData for drag/drop
+from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QIcon,
-)  # QIcon for icons, QMouseEvent for drag, QDrag for drag/drop
+)
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QMessageBox,  # For user feedback
+    QMessageBox,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -15,10 +15,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.controllers.node_controller import NodeController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.scene_node import SceneNode
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 from src.shared.constants import IconPath
 
 
@@ -33,13 +34,12 @@ class LayersTab(QWidget):
     def __init__(
         self,
         model: ApplicationModel,
-        node_controller: NodeController,
+        event_aggregator: EventAggregator,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
-        # TODO: Check if I even pass a parent
         self.model = model
-        self.node_controller = node_controller
+        self._event_aggregator = event_aggregator
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayersTab initialized.")
 
@@ -77,32 +77,44 @@ class LayersTab(QWidget):
         )  # Enable internal reordering
         self._tree_widget.setDefaultDropAction(Qt.MoveAction)
 
-        # Connect signals
+        # Connect signals (internal UI interactions)
         self._tree_widget.itemChanged.connect(self._handle_item_changed)
         self._tree_widget.itemDoubleClicked.connect(self._handle_item_double_clicked)
-        self._tree_widget.itemSelectionChanged.connect(
-            self._update_toolbar_buttons
-        )  # To enable/disable group/ungroup
-        # Custom drag/drop events
-        self._tree_widget.setContextMenuPolicy(
-            Qt.CustomContextMenu
-        )  # For custom context menu if needed later
-        # self._tree_widget.customContextMenuRequested.connect(self._show_context_menu) # Connect to context menu handler
+        self._tree_widget.itemSelectionChanged.connect(self._update_toolbar_buttons)
+        # Custom drag/drop events (TODO: implement event publishing for reordering)
+        self._tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
 
         self._main_layout.addWidget(self._tree_widget)
         self._main_layout.addStretch()
 
-        self._drag_start_position = None  # For drag and drop tracking
-        self._node_id_to_tree_item: dict[str, QTreeWidgetItem] = {} # Mapping from node ID to tree item
+        self._drag_start_position = None
+        self._node_id_to_tree_item: dict[str, QTreeWidgetItem] = {}
 
-        # Connect model signals
-        self.model.modelChanged.connect(self._update_content)
-        self.model.selectionChanged.connect(self._update_selection_in_tree)
-
+        self._subscribe_to_events()
+        self.logger.debug("LayersTab initialized.")
         self._update_content()  # Initial population
         self._update_toolbar_buttons()  # Initial state of buttons
 
-    def _update_content(self):
+    def _subscribe_to_events(self):
+        """Subscribes to relevant EventAggregator notifications for UI updates."""
+        self._event_aggregator.subscribe(Events.PROJECT_WAS_RESET, self._update_content)
+        self._event_aggregator.subscribe(Events.NODE_RENAMED, self._update_content_for_node_by_id)
+        self._event_aggregator.subscribe(Events.NODE_VISIBILITY_CHANGED, self._update_content_for_node_by_id)
+        self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._update_content_for_node_by_id)
+        self._event_aggregator.subscribe(Events.SCENE_GRAPH_CHANGED, self._update_content) # Generic structure change
+        self._event_aggregator.subscribe(Events.NODE_ADDED_TO_SCENE, self._update_content) # For now, rebuild fully
+        self._event_aggregator.subscribe(Events.NODE_REMOVED_FROM_SCENE, self._update_content) # For now, rebuild fully
+        self._event_aggregator.subscribe(Events.NODE_REPARENTED_IN_SCENE, self._update_content) # For now, rebuild fully
+        self._event_aggregator.subscribe(Events.NODE_ORDER_CHANGED_IN_SCENE, self._update_content) # For now, rebuild fully
+        self._event_aggregator.subscribe(Events.SELECTION_CHANGED, self._update_selection_in_tree)
+
+
+    def _update_content_for_node_by_id(self, node_id: str, *args, **kwargs):
+        """Triggers a content update for a specific node event."""
+        # For now, a full rebuild is simplest. Optimize for incremental updates later.
+        self._update_content()
+
+    def _update_content(self, *args, **kwargs): # Added *args, **kwargs to match event signature
         """
         Clears and rebuilds the QTreeWidget based on the current ApplicationModel.
         """
@@ -116,7 +128,7 @@ class LayersTab(QWidget):
         )
 
         self._tree_widget.expandAll()  # Expand all nodes by default
-        self._update_selection_in_tree()  # Ensure tree selection matches model
+        self._update_selection_in_tree(self.model.selection) #TODO: This should later be requested instead of just taken
         self._tree_widget.blockSignals(False)  # Re-enable signals
         self.logger.debug("LayersTab: QTreeWidget content updated.")
 
@@ -164,7 +176,8 @@ class LayersTab(QWidget):
 
     def _handle_item_changed(self, item: QTreeWidgetItem, column: int):
         """
-        Handles changes to a QTreeWidgetItem (e.g., checkbox state, text edit).
+        Handles changes to a QTreeWidgetItem (e.g., checkbox state, text edit)
+        and publishes corresponding request events.
         """
         node_id = item.data(self.COL_NAME, Qt.UserRole)
         if not node_id:
@@ -178,63 +191,60 @@ class LayersTab(QWidget):
             if item.checkState(self.COL_NAME) != (Qt.Checked if node.visible else Qt.Unchecked):
                 # Visibility changed
                 new_visibility = item.checkState(self.COL_NAME) == Qt.Checked
-                self.node_controller.set_node_visibility(node_id, new_visibility)
+                self._event_aggregator.publish(Events.CHANGE_NODE_VISIBILITY_REQUESTED, node_id=node_id, is_visible=new_visibility)
             elif item.text(self.COL_NAME) != node.name:
                 # Name changed
                 new_name = item.text(self.COL_NAME)
-                self.node_controller.rename_node(node_id, new_name)
-        # TODO: Handle lock icon/state change in column 1 if implemented as checkbox
+                self._event_aggregator.publish(Events.RENAME_NODE_REQUESTED, node_id=node_id, new_name=new_name)
+        # TODO: Handle lock icon/state change in column 1 if implemented as checkbox publishing CHANGE_NODE_LOCKED_REQUESTED
 
     def _handle_item_double_clicked(self, item: QTreeWidgetItem, column: int):
         """
         Handles double-clicking an item in the tree.
         Could be used for in-place renaming or opening properties.
         """
-        # For now, allow in-place renaming on double-click if not locked
         node_id = item.data(self.COL_NAME, Qt.UserRole)
         node = self.model.scene_root.find_node_by_id(node_id)
         if node and not node.locked:
-            self._tree_widget.editItem(item, self.COL_NAME)  # Start editing the name column
+            self._tree_widget.editItem(item, self.COL_NAME)
 
-    def _update_selection_in_tree(self):
+    def _update_selection_in_tree(self, selected_node_ids: list[str]): # Match event signature
         """Ensures the selection in the QTreeWidget matches the model's selection."""
         self.logger.debug("LayersTab: Updating tree selection to match model.")
-        self._tree_widget.blockSignals(
-            True
-        )  # Block signals to avoid triggering itemChanged
+        self._tree_widget.blockSignals(True)
         self._tree_widget.clearSelection()
 
-        for selected_node in self.model.selection:
-            if selected_node.id in self._node_id_to_tree_item:
-                item = self._node_id_to_tree_item[selected_node.id]
+        for node_id in selected_node_ids:
+            if node_id in self._node_id_to_tree_item:
+                item = self._node_id_to_tree_item[node_id]
                 item.setSelected(True)
                 self._tree_widget.scrollToItem(item)
             else:
-                self.logger.warning(f"LayersTab: Item for node ID {selected_node.id} not found in tree map.")
+                self.logger.warning(f"LayersTab: Item for node ID {node_id} not found in tree map.")
         self._tree_widget.blockSignals(False)
 
     def _group_selected_nodes(self):
-        """Triggers grouping action for currently selected nodes."""
+        """Publishes request to group currently selected nodes."""
         selected_node_ids = [
             item.data(self.COL_NAME, Qt.UserRole)
             for item in self._tree_widget.selectedItems()
             if item.data(self.COL_NAME, Qt.UserRole)
         ]
         if len(selected_node_ids) > 1:
-            self.node_controller.group_nodes(selected_node_ids)
+            self._event_aggregator.publish(Events.GROUP_NODES_REQUESTED, node_ids=selected_node_ids)
         else:
             QMessageBox.warning(
                 self, "Grouping Error", "Select at least two nodes to group."
             )
 
     def _ungroup_selected_node(self):
-        """Triggers ungrouping action for a selected GroupNode."""
+        """Publishes request to ungroup a selected GroupNode."""
         selected_items = self._tree_widget.selectedItems()
         if len(selected_items) == 1:
             node_id = selected_items[0].data(self.COL_NAME, Qt.UserRole)
             node = self.model.scene_root.find_node_by_id(node_id)
             if isinstance(node, GroupNode):
-                self.node_controller.ungroup_node(node_id)
+                self._event_aggregator.publish(Events.UNGROUP_NODE_REQUESTED, node_id=node_id)
             else:
                 QMessageBox.warning(
                     self, "Ungrouping Error", "Select a GroupNode to ungroup."

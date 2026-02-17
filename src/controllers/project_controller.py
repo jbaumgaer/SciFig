@@ -25,7 +25,6 @@ class ProjectController:
         self,
         lifecycle: ProjectLifecycle,
         command_manager: CommandManager,
-        layout_manager: LayoutManager,
         template_dir: Path,
         max_recent_files: int,
         event_aggregator: EventAggregator,
@@ -33,7 +32,6 @@ class ProjectController:
         super().__init__()
         self._lifecycle = lifecycle
         self._command_manager = command_manager
-        self._layout_manager = layout_manager
         self._template_dir = template_dir
         self._max_recent_files = max_recent_files
         self._event_aggregator = event_aggregator

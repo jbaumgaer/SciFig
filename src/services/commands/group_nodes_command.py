@@ -3,6 +3,8 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode  # New Import
 from src.models.nodes.scene_node import SceneNode
 from src.services.commands.base_command import BaseCommand
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 
 
 class GroupNodesCommand(BaseCommand):
@@ -11,9 +13,13 @@ class GroupNodesCommand(BaseCommand):
     """
 
     def __init__(
-        self, model: ApplicationModel, node_ids: list[str], group_name: str = "Group"
+        self,
+        model: ApplicationModel,
+        event_aggregator: EventAggregator,
+        node_ids: list[str],
+        group_name: str = "Group"
     ):
-        super().__init__(model)
+        super().__init__(model, event_aggregator)
         self.node_ids = node_ids
         self.group_name = group_name
         self.group_id: Optional[str] = None  # Will be set during execute
@@ -72,7 +78,7 @@ class GroupNodesCommand(BaseCommand):
                 f"GroupNodesCommand: Moved node {node.id} into group {new_group.id}."
             )
 
-        self.model.modelChanged.emit()
+        self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)
 
     def undo(self):
         if not self.group_id:
@@ -121,4 +127,4 @@ class GroupNodesCommand(BaseCommand):
                 f"GroupNodesCommand: Removed group node {group_node.id} from scene root."
             )
 
-        self.model.modelChanged.emit()
+        self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)

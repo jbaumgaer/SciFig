@@ -94,7 +94,7 @@ class CompositionRoot:
             f"Figure created with dimensions: {figure_width}x{figure_height} @ {figure_dpi}dpi, Facecolor: {figure_facecolor}"
         )
 
-        self._application_model = ApplicationModel()
+        self._application_model = ApplicationModel(event_aggregator=self._event_aggregator)
         self._command_manager = CommandManager(
             model=self._application_model, event_aggregator=self._event_aggregator
         )
@@ -104,11 +104,13 @@ class CompositionRoot:
             free_engine=FreeLayoutEngine(),
             grid_engine=GridLayoutEngine(),
             config_service=self._config_service,
+            event_aggregator=self._event_aggregator,
         )
         self._layout_controller = LayoutController(
             model=self._application_model,
             command_manager=self._command_manager,
             layout_manager=self._layout_manager,
+            event_aggregator=self._event_aggregator,
         )
         self._node_controller = NodeController(
             model=self._application_model,
@@ -126,7 +128,6 @@ class CompositionRoot:
         self._project_controller = ProjectController(
             lifecycle=self._application_model,
             command_manager=self._command_manager,
-            layout_manager=self._layout_manager,
             template_dir=template_dir_path,
             max_recent_files=max_recent_files,
             event_aggregator=self._event_aggregator,
@@ -160,6 +161,7 @@ class CompositionRoot:
         self.logger.info("Assembling side panel.")
         self._layout_ui_factory = LayoutUIFactory(
             layout_manager=self._layout_manager,
+            event_aggregator=self._event_aggregator,
         )
         self._plot_types = list(self._renderer.plotting_strategies.keys())
         self._plot_properties_ui_factory = PlotPropertiesUIFactory(
@@ -172,7 +174,7 @@ class CompositionRoot:
         self._plot_properties_ui_factory.register_builder(
             PlotType.SCATTER, _build_scatter_plot_ui_widgets
         )
-        self._side_panel = SidePanel(model=self._application_model)
+        self._side_panel = SidePanel(model=self._application_model, event_aggregator=self._event_aggregator)
         properties_tab = PropertiesTab(
             model=self._application_model,
             event_aggregator=self._event_aggregator,
@@ -183,6 +185,7 @@ class CompositionRoot:
             model=self._application_model,
             layout_controller=self._layout_controller,
             layout_ui_factory=self._layout_ui_factory,
+            event_aggregator=self._event_aggregator,
             parent=self._side_panel,
         )
         layers_tab = LayersTab(
@@ -227,11 +230,6 @@ class CompositionRoot:
     def _connect_signals(self):
         """Connect all application-wide Qt signals to their slots."""
         self.logger.debug("Connecting Qt signals.")
-        # This method is now for Qt-only signals that are not part of the event system (yet).
-        self._application_model.projectReset.connect(self._layout_manager.on_model_reset)
-        # self._application_model.modelChanged.connect(self._redraw_canvas_callback) # Removed: Replaced by granular events
-        self._application_model.selectionChanged.connect(self._redraw_canvas_callback)
-        self._application_model.layoutConfigChanged.connect(self._redraw_canvas_callback)
         self._main_menu_actions.exit_action.triggered.connect(self._app.quit)
 
     def _subscribe_to_events(self):
@@ -293,6 +291,9 @@ class CompositionRoot:
         self._event_aggregator.subscribe(Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, self._view._prompt_for_open_path_for_node_data)
 
 
+        # --- LayoutManager Subscriptions ---
+        self._event_aggregator.subscribe(Events.PROJECT_WAS_RESET, self._layout_manager.on_model_reset)
+
         # --- Redraw Canvas Callbacks (Granular Events) ---
         self._event_aggregator.subscribe(Events.NODE_VISIBILITY_CHANGED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._redraw_canvas_callback)
@@ -311,7 +312,7 @@ class CompositionRoot:
         self._event_aggregator.subscribe(Events.NODE_REMOVED_FROM_SCENE, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_REPARENTED_IN_SCENE, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_ORDER_CHANGED_IN_SCENE, self._redraw_canvas_callback)
-
+        self._event_aggregator.subscribe(Events.LAYOUT_CONFIG_CHANGED, self._redraw_canvas_callback)
 
     def _redraw_canvas_callback(self):
         """Callback to trigger canvas redraw."""

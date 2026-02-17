@@ -1,5 +1,7 @@
 from src.models.application_model import ApplicationModel
 from src.services.commands.base_command import BaseCommand
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 
 
 class ChangeChildrenOrderCommand(BaseCommand):
@@ -10,12 +12,14 @@ class ChangeChildrenOrderCommand(BaseCommand):
     def __init__(
         self,
         model: ApplicationModel,
+        event_aggregator: EventAggregator,
         parent_id: str,
         node_id: str,
         old_index: int,
         new_index: int,
     ):
-        super().__init__(model)
+        super().__init__(description=None, event_aggregator=event_aggregator)
+        self.model = model
         self.parent_id = parent_id
         self.node_id = node_id
         self.old_index = old_index
@@ -30,7 +34,11 @@ class ChangeChildrenOrderCommand(BaseCommand):
             children = parent_node.children
             children.pop(self.old_index)
             children.insert(self.new_index, node_to_move)
-            self.model.modelChanged.emit()
+            self._event_aggregator.publish(
+                Events.NODE_ORDER_CHANGED_IN_SCENE,
+                parent_id=self.parent_id,
+                new_ordered_child_ids=[child.id for child in parent_node.children]
+            )
         else:
             self.logger.warning(
                 f"ChangeChildrenOrderCommand: Failed to execute. Parent ({self.parent_id}) or child ({self.node_id}) not found or child not belonging to parent."
@@ -44,7 +52,11 @@ class ChangeChildrenOrderCommand(BaseCommand):
             children = parent_node.children
             children.pop(self.new_index)
             children.insert(self.old_index, node_to_move)
-            self.model.modelChanged.emit()
+            self._event_aggregator.publish(
+                Events.NODE_ORDER_CHANGED_IN_SCENE,
+                parent_id=self.parent_id,
+                new_ordered_child_ids=[child.id for child in parent_node.children]
+            )
         else:
             self.logger.warning(
                 f"ChangeChildrenOrderCommand: Failed to undo. Parent ({self.parent_id}) or child ({self.node_id}) not found or child not belonging to parent."

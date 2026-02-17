@@ -71,6 +71,9 @@ class MainWindow(QMainWindow):
         self._event_aggregator.subscribe(
             Events.PROMPT_FOR_TEMPLATE_SELECTION_REQUESTED, self._prompt_for_template
         )
+        self._event_aggregator.subscribe(
+            Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, self._prompt_for_open_path_for_node_data
+        )
 
         # --- Subscribe to notifications that affect the window's state ---
         self._event_aggregator.subscribe(
@@ -115,6 +118,17 @@ class MainWindow(QMainWindow):
             self._event_aggregator.publish(Events.TEMPLATE_PROVIDED_FOR_NEW, template_name=template_name)
         else:
             self._event_aggregator.publish(Events.TEMPLATE_PROVIDED_FOR_NEW, template_name=None)
+
+    def _prompt_for_open_path_for_node_data(self, node_id: str):
+        """
+        Opens a file dialog for selecting data for a specific node and publishes the result.
+        """
+        file_path_str, _ = QFileDialog.getOpenFileName(
+            self, "Select Data File for Node", "", "Data Files (*.csv *.tsv *.txt)"
+        )
+        path = Path(file_path_str) if file_path_str else None
+        self._event_aggregator.publish(Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, node_id=node_id, path=path)
+
 
     def _update_window_title(self, **kwargs):
         """Updates the window title based on the current project state.

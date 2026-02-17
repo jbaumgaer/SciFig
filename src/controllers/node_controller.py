@@ -1,111 +1,201 @@
 import logging
-from pathlib import Path  # New Import
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Any
 
 from PySide6.QtCore import QObject
-from PySide6.QtWidgets import (
-    QComboBox,
-    QFileDialog,
-    QLineEdit,
-)
+import pandas as pd
 
-from src.controllers.project_controller import ProjectController  # New Import
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import AxesLimits, PlotMapping
 from src.models.plots.plot_types import PlotType
 from src.services.commands.change_property_command import ChangePropertyCommand
 from src.services.commands.command_manager import CommandManager
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 
 
 class NodeController(QObject):
+    """TODO: In the future, there will be different node controllers, e.g. PlotNodeController."""
     def __init__(
         self,
         model: ApplicationModel,
         command_manager: CommandManager,
-        project_controller: ProjectController,
+        event_aggregator: EventAggregator,
     ):
         super().__init__()
         self.model = model
         self.command_manager = command_manager
-        self.project_controller = project_controller  # Store project_controller
+        self._event_aggregator = event_aggregator
         self.logger = logging.getLogger(self.__class__.__name__)
+
+        self._subscribe_to_events()
         self.logger.info("NodeController initialized.")
 
-    def on_subplot_selection_changed(self, plot_id: str):
+    def _subscribe_to_events(self):
+        """Subscribes to all relevant application events. TODO: Unsure if subscribing should be handled by the controller itself or if there should be a separate layer (currently the composition root) responsible for wiring up event subscriptions."""
+        self._event_aggregator.subscribe(
+            Events.SUBPLOT_SELECTION_IN_UI_CHANGED, self._handle_subplot_selection_changed_request
+        )
+        self._event_aggregator.subscribe(
+            Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED, self._handle_select_data_file_request
+        )
+        self._event_aggregator.subscribe(
+            Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, self._handle_data_file_path_provided
+        )
+        self._event_aggregator.subscribe(
+            Events.APPLY_DATA_TO_NODE_REQUESTED, self._handle_apply_data_request
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_PLOT_TYPE_REQUESTED, self._handle_plot_type_change_request
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_PLOT_TITLE_REQUESTED,
+            lambda node_id, new_title: self._handle_generic_property_change_request(node_id, "title", new_title)
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_PLOT_XLABEL_REQUESTED,
+            lambda node_id, new_xlabel: self._handle_generic_property_change_request(node_id, "xlabel", new_xlabel)
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_PLOT_YLABEL_REQUESTED,
+            lambda node_id, new_ylabel: self._handle_generic_property_change_request(node_id, "ylabel", new_ylabel)
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_PLOT_MARKER_SIZE_REQUESTED, self._handle_marker_size_change_request
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_PLOT_AXIS_LIMITS_REQUESTED, self._handle_limit_editing_request
+        )
+        self._event_aggregator.subscribe(
+            Events.MAP_PLOT_COLUMNS_REQUESTED, self._handle_column_mapping_request
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_NODE_VISIBILITY_REQUESTED, self._handle_node_visibility_request
+        )
+        self._event_aggregator.subscribe(
+            Events.RENAME_NODE_REQUESTED, self._handle_rename_node_request
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_NODE_LOCKED_REQUESTED, self._handle_node_locked_request
+        )
+        # TODO: Add subscriptions for group, ungroup, reorder requests when commands are implemented
+
+
+    def _get_node_by_id(self, node_id: str) -> Optional[SceneNode]:
+        node = self.model.scene_root.find_node_by_id(node_id) #TODO: In the fugure, I might want to change this by asking the model for the node directly, instead of reaching deep into the model's scene graph
+        if not node:
+            self.logger.warning(f"NodeController: Node with ID '{node_id}' not found.")
+        return node
+
+    def _get_plot_node_by_id(self, node_id: str) -> Optional[PlotNode]:
+        node = self._get_node_by_id(node_id)
+        if not (node and isinstance(node, PlotNode)):
+            self.logger.warning(f"NodeController: PlotNode with ID '{node_id}' not found or not a PlotNode.")
+            return None
+        return node
+
+    # --- Request Handlers ---
+
+    def _handle_subplot_selection_changed_request(self, plot_id: str):
         """
-        Sets the application model's selection to the PlotNode with the given ID.
+        Sets the application model's selection to the PlotNode with the given ID
+        and publishes SELECTION_CHANGED.
         """
         if not plot_id:
-            self.model.selection = []
+            self.model.set_selection([])
+            self._event_aggregator.publish(Events.SELECTION_CHANGED, selected_node_ids=[])
             return
 
-        node = self.model.scene_root.find_node_by_id(plot_id)
-        if node and isinstance(node, PlotNode):
+        node = self._get_plot_node_by_id(plot_id)
+        if node:
             self.logger.debug(
                 f"NodeController: Setting selection to PlotNode with ID: {plot_id}"
             )
-            self.model.selection = [node]
+            self.model.set_selection([node])
+            self._event_aggregator.publish(Events.SELECTION_CHANGED, selected_node_ids=[node.id])
         else:
-            self.logger.warning(
-                f"NodeController: PlotNode with ID '{plot_id}' not found for selection."
-            )
-            self.model.selection = []
+            self.model.set_selection([])
+            self._event_aggregator.publish(Events.SELECTION_CHANGED, selected_node_ids=[])
 
-    def on_select_file_clicked(self, node: PlotNode):
+
+    def _handle_select_data_file_request(self, node_id: str):
         """
-        Opens a file dialog to allow the user to select a data file (e.g., CSV).
-        Stores the selected path temporarily in the PlotNode.
+        Publishes a request for the UI to prompt for a data file path for a node.
         """
-        self.logger.debug(f"NodeController: Select file clicked for node {node.id}")
-        file_path, _ = QFileDialog.getOpenFileName(
-            None, "Select Data File", "", "Data Files (*.csv *.tsv *.txt)"
+        node = self._get_plot_node_by_id(node_id)
+        if not node:
+            self.logger.warning(f"NodeController: Cannot request data file for non-existent node with ID: {node_id}")
+            return
+        self.logger.debug(f"NodeController: Requesting data file selection for node {node_id}")
+        self._event_aggregator.publish(Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, node_id=node_id)
+        #TODO: This event is currently not being answered by the ui
+
+
+    def _handle_data_file_path_provided(self, node_id: str, path: Optional[Path]):
+        """
+        Handles the provided data file path from the UI and updates the node.
+        """
+        node = self._get_plot_node_by_id(node_id)
+        if not node:
+            return
+
+        # Use a command to update node.data_file_path, this will also publish NODE_DATA_FILE_PATH_UPDATED
+        cmd = ChangePropertyCommand(
+            node=node,
+            property_name="data_file_path",
+            new_value=path,
+            property_dict_name=None,
+            event_aggregator=self._event_aggregator,
         )
-        if file_path:
-            node.data_file_path = Path(file_path)
-            self.logger.debug(
-                f"NodeController: Selected file: {node.data_file_path} for node {node.id}"
-            )
-            # The UI will need to re-read node.data_file_path to update the QLineEdit
-            self.model.modelChanged.emit()  # Force UI update
+        self.command_manager.execute_command(cmd)
 
-    def on_apply_data_clicked(self, node: PlotNode, new_file_path: Optional[Path]):
+
+    def _handle_apply_data_request(self, node_id: str, file_path: Optional[Path]):
         """
         Triggers data loading for the given PlotNode from new_file_path.
         """
-        self.logger.debug(
-            f"NodeController: Apply data clicked for node {node.id} with path {new_file_path}"
-        )
-        if not new_file_path or not new_file_path.exists():
+        node = self._get_plot_node_by_id(node_id)
+        if not node:
+            return
+
+        if not file_path or not file_path.exists():
             self.logger.warning(
-                f"NodeController: Invalid file path provided for data loading: {new_file_path}"
+                f"NodeController: Invalid file path provided for data loading: {file_path}"
             )
+            # TODO: Publish an error event
             return
 
         try:
-            # Delegate actual data loading to project_controller which manages DataLoader
-            new_data = self.project_controller._data_loader.load_data(new_file_path)
+            #TODO: Instead of the node and canvas controller handling this, I should invoke a data loader service with a request
+            new_data = pd.read_csv(file_path, sep=";")  # Placeholder for loaded data, replace with actual loading logic
 
-            # Create a command to update node.data and node.data_file_path
             cmd = ChangePropertyCommand(
                 node=node,
                 property_name="data",
                 new_value=new_data,
-                property_dict_name=None,  # Direct property of PlotNode
-                additional_properties={"data_file_path": new_file_path},
+                property_dict_name=None,
+                event_aggregator=self._event_aggregator,
+                # additional_properties={"data_file_path": file_path}, # TODO: Check if this is needed
             )
             self.command_manager.execute_command(cmd)
             self.logger.info(
-                f"NodeController: Successfully loaded and applied data from {new_file_path} to node {node.id}"
+                f"NodeController: Successfully loaded and applied data from {file_path} to node {node_id}"
             )
         except Exception as e:
             self.logger.error(
-                f"NodeController: Failed to load data from {new_file_path} for node {node.id}: {e}"
+                f"NodeController: Failed to load data from {file_path} for node {node_id}: {e}"
             )
-            # Optionally show a message box to the user
+            # TODO: Publish an error event to be displayed by UI
 
-    def on_plot_type_changed(self, new_plot_type_str: str, node: PlotNode):
+
+    def _handle_plot_type_change_request(self, node_id: str, new_plot_type_str: str):
         """Creates and executes a command when the plot type changes."""
+        node = self._get_plot_node_by_id(node_id)
+        if not node:
+            return
+
         if not new_plot_type_str:
             return
 
@@ -114,91 +204,132 @@ class NodeController(QObject):
         assert node.plot_properties is not None
         old_plot_type = node.plot_properties.plot_type
 
-        if new_plot_type != old_plot_type:
-            cmd = ChangePropertyCommand(
-                node=node,
-                property_name="plot_type",
-                new_value=new_plot_type,
-                property_dict_name="plot_properties",
-            )
-            self.command_manager.execute_command(cmd)
-            # Rebuilding UI would typically be handled by properties_panel listening to modelChanged/selectionChanged
-            # self.on_selection_changed()  # Rebuild UI
+        if new_plot_type == old_plot_type:
+            self.logger.debug(f"NodeController: Plot type unchanged for node {node_id}")
+            return
+        cmd = ChangePropertyCommand(
+            node=node,
+            property_name="plot_type",
+            new_value=new_plot_type,
+            property_dict_name="plot_properties",
+            event_aggregator=self._event_aggregator,
+        )
+        self.command_manager.execute_command(cmd)
 
-    def on_property_changed(self, node: PlotNode, prop_name: str, new_value: str):
-        """Creates and executes a command when a QLineEdit's editing is finished."""
-        old_value = getattr(node.plot_properties, prop_name)
 
-        if new_value != old_value:
-            cmd = ChangePropertyCommand(
-                node=node,
-                property_name=prop_name,
-                new_value=new_value,
-                property_dict_name="plot_properties",
-            )
-            self.command_manager.execute_command(cmd)
+    def _handle_generic_property_change_request(self, node_id: str, prop_name: str, new_value: Any):
+        """
+        Handles requests to change a generic property (title, xlabel, ylabel, marker_size).
+        """
+        node = self._get_plot_node_by_id(node_id)
+        if not node or not node.plot_properties:
+            return
 
-    def on_limit_editing_finished(
+        # Attempt to convert value if needed, e.g., for marker_size
+        if prop_name == "marker_size":
+            try:
+                new_value = float(new_value)
+            except ValueError:
+                self.logger.warning(f"Invalid value for marker_size: {new_value}. Not applying.")
+                return
+
+        # old_value = getattr(node.plot_properties, prop_name) # No longer needed, command handles comparison
+
+        cmd = ChangePropertyCommand(
+            node=node,
+            property_name=prop_name,
+            new_value=new_value,
+            property_dict_name="plot_properties",
+            event_aggregator=self._event_aggregator,
+        )
+        self.command_manager.execute_command(cmd)
+
+
+    def _handle_marker_size_change_request(self, node_id: str, new_size: str):
+        """Handles request to change marker size, including value parsing.
+        TODO: Somehow refactor this together with the generic property change handler, so that parsing logic can be reused for different properties."""
+        node = self._get_plot_node_by_id(node_id)
+        if not node or not node.plot_properties:
+            return
+        
+        try:
+            parsed_size = float(new_size)
+        except ValueError:
+            self.logger.warning(f"Invalid marker size value: {new_size}. Request ignored.")
+            return
+        
+        cmd = ChangePropertyCommand(
+            node=node,
+            property_name="marker_size",
+            new_value=parsed_size,
+            property_dict_name="plot_properties",
+            event_aggregator=self._event_aggregator,
+        )
+        self.command_manager.execute_command(cmd)
+
+
+    def _handle_limit_editing_request(
         self,
-        node: PlotNode,
-        xlim_min_edit: QLineEdit,
-        xlim_max_edit: QLineEdit,
-        ylim_min_edit: QLineEdit,
-        ylim_max_edit: QLineEdit,
+        node_id: str,
+        xlim_min: str,
+        xlim_max: str,
+        ylim_min: str,
+        ylim_max: str,
     ):
         """
-        This runs after the user has finished editing in the limit fields.
-        It gathers all values from the QLineEdit widgets and executes a single command.
+        Handles requests to change axis limits. Parses string inputs.
         """
-        if not node:
+        node = self._get_plot_node_by_id(node_id)
+        if not node or not node.plot_properties:
             return
 
         def _parse_or_none(text: str) -> Optional[float]:
+            #TODO: Make this a general function in a utils module, since similar parsing is needed in multiple places. Maybe an InputValidationService
             try:
                 return float(text)
             except (ValueError, TypeError):
                 return None
 
-        new_xlim_min = _parse_or_none(xlim_min_edit.text())
-        new_xlim_max = _parse_or_none(xlim_max_edit.text())
-        new_ylim_min = _parse_or_none(ylim_min_edit.text())
-        new_ylim_max = _parse_or_none(ylim_max_edit.text())
+        new_xlim_min = _parse_or_none(xlim_min)
+        new_xlim_max = _parse_or_none(xlim_max)
+        new_ylim_min = _parse_or_none(ylim_min)
+        new_ylim_max = _parse_or_none(ylim_max)
 
-        assert node.plot_properties is not None
         old_limits = node.plot_properties.axes_limits
         new_limits = AxesLimits(
             xlim=(new_xlim_min, new_xlim_max),
             ylim=(new_ylim_min, new_ylim_max),
         )
 
-        if old_limits != new_limits:
+        if old_limits != new_limits: #TODO: This comparison logic is now duplicated in the command, maybe it should be handled solely in the command
             cmd = ChangePropertyCommand(
                 node=node,
                 property_name="axes_limits",
                 new_value=new_limits,
                 property_dict_name="plot_properties",
+                event_aggregator=self._event_aggregator,
             )
             self.command_manager.execute_command(cmd)
 
-    def on_column_mapping_changed(
+    def _handle_column_mapping_request(
         self,
-        new_text_ignored: str,
-        node: PlotNode,
-        x_combo: QComboBox,
-        y_combo: QComboBox,
+        node_id: str,
+        x_column: str,
+        y_column: str,
     ):
         """
-        Creates and executes a command when a column selection changes.
-        Reads from BOTH combo boxes to create a complete mapping.
+        Handles requests to change column mappings for a plot.
         """
-        x_col = x_combo.currentText()
-        y_col = y_combo.currentText()
-
-        if not x_col or not y_col:
+        node = self._get_plot_node_by_id(node_id)
+        if not node or not node.plot_properties:
+            self.logger.warning(f"NodeController: Cannot change column mapping for non-existent plot node with ID: {node_id}")
             return
 
-        assert node.plot_properties is not None
-        new_mapping = PlotMapping(x=x_col, y=[y_col])
+        if not x_column or not y_column:
+            self.logger.warning(f"NodeController: Cannot change column mapping for node {node_id} because x_column or y_column is empty.")
+            return
+
+        new_mapping = PlotMapping(x=x_column, y=[y_column])
         old_mapping = node.plot_properties.plot_mapping
 
         if new_mapping != old_mapping:
@@ -207,77 +338,75 @@ class NodeController(QObject):
                 property_name="plot_mapping",
                 new_value=new_mapping,
                 property_dict_name="plot_properties",
+                event_aggregator=self._event_aggregator,
             )
             self.command_manager.execute_command(cmd)
 
-    def set_node_visibility(self, node_id: str, visible: bool):
+    def _handle_node_visibility_request(self, node_id: str, visible: bool):
         """
-        Sets the visibility of a SceneNode.
+        Handles requests to set the visibility of a SceneNode.
+        TODO: This should later go into a general node handler or maybe the layers controller
         """
-        node = self.model.scene_root.find_node_by_id(node_id)
+        node = self._get_node_by_id(node_id)
         if node and node.visible != visible:
             cmd = ChangePropertyCommand(
                 node=node,
                 property_name="visible",
                 new_value=visible,
-                property_dict_name=None,  # Direct property of SceneNode
+                property_dict_name=None,
+                event_aggregator=self._event_aggregator,
             )
             self.command_manager.execute_command(cmd)
-            self.logger.debug(
-                f"NodeController: Set visibility of node {node_id} to {visible}."
-            )
 
-    def set_node_locked(self, node_id: str, locked: bool):
+    def _handle_node_locked_request(self, node_id: str, locked: bool):
         """
-        Sets the locked state of a SceneNode.
+        Handles requests to set the locked state of a SceneNode.
+        TODO: This should later go into a general node handler or maybe the layers controller
         """
-        node = self.model.scene_root.find_node_by_id(node_id)
+        node = self._get_node_by_id(node_id)
         if node and node.locked != locked:
             cmd = ChangePropertyCommand(
                 node=node,
                 property_name="locked",
                 new_value=locked,
-                property_dict_name=None,  # Direct property of SceneNode
+                property_dict_name=None,
+                event_aggregator=self._event_aggregator,
             )
             self.command_manager.execute_command(cmd)
-            self.logger.debug(
-                f"NodeController: Set locked state of node {node_id} to {locked}."
-            )
 
+
+    def _handle_rename_node_request(self, node_id: str, new_name: str):
+        """
+        Handles requests to rename a SceneNode.
+        TODO: This should later go into a general node handler or maybe the layers controller
+        """
+        node = self._get_node_by_id(node_id)
+        if node and node.name != new_name:
+            cmd = ChangePropertyCommand(
+                node=node,
+                property_name="name",
+                new_value=new_name,
+                property_dict_name=None,
+                event_aggregator=self._event_aggregator,
+            )
+            self.command_manager.execute_command(cmd)
+
+    # These methods are currently just warnings, actual commands need to be implemented
     def reorder_nodes(self, parent_id: str, node_id: str, new_index: int):
         """
         Reorders a child node within its parent's children list.
         """
-        parent_node = self.model.scene_root.find_node_by_id(parent_id)
-        node_to_move = self.model.scene_root.find_node_by_id(node_id)
-
-        if parent_node and node_to_move and node_to_move.parent == parent_node:
-            # Need to create a new command for reordering children
-            # This would likely involve a ChangeChildrenOrderCommand
-            self.logger.warning(
-                "NodeController: reorder_nodes not fully implemented yet, requires ChangeChildrenOrderCommand."
-            )
-            # Placeholder for now, full implementation once command is created.
-            # cmd = ChangeChildrenOrderCommand(...)
-            # self.command_manager.execute_command(cmd)
-        else:
-            self.logger.warning(
-                f"NodeController: Could not reorder node {node_id} in parent {parent_id}."
-            )
+        # Placeholder for now, full implementation once command is created.
+        # cmd = ChangeChildrenOrderCommand(...)
+         # self.command_manager.execute_command(cmd)
+        self.logger.warning(
+            "NodeController: reorder_nodes not fully implemented yet, requires ChangeChildrenOrderCommand."
+        )
 
     def group_nodes(self, node_ids: list[str]):
         """
         Groups selected nodes under a new GroupNode.
         """
-        nodes_to_group = [
-            self.model.scene_root.find_node_by_id(nid) for nid in node_ids
-        ]
-        nodes_to_group = [n for n in nodes_to_group if n is not None]
-
-        if len(nodes_to_group) < 2:
-            self.logger.warning("NodeController: Grouping requires at least two nodes.")
-            return
-
         self.logger.warning(
             "NodeController: group_nodes not fully implemented yet, requires GroupNodesCommand."
         )
@@ -289,35 +418,9 @@ class NodeController(QObject):
         """
         Ungroups a GroupNode, moving its children to its parent.
         """
-        # Need to import GroupNode for isinstance check
-        from src.models.nodes.group_node import (
-            GroupNode,
-        )  # Local import to avoid circular dependency
-
-        group_node = self.model.scene_root.find_node_by_id(group_id)
-        if group_node and isinstance(group_node, GroupNode):
-            self.logger.warning(
-                "NodeController: ungroup_node not fully implemented yet, requires UngroupNodesCommand."
-            )
-            # Placeholder for now, full implementation once command is created.
-            # cmd = UngroupNodesCommand(...)
-            # self.command_manager.execute_command(cmd)
-        else:
-            self.logger.warning(
-                f"NodeController: Node {group_id} is not a GroupNode or not found for ungrouping."
-            )
-
-    def rename_node(self, node_id: str, new_name: str):
-        """
-        Renames a SceneNode.
-        """
-        node = self.model.scene_root.find_node_by_id(node_id)
-        if node and node.name != new_name:
-            cmd = ChangePropertyCommand(
-                node=node,
-                property_name="name",
-                new_value=new_name,
-                property_dict_name=None,  # Direct property of SceneNode
-            )
-            self.command_manager.execute_command(cmd)
-            self.logger.debug(f"NodeController: Renamed node {node_id} to {new_name}.")
+        self.logger.warning(
+            "NodeController: ungroup_node not fully implemented yet, requires UngroupNodesCommand."
+        )
+        # Placeholder for now, full implementation once command is created.
+        # cmd = UngroupNodesCommand(...)
+        # self.command_manager.execute_command(cmd)

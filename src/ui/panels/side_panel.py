@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 from src.ui.panels.layers_tab import LayersTab
 from src.ui.panels.layout_tab import LayoutTab
 from src.ui.panels.properties_tab import PropertiesTab
@@ -23,16 +25,17 @@ class SidePanel(QTabWidget):
     def __init__(
         self,
         model: ApplicationModel,
+        event_aggregator: EventAggregator
     ):
         super().__init__()
-        # TODO: Check if I even pass a parent
         self.model = model
         self._tabs: dict[str, QWidget] = {}
+        self._event_aggregator = event_aggregator
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Connect model signals to the new _on_selection_changed method
-        self.model.selectionChanged.connect(self._on_selection_changed)
+        self._event_aggregator.subscribe(Events.SELECTION_CHANGED, self._on_selection_changed)
         self._on_selection_changed() # Initial call to set up tab state
         self.logger.info("SidePanel initialized.")
 

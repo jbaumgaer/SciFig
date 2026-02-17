@@ -1,31 +1,25 @@
 import logging
 from pathlib import Path
-from typing import Optional
-
-import matplotlib.figure
-from PySide6.QtCore import QObject, Signal
+from typing import Optional, Any
 
 from src.interfaces.project_io import ProjectLifecycle
 from src.models.layout.layout_config import FreeConfig, LayoutConfig
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode, node_factory
+from src.shared.events import Events
+from src.services.event_aggregator import EventAggregator
 
 
-class ApplicationModel(QObject, ProjectLifecycle):
+class ApplicationModel(ProjectLifecycle):
     """
     The central model for the entire application. It is the single source of truth,
     holding the state of the scene graph and implementing the ProjectLifecycle protocol.
     """
 
-    projectReset = Signal()
-    modelChanged = Signal()
-    selectionChanged = Signal()
-    layoutConfigChanged = Signal()
-
-    def __init__(self):
-        super().__init__()
+    def __init__(self, event_aggregator: EventAggregator):
         self.logger = logging.getLogger(self.__class__.__name__)
+        self._event_aggregator = event_aggregator
         self.scene_root = GroupNode(name="root")
         self.selection: list[SceneNode] = []
         self._file_path: Optional[Path] = None
@@ -36,34 +30,28 @@ class ApplicationModel(QObject, ProjectLifecycle):
         """Public method to set the dirty status of the model."""
         if self._is_dirty != is_dirty:
             self._is_dirty = is_dirty
-            # The notification for this change is now handled by the EventAggregator,
-            # published by the component that calls this setter.
 
     def reset_state(self):
-        """Resets the model to a clean, default state.
-        TODO: This is maybe redundant with set_scene_root, which also clears the selection. Decide on one approach and remove the other.
-        Also. I manually change the selection without using set_selection, which is a bit hacky. Maybe I should make set_selection private and only
-        use it within the model to ensure the signal is always emitted when the selection changes"""
+        """Resets the model to a clean, default state and publishes events."""
         self.scene_root = GroupNode(name="root")
-        self.selection = []
-        self.file_path = None # This will call the setter and set dirty state
+        self.set_selection([])
+        self.file_path = None
         self.current_layout_config = FreeConfig()
         self.set_dirty(False) # Explicitly set to not dirty after a full reset
-        self.projectReset.emit()
-        self.modelChanged.emit()
-        self.selectionChanged.emit()
+        self._event_aggregator.publish(Events.PROJECT_WAS_RESET)
+
 
     def set_selection(self, nodes: list[SceneNode]):
-        """Sets the selection and emits the selectionChanged signal."""
-        self.selection = nodes
-        self.selectionChanged.emit()
+        """Sets the selection and publishes SELECTION_CHANGED event."""
+        if self.selection != nodes:
+            self.selection = nodes
+            self._event_aggregator.publish(Events.SELECTION_CHANGED, selected_node_ids=[n.id for n in nodes])
+
 
     def set_scene_root(self, new_root: SceneNode):
         """Sets a new root for the scene graph."""
         self.scene_root = new_root
         self.set_selection([])
-        self.logger.debug(f"Scene root set to: {new_root.name} (ID: {new_root.id}). Selection cleared.")
-        self.set_dirty(True)
 
     @property
     def is_dirty(self) -> bool:
@@ -77,7 +65,6 @@ class ApplicationModel(QObject, ProjectLifecycle):
     def file_path(self, path: Optional[Path]) -> None:
         if self._file_path != path:
             self._file_path = path
-            self.set_dirty(True)
 
     @property
     def current_layout_config(self) -> LayoutConfig:
@@ -88,15 +75,13 @@ class ApplicationModel(QObject, ProjectLifecycle):
         if self._current_layout_config != config:
             self._current_layout_config = config
             self.logger.info(f"Layout config changed to mode: {config.mode.value}")
-            self.layoutConfigChanged.emit()
-            self.set_dirty(True)
 
     def add_node(self, node: SceneNode, parent: Optional[SceneNode] = None):
         """Adds a node to the scene graph."""
         if parent is None:
             parent = self.scene_root
         parent.add_child(node)
-        self.set_dirty(True)
+        # Dirty state is managed by the command adding the node.
 
     def extract_plot_states(self) -> list[dict]:
         """Extracts data and properties from all existing plot nodes."""
@@ -117,7 +102,7 @@ class ApplicationModel(QObject, ProjectLifecycle):
         """Finds the topmost node at the given figure coordinates."""
         return self.scene_root.hit_test(position)
 
-    def as_dict(self) -> dict[str, any]:
+    def as_dict(self) -> dict[str, Any]:
         """Serializes the application model to a dictionary."""
         return {
             "version": "1.0",
@@ -125,17 +110,16 @@ class ApplicationModel(QObject, ProjectLifecycle):
             "layout_config": self.current_layout_config.to_dict(),
         }
 
-    def load_from_state(self, data: dict[str, any], temp_dir: Path):
+    def load_from_state(self, data: dict[str, Any], temp_dir: Path):
         """Loads the application model from a dictionary."""
-        self.reset_state()
+        self.reset_state() # This will publish PROJECT_WAS_RESET, SELECTION_CHANGED, LAYOUT_CONFIG_CHANGED
         self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
 
         layout_config_data = data.get("layout_config")
         if layout_config_data:
-            self.current_layout_config = LayoutConfig.from_dict(layout_config_data)
+            self.current_layout_config = LayoutConfig.from_dict(layout_config_data) # Publishes LAYOUT_CONFIG_CHANGED
         else:
             self.current_layout_config = FreeConfig()
 
         # After loading, the project is considered unmodified until a change is made
         self.set_dirty(False)
-        self.modelChanged.emit()

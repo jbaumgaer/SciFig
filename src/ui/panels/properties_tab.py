@@ -1,7 +1,8 @@
 import logging
+from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QObject  # Qt for Alignment - Removed Qt as not directly used in this version
+from PySide6.QtCore import QObject
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -14,26 +15,26 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.controllers.node_controller import NodeController
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
-from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
 from src.models.plots.plot_types import PlotType
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
+from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
 
 
 class PropertiesTab(QWidget):
     def __init__(
         self,
         model: ApplicationModel,
-        node_controller: NodeController,
+        event_aggregator: EventAggregator,
         plot_properties_ui_factory: PlotPropertiesUIFactory,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
-        # TODO: Check if I even pass a parent
         self.model = model
-        self.node_controller = node_controller
-        self.plot_properties_ui_factory = plot_properties_ui_factory
+        self._event_aggregator = event_aggregator
+        self._plot_properties_ui_factory = plot_properties_ui_factory
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self._main_layout = QVBoxLayout(self)
@@ -45,7 +46,7 @@ class PropertiesTab(QWidget):
 
         self._subplot_selector_combo = QComboBox(self)
         self._subplot_selector_combo.setObjectName("subplot_selector_combo")
-        self._subplot_selection_layout.addRow("Subplot:", self._subplot_selector_combo) #TODO: This doesn't work somehow. I can't select the y axis anymore
+        self._subplot_selection_layout.addRow("Subplot:", self._subplot_selector_combo)
 
         self._data_file_path_edit = QLineEdit(self)
         self._data_file_path_edit.setPlaceholderText("No data file loaded")
@@ -62,16 +63,16 @@ class PropertiesTab(QWidget):
         h_layout_data_buttons = QHBoxLayout()
         h_layout_data_buttons.addWidget(self._select_file_button)
         h_layout_data_buttons.addWidget(self._apply_data_button)
-        #TODO: What is this h_layout? Where is the epy
 
         self._subplot_selection_layout.addRow("Data File:", self._data_file_path_edit)
         self._subplot_selection_layout.addRow(
             "", h_layout_data_buttons
         )  # Empty label to align buttons
+        #TODO: Is this the tangling widget that I see in the properties?
 
         self._main_layout.addWidget(self._subplot_selection_group)
 
-        # --- Plot Type Selection Section (managed by PropertiesTab directly) ---
+        # --- Plot Type Selection Section ---
         self._plot_type_group = QGroupBox("Plot Type", self)
         self._plot_type_layout = QFormLayout(self._plot_type_group)
 
@@ -82,7 +83,6 @@ class PropertiesTab(QWidget):
         self._plot_type_layout.addRow("Type:", self._plot_type_selector_combo)
         
         self._main_layout.addWidget(self._plot_type_group)
-
 
         # --- Dynamic Properties Section ---
         self._dynamic_properties_area = QWidget(self)
@@ -96,28 +96,55 @@ class PropertiesTab(QWidget):
         self._x_combo: QComboBox = QComboBox(self)
         self._y_combo: QComboBox = QComboBox(self)
 
-        # Connect signals TODO: This connection should not happen here, I think, but in the composotion root
-        self.model.modelChanged.connect(
-            self._update_content
-        )  # For changes that affect list of plots or properties
-        self.model.selectionChanged.connect(
-            self._update_content
-        )  # For when selected plot changes
-
-        # Connect subplot selector and plot type selector to their handlers
-        self._subplot_selector_combo.currentTextChanged.connect(
-            self.node_controller.on_subplot_selection_changed
-        )
-        self._plot_type_selector_combo.currentTextChanged.connect(
-            self._on_plot_type_combo_changed
-        ) # Connect to local handler
-
-        self._select_file_button.clicked.connect(self._on_select_file_clicked)
-        self._apply_data_button.clicked.connect(self._on_apply_data_clicked)
+        self._subscribe_to_events()
+        self._connect_widgets_to_events()
         
         self.logger.info("PropertiesTab initialized.")
-
         self._update_content()  # Initial call
+
+    def _subscribe_to_events(self):
+        """Subscribes to notification events to update the UI."""
+        self._event_aggregator.subscribe(Events.SELECTION_CHANGED, self._update_content)
+        self._event_aggregator.subscribe(Events.NODE_RENAMED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.NODE_VISIBILITY_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.PLOT_TITLE_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.PLOT_XLABEL_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.PLOT_YLABEL_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.PLOT_MARKER_SIZE_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.PLOT_AXIS_LIMITS_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.PLOT_MAPPING_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.PLOT_TYPE_CHANGED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.NODE_DATA_FILE_PATH_UPDATED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.NODE_DATA_LOADED, self._update_content_if_selected)
+
+    def _connect_widgets_to_events(self):
+        """Connects UI widgets to publish request events."""
+        self._subplot_selector_combo.currentTextChanged.connect(
+            lambda text: self._event_aggregator.publish(
+                Events.SUBPLOT_SELECTION_IN_UI_CHANGED, plot_id=self._subplot_selector_combo.currentData()
+            )
+        )
+        self._plot_type_selector_combo.currentTextChanged.connect(
+            lambda text: self._event_aggregator.publish(
+                Events.CHANGE_PLOT_TYPE_REQUESTED,
+                node_id=self._subplot_selector_combo.currentData(),
+                new_plot_type_str=text,
+            )
+        )
+        self._select_file_button.clicked.connect(
+            lambda: self._event_aggregator.publish(
+                Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED,
+                node_id=self._subplot_selector_combo.currentData(),
+            )
+        )
+        self._apply_data_button.clicked.connect(
+            lambda: self._event_aggregator.publish(
+                Events.APPLY_DATA_TO_NODE_REQUESTED,
+                node_id=self._subplot_selector_combo.currentData(),
+                file_path=Path(self._data_file_path_edit.text()),
+            )
+        )
 
     def _clear_layout(self, layout_obj: QVBoxLayout | QFormLayout):
         """Recursively clears all widgets and sub-layouts from a layout."""
@@ -133,7 +160,13 @@ class PropertiesTab(QWidget):
                 if sub_layout is not None:
                     self._clear_layout(sub_layout)
 
-    def _update_content(self):
+    def _update_content_if_selected(self, node_id: str, *args, **kwargs):
+        """Triggers a content update only if the event's node_id matches the currently selected plot."""
+        current_selected_plot_id = self._subplot_selector_combo.currentData()
+        if node_id == current_selected_plot_id:
+            self._update_content()
+
+    def _update_content(self, selected_node_ids: Optional[list[str]] = None):
         """
         Updates the content of the PropertiesTab based on the current selection.
         This method orchestrates updates for all sections of the tab.
@@ -142,7 +175,7 @@ class PropertiesTab(QWidget):
         selected_nodes = self.model.selection
         
         self._update_subplot_selection_ui(selected_nodes)
-        self._update_plot_type_selector_ui(selected_nodes) # New call
+        self._update_plot_type_selector_ui(selected_nodes)
         self._update_node_specific_properties_ui(selected_nodes)
 
     def _update_subplot_selection_ui(self, selected_nodes: list[QObject]):
@@ -150,7 +183,6 @@ class PropertiesTab(QWidget):
         Populates the subplot selector combo box and updates the data file path display.
         """
         self.logger.debug("PropertiesTab: Updating subplot selection UI.")
-        # Temporarily block signals to prevent triggering on_subplot_selection_changed during repopulation
         self._subplot_selector_combo.blockSignals(True)
         
         self._subplot_selector_combo.clear()
@@ -161,7 +193,6 @@ class PropertiesTab(QWidget):
         ]
 
         plot_id_to_name = {plot.id: plot.name for plot in all_plots}
-        # plot_ids = [plot.id for plot in all_plots] # Not used
 
         if not all_plots:
             self._subplot_selector_combo.addItem("No plots available")
@@ -182,17 +213,13 @@ class PropertiesTab(QWidget):
             current_selected_plot_id = selected_nodes[0].id
 
         if current_selected_plot_id:
-            # Find the index of the currently selected plot
             index = self._subplot_selector_combo.findData(current_selected_plot_id)
             if index != -1:
                 self._subplot_selector_combo.setCurrentIndex(index)
                 self.logger.debug(
                     f"PropertiesTab: Subplot selector set to: {plot_id_to_name.get(current_selected_plot_id)}"
                 )
-                # Update data file path edit for the selected plot
-                selected_plot_node = selected_nodes[
-                    0
-                ]  # Assumed to be PlotNode based on if condition
+                selected_plot_node = selected_nodes[0]
                 self._data_file_path_edit.setText(
                     str(selected_plot_node.data_file_path)
                     if selected_plot_node.data_file_path
@@ -209,9 +236,7 @@ class PropertiesTab(QWidget):
                     f"PropertiesTab: Current selected plot ID {current_selected_plot_id} not found in combo box."
                 )
         else:
-            self._subplot_selector_combo.setCurrentIndex(
-                0
-            )  # Select first item if nothing specific selected
+            self._subplot_selector_combo.setCurrentIndex(0)
             self._data_file_path_edit.clear()
             self._select_file_button.setEnabled(False)
             self._apply_data_button.setEnabled(False)
@@ -226,7 +251,7 @@ class PropertiesTab(QWidget):
         Updates the plot type selector combo box based on the selected plot's properties.
         """
         self.logger.debug("PropertiesTab: Updating plot type selection UI.")
-        self._plot_type_selector_combo.blockSignals(True) # Block signals during update
+        self._plot_type_selector_combo.blockSignals(True)
 
         current_node: Optional[PlotNode] = None
         if len(selected_nodes) == 1 and isinstance(selected_nodes[0], PlotNode):
@@ -238,72 +263,11 @@ class PropertiesTab(QWidget):
             self._plot_type_selector_combo.setEnabled(True)
             self.logger.debug(f"PropertiesTab: Plot type selector set to: {current_plot_type.value}")
         else:
-            self._plot_type_selector_combo.setCurrentIndex(0) # Default to first item
+            self._plot_type_selector_combo.setCurrentIndex(0)
             self._plot_type_selector_combo.setEnabled(False)
             self.logger.debug("PropertiesTab: No plot selected, plot type selector disabled.")
 
         self._plot_type_selector_combo.blockSignals(False)
-
-    def _on_plot_type_combo_changed(self, new_plot_type_str: str):
-        """
-        Handler for when the plot type combo box selection changes.
-        Triggers the NodeController to update the plot type in the model.
-        """
-        self.logger.debug(f"PropertiesTab: Plot type combo changed to: {new_plot_type_str}")
-        selected_plot_id = self._subplot_selector_combo.currentData()
-        if not selected_plot_id:
-            self.logger.warning("PropertiesTab: Plot type changed but no plot selected in combo box.")
-            return
-
-        selected_plot_node = self.model.scene_root.find_node_by_id(selected_plot_id)
-        if selected_plot_node:
-            self.node_controller.on_plot_type_changed(new_plot_type_str, selected_plot_node)
-        else:
-            self.logger.error(f"PropertiesTab: Could not find PlotNode with ID {selected_plot_id} for plot type change.")
-
-
-    def _on_select_file_clicked(self):
-        """Handles the 'Select File' button click."""
-        selected_plot_id = self._subplot_selector_combo.currentData()
-        if not selected_plot_id:
-            self.logger.warning(
-                "PropertiesTab: Select File clicked but no plot selected in combo box."
-            )
-            return
-
-        # Get the actual PlotNode instance
-        selected_plot_node = self.model.scene_root.find_node_by_id(selected_plot_id)
-        if selected_plot_node:
-            self.node_controller.on_select_file_clicked(selected_plot_node)
-            # The node_controller updates node.data_file_path and emits modelChanged, triggering _update_content
-        else:
-            self.logger.error(
-                f"PropertiesTab: Could not find PlotNode with ID {selected_plot_id} for 'Select File' action."
-            )
-
-    def _on_apply_data_clicked(self):
-        """Handles the 'Apply' data button click."""
-        selected_plot_id = self._subplot_selector_combo.currentData()
-        if not selected_plot_id:
-            self.logger.warning(
-                "PropertiesTab: Apply clicked but no plot selected in combo box."
-            )
-            return
-
-        selected_plot_node = self.model.scene_root.find_node_by_id(selected_plot_id)
-        if selected_plot_node and selected_plot_node.data_file_path:
-            self.node_controller.on_apply_data_clicked(
-                selected_plot_node, selected_plot_node.data_file_path
-            )
-            # The node_controller handles loading and updating the model
-        elif selected_plot_node:
-            self.logger.warning(
-                f"PropertiesTab: Apply clicked for node {selected_plot_id}, but no data file path is set."
-            )
-        else:
-            self.logger.error(
-                f"PropertiesTab: Could not find PlotNode with ID {selected_plot_id} for 'Apply' action."
-            )
 
     def _update_node_specific_properties_ui(self, selected_nodes: list[QObject]):
         """
@@ -317,14 +281,14 @@ class PropertiesTab(QWidget):
             current_node = selected_nodes[0]
 
         if current_node:
-            # Pass all necessary items, including the combo boxes and edits to be populated by the factory
-            self.plot_properties_ui_factory.build_widgets(
+            self._plot_properties_ui_factory.build_widgets(
                 node=current_node,
-                layout=self._dynamic_properties_layout,  # Expects QVBoxLayout now
+                layout=self._dynamic_properties_layout,
                 parent=self._dynamic_properties_area,
                 limit_edits=self._limit_edits,
                 x_combo=self._x_combo,
                 y_combo=self._y_combo,
+                event_aggregator=self._event_aggregator,
             )
         else:
             self._dynamic_properties_layout.addWidget(

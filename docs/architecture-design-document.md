@@ -22,17 +22,19 @@ This section defines the fundamental architectural patterns that form the founda
 
 The application employs the **Model-View-Presenter (MVP)** pattern, specifically the **"Passive View"** variant. This pattern enforces a strict separation of concerns between the application's data and business logic (Model), the user interface (View), and the application logic that handles user input (Presenter).
 
-#### Component Responsibilities
-
 *   **Model (`ApplicationModel`):** The single source of truth for all application data and state. It is a "headless" component, containing no UI-specific code. Its responsibilities are limited to managing its internal state, enforcing business rules, and notifying observers when its state changes via signals.
 
 *   **View (`MainWindow`, UI Panels):** A passive component whose sole responsibilities are to display data it is explicitly given and to capture raw user input (e.g., clicks, key presses), which it forwards to the Presenter. The View has no direct knowledge of the Model.
 
 *   **Presenter (Controllers):** The mediator between the Model and the View. It contains all application and presentation logic. It responds to user input from the View, manipulates the Model (typically via the Command Pattern), and formats data from the Model to pass to the View for display. In this codebase, the Presenter role is fulfilled by the various **Controllers** (e.g., `ProjectController`, `NodeController`).
 
-#### Implementation via Interfaces
+## 3.2. Decoupling with Event-Based Communication and Interfaces
 
-The decoupling between M, V, and P is enforced through abstract interfaces (defined as plain classes to ensure compatibility with Qt's object model). Components do not depend on concrete classes, but on these contracts, which are injected at startup by the Composition Root.
+Decoupling is central to this architecture, achieved through a strategic combination of event-based communication and explicitinterfaces.
+
+*   **Event-Based Communication for Orchestration:** The `EventAggregator` is the primary mechanism for cross-component interaction and workflow orchestration. Components communicate bypublishing and subscribing to specific Events rather than direct calls. This completely decouples publishers from subscribers, enhancingscalability, testability, and clarity of application flow. It is primarily used for requests and state changes that are expected to have multiple listeners,allowing components to react to relevant events without direct knowledge of their origin. The communication contract is defined by the event type and its payload.
+
+*   **Interfaces for Explicit Dependencies:** Abstract interfaces are utilized when a clear, direct, and singular dependency exists between two specific parts of the system. Theyestablish precise contracts for what functionality a component expects from its dependency. This ensures that a component does not rely on a concreteimplementation, promoting loose coupling for dependencies where a one-to-one relationship is fundamental, rather than a many-to-many eventbroadcast. The `CompositionRoot` remains responsible for injecting concrete implementations adhering to these interface contracts.
 
 ## 3.2. State Management Pattern: The Scene Graph Model
 
@@ -79,6 +81,7 @@ This section details the key components that make up the application's core doma
 
 This group includes services that provide fundamental, application-wide capabilities.
 
+*   **`EventAggregator`:** The central hub for event-based communication. This service facilitates decoupled interaction between all application components by allowing them to publish and subscribe to specific events without direct knowledge of each other. It significantly enhances flexibility, testability, and scalability by replacing direct method calls for cross-component communication with an indirect, message-based system.
 *   **`ToolService`**: Manages the collection of interactive canvas tools (e.g., `SelectionTool`) and is responsible for dispatching UI events to the currently active tool.
 *   **`CommandManager`**: The concrete implementation of the Command Pattern. It executes all state-changing actions and manages the undo/redo stacks.
 

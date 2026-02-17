@@ -2,6 +2,8 @@ from typing import Optional
 from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode  # New Import
 from src.services.commands.base_command import BaseCommand
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 
 
 class UngroupNodesCommand(BaseCommand):
@@ -10,8 +12,8 @@ class UngroupNodesCommand(BaseCommand):
     and removing the GroupNode itself.
     """
 
-    def __init__(self, model: ApplicationModel, group_id: str):
-        super().__init__(model)
+    def __init__(self, model: ApplicationModel, event_aggregator: EventAggregator, group_id: str):
+        super().__init__(model, event_aggregator)
         self.group_id = group_id
         self.ungrouped_children_ids: list[str] = []
         self.original_parent_id: Optional[str] = None
@@ -51,7 +53,7 @@ class UngroupNodesCommand(BaseCommand):
             )  # Remove from group (changes child's parent to None)
             original_parent.add_child(child)  # Add to original parent
 
-        self.model.modelChanged.emit()
+        self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)
 
     def undo(self):
         group_node = GroupNode(id=self.group_id)  # Recreate group node with original ID
@@ -83,4 +85,4 @@ class UngroupNodesCommand(BaseCommand):
                 original_parent.remove_child(child)  # Remove from original parent
                 group_node.add_child(child)  # Add to group
 
-        self.model.modelChanged.emit()
+        self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)

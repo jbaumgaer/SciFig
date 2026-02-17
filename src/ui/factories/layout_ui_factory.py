@@ -14,19 +14,23 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.controllers.layout_controller import LayoutController
+from src.controllers.layout_controller import LayoutController # Keep for building, remove direct calls
+from src.services.event_aggregator import EventAggregator # New import
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import IconPath, LayoutMode
+from src.shared.events import Events # New import
 
 
 class LayoutUIFactory:
     """
     A factory class responsible for building UI elements (QActions, QMenus)
     related to layout management, based on the current layout mode.
+    It publishes requests as events via the EventAggregator for actions.
     """
 
-    def __init__(self, layout_manager: LayoutManager):
+    def __init__(self, layout_manager: LayoutManager, event_aggregator: EventAggregator):
         self._layout_manager = layout_manager
+        self._event_aggregator = event_aggregator # Store EventAggregator
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutUIFactory initialized.")
 
@@ -34,18 +38,22 @@ class LayoutUIFactory:
         self,
         icon_key: str,
         tooltip: str,
-        command: callable,
+        event_to_publish: Events, # Now takes an event enum
+        event_payload: dict, # And a payload for the event
         parent: QWidget,
         object_name: Optional[str] = None,
     ) -> QPushButton:
         """
         Helper to create an icon-only QPushButton with a tooltip and connected command.
+        The button will publish an EventAggregator event when clicked.
         """
         button = QPushButton(QIcon(IconPath.get_path(icon_key)), "", parent)
         button.setToolTip(tooltip)
         if object_name:
             button.setObjectName(object_name)
-        button.clicked.connect(command)
+        
+        # Connect to publish the event
+        button.clicked.connect(lambda: self._event_aggregator.publish(event_to_publish, **event_payload))
         return button
 
     def _create_parameter_line_edit(
@@ -54,7 +62,6 @@ class LayoutUIFactory:
         initial_value: any,
         validator: Optional[QValidator],
         container: QWidget,
-        layout_controller: LayoutController,
         placeholder_text: Optional[str] = None,
         is_list_param: bool = False,  # Flag to indicate if the parameter is a list (e.g., hspace, wspace)
     ) -> QLineEdit:
@@ -77,7 +84,7 @@ class LayoutUIFactory:
         # Connect editingFinished to the handler, passing the line_edit instance
         line_edit.editingFinished.connect(
             partial(
-                self._handle_line_edit_change, layout_controller, param_name, line_edit
+                self._handle_line_edit_change, param_name, line_edit
             )
         )
         return line_edit
@@ -93,9 +100,9 @@ class LayoutUIFactory:
             f"Building layout controls for UI selected mode: {ui_mode.value}"
         )
         if ui_mode == LayoutMode.FREE_FORM:
-            return self._build_free_form_controls(layout_controller, parent)
+            return self._build_free_form_controls(parent)
         elif ui_mode == LayoutMode.GRID:
-            return self._build_grid_layout_controls(layout_controller, parent)
+            return self._build_grid_layout_controls(parent)
         else:
             self.logger.warning(
                 f"Unknown UI selected layout mode '{ui_mode}'. Returning empty widget."
@@ -103,7 +110,7 @@ class LayoutUIFactory:
             return QWidget(parent)  # Return an empty widget for unknown mode
 
     def _build_free_form_controls(
-        self, layout_controller: LayoutController, parent: QObject
+        self, parent: QObject
     ) -> QWidget:
         """
         Builds UI controls for Free-Form layout mode (e.g., alignment, distribution).
@@ -123,7 +130,7 @@ class LayoutUIFactory:
             self._create_icon_button(
                 "properties.alignment.align_horizontal_left",
                 "Align Left",
-                lambda: layout_controller.align_selected_plots("left"),
+                Events.ALIGN_PLOTS_REQUESTED, {"edge": "left"}, # Event and payload
                 container,
                 "btn_align_left",
             )
@@ -134,7 +141,7 @@ class LayoutUIFactory:
             self._create_icon_button(
                 "properties.alignment.align_horizontal_center",
                 "Align Horizontal Center",
-                lambda: layout_controller.align_selected_plots("h_center"),
+                Events.ALIGN_PLOTS_REQUESTED, {"edge": "h_center"}, # Event and payload
                 container,
                 "btn_align_h_center",
             )
@@ -145,7 +152,7 @@ class LayoutUIFactory:
             self._create_icon_button(
                 "properties.alignment.align_horizontal_right",
                 "Align Right",
-                lambda: layout_controller.align_selected_plots("right"),
+                Events.ALIGN_PLOTS_REQUESTED, {"edge": "right"}, # Event and payload
                 container,
                 "btn_align_right",
             )
@@ -158,7 +165,7 @@ class LayoutUIFactory:
             self._create_icon_button(
                 "properties.alignment.align_vertical_top",
                 "Align Top",
-                lambda: layout_controller.align_selected_plots("top"),
+                Events.ALIGN_PLOTS_REQUESTED, {"edge": "top"}, # Event and payload
                 container,
                 "btn_align_top",
             )
@@ -169,7 +176,7 @@ class LayoutUIFactory:
             self._create_icon_button(
                 "properties.alignment.align_vertical_center",
                 "Align Vertical Center",
-                lambda: layout_controller.align_selected_plots("v_center"),
+                Events.ALIGN_PLOTS_REQUESTED, {"edge": "v_center"}, # Event and payload
                 container,
                 "btn_align_v_center",
             )
@@ -180,7 +187,7 @@ class LayoutUIFactory:
             self._create_icon_button(
                 "properties.alignment.align_vertical_bottom",
                 "Align Bottom",
-                lambda: layout_controller.align_selected_plots("bottom"),
+                Events.ALIGN_PLOTS_REQUESTED, {"edge": "bottom"}, # Event and payload
                 container,
                 "btn_align_bottom",
             )
@@ -199,7 +206,7 @@ class LayoutUIFactory:
             self._create_icon_button(
                 "properties.distribute.horizontal_distribute",
                 "Distribute Horizontally",
-                lambda: layout_controller.distribute_selected_plots("horizontal"),
+                Events.DISTRIBUTE_PLOTS_REQUESTED, {"axis": "horizontal"}, # Event and payload
                 container,
                 "btn_distribute_h",
             )
@@ -210,7 +217,7 @@ class LayoutUIFactory:
             self._create_icon_button(
                 "properties.distribute.vertical_distribute",
                 "Distribute Vertically",
-                lambda: layout_controller.distribute_selected_plots("vertical"),
+                Events.DISTRIBUTE_PLOTS_REQUESTED, {"axis": "vertical"}, # Event and payload
                 container,
                 "btn_distribute_v",
             )
@@ -224,7 +231,7 @@ class LayoutUIFactory:
         return container
 
     def _build_grid_layout_controls(
-        self, layout_controller: LayoutController, parent: QObject
+        self, parent: QObject
     ) -> QWidget:
         """
         Builds UI controls for Grid layout mode (e.g., set grid size, adjust ratios).
@@ -249,7 +256,6 @@ class LayoutUIFactory:
             current_grid_config.rows if current_grid_config else None,
             QIntValidator(1, 99),
             container,
-            layout_controller,
         )
         form_layout.addRow("Rows:", line_rows)
 
@@ -259,7 +265,6 @@ class LayoutUIFactory:
             current_grid_config.cols if current_grid_config else None,
             QIntValidator(1, 99),
             container,
-            layout_controller,
         )
         form_layout.addRow("Cols:", line_cols)
 
@@ -269,7 +274,6 @@ class LayoutUIFactory:
             current_grid_config.margins.top if current_grid_config else None,
             None,
             container,
-            layout_controller,
         )
         form_layout.addRow("Margin Top:", line_margin_top)
 
@@ -278,7 +282,6 @@ class LayoutUIFactory:
             current_grid_config.margins.bottom if current_grid_config else None,
             None,
             container,
-            layout_controller,
         )
         form_layout.addRow("Margin Bottom:", line_margin_bottom)
 
@@ -287,7 +290,6 @@ class LayoutUIFactory:
             current_grid_config.margins.left if current_grid_config else None,
             None,
             container,
-            layout_controller,
         )
         form_layout.addRow("Margin Left:", line_margin_left)
 
@@ -296,7 +298,6 @@ class LayoutUIFactory:
             current_grid_config.margins.right if current_grid_config else None,
             None,
             container,
-            layout_controller,
         )
         form_layout.addRow("Margin Right:", line_margin_right)
 
@@ -306,7 +307,6 @@ class LayoutUIFactory:
             current_grid_config.gutters.hspace if current_grid_config else None,
             None,
             container,
-            layout_controller,
             placeholder_text="e.g., 0.1, 0.2",
             is_list_param=True,
         )
@@ -317,7 +317,6 @@ class LayoutUIFactory:
             current_grid_config.gutters.wspace if current_grid_config else None,
             None,
             container,
-            layout_controller,
             placeholder_text="e.g., 0.1, 0.2",
             is_list_param=True,
         )
@@ -331,7 +330,7 @@ class LayoutUIFactory:
         btn_infer_grid.setToolTip(
             "Infer grid parameters (rows, cols, margins, gutters) from current free-form plot positions."
         )
-        btn_infer_grid.clicked.connect(layout_controller.infer_grid_parameters_action) # Changed connection
+        btn_infer_grid.clicked.connect(lambda: self._event_aggregator.publish(Events.INFER_GRID_PARAMETERS_REQUESTED)) # Event publish
         overall_container_layout.addWidget(btn_infer_grid)
 
         # Optimize Layout Button (formerly Snap to Grid)
@@ -342,7 +341,7 @@ class LayoutUIFactory:
         btn_optimize_layout.setToolTip(
             "Optimize layout using current grid parameters and Matplotlib's constrained layout."
         )
-        btn_optimize_layout.clicked.connect(layout_controller.optimize_layout_action) # Changed connection
+        btn_optimize_layout.clicked.connect(lambda: self._event_aggregator.publish(Events.OPTIMIZE_LAYOUT_REQUESTED)) # Event publish
         overall_container_layout.addWidget(btn_optimize_layout)
 
         overall_container_layout.addStretch()
@@ -350,7 +349,7 @@ class LayoutUIFactory:
         return container
 
     def _handle_line_edit_change(
-        self, layout_controller: LayoutController, param_name: str, line_edit: QLineEdit
+        self, param_name: str, line_edit: QLineEdit
     ):
         raw_value = line_edit.text()
         value_to_pass = raw_value  # Default to passing raw string
@@ -412,6 +411,6 @@ class LayoutUIFactory:
                 )
 
         self.logger.debug(
-            f"LayoutUIFactory: Processing change for {param_name}. Value: {value_to_pass}"
+            f"LayoutUIFactory: Publishing CHANGE_GRID_PARAMETER_REQUESTED for {param_name}. Value: {value_to_pass}"
         )
-        layout_controller.on_grid_layout_param_changed(param_name, value_to_pass)
+        self._event_aggregator.publish(Events.CHANGE_GRID_PARAMETER_REQUESTED, param_name=param_name, value=value_to_pass)

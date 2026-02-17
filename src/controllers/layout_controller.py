@@ -1,6 +1,5 @@
 import logging
-
-from PySide6.QtCore import QObject
+from typing import Any
 
 from src.models.application_model import ApplicationModel
 from src.models.layout.layout_config import (
@@ -15,11 +14,13 @@ from src.services.commands.change_grid_parameters_command import (
     ChangeGridParametersCommand,
 ) 
 from src.services.commands.command_manager import CommandManager
+from src.services.event_aggregator import EventAggregator # New import
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import LayoutMode
+from src.shared.events import Events # New import
 
 
-class LayoutController(QObject):
+class LayoutController():
     """
     Manages user interactions related to layout, translating UI events into
     commands that modify the ApplicationModel's layout state.
@@ -38,13 +39,25 @@ class LayoutController(QObject):
         model: ApplicationModel,
         command_manager: CommandManager,
         layout_manager: LayoutManager,
+        event_aggregator: EventAggregator, # New dependency
     ):
-        super().__init__()
         self.model = model
         self.command_manager = command_manager
         self._layout_manager = layout_manager
+        self._event_aggregator = event_aggregator # Store EventAggregator
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutController initialized.")
+
+        self._subscribe_to_events() # New: Subscribe to events
+
+    def _subscribe_to_events(self):
+        """Subscribes to layout-related request events."""
+        self._event_aggregator.subscribe(Events.ALIGN_PLOTS_REQUESTED, self._handle_align_plots_request)
+        self._event_aggregator.subscribe(Events.DISTRIBUTE_PLOTS_REQUESTED, self._handle_distribute_plots_request)
+        self._event_aggregator.subscribe(Events.INFER_GRID_PARAMETERS_REQUESTED, self._handle_infer_grid_parameters_request)
+        self._event_aggregator.subscribe(Events.OPTIMIZE_LAYOUT_REQUESTED, self._handle_optimize_layout_request)
+        self._event_aggregator.subscribe(Events.CHANGE_GRID_PARAMETER_REQUESTED, self._handle_change_grid_parameter_request)
+
 
     def set_layout_mode(self, mode: LayoutMode):
         """
@@ -75,9 +88,9 @@ class LayoutController(QObject):
         """
         return self._layout_manager.ui_selected_layout_mode
 
-    def align_selected_plots(self, edge: str):
+    def _handle_align_plots_request(self, edge: str): # Renamed
         """
-        Aligns the currently selected plots.
+        Aligns the currently selected plots based on an event request.
         """
         self.logger.info(
             f"LayoutController received request to align selected plots to: {edge}"
@@ -103,9 +116,9 @@ class LayoutController(QObject):
         else:
             self.logger.info("No geometry changes after alignment calculation.")
 
-    def distribute_selected_plots(self, axis: str):
+    def _handle_distribute_plots_request(self, axis: str): # Renamed
         """
-        Distributes the currently selected plots.
+        Distributes the currently selected plots based on an event request.
         """
         self.logger.info(
             f"LayoutController received request to distribute selected plots along: {axis}"
@@ -145,12 +158,10 @@ class LayoutController(QObject):
         self._layout_manager.set_layout_mode(LayoutMode.GRID)
         self.logger.debug("Switched layout mode to GRID to snap plots.")
 
-    def on_grid_layout_param_changed(self, param_name: str, value: any):
+    def _handle_change_grid_parameter_request(self, param_name: str, value: Any): # Renamed
         """
         Handles changes from granular UI controls for grid layout parameters.
         Collects changes and dispatches a ChangeGridParametersCommand.
-        TODO: The type hint any is pointless. Be specific
-        TODO: This is doing redundante work to some of the validators in other parts of the program because I'm also validating input here
         """
         self.logger.debug(f"Grid layout param changed: {param_name} = {value}")
 
@@ -208,7 +219,7 @@ class LayoutController(QObject):
             try:
                 # Interpret empty string as empty list for hspace
                 new_hspace = (
-                    [float(x.strip()) for x in value.split(",") if x.strip()]
+                    [float(x.strip()) for x in str(value).split(",") if x.strip()] # Cast value to str for split
                     if value
                     else []
                 )
@@ -225,7 +236,7 @@ class LayoutController(QObject):
             try:
                 # Interpret empty string as empty list for wspace
                 new_wspace = (
-                    [float(x.strip()) for x in value.split(",") if x.strip()]
+                    [float(x.strip()) for x in str(value).split(",") if x.strip()] # Cast value to str for split
                     if value
                     else []
                 )
@@ -264,7 +275,7 @@ class LayoutController(QObject):
             f"Executed ChangeGridParametersCommand for {param_name} change."
         )
 
-    def infer_grid_parameters_action(self):
+    def _handle_infer_grid_parameters_request(self): # Renamed
         """
         Triggers the LayoutManager to infer grid parameters from the current free-form plot positions.
         This action is typically called by a UI button.
@@ -272,7 +283,7 @@ class LayoutController(QObject):
         self.logger.info("LayoutController received request to infer grid parameters.")
         self._layout_manager.infer_grid_parameters()
 
-    def optimize_layout_action(self):
+    def _handle_optimize_layout_request(self): # Renamed
         """
         Triggers the LayoutManager to optimize the current grid layout.
         This action is typically called by a UI button.

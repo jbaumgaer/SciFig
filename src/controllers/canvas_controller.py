@@ -9,7 +9,9 @@ from src.models.plots.plot_properties import (
     PlotMapping,
 )
 from src.processing.data_loader import DataLoader
+from src.services.event_aggregator import EventAggregator
 from src.services.tool_service import ToolService
+from src.shared.events import Events
 from src.ui.widgets.canvas_widget import CanvasWidget
 
 
@@ -22,12 +24,13 @@ class CanvasController(QObject):
     def __init__(
         self,
         model: ApplicationModel,
+        event_aggregator: EventAggregator,
         canvas_widget: CanvasWidget,
         tool_manager: ToolService,
     ):
         super().__init__()
-        # TODO: Check if I even pass a parent
         self.model = model
+        self._event_aggregator = event_aggregator
         self.view = canvas_widget
         self.tool_manager = tool_manager
         self.canvas = self.view.figure_canvas #TODO: I don't think the canvas controller should have such knowledge of the view's internal representation of a figure
@@ -179,9 +182,9 @@ class CanvasController(QObject):
                     f"PlotNode '{node.name}' has insufficient columns ({dataframe.shape[1]}) for default plot mapping."
                 )
 
-            self.model.modelChanged.emit()
+            self._event_aggregator.publish(Events.NODE_DATA_LOADED, node_id=node.id)
             self.logger.debug(
-                f"modelChanged signal emitted after data load for '{node.name}'."
+                f"NODE_DATA_LOADED event published after data load for '{node.name}'."
             )
         else:
             self.logger.warning(

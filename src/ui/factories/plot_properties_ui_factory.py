@@ -16,13 +16,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.controllers.node_controller import NodeController
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import (
     ScatterPlotProperties,
     BasePlotProperties,
 )
 from src.models.plots.plot_types import PlotType
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 
 
 # New helper function for data source UI
@@ -30,7 +31,7 @@ def _build_data_source_ui(
     node: PlotNode,
     layout: QFormLayout,
     parent: QWidget,
-    node_controller: NodeController,
+    event_aggregator: EventAggregator,
 ) -> None:
     """
     Builds the UI elements for selecting and applying data files.
@@ -45,18 +46,19 @@ def _build_data_source_ui(
     select_file_button = QPushButton("Select File", parent)
     select_file_button.setObjectName("select_file_button")
     select_file_button.clicked.connect(
-        partial(node_controller.on_select_file_clicked, node=node)
+        partial(event_aggregator.publish, Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED, node_id=node.id)
     )
 
     apply_button = QPushButton("Apply", parent)
     apply_button.setObjectName("apply_data_button")
     apply_button.clicked.connect(
         partial(
-            node_controller.on_apply_data_clicked,
-            node=node,
-            new_file_path=node.data_file_path,
+            event_aggregator.publish,
+            Events.APPLY_DATA_TO_NODE_REQUESTED,
+            node_id=node.id,
+            file_path=node.data_file_path,
         )
-    )  # Path will be updated in controller
+    )
 
     h_layout = QHBoxLayout()
     h_layout.addWidget(data_file_path_edit)
@@ -71,7 +73,7 @@ def _build_column_selectors(
     layout: QFormLayout,
     x_combo: QComboBox,
     y_combo: QComboBox,
-    node_controller: NodeController,
+    event_aggregator: EventAggregator,
 ):
     assert node.data is not None
     assert node.plot_properties is not None
@@ -88,11 +90,11 @@ def _build_column_selectors(
         x_combo.setCurrentText(current_x)
     x_combo.blockSignals(False)
     x_combo.currentTextChanged.connect(
-        partial(
-            node_controller.on_column_mapping_changed,
-            node=node,
-            x_combo=x_combo,
-            y_combo=y_combo,
+        lambda text: event_aggregator.publish(
+            Events.MAP_PLOT_COLUMNS_REQUESTED,
+            node_id=node.id,
+            x_column=x_combo.currentText(),
+            y_column=y_combo.currentText(),
         )
     )
     layout.addRow("X-Axis Column:", x_combo)
@@ -104,11 +106,11 @@ def _build_column_selectors(
         y_combo.setCurrentText(current_y)
     y_combo.blockSignals(False)
     y_combo.currentTextChanged.connect(
-        partial(
-            node_controller.on_column_mapping_changed,
-            node=node,
-            x_combo=x_combo,
-            y_combo=y_combo,
+        lambda text: event_aggregator.publish(
+            Events.MAP_PLOT_COLUMNS_REQUESTED,
+            node_id=node.id,
+            x_column=x_combo.currentText(),
+            y_column=y_combo.currentText(),
         )
     )
     layout.addRow("Y-Axis Column:", y_combo)
@@ -118,7 +120,7 @@ def _build_limit_selectors(
     node: PlotNode,
     layout: QFormLayout,
     limit_edits: dict,
-    node_controller: NodeController,
+    event_aggregator: EventAggregator,
 ):
     assert node.plot_properties is not None
     validator = QDoubleValidator()
@@ -153,53 +155,25 @@ def _build_limit_selectors(
     layout.addRow("Y-Axis Limits:", lim_layout_y)
 
     # Connect signals after all QLineEdit widgets are defined
-    limit_edits["xlim_min"].editingFinished.connect(
-        partial(
-            node_controller.on_limit_editing_finished,
-            node=node,
-            xlim_min_edit=limit_edits["xlim_min"],
-            xlim_max_edit=limit_edits["xlim_max"],
-            ylim_min_edit=limit_edits["ylim_min"],
-            ylim_max_edit=limit_edits["ylim_max"],
+    def publish_limit_change():
+        event_aggregator.publish(
+            Events.CHANGE_PLOT_AXIS_LIMITS_REQUESTED,
+            node_id=node.id,
+            xlim_min=limit_edits["xlim_min"].text(),
+            xlim_max=limit_edits["xlim_max"].text(),
+            ylim_min=limit_edits["ylim_min"].text(),
+            ylim_max=limit_edits["ylim_max"].text(),
         )
-    )
-    limit_edits["xlim_max"].editingFinished.connect(
-        partial(
-            node_controller.on_limit_editing_finished,
-            node=node,
-            xlim_min_edit=limit_edits["xlim_min"],
-            xlim_max_edit=limit_edits["xlim_max"],
-            ylim_min_edit=limit_edits["ylim_min"],
-            ylim_max_edit=limit_edits["ylim_max"],
-        )
-    )
-    limit_edits["ylim_min"].editingFinished.connect(
-        partial(
-            node_controller.on_limit_editing_finished,
-            node=node,
-            xlim_min_edit=limit_edits["xlim_min"],
-            xlim_max_edit=limit_edits["xlim_max"],
-            ylim_min_edit=limit_edits["ylim_min"],
-            ylim_max_edit=limit_edits["ylim_max"],
-        )
-    )
-    limit_edits["ylim_max"].editingFinished.connect(
-        partial(
-            node_controller.on_limit_editing_finished,
-            node=node,
-            xlim_min_edit=limit_edits["xlim_min"],
-            xlim_max_edit=limit_edits["xlim_max"],
-            ylim_min_edit=limit_edits["ylim_min"],
-            ylim_max_edit=limit_edits["ylim_max"],
-        )
-    )
+
+    for w in (limit_edits["xlim_min"], limit_edits["xlim_max"], limit_edits["ylim_min"], limit_edits["ylim_max"]):
+        w.editingFinished.connect(publish_limit_change)
 
 
 def _build_base_plot_properties_ui(
     node: PlotNode,
     layout: QVBoxLayout,
     parent: QWidget,
-    node_controller: NodeController,
+    event_aggregator: EventAggregator,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -207,6 +181,18 @@ def _build_base_plot_properties_ui(
     """
     Builds the base UI elements for plot properties (Title, Labels, Column Selectors, Limits).
     """
+    
+    # Data Source Group (Moved from PropertiesTab for cleaner separation)
+    data_source_group = QGroupBox("Data Source", parent)
+    data_source_layout = QFormLayout(data_source_group)
+    _build_data_source_ui(
+        node=node,
+        layout=data_source_layout,
+        parent=data_source_group,
+        event_aggregator=event_aggregator,
+    )
+    layout.addWidget(data_source_group)
+
     props = node.plot_properties
 
     # General Properties Group
@@ -218,10 +204,10 @@ def _build_base_plot_properties_ui(
     title_edit.setObjectName("title_edit")
     title_edit.editingFinished.connect(
         partial(
-            node_controller.on_property_changed,
-            node=node,
-            prop_name="title",
-            new_value=title_edit.text(),
+            event_aggregator.publish,
+            Events.CHANGE_PLOT_TITLE_REQUESTED,
+            node_id=node.id,
+            new_title=title_edit.text(),
         )
     )
     general_layout.addRow("Title:", title_edit)
@@ -237,10 +223,10 @@ def _build_base_plot_properties_ui(
     xlabel_edit.setObjectName("xlabel_edit")
     xlabel_edit.editingFinished.connect(
         partial(
-            node_controller.on_property_changed,
-            node=node,
-            prop_name="xlabel",
-            new_value=xlabel_edit.text(),
+            event_aggregator.publish,
+            Events.CHANGE_PLOT_XLABEL_REQUESTED,
+            node_id=node.id,
+            new_xlabel=xlabel_edit.text(),
         )
     )
     axis_layout.addRow("X-Axis Label:", xlabel_edit)
@@ -250,15 +236,16 @@ def _build_base_plot_properties_ui(
     ylabel_edit.setObjectName("ylabel_edit")
     ylabel_edit.editingFinished.connect(
         partial(
-            node_controller.on_property_changed,
-            node=node,
-            prop_name="ylabel",
-            new_value=ylabel_edit.text(),
+            event_aggregator.publish,
+            Events.CHANGE_PLOT_YLABEL_REQUESTED,
+            node_id=node.id,
+            new_ylabel=ylabel_edit.text(),
         )
     )
     axis_layout.addRow("Y-Axis Label:", ylabel_edit)
 
     layout.addWidget(axis_group)
+
 
     # Data Mapping Group
     data_mapping_group = QGroupBox("Data Mapping", parent)
@@ -267,7 +254,7 @@ def _build_base_plot_properties_ui(
     if node.data is not None:
         try:
             _build_column_selectors(
-                node, data_mapping_layout, x_combo, y_combo, node_controller
+                node, data_mapping_layout, x_combo, y_combo, event_aggregator
             )
         except Exception as e:
             logging.error(f"Error building column selectors for node {node.id}: {e}")
@@ -280,7 +267,7 @@ def _build_base_plot_properties_ui(
     # Axis Limits Group
     limits_group = QGroupBox("Axis Limits", parent)
     limits_layout = QFormLayout(limits_group)
-    _build_limit_selectors(node, limits_layout, limit_edits, node_controller)
+    _build_limit_selectors(node, limits_layout, limit_edits, event_aggregator)
     layout.addWidget(limits_group)
 
 
@@ -288,7 +275,7 @@ def _build_line_plot_ui_widgets(
     node: PlotNode,
     layout: QVBoxLayout,
     parent: QWidget,
-    node_controller: NodeController,
+    event_aggregator: EventAggregator,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -302,7 +289,7 @@ def _build_line_plot_ui_widgets(
         node=node,
         layout=base_form_layout,
         parent=parent,
-        node_controller=node_controller,
+        event_aggregator=event_aggregator,
         limit_edits=limit_edits,
         x_combo=x_combo,
         y_combo=y_combo,
@@ -313,7 +300,7 @@ def _build_line_plot_ui_widgets(
 
     # Line-specific properties group
     line_specific_group = QGroupBox("Line Properties", parent)
-    line_specific_layout = QFormLayout(line_specific_group)
+    line_specific_layout = QFormLayout(line_specific_group) #TODO: This doesn't do anything right now
     # Line-specific properties will go here later
     layout.addWidget(line_specific_group)
 
@@ -322,7 +309,7 @@ def _build_scatter_plot_ui_widgets(
     node: PlotNode,
     layout: QVBoxLayout,
     parent: QWidget,
-    node_controller: NodeController,
+    event_aggregator: EventAggregator,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -336,7 +323,7 @@ def _build_scatter_plot_ui_widgets(
         node=node,
         layout=base_form_layout,
         parent=parent,
-        node_controller=node_controller,
+        event_aggregator=event_aggregator,
         limit_edits=limit_edits,
         x_combo=x_combo,
         y_combo=y_combo,
@@ -357,10 +344,10 @@ def _build_scatter_plot_ui_widgets(
         marker_size_edit.setObjectName("marker_size_edit")
         marker_size_edit.editingFinished.connect(
             partial(
-                node_controller.on_property_changed,
-                node=node,
-                prop_name="marker_size",
-                new_value=marker_size_edit.text(),
+                event_aggregator.publish,
+                Events.CHANGE_PLOT_MARKER_SIZE_REQUESTED,
+                node_id=node.id,
+                new_size=marker_size_edit.text(),
             )
         )
         scatter_specific_layout.addRow("Marker Size:", marker_size_edit)
@@ -374,9 +361,9 @@ class PlotPropertiesUIFactory:
     based on the type of the plot.
     """
 
-    def __init__(self, node_controller: NodeController):
+    def __init__(self, event_aggregator: EventAggregator):
         self._builders = {}
-        self._node_controller = node_controller
+        self._event_aggregator = event_aggregator
 
     def register_builder(self, plot_type: PlotType, builder_func: callable):
         self._builders[plot_type] = builder_func
@@ -409,7 +396,7 @@ class PlotPropertiesUIFactory:
                 node=node,
                 layout=layout,
                 parent=parent,
-                node_controller=self._node_controller,
+                event_aggregator=self._event_aggregator,
                 limit_edits=limit_edits,
                 x_combo=x_combo,
                 y_combo=y_combo,
@@ -420,7 +407,7 @@ class PlotPropertiesUIFactory:
                 node=node,
                 layout=base_form_layout,
                 parent=parent,
-                node_controller=self._node_controller,
+                event_aggregator=self._event_aggregator,
                 limit_edits=limit_edits,
                 x_combo=x_combo,
                 y_combo=y_combo,

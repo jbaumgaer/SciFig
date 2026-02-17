@@ -1,6 +1,9 @@
 from src.models import ApplicationModel
 from src.models.nodes import PlotNode
 from src.services.commands.base_command import BaseCommand
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
+from src.shared.events import Events
 from src.shared.types import PlotID, Rect
 
 
@@ -13,10 +16,11 @@ class BatchChangePlotGeometryCommand(BaseCommand):
     def __init__(
         self,
         model: ApplicationModel,
+        event_aggregator: EventAggregator,
         new_geometries: dict[PlotID, Rect],
         description: str,
     ):
-        super().__init__(description)
+        super().__init__(description, event_aggregator)
         self._model = model
         self._new_geometries = new_geometries
         self._old_geometries: dict[PlotID, Rect] = {}
@@ -56,7 +60,7 @@ class BatchChangePlotGeometryCommand(BaseCommand):
                     f"  Could not find PlotNode with ID {plot_id} to apply new geometry."
                 )
 
-        self._model.modelChanged.emit()  # Notify observers of changes
+        self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)
         self.logger.debug("BatchChangePlotGeometryCommand executed. Model updated.")
 
     def undo(self):
@@ -75,5 +79,5 @@ class BatchChangePlotGeometryCommand(BaseCommand):
                     f"  PlotNode {node.name} (ID: {node.id}) geometry reverted to {node.geometry}"
                 )
 
-        self._model.modelChanged.emit()  # Notify observers of changes
+        self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)
         self.logger.debug("BatchChangePlotGeometryCommand undone. Model reverted.")

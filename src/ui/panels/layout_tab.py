@@ -2,16 +2,19 @@ import logging
 from typing import Optional
 
 from PySide6.QtWidgets import (
-    QGroupBox,  # New Import
-    QStackedWidget,  # New Import for dynamic content
-    QToolButton,  # New Import
+    QGroupBox,
+    QStackedWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from src.controllers.layout_controller import LayoutController
 from src.models.application_model import ApplicationModel
-from src.shared.constants import LayoutMode  # New Import
+from src.models.layout.layout_config import GridConfig, LayoutConfig
+from src.services.event_aggregator import EventAggregator
+from src.shared.constants import LayoutMode
+from src.shared.events import Events
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
 
 
@@ -19,6 +22,7 @@ class LayoutTab(QWidget):
     def __init__(
         self,
         model: ApplicationModel,
+        event_aggregator: EventAggregator,
         layout_controller: LayoutController,
         layout_ui_factory: LayoutUIFactory,
         parent: Optional[QWidget] = None,
@@ -26,6 +30,7 @@ class LayoutTab(QWidget):
         super().__init__(parent)
         # TODO: Check if I even pass a parent
         self.model = model
+        self._event_aggregator = event_aggregator
         self.layout_controller = layout_controller
         self.layout_ui_factory = layout_ui_factory
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -56,7 +61,7 @@ class LayoutTab(QWidget):
         # Connect to layout_controller
         self._layout_mode_toggle_button.toggled.connect(
             self.layout_controller.toggle_layout_mode
-        )
+        ) #TODO: Make this an event
         self._toggle_layout.addWidget(self._layout_mode_toggle_button)
 
         self._main_layout.addWidget(self._toggle_group)
@@ -67,21 +72,19 @@ class LayoutTab(QWidget):
 
         self._main_layout.addStretch()
 
-        # Connect signals
-        # Note: These signals are directly from LayoutManager, which is acceptable for View to react to Model changes.
-        self.layout_controller._layout_manager.uiLayoutModeChanged.connect(
-            self._update_content
-        )
-        self.layout_controller._layout_manager.uiLayoutModeChanged.connect(
-            self._update_toggle_button_text
-        )
-        self.layout_controller._layout_manager.gridConfigParametersChanged.connect(
-            self._update_content
-        )
-        self._update_content(
-            initial_ui_layout_mode
-        )  # Initial call to populate dynamic controls
+        self._subscribe_to_events()
 
+        self.logger.debug("LayoutTab initializing complete.")
+
+        self._update_content(initial_ui_layout_mode)
+
+    def _subscribe_to_events(self):
+        self._event_aggregator.subscribe(Events.UI_LAYOUT_MODE_CHANGED, self._update_content)
+        self._event_aggregator.subscribe(Events.UI_LAYOUT_MODE_CHANGED, self._update_toggle_button_text)
+        self._event_aggregator.subscribe(Events.GRID_CONFIG_PARAMETERS_CHANGED, self._handle_grid_parameters_inferred)
+        self._event_aggregator.subscribe(Events.LAYOUT_CONFIG_CHANGED, self._handle_layout_config_changed)
+        self._event_aggregator.subscribe(Events.ACTIVE_LAYOUT_MODE_CHANGED, self._handle_active_layout_mode_changed)
+    
     def _clear_stacked_widget(self, stacked_widget: QStackedWidget):
         """Clears all widgets from a QStackedWidget."""
         for i in reversed(range(stacked_widget.count())):
@@ -124,3 +127,22 @@ class LayoutTab(QWidget):
             )
         else:
             self._layout_mode_toggle_button.setText("Switch to Grid Layout Controls")
+
+    def _handle_grid_parameters_inferred(self, config: GridConfig):
+        """Handler for when grid parameters are inferred, to update UI."""
+        self.logger.debug(f"LayoutTab: Grid parameters inferred. Updating UI with {config}.")
+        # Force update the grid view if the current UI mode is GRID
+        if self.layout_controller.get_ui_selected_layout_mode() == LayoutMode.GRID:
+            self._update_content(LayoutMode.GRID)
+
+    def _handle_layout_config_changed(self, new_config: LayoutConfig):
+        """Handler for when the application's active layout config changes."""
+        self.logger.debug(f"LayoutTab: Active layout config changed to {new_config.mode}. Updating content.")
+        # Rebuild content for the active mode, which will then reflect the new config
+        self._update_content(new_config.mode)
+
+    def _handle_active_layout_mode_changed(self, mode: LayoutMode):
+        """Handler for when the application's active layout mode changes."""
+        self.logger.debug(f"LayoutTab: Active layout mode changed to {mode}. Ensuring UI reflects this.")
+        # Ensure the content shown matches the active mode
+        self._update_content(mode)

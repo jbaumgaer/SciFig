@@ -11,12 +11,14 @@ from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import BasePlotProperties
 from src.models.plots.plot_types import PlotType
 from src.services.config_service import ConfigService
+from src.services.event_aggregator import EventAggregator
 from src.shared.constants import LayoutMode
+from src.shared.events import Events
 from src.shared.types import PlotID, Rect
 from src.models.layout.layout_protocols import FreeFormLayoutCapabilities
 
 
-class LayoutManager(QObject):
+class LayoutManager():
     """
     Orchestrates the layout engines, manages the active layout mode,
     and provides the interface for main application components to
@@ -25,10 +27,7 @@ class LayoutManager(QObject):
     appropriate LayoutEngine.
     """
 
-    layoutModeChanged = Signal(LayoutMode)
     _ui_selected_layout_mode: LayoutMode = LayoutMode.FREE_FORM
-    uiLayoutModeChanged = Signal(LayoutMode)
-    gridConfigParametersChanged = Signal() # New signal to notify UI of grid config parameter changes
 
     def __init__(
         self,
@@ -36,13 +35,13 @@ class LayoutManager(QObject):
         free_engine: FreeLayoutEngine,
         grid_engine: GridLayoutEngine,
         config_service: ConfigService,
+        event_aggregator: EventAggregator,
     ):
-        super().__init__()
-        # TODO: Check if I even pass a parent
         self._application_model = application_model
         self._free_engine = free_engine
         self._grid_engine = grid_engine
         self._config_service = config_service
+        self._event_aggregator = event_aggregator
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutManager initialized.")
 
@@ -76,11 +75,11 @@ class LayoutManager(QObject):
 
     @ui_selected_layout_mode.setter
     def ui_selected_layout_mode(self, mode: LayoutMode):
-        """Sets the UI selected layout mode and emits uiLayoutModeChanged signal."""
+        """Sets the UI selected layout mode and publishes the event."""
         if self._ui_selected_layout_mode != mode:
             self.logger.info(f"UI selected layout mode changed to: {mode.value}")
             self._ui_selected_layout_mode = mode
-            self.uiLayoutModeChanged.emit(mode)
+            self._event_aggregator.publish(Events.UI_LAYOUT_MODE_CHANGED, ui_layout_mode=mode) #Who is subscribed to this signal?
     
     def on_model_reset(self) -> None:
         """
@@ -329,9 +328,9 @@ class LayoutManager(QObject):
             self._application_model.current_layout_config = self._last_free_form_config
             self.logger.debug("Active layout mode set to FREE_FORM.")
 
-        self.layoutModeChanged.emit(mode)
-        self.logger.debug("Emitting layoutConfigChanged signal from set_layout_mode.")
-        self._application_model.layoutConfigChanged.emit()  # Notify model observers of config change
+        self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=mode)
+        self.logger.debug("Publishing ACTIVE_LAYOUT_MODE_CHANGED event from set_layout_mode.")
+        self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=current_config) #TODO: Not sure what needs to go in as config
         self.logger.info(f"Active layout mode successfully switched to {mode.value}.")
 
     def update_grid_config_and_apply(
@@ -349,9 +348,9 @@ class LayoutManager(QObject):
             new_grid_config  # Update stored last grid config for next time
         )
 
-        self.layoutModeChanged.emit(LayoutMode.GRID)  # Ensure UI updates if needed
-        self.logger.debug("Emitting layoutConfigChanged signal.")
-        self._application_model.layoutConfigChanged.emit()  # Notify model observers
+        self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID)
+        self.logger.debug("Publishing ACTIVE_LAYOUT_MODE_CHANGED event for GRID mode.")
+        self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=new_grid_config)
 
         all_plots = list(
             self._application_model.scene_root.all_descendants(of_type=PlotNode)
@@ -447,7 +446,7 @@ class LayoutManager(QObject):
         self._last_grid_config = new_inferred_grid_config
 
         # Emit signal to update UI fields
-        self.gridConfigParametersChanged.emit()
+        self._event_aggregator.publish(Events.GRID_CONFIG_PARAMETERS_CHANGED, grid_config=new_inferred_grid_config)
         self.logger.info(f"Inferred grid parameters: {new_inferred_grid_config}")
 
     def optimize_layout_action(self):
@@ -502,13 +501,13 @@ class LayoutManager(QObject):
                 plot_node = self._application_model.scene_root.find_node_by_id(plot_id)
                 if plot_node:
                     plot_node.geometry = rect
-            self._application_model.modelChanged.emit()  # Redraw canvas
-
-        self.layoutModeChanged.emit(LayoutMode.GRID)  # Ensure UI updates if needed
+            self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)  # Redraw canvas
+    
+        self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID)
         self.logger.debug(
-            "Emitting layoutConfigChanged signal to update UI with optimized parameters."
+            "Publishing LAYOUT_CONFIG_CHANGED event to update UI with optimized parameters."
         )
-        self._application_model.layoutConfigChanged.emit()
+        self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=updated_grid_config)
         self.logger.info(f"Optimized layout applied with config: {updated_grid_config}")
 
     def update_grid_layout_parameters(
