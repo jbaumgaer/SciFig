@@ -1,0 +1,13 @@
+{
+  "Subplot Labels": {
+    "Font Size (pt.)": 8,
+    "Lowercase": true,
+    "Bold": true,
+    "Italic": false
+  },
+  "Figure Width (mm)": {
+    "Single Column": 89,
+    "Double Column": 120,
+    "Triple Column": 180
+  }
+}

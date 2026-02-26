@@ -1,0 +1,242 @@
+## Matplotlib style divided into following parts:
+##     - LINES
+##     - PATCHES
+##     - HATCHES
+##     - BOXPLOT
+##     - FONT
+##     - TEXT
+##     - LaTeX
+##     - AXES
+##     - TICKS
+##     - GRIDS
+##     - LEGEND
+##     - FIGURE
+##     - IMAGES
+##     - CONTOUR PLOTS
+##     - ERRORBAR PLOTS
+##     - HISTOGRAM PLOTS
+##     - SCATTER PLOTS
+
+## ***************************************************************************
+## * LINES                                                                   *
+## ***************************************************************************
+
+lines.linewidth: 0.75              # line width in points
+lines.linestyle: -                 # solid line
+lines.color:     C0                # has no affect on plot(); see axes.prop_cycle
+lines.marker:          None        # the default marker
+lines.markerfacecolor: auto        # the default marker face color
+lines.markeredgecolor: black       # the default marker edge color. TODO: Make this algorithmically white for certain cases
+lines.markeredgewidth: 0.25        # the line width around the marker symbol
+lines.markersize:      2           # marker size, in points
+
+## ***************************************************************************
+## * PATCHES                                                                 *
+## ***************************************************************************
+
+patch.linewidth:       0.5    # edge width in points.
+patch.facecolor:       C0
+patch.edgecolor:       black  # By default, Patches and Collections do not draw edges. This value is only used if facecolor is "none"
+                              # (an Artist without facecolor and edgecolor would be invisible)  or if patch.force_edgecolor is True.
+patch.force_edgecolor: False  # By default, Patches and Collections do not draw edges. Set this to True to draw edges with patch.edgedcolor
+                              # as the default edgecolor. This is mainly relevant for styles.           
+
+## ***************************************************************************
+## * HATCHES                                                                 *
+## ***************************************************************************
+
+hatch.color:     black
+hatch.linewidth: 0.5
+
+## ***************************************************************************
+## * BOXPLOT                                                                 *
+## ***************************************************************************
+
+boxplot.whiskers:    1
+
+boxplot.flierprops.markeredgewidth: 0.5
+boxplot.flierprops.markersize:      2
+boxplot.flierprops.linewidth:       0.5
+
+boxplot.boxprops.linewidth: 0.5
+
+boxplot.whiskerprops.linewidth: 0.5
+
+boxplot.capprops.linewidth: 0.5
+
+boxplot.medianprops.color:     C1
+boxplot.medianprops.linewidth: 0.5
+
+boxplot.meanprops.color:           C2
+boxplot.meanprops.marker:          ^
+boxplot.meanprops.markerfacecolor: C2
+boxplot.meanprops.markeredgecolor: C2
+boxplot.meanprops.markersize:       2
+boxplot.meanprops.linestyle:       --
+boxplot.meanprops.linewidth:       0.5
+
+## ***************************************************************************
+## * FONT                                                                    *
+## ***************************************************************************
+
+font.family:  sans-serif
+font.style:   normal
+font.variant: normal
+font.weight:  normal
+font.stretch: normal
+font.size:    7 # TODO: Give an allowed range here, depending on the journal
+
+font.serif:      Times New Roman, Times
+font.sans-serif: Arial, Helvetica
+font.fantasy:    xkcd script
+
+## ***************************************************************************
+## * TEXT                                                                    *
+## ***************************************************************************
+
+text.color: black
+
+## ***************************************************************************
+## * LaTeX                                                                   *
+## ***************************************************************************
+
+mathtext.bf:  sans-serif:bold
+mathtext.bfit: sans-serif:italic:bold
+mathtext.cal: cursive
+mathtext.it:  sans-serif:italic
+mathtext.rm:  sans-serif
+mathtext.sf:  sans-serif
+mathtext.tt:  monospace
+mathtext.fallback: cm  # Select fallback font from ['cm' (Computer Modern), 'stix' 'stixsans'] when a symbol cannot be found in one of the
+                        # custom math fonts. Select 'None' to not perform fallback and replace the missing character by a dummy symbol.
+mathtext.default: regular  # The default font to use for math. Can be any of the LaTeX font names, including
+                       # the special name "regular" for the same font used in regular text.
+
+## ***************************************************************************
+## * AXES                                                                    *
+## ***************************************************************************
+
+axes.edgecolor:     black   # axes edge color
+axes.linewidth:     0.5     # edge line width
+axes.labelsize:     medium  # font size of the x and y labels
+axes.labelpad:      4.0     # space between label and axis
+axes.labelweight:   normal  # weight of the x and y labels
+axes.labelcolor:    black
+axes.axisbelow:     line    # draw axis gridlines and ticks:
+                             #     - below patches (True)
+                             #     - above patches but below lines ('line')
+                             #     - above all (False)
+
+axes.formatter.limits: -4, 5  # use scientific notation if log10 of the axis range is smaller than the first or larger than the second
+axes.formatter.useoffset: True  # If True, the tick label formatter will default to labeling ticks relative to an offset
+                                 # when the data range is small compared to the minimum absolute value of the data.
+axes.formatter.offset_threshold: 4  # When useoffset is True, the offset will be used when it can remove
+                                     # at least this number of significant digits from tick labels.
+
+axes.spines.left:   True
+axes.spines.bottom: True
+axes.spines.top:    True
+axes.spines.right:  True
+
+axes.prop_cycle: cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']) 
+# Change this!!!! Layer this by hardcoding these values into different style sheets that are called subsequently to resolve the base environment. For instance, there can be color schemes, but also font schemes, journal style schemes etc.
+
+axes.xmargin:   .0  # x margin.  See `axes.Axes.margins`
+axes.ymargin:   .1  # y margin.  See `axes.Axes.margins` TODO: Hardcode this to be 0, in certain cases
+axes.zmargin:   .1  # z margin.  See `axes.Axes.margins`
+axes.autolimit_mode: data   # If "data", use axes.xmargin and axes.ymargin as is. If "round_numbers", after application
+                            # of margins, axis limits are further expanded to the nearest "round" number. TODO: Make this more flexible
+
+axes3d.xaxis.panecolor:    (0.95, 0.95, 0.95, 0.5)  # background pane on 3D axes
+axes3d.yaxis.panecolor:    (0.90, 0.90, 0.90, 0.5)  # background pane on 3D axes
+axes3d.zaxis.panecolor:    (0.925, 0.925, 0.925, 0.5)  # background pane on 3D axes
+
+## ***************************************************************************
+## * TICKS                                                                   *
+## ***************************************************************************
+
+xtick.major.size:    3     # major tick size in points
+xtick.minor.size:    1.5       # minor tick size in points
+xtick.major.width:   0.5     # major tick width in points
+xtick.minor.width:   0.25     # minor tick width in points
+xtick.direction:     out     # direction: {in, out, inout}
+xtick.minor.visible: False   # visibility of minor ticks on x-axis
+xtick.minor.ndivs:   2    # number of minor ticks between the major ticks on x-axis
+
+ytick.major.size:    3     # major tick size in points
+ytick.minor.size:    1.5       # minor tick size in points
+ytick.major.width:   0.5     # major tick width in points
+ytick.minor.width:   0.25     # minor tick width in points
+ytick.major.pad:     3.5     # distance to major tick label in points
+ytick.minor.pad:     3.4     # distance to the minor tick label in points
+ytick.direction:     out     # direction: {in, out, inout}
+ytick.minor.visible: False   # visibility of minor ticks on y-axi
+ytick.minor.ndivs:   2    # number of minor ticks between the major ticks on y-axis
+
+## ***************************************************************************
+## * GRIDS                                                                   *
+## ***************************************************************************
+
+grid.color:     "#b0b0b0"  # grid color
+grid.linestyle: -          # solid
+grid.linewidth: 0.5        # in points
+grid.alpha:     1.0        # transparency, between 0.0 and 1.0
+
+## ***************************************************************************
+## * LEGEND                                                                  *
+## ***************************************************************************
+
+legend.loc:           best
+legend.frameon:       False    # if True, draw the legend on a background patch
+legend.framealpha:    0.5      # legend patch transparency
+legend.edgecolor:     0.5      # background patch boundary color
+legend.fancybox:      True     # if True, use a rounded box for the legend background, else a rectangle
+
+## ***************************************************************************
+## * FIGURE                                                                  *
+## ***************************************************************************
+
+figure.labelsize:   medium    # size of the figure label (``Figure.sup[x|y]label()``)
+figure.labelweight: normal    # weight of the figure label
+figure.figsize:     2.5, 2    # figure size in inches !!!!
+figure.dpi:         150       # figure dots per inch
+
+figure.subplot.left:   0.125  # the left side of the subplots of the figure
+figure.subplot.right:  0.9    # the right side of the subplots of the figure
+figure.subplot.bottom: 0.11   # the bottom of the subplots of the figure
+figure.subplot.top:    0.88   # the top of the subplots of the figure
+figure.subplot.wspace: 0.2    # the amount of width reserved for space between subplots, expressed as a fraction of the average axis width
+figure.subplot.hspace: 0.2    # the amount of height reserved for space between subplots, expressed as a fraction of the average axis height
+
+figure.constrained_layout.h_pad:  0.04167
+figure.constrained_layout.w_pad:  0.04167
+figure.constrained_layout.hspace: 0.02
+figure.constrained_layout.wspace: 0.02
+
+## ***************************************************************************
+## * IMAGES                                                                  *
+## ***************************************************************************
+
+image.cmap:            viridis      # A colormap name (plasma, magma, etc.) !!!
+
+## ***************************************************************************
+## * ERRORBAR PLOTS                                                          *
+## ***************************************************************************
+
+errorbar.capsize: 2  # length of end cap on error bars in pixels
+
+## ***************************************************************************
+## * HISTOGRAM PLOTS                                                         *
+## ***************************************************************************
+
+hist.bins: 'auto'  # The default number of histogram bins or 'auto'.
+
+## ***************************************************************************
+## * SCATTER PLOTS                                                           *
+## ***************************************************************************
+
+scatter.marker: o         # The default marker type for scatter plots.
+scatter.edgecolors: face  # The default edge colors for scatter plots.
+
+
+
