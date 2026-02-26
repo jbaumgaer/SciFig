@@ -292,3 +292,4 @@ src/interfaces/__pycache__/ui_providers.cpython-313.pyc
 data/test_2.sci
 src/services/__pycache__/event_aggregator.cpython-313.pyc
 src/shared/__pycache__/events.cpython-313.pyc
+examples/Assets/Cut/__pycache__/data_sets.cpython-313.pyc

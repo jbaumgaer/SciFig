@@ -164,3 +164,62 @@ This epic focuses on externalizing various application settings, user preference
 *   **Risk:** Complex state management during drag-and-drop, leading to visual glitches or incorrect model updates.
 *   **Mitigation:** Clear separation of concerns between `CanvasWidget` (UI events), `CanvasController` (logic), and `CommandManager` (state changes). Thorough unit tests for event handling.
 *   **Risk:** Performance issues with visual
+
+---
+
+## Epic: Architectural Refinement - Decoupling Rendering and View
+
+This epic focuses on strictly enforcing the "Passive View" MVP protocol by transforming the `Renderer` into a stateless domain service and removing all Matplotlib backend and coordinate transformation logic from the `CanvasWidget`. This is a prerequisite for headless reproducibility and high-resolution exports.
+
+### Feature: Stateless Rendering Service with Harvested Pipeline
+**Description:** Refactor the `Renderer` into a stateless service that performs explicit placement using "baked" coordinates from the `LayoutManager`.
+
+**Core Principle: Shadow Rendering & Harvesting**
+The `LayoutManager` owns the Matplotlib layout solver (`constrained_layout`). It calculates absolute geometries using a "Shadow Figure" and harvests the results. The `Renderer` never calls the layout solver; it only performs fixed placement.
+
+**Property Categorization:**
+*   **Layout-Affecting (Triggers Shadow Optimization):** `figsize`, `dpi`, `title`, `xlabel`, `ylabel`, `legend`, `tick_params`, `hspace`, `wspace`, `margins`, adding/removing nodes.
+*   **Purely Aesthetic (Fast Path):** `color`, `linestyle`, `linewidth`, `alpha`, `marker`, `markersize`, `markerfacecolor`, `fontfamily`, `xlim`, `ylim`, `grid`, and data updates.
+
+**Planned Implementation:**
+
+1.  **Modify `Renderer` (`src/ui/renderers/renderer.py`):**
+    *   **Task:** Implement a persistent `_node_artist_registry` (node_id -> Matplotlib objects) to support incremental updates.
+    *   **Task:** Replace `figure.add_subplot()` with `figure.add_axes(rect)` to ensure Matplotlib skips internal layout logic.
+    *   **Task:** Update `render(figure, root_node, selection, geometries, hint=None)`:
+        *   If `hint` is Aesthetic: Update the registry artist and call `draw_idle()`.
+        *   Else: Rebuild the figure using the explicit `geometries`.
+
+2.  **Modify `LayoutManager` (`src/services/layout_manager.py`):**
+    *   **Task:** Implement "Shadow Optimization": Create a temporary figure matching the real figure's DPI/Size, populate with titles/labels, run `execute_constrained_layout()`, and harvest `ax.get_position()`.
+    *   **Task:** Return a `LayoutReport` containing absolute `Rects` and effective `Margins/Gutters`.
+
+3.  **Refactor Events:**
+    *   **`Events.LAYOUT_CONFIG_CHANGED`:** Payload: `GridConfig`. Target: `LayoutTab` (UI sync) and `ApplicationModel`.
+    *   **`Events.NODE_GEOMETRY_CHANGED`:** Payload: `dict[node_id, Rect]`. Target: `Renderer` and `ApplicationModel`.
+
+4.  **Modify Application Entry Point (`main.py`):**
+    *   **Task:** Move `matplotlib.use("QtAgg")` here to support headless overrides.
+
+### Feature: Standardized Coordinate Transformations
+**Description:** Centralize Matplotlib-to-Figure coordinate transformations to remove "leaks" in the View and Tools.
+
+**Planned Implementation:**
+
+1.  **Modify `src/shared/utils.py`:**
+    *   **Task:** Add standardized helper functions for converting between Screen (Pixels), Figure (Normalized 0-1), and Data coordinates.
+
+2.  **Update Interactive Tools (`src/services/tools/`):**
+    *   **Task:** Refactor `SelectionTool` to use the new utility functions.
+
+3.  **Modify `CanvasWidget` (`src/ui/widgets/canvas_widget.py`):**
+    *   **Task:** Remove all coordinate transformation logic. The widget only emits raw events with pixel coordinates.
+
+**Testing Plan:**
+*   **Unit Tests (`tests/ui/renderers/test_renderer.py`):** Verify `Renderer` renders correctly given explicit geometries without an active layout solver.
+*   **Unit Tests (`tests/services/test_layout_manager.py`):** Verify "Shadow Optimization" harvests correct coordinates.
+*   **Integration Tests:** Verify that changing a label updates the model via the shadow-harvest cycle, while changing a color uses the direct fast-path.
+
+**Risks & Mitigations:**
+*   **Risk:** Text size mismatch between Shadow and Real figure.
+*   **Mitigation:** Ensure Shadow Figure perfectly syncs DPI, figsize, and FontProperties with the Real figure before harvesting.

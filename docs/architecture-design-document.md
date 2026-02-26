@@ -26,7 +26,7 @@ The application employs the **Model-View-Presenter (MVP)** pattern, specifically
 
 *   **View (`MainWindow`, UI Panels):** A passive component whose sole responsibilities are to display data it is explicitly given and to capture raw user input (e.g., clicks, key presses), which it forwards to the Presenter. The View has no direct knowledge of the Model.
 
-*   **Presenter (Controllers):** The mediator between the Model and the View. It contains all application and presentation logic. It responds to user input from the View, manipulates the Model (typically via the Command Pattern), and formats data from the Model to pass to the View for display. In this codebase, the Presenter role is fulfilled by the various **Controllers** (e.g., `ProjectController`, `NodeController`).
+*   **Presenter (Controllers):** The mediator between the Model and the View. It contains all application and presentation logic. It responds to user input from the View, manipulates the Model (typically via the Command Pattern), and formats data from the Model to pass to the View for display. In this codebase, the Presenter role is fulfilled by the various **Controllers** (e.g., `ProjectController`, `NodeController`, `LayoutController`, `CanvasController`).
 
 ## 3.2. Decoupling with Event-Based Communication and Interfaces
 

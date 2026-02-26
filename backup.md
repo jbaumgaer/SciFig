@@ -312,119 +312,108 @@ All documentation is considered "live" and must be kept in sync with the project
 
 ## 6. Technology Guidelines & Professional Standards
 
-This section contains the architectural mandates and implementation standards specific to the SciFig project. These guides ensure consistency across the hybrid scientific-vector environment.
+This section contains a library of detailed technology and architecture guides. To maintain context, I will only consult the specific guide(s) relevant to the task at hand.
 
 **Index of Technology Guides:**
 
 *   **Architecture & High-Level Design:**
-    *   `<TECH_GUIDE:MVP_PASSIVE_VIEW_PROTOCOL>`
-    *   `<TECH_GUIDE:STATE_AND_COMMAND_INTEGRITY>`
-    *   `<TECH_GUIDE:EVENT_ORCHESTRATION_SEMANTICS>`
-*   **Implementation Standards:**
-    *   `<TECH_GUIDE:SCIENTIFIC_RENDERING_PIPELINE>`
-    *   `<TECH_GUIDE:INTERACTIVE_CANVAS_TOOLS>`
-    *   `<TECH_GUIDE:DATA_LOADING_CONCURRENCY>`
-*   **Others:**
+    *   `<TECH_GUIDE:UI_UX_DESIGN>`
+    *   `<TECH_GUIDE:FRONTEND_ARCHITECTURE>`
+    *   `<TECH_GUIDE:BACKEND_ARCHITECTURE>`
+*   **Implementation & Tooling:**
+    *   `<TECH_GUIDE:LOCAL_DEVELOPMENT_SETUP>`
+    *   `<TECH_GUIDE:CODE_QUALITY_AND_DEPENDENCIES>`
     *   `<TECH_GUIDE:TESTING_STRATEGY>`
 
 <details>
-<summary>TECH_GUIDE:MVP_PASSIVE_VIEW_PROTOCOL</summary>
+<summary>TECH_GUIDE:UI_UX_DESIGN</summary>
+### Aesthetic & Responsive UI/UX Design Guidelines
 
-### MVP / Passive View Protocol
+This document outlines the core principles and actionable decisions for creating beautiful, responsive, and user-centric applications.
 
-To ensure high testability and separation of concerns, the application strictly adheres to the Passive View variant of the Model-View-Presenter pattern.
+#### 1. Core Philosophy: Clarity, Consistency, Simplicity
 
-1.  **Headless Model (`ApplicationModel` & `SceneNode`):**
-    *   Must have ZERO dependencies on `PySide6` or `matplotlib.backends`.
-    *   The model is a pure data structure representing the Scene Graph and scientific metadata.
-    *   It notifies the system of state changes only via the `EventAggregator`.
+Before any specific design choice, adhere to these principles:
 
-2.  **Passive View (`MainWindow`, `Panels`, `Widgets`):**
-    *   Responsible ONLY for rendering data provided by a Presenter/Controller and capturing raw user input.
-    *   Prohibited from containing business logic, data validation, or direct Model manipulation.
-    *   Input handling: Capture a UI signal (e.g., `button.clicked`) and immediately publish a `_REQUESTED` event.
+*   **Clarity:** The user should always understand what they are seeing and what will happen when they take an action. Avoid ambiguity.
+*   **Consistency:** Elements that look the same should behave the same. A consistent design language reduces the cognitive load on the user, making the app feel intuitive.
+*   **Simplicity:** Less is more. Every element on the screen should serve a purpose. Aggressively remove clutter to focus the user's attention on what matters.
 
-3.  **Presenter / Controller (`ProjectController`, `NodeController`, etc.):**
-    *   The orchestration layer. It subscribes to UI `_REQUESTED` events.
-    *   Logic Flow: `UI Request` -> `Controller Logic/Validation` -> `Command Execution` -> `Model Update`.
-    *   Controllers must never call View methods to update state; the View must update itself by subscribing to the resulting Model `_CHANGED` events.
+#### 2. The Foundational Pillars of Visual Design
+
+These three areas form the bedrock of your application's look and feel.
+
+**A. Layout & Spacing: Creating Rhythm and Hierarchy**
+
+A structured layout is the skeleton of a beautiful app.
+
+*   **Use a Grid System:** All layouts should be built on a grid (e.g., a 12-column grid is a web standard). This ensures alignment and a professional, organized look.
+*   **Establish a Spacing Scale:** Do not use random margin or padding values. Use a consistent scale based on a multiple of 4 or 8 (e.g., 4px, 8px, 12px, 16px, 24px, 32px). This creates a visual rhythm and makes components feel like they belong together.
+    *   **Decision:** Use an 8-point grid system for all spacing and sizing.
+*   **Embrace Whitespace:** Whitespace (or negative space) is not empty space; it's a powerful design tool. Use it generously to group related items, separate unrelated ones, and give your content room to breathe.
+
+**B. Typography: The Voice of Your Application**
+
+Typography is 90% of design. Getting it right is critical for usability and aesthetics.
+
+*   **Limit Font Families:** Do not use more than two fonts in your application—one for headings (a "display" font) and one for body text (a "body" font). This ensures consistency and avoids a chaotic look.
+    *   **Decision:** Use a clean, sans-serif font.
+*   **Establish a Type Scale:** Just like with spacing, define a clear hierarchy for text sizes (e.g., 12px, 14px, 16px, 20px, 24px, 32px). This visually communicates the importance of different pieces of information.
+*   **Prioritize Readability:**
+    *   **Line Height:** Set body text line-height to ~1.5x the font size for comfortable reading.
+    *   **Line Length:** Aim for 50-75 characters per line. Lines that are too long or too short are fatiguing to read.
+
+**C. Color Palette: Setting the Mood and Guiding the Eye**
+
+Color is used to create hierarchy, convey meaning, and establish a brand.
+
+*   **Define a Structured Palette:**
+    *   **Primary (1-2 colors):** Your main brand colors. Used for primary actions and key elements.
+    *   **Secondary (1-2 colors):** Complements the primary colors. Used for secondary actions and highlighting information.
+    *   **Neutrals (3-5 shades):** Your grays and off-whites. Used for text, backgrounds, and borders. A good range of neutrals is essential for a clean UI.
+    *   **Semantic Colors (4 colors):** Colors with specific meanings:
+        *   **Success (Green):** For confirmations and positive feedback.
+        *   **Warning (Yellow/Orange):** For potential issues or alerts.
+        *   **Error (Red):** For validation errors and critical failures.
+        *   **Info (Blue):** For informational messages.
+*   **Check for Accessibility:** Ensure all text has a sufficient contrast ratio against its background to be readable by users with visual impairments. Use a WCAG contrast checker tool.
+    *   **Decision:** All text/background color combinations **must** pass WCAG AA standards.
+
+#### 3. Component & Interaction Design
+
+*   **Design for States:** A component is never static. Explicitly design for all its states: default, hover, focused, active, disabled, loading, and empty. This makes the UI feel responsive and alive.
+*   **Provide Instant Feedback:** When a user performs an action, the UI must provide immediate feedback. This can be a spinner on a button, a success toast, or a validation message. Never leave the user wondering if their action was registered.
+
+#### 4. Responsiveness & Adaptability
+
+Your application must be usable and beautiful on any screen size.
+
+*   **Use Fluid Layouts:** Use relative units like percentages (%) and viewport units (vw, vh) for containers, so they adapt smoothly to different screen sizes.
+</details>
+
+<summary>TECH_GUIDE:CODE_QUALITY_AND_DEPENDENCIES</summary>
+### Code Quality & Dependency Management
+
+These are mandatory for all projects.
+
+*   **Code Style & Linting (Enforced in CI):**
+    *   **Python:**
+        *   **Configuration Management:** Use **`pydantic`** for settings management. It provides the same benefits as `zod` for the Python ecosystem.
+        *   **CLI Tooling:** For any Python-based CLIs, use **`Typer`** or **`Click`**. They provide a simple, declarative way to build robust command-line interfaces.
 </details>
 
 <details>
-<summary>TECH_GUIDE:STATE_AND_COMMAND_INTEGRITY</summary>
+<summary>TECH_GUIDE:TESTING_STRATEGY</summary>
+### The Testing Pyramid: A Strategy for Confidence
 
-### State and Command Integrity
+A structured testing strategy is mandatory.
 
-All modifications to the application state must be reversible and traceable.
-
-1.  **Command Pattern Mandate:**
-    *   Every operation that modifies the `ApplicationModel` or any `SceneNode` property MUST be encapsulated in a subclass of `BaseCommand`.
-    *   Directly setting attributes on nodes from a Controller is a critical architectural violation.
-
-2.  **Undo/Redo Symmetry:**
-    *   `BaseCommand.execute()` and `BaseCommand.undo()` must be perfectly symmetrical.
-    *   The `CommandManager` is the sole authority on the undo/redo stacks and the project's "dirty" (modified) status.
-
-3.  **Serialization Contract:**
-    *   The project uses a ZIP-based format (`.sci`) containing a `project.json` (the Scene Graph) and auxiliary data.
-    *   Every `SceneNode` must implement `to_dict` and `from_dict`.
-    *   New node types must be registered in the `node_factory` to maintain persistence integrity.
-</details>
-
-<details>
-<summary>TECH_GUIDE:EVENT_ORCHESTRATION_SEMANTICS</summary>
-
-### Event Orchestration Semantics
-
-To prevent "event spaghetti," all communication via the `EventAggregator` must follow strict naming and payload conventions.
-
-1.  **Naming Conventions:**
-    *   `_REQUESTED` (e.g., `SAVE_PROJECT_REQUESTED`): Indicates user intent. Published by the View, handled by a Controller.
-    *   `_CHANGED` or `_OCCURRED` (e.g., `SELECTION_CHANGED`): Indicates a fact. Published by the Model or a Service after a state change.
-
-2.  **Payload Discipline:**
-    *   Prefer passing `node_id` (string) or primitive types over passing complex object references.
-    *   For complex updates, use small, focused dataclasses (e.g., `Rect`, `Margins`).
-    *   The `EventAggregator` is for cross-component orchestration; use standard Qt signals for internal, single-component widget communication.
-</details>
-
-<details>
-<summary>TECH_GUIDE:SCIENTIFIC_RENDERING_PIPELINE</summary>
-
-### Scientific Rendering Pipeline
-
-The rendering system bridges the hierarchical Scene Graph and the Matplotlib plotting backend.
-
-1.  **Scene Graph Traversal:**
-    *   The `Renderer` traverses the `scene_root` from the `ApplicationModel`.
-    *   It uses the `LayoutManager` to determine the figure-relative coordinates (0.0 to 1.0) for each `PlotNode`.
-
-2.  **Plotting Strategy Pattern:**
-    *   Individual plot types (Line, Scatter, etc.) are implemented as `BasePlottingStrategy`.
-    *   To add a new plot type:
-        1. Define a `PlotType` enum.
-        2. Implement a `PlotProperties` dataclass.
-        3. Implement the `BasePlottingStrategy`.
-        4. Register it in the `CompositionRoot`.
-
-3.  **Visual Feedback:**
-    *   The `Renderer` is responsible for drawing non-data elements, such as selection highlights (blue borders) and layout guides.
-</details>
-
-<details>
-<summary>TECH_GUIDE:INTERACTIVE_CANVAS_TOOLS</summary>
-
-### Interactive Canvas Tools
-
-Interaction on the `CanvasWidget` mimics vector graphics software like Adobe Illustrator.
-
-1.  **The Tool System:**
-    *   All mouse and keyboard interactions on the canvas must be managed by the `ToolService`.
-    *   The `CanvasController` dispatches raw Matplotlib events to the `ToolService`, which delegates them to the `active_tool`.
-
-2.  **Coordinate Systems:**
-    *   **Screen/Widget:** Pixels relative to the `CanvasWidget`.
-    *   **Scene/Figure:** Normalized fractions (0.0 to 1.0) relative to the `Figure`.
-    *   **Data:** Value-based coordinates within a specific `Axes`.
-    *   Tools must use established helpers to convert between these systems for accurate hit-testing and manipulation.
+*   **Level 1: Unit Tests (Most Numerous):**
+    *   **Goal:** Test individual functions/components in isolation.
+    *   **Tools:** **Pytest** (Python).
+*   **Level 2: Integration Tests:**
+    *   **Goal:** Test the interaction between services (e.g., API to Database).
+*   **Level 3: End-to-End (E2E) Tests (Least Numerous):**
+    *   **Goal:** Simulate a full user journey in a real app.
+    *   **Tools:** **Playwright** or **Cypress**.
 </details>
