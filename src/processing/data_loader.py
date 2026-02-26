@@ -12,6 +12,7 @@ class DataLoader(QObject):
     A worker object that processes data in a separate thread.
     Inherits from QObject to use the signal/slot mechanism for thread-safe
     communication.
+    TODO: Remove the signals and use events instead
     """
 
     # Signal emitted when data processing is complete.

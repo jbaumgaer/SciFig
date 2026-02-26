@@ -1,9 +1,11 @@
 from typing import Optional
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QPainter
 
+from src.services.event_aggregator import EventAggregator
 from src.services.tools.base_tool import BaseTool
+from src.shared.events import Events
 
 
 class ToolService(QObject):
@@ -15,10 +17,9 @@ class ToolService(QObject):
     canvas events to the currently active tool.
     """
 
-    active_tool_changed = Signal(str)
-
-    def __init__(self,):
+    def __init__(self, event_aggregator: EventAggregator):
         super().__init__()
+        self._event_aggregator = event_aggregator
         self._tools: dict[str, BaseTool] = {}
         self._active_tool_name: Optional[str] = None
 
@@ -50,7 +51,8 @@ class ToolService(QObject):
         if self.active_tool:
             self.active_tool.on_activated()
 
-        self.active_tool_changed.emit(tool_name)
+        self._event_aggregator.publish(Events.ACTIVE_TOOL_CHANGED, tool_name=tool_name)
+        
 
     def dispatch_mouse_press_event(self, event: QMouseEvent) -> None:
         """Dispatches the mouse press event to the active tool."""

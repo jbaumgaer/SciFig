@@ -69,6 +69,7 @@ class Renderer:
     def _render_plots(self, figure: matplotlib.figure.Figure):
         """
         Renders all PlotNodes on the figure based on calculated geometries.
+        TODO: Don't just reach into the application model or the layout manager. Ask them instead
         """
         plot_nodes = [
             node

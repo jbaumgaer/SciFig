@@ -10,7 +10,6 @@ from src.shared.events import Events
 from src.interfaces.project_io import ProjectLifecycle
 from src.models.nodes.scene_node import node_factory
 from src.services.commands.command_manager import CommandManager
-from src.services.layout_manager import LayoutManager
 
 RECENT_FILES_KEY = "recentFiles"
 
@@ -39,6 +38,41 @@ class ProjectController:
         self.logger.info("ProjectController initialized.")
         # TODO: The QSettings dependency for recent files needs to be handled
         # by a dedicated service or through the View via events.
+        self._subscribe_to_events()
+
+    def _subscribe_to_events(self):
+        self._event_aggregator.subscribe(
+            Events.WINDOW_TITLE_REQUESTED, self._provide_window_title_data
+        )
+        self._event_aggregator.subscribe(
+            Events.PROJECT_IS_DIRTY_CHANGED, self._provide_window_title_data
+        )
+        self._event_aggregator.subscribe(
+            Events.PROJECT_OPENED, self._provide_window_title_data
+        )
+        self._event_aggregator.subscribe(
+            Events.PROJECT_WAS_RESET, self._provide_window_title_data
+        )
+
+    def _provide_window_title_data(self, *args, **kwargs):
+        """
+        Queries the model for the current file path and dirty status,
+        formats the window title, and publishes it for the view.
+        """
+        is_dirty = self._lifecycle.is_dirty
+        file_path = self._lifecycle.file_path
+
+        if file_path:
+            base_title = f"{file_path.name}[*] - SciFig"
+        else:
+            base_title = "Untitled[*] - SciFig"
+
+        self.logger.debug(f"Publishing WINDOW_TITLE_DATA_READY: title='{base_title}', is_dirty={is_dirty}")
+        self._event_aggregator.publish(
+            Events.WINDOW_TITLE_DATA_READY,
+            title=base_title,
+            is_dirty=is_dirty
+        )
 
     def get_template_names(self) -> list[str]:
         """Returns a list of available template file names."""

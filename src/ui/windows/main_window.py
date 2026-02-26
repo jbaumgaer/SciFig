@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
-from src.models.application_model import ApplicationModel
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
 from src.ui.builders.menu_bar_builder import MainMenuActions
@@ -29,7 +28,6 @@ class MainWindow(QMainWindow):
 
     def __init__(
         self,
-        model: ApplicationModel,
         menu_bar: QMenuBar,
         main_menu_actions: MainMenuActions,
         tool_bar: QToolBar,
@@ -41,7 +39,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("SciFig")
         self.setGeometry(50, 50, 800, 600)  # TODO: Inject these from the config service
 
-        self.model = model
         self._event_aggregator = event_aggregator
 
         self.side_panel_view, self.side_panel_dock = self._add_side_panel(side_panel)
@@ -57,7 +54,7 @@ class MainWindow(QMainWindow):
         self.canvas_widget: Optional[CanvasWidget] = None
 
         self._subscribe_to_events()
-        self._update_window_title() # Set initial title
+        self._event_aggregator.publish(Events.WINDOW_TITLE_REQUESTED)
 
     def _subscribe_to_events(self):
         """Subscribes to all relevant application events."""
@@ -74,13 +71,9 @@ class MainWindow(QMainWindow):
         self._event_aggregator.subscribe(
             Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, self._prompt_for_open_path_for_node_data
         )
-
-        # --- Subscribe to notifications that affect the window's state ---
         self._event_aggregator.subscribe(
-            Events.PROJECT_IS_DIRTY_CHANGED, self._update_window_title
+            Events.WINDOW_TITLE_DATA_READY, self._on_window_title_data_ready
         )
-        self._event_aggregator.subscribe(Events.PROJECT_OPENED, self._update_window_title)
-        self._event_aggregator.subscribe(Events.PROJECT_WAS_RESET, self._update_window_title)
 
 
     def set_canvas_widget(self, canvas_widget: CanvasWidget):
@@ -130,22 +123,12 @@ class MainWindow(QMainWindow):
         self._event_aggregator.publish(Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, node_id=node_id, path=path)
 
 
-    def _update_window_title(self, **kwargs):
-        """Updates the window title based on the current project state.
-        TODO: I don't understand how this works and what is_dirty is"""
-        is_dirty = self.model.is_dirty
-        # The 'is_dirty' kwarg from the event payload is authoritative if present
-        if 'is_dirty' in kwargs:
-            is_dirty = kwargs['is_dirty']
-
+    def _on_window_title_data_ready(self, title: str, is_dirty: bool):
+        """
+        Passively updates the window title and modified status from an event.
+        """
         self.setWindowModified(is_dirty)
-
-        if self.model.file_path:
-            base_title = f"{self.model.file_path.name}[*] - SciFig"
-        else:
-            base_title = "Untitled[*] - SciFig"
-        
-        self.setWindowTitle(base_title)
+        self.setWindowTitle(title)
 
     def _add_side_panel(self, side_panel: SidePanel):
         """Makes the side panel dock widget visible and raises it to the top."""

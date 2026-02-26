@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
 )
 
 from src.controllers.layout_controller import LayoutController
-from src.models.application_model import ApplicationModel
 from src.models.layout.layout_config import GridConfig, LayoutConfig
 from src.services.event_aggregator import EventAggregator
 from src.shared.constants import LayoutMode
@@ -21,15 +20,12 @@ from src.ui.factories.layout_ui_factory import LayoutUIFactory
 class LayoutTab(QWidget):
     def __init__(
         self,
-        model: ApplicationModel,
         event_aggregator: EventAggregator,
         layout_controller: LayoutController,
         layout_ui_factory: LayoutUIFactory,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
-        # TODO: Check if I even pass a parent
-        self.model = model
         self._event_aggregator = event_aggregator
         self.layout_controller = layout_controller
         self.layout_ui_factory = layout_ui_factory

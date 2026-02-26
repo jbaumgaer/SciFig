@@ -16,6 +16,7 @@ class CanvasWidget(QGraphicsView):
     The main canvas widget that hosts the Matplotlib figure.
     It uses a QGraphicsView to allow for Illustrator-like panning and zooming,
     and it handles drag-and-drop events for data files.
+    TODO: Remove the signals and move to events
     """
 
     # Signal emitted when a file is dropped onto the canvas

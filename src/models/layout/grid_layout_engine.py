@@ -6,10 +6,9 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.transforms import Bbox
 
-from src.models.layout.layout_config import GridConfig, Gutters, LayoutConfig, Margins
+from src.models.layout.layout_config import GridConfig, Gutters, Margins
 from src.models.layout.layout_engine import LayoutEngine
 from src.models.nodes import PlotNode
-from src.services.config_service import ConfigService
 from src.shared.types import PlotID, Rect
 
 
@@ -21,7 +20,6 @@ class GridLayoutEngine(LayoutEngine):
 
     def __init__(self): # Removed config_service
         super().__init__()
-        # Removed self._config_service = config_service
         self.logger.info("GridLayoutEngine initialized.")
 
     def calculate_geometries(

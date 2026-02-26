@@ -142,18 +142,18 @@ class CompositionRoot:
     def _assemble_tooling(self):
         """Assemble the tool manager, individual tools, and the toolbar."""
         self.logger.info("Assembling tooling.")
-        self._tool_manager = ToolService()
+        self._tool_manager = ToolService(event_aggregator=self._event_aggregator)
         self._selection_tool = SelectionTool(model=self._application_model, canvas_widget=None)
         self._tool_manager.add_tool(self._selection_tool)
         default_active_tool_name = self._config_service.get("tool.default_active_tool", ToolName.SELECTION.value)
-        self._tool_manager.set_active_tool(default_active_tool_name)
-        self.logger.debug(f"Default active tool set to: {default_active_tool_name}")
         self._tool_manager.add_tool(MockTool(self._config_service.get("tool.direct_selection.name", ToolName.DIRECT_SELECTION.value), IconPath.get_path("tool_icons.direct_select"), self._application_model, None))
         self._tool_manager.add_tool(MockTool(self._config_service.get("tool.eyedropper.name", ToolName.EYEDROPPER.value), IconPath.get_path("tool_icons.eyedropper"), self._application_model, None))
         self._tool_manager.add_tool(MockTool(self._config_service.get("tool.plot.name", ToolName.PLOT.value), IconPath.get_path("tool_icons.plot"), self._application_model, None))
         self._tool_manager.add_tool(MockTool(self._config_service.get("tool.text.name", ToolName.TEXT.value), IconPath.get_path("tool_icons.text"), self._application_model, None))
         self._tool_manager.add_tool(MockTool(self._config_service.get("tool.zoom.name", ToolName.ZOOM.value), IconPath.get_path("tool_icons.zoom"), self._application_model, None))
-        tool_bar_builder = ToolBarBuilder(tool_manager=self._tool_manager)
+        tool_bar_builder = ToolBarBuilder(tool_service=self._tool_manager, event_aggregator=self._event_aggregator)
+        self._tool_manager.set_active_tool(default_active_tool_name)
+        self.logger.debug(f"Default active tool set to: {default_active_tool_name}")
         self._tool_bar, self._tool_bar_actions = tool_bar_builder.build()
 
     def _assemble_side_panel(self):
@@ -174,7 +174,7 @@ class CompositionRoot:
         self._plot_properties_ui_factory.register_builder(
             PlotType.SCATTER, _build_scatter_plot_ui_widgets
         )
-        self._side_panel = SidePanel(model=self._application_model, event_aggregator=self._event_aggregator)
+        self._side_panel = SidePanel(event_aggregator=self._event_aggregator)
         properties_tab = PropertiesTab(
             model=self._application_model,
             event_aggregator=self._event_aggregator,
@@ -182,7 +182,6 @@ class CompositionRoot:
             parent=self._side_panel,
         )
         layout_tab = LayoutTab(
-            model=self._application_model,
             layout_controller=self._layout_controller,
             layout_ui_factory=self._layout_ui_factory,
             event_aggregator=self._event_aggregator,
@@ -201,7 +200,6 @@ class CompositionRoot:
         """Assemble the main application window."""
         self.logger.info("Assembling main window.")
         self._view = MainWindow(
-            model=self._application_model,
             menu_bar=self._menu_bar,
             main_menu_actions=self._main_menu_actions,
             tool_bar=self._tool_bar,
@@ -295,6 +293,10 @@ class CompositionRoot:
         self._event_aggregator.subscribe(Events.PROJECT_WAS_RESET, self._layout_manager.on_model_reset)
 
         # --- Redraw Canvas Callbacks (Granular Events) ---
+        self._event_aggregator.subscribe(Events.SCENE_GRAPH_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.SELECTION_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PROJECT_OPENED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PROJECT_WAS_RESET, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_VISIBILITY_CHANGED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_POSITION_CHANGED, self._redraw_canvas_callback)
@@ -314,7 +316,7 @@ class CompositionRoot:
         self._event_aggregator.subscribe(Events.NODE_ORDER_CHANGED_IN_SCENE, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.LAYOUT_CONFIG_CHANGED, self._redraw_canvas_callback)
 
-    def _redraw_canvas_callback(self):
+    def _redraw_canvas_callback(self, *args, **kwargs):
         """Callback to trigger canvas redraw."""
         self.logger.debug("CompositionRoot._redraw_canvas_callback called")
         self._renderer.render(

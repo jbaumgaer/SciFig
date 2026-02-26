@@ -117,6 +117,7 @@ class LayersTab(QWidget):
     def _update_content(self, *args, **kwargs): # Added *args, **kwargs to match event signature
         """
         Clears and rebuilds the QTreeWidget based on the current ApplicationModel.
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
         """
         self.logger.debug("LayersTab: Updating content of QTreeWidget.")
         self._tree_widget.blockSignals(True)  # Block signals during rebuild
@@ -126,6 +127,7 @@ class LayersTab(QWidget):
         self._add_node_to_tree(
             self.model.scene_root, self._tree_widget.invisibleRootItem()
         )
+        
 
         self._tree_widget.expandAll()  # Expand all nodes by default
         self._update_selection_in_tree(self.model.selection) #TODO: This should later be requested instead of just taken
@@ -135,6 +137,7 @@ class LayersTab(QWidget):
     def _add_node_to_tree(self, node: SceneNode, parent_item: QTreeWidgetItem):
         """
         Recursively adds a SceneNode and its children to the QTreeWidget.
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
         """
         if node == self.model.scene_root:  # Don't add the invisible root node itself
             for child in node.children:
@@ -178,6 +181,7 @@ class LayersTab(QWidget):
         """
         Handles changes to a QTreeWidgetItem (e.g., checkbox state, text edit)
         and publishes corresponding request events.
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
         """
         node_id = item.data(self.COL_NAME, Qt.UserRole)
         if not node_id:
@@ -202,6 +206,7 @@ class LayersTab(QWidget):
         """
         Handles double-clicking an item in the tree.
         Could be used for in-place renaming or opening properties.
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
         """
         node_id = item.data(self.COL_NAME, Qt.UserRole)
         node = self.model.scene_root.find_node_by_id(node_id)
@@ -238,7 +243,8 @@ class LayersTab(QWidget):
             )
 
     def _ungroup_selected_node(self):
-        """Publishes request to ungroup a selected GroupNode."""
+        """Publishes request to ungroup a selected GroupNode.
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture."""
         selected_items = self._tree_widget.selectedItems()
         if len(selected_items) == 1:
             node_id = selected_items[0].data(self.COL_NAME, Qt.UserRole)
@@ -255,7 +261,8 @@ class LayersTab(QWidget):
             )
 
     def _update_toolbar_buttons(self):
-        """Updates the enabled state of toolbar buttons based on selection."""
+        """Updates the enabled state of toolbar buttons based on selection.
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture."""
         selected_items = self._tree_widget.selectedItems()
         self._group_button.setEnabled(len(selected_items) > 1)
 

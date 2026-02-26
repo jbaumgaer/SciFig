@@ -21,6 +21,7 @@ class Events(Enum):
     PROJECT_OPENED = auto()  # Payload: project_metadata: dict
     PROJECT_WAS_RESET = auto()
     PROJECT_IS_DIRTY_CHANGED = auto()  # Payload: is_dirty: bool
+    WINDOW_TITLE_DATA_READY = auto()  # Payload: title: str, is_dirty: bool
 
     # --- Node Property Changes ---
     NODE_RENAMED = auto()  # Payload: node_id: str, new_name: str
@@ -46,6 +47,7 @@ class Events(Enum):
     NODE_REMOVED_FROM_SCENE = auto()  # Payload: parent_id: str, removed_node_id: str
     NODE_REPARENTED_IN_SCENE = auto()  # Payload: node_id: str, new_parent_id: str, new_index: int
     NODE_ORDER_CHANGED_IN_SCENE = auto()  # Payload: parent_id: str, new_ordered_child_ids: list[str]
+    SWITCH_SIDEPANEL_TAB = auto()  # Payload: tab_key: str
 
     # --- Layout Changes ---
     LAYOUT_CONFIG_CHANGED = auto()  # Payload: new_config: dict
@@ -54,7 +56,7 @@ class Events(Enum):
 
     # --- Other Notification Events ---
     SELECTION_CHANGED = auto()  # Payload: selected_node_ids: list[str]
-    ACTIVE_TOOL_DID_CHANGE = auto()  # Payload: new_tool_name: str
+    ACTIVE_TOOL_CHANGED = auto()  # Payload: tool_name: str
     RECENT_PROJECTS_LIST_UPDATED = auto()  # Payload: file_list: list[str]
     GRID_CONFIG_PARAMETERS_CHANGED = auto()  # Payload: new_grid_config: dict
 
@@ -70,6 +72,7 @@ class Events(Enum):
     SAVE_PROJECT_AS_REQUESTED = auto()
     UNDO_REQUESTED = auto()
     REDO_REQUESTED = auto()
+    WINDOW_TITLE_REQUESTED = auto()
 
     # --- Node Property Change Requests ---
     RENAME_NODE_REQUESTED = auto()  # Payload: node_id: str, new_name: str

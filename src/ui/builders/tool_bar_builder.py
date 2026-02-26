@@ -4,8 +4,10 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QToolBar
 
+from src.services.event_aggregator import EventAggregator
 from src.services.tool_service import ToolService
 from src.shared.constants import IconPath, ToolName
+from src.shared.events import Events
 
 
 @dataclass
@@ -22,13 +24,14 @@ class ToolBarActions:
 
 class ToolBarBuilder(QObject):
     """
-    Builds the main application toolbar and manages its state based on the ToolManager.
+    Builds the main application toolbar and manages its state based on the ToolService.
     """
 
-    def __init__(self, tool_manager: ToolService):  # Removed parent_window
-        super().__init__()  # Removed parent_window
-        self._tool_manager = tool_manager
-        self._actions: dict[str, QAction] = {}  # To store actions by tool name
+    def __init__(self, tool_service: ToolService, event_aggregator: EventAggregator):
+        super().__init__()
+        self._tool_service = tool_service
+        self._event_aggregator = event_aggregator
+        self._actions: dict[str, QAction] = {}
 
     def build(self) -> tuple[QToolBar, ToolBarActions]:
         """
@@ -74,13 +77,15 @@ class ToolBarBuilder(QObject):
             )  # Parent QAction to tool_bar
             action.setCheckable(True)
             action.triggered.connect(
-                lambda checked, name=tool_name: self._tool_manager.set_active_tool(name)
+                lambda checked, name=tool_name: self._tool_service.set_active_tool(name)
             )
             tool_bar.addAction(action)
             self._actions[tool_name.value] = action  # Use tool_name.value for dict key
 
-        # Connect tool manager signal to update toolbar state
-        self._tool_manager.active_tool_changed.connect(self._update_tool_bar_state)
+        # Connect tool service signal to update toolbar state
+        self._event_aggregator.subscribe(Events.ACTIVE_TOOL_CHANGED, self._update_tool_bar_state)
+        initial_active_tool = self._tool_service.active_tool.name
+        self._update_tool_bar_state(initial_active_tool)
 
         # Return a ToolBarActions dataclass for easy access to specific actions
         toolbar_actions = ToolBarActions(

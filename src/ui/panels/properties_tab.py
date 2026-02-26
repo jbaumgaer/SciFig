@@ -170,6 +170,7 @@ class PropertiesTab(QWidget):
         """
         Updates the content of the PropertiesTab based on the current selection.
         This method orchestrates updates for all sections of the tab.
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
         """
         self.logger.debug("PropertiesTab: Updating content.")
         selected_nodes = self.model.selection
@@ -181,6 +182,7 @@ class PropertiesTab(QWidget):
     def _update_subplot_selection_ui(self, selected_nodes: list[QObject]):
         """
         Populates the subplot selector combo box and updates the data file path display.
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
         """
         self.logger.debug("PropertiesTab: Updating subplot selection UI.")
         self._subplot_selector_combo.blockSignals(True)
@@ -288,7 +290,6 @@ class PropertiesTab(QWidget):
                 limit_edits=self._limit_edits,
                 x_combo=self._x_combo,
                 y_combo=self._y_combo,
-                event_aggregator=self._event_aggregator,
             )
         else:
             self._dynamic_properties_layout.addWidget(

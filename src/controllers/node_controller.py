@@ -80,8 +80,26 @@ class NodeController(QObject):
         self._event_aggregator.subscribe(
             Events.CHANGE_NODE_LOCKED_REQUESTED, self._handle_node_locked_request
         )
+        self._event_aggregator.subscribe(
+           Events.SELECTION_CHANGED, self._handle_selection_for_ui_management
+       )
         # TODO: Add subscriptions for group, ungroup, reorder requests when commands are implemented
 
+    def _handle_selection_for_ui_management(self, selected_node_ids: list[str]):
+        """
+        Analyzes the selection and publishes events to manage UI components
+        like the SidePanel based on the selection state.
+        """
+        if len(selected_node_ids) == 1:
+            # We must get the node from the model to check its type
+            node = self._get_node_by_id(selected_node_ids[0])
+            if isinstance(node, PlotNode):
+                self.logger.debug(
+                    "NodeController: Single PlotNode selected. Requesting SidePanel switch to 'properties' tab."
+                )
+                self._event_aggregator.publish(
+                    Events.SWITCH_SIDEPANEL_TAB, tab_key="properties"
+                )
 
     def _get_node_by_id(self, node_id: str) -> Optional[SceneNode]:
         node = self.model.scene_root.find_node_by_id(node_id) #TODO: In the fugure, I might want to change this by asking the model for the node directly, instead of reaching deep into the model's scene graph

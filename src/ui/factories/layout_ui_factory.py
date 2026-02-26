@@ -14,11 +14,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.controllers.layout_controller import LayoutController # Keep for building, remove direct calls
-from src.services.event_aggregator import EventAggregator # New import
+from src.controllers.layout_controller import LayoutController
+from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import IconPath, LayoutMode
-from src.shared.events import Events # New import
+from src.shared.events import Events
 
 
 class LayoutUIFactory:
@@ -30,7 +30,7 @@ class LayoutUIFactory:
 
     def __init__(self, layout_manager: LayoutManager, event_aggregator: EventAggregator):
         self._layout_manager = layout_manager
-        self._event_aggregator = event_aggregator # Store EventAggregator
+        self._event_aggregator = event_aggregator
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutUIFactory initialized.")
 
@@ -38,8 +38,8 @@ class LayoutUIFactory:
         self,
         icon_key: str,
         tooltip: str,
-        event_to_publish: Events, # Now takes an event enum
-        event_payload: dict, # And a payload for the event
+        event_to_publish: Events,
+        event_payload: dict,
         parent: QWidget,
         object_name: Optional[str] = None,
     ) -> QPushButton:

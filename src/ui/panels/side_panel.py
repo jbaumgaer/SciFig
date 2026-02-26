@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QTabWidget
 )
 
-from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
@@ -24,19 +23,16 @@ class SidePanel(QTabWidget):
 
     def __init__(
         self,
-        model: ApplicationModel,
         event_aggregator: EventAggregator
     ):
         super().__init__()
-        self.model = model
         self._tabs: dict[str, QWidget] = {}
         self._event_aggregator = event_aggregator
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Connect model signals to the new _on_selection_changed method
-        self._event_aggregator.subscribe(Events.SELECTION_CHANGED, self._on_selection_changed)
-        self._on_selection_changed() # Initial call to set up tab state
+        self._event_aggregator.subscribe(Events.SWITCH_SIDEPANEL_TAB, self._on_switch_tab)
         self.logger.info("SidePanel initialized.")
 
     def add_tab(self, tab_key: str, tab_widget: QWidget, tab_name: str):
@@ -78,21 +74,16 @@ class SidePanel(QTabWidget):
                 if sub_layout is not None:
                     self._clear_layout(sub_layout)
 
-
-    def _on_selection_changed(self):
+    def _on_switch_tab(self, tab_key: str):
         """
-        Handles changes in application model selection, potentially switching tabs.
+        Passively switches the active tab based on an event command.
         """
-        self.logger.debug(
-            "SidePanel: Selection changed. Checking for PlotNode selection."
-        )
-        selection = self.model.selection
-        if len(selection) == 1 and isinstance(selection[0], PlotNode):
-            self.logger.debug(
-                "SidePanel: Single PlotNode selected. Switching to Properties tab."
-            )
-            self.setCurrentWidget(self.properties_tab) # Changed
-        # Future: Handle other node types or no selection gracefully
+        target_tab = self._tabs.get(tab_key)
+        if target_tab and self.currentWidget() != target_tab:
+            self.logger.debug(f"SidePanel: Switching to tab with key '{tab_key}'.")
+            self.setCurrentWidget(target_tab)
+        elif not target_tab:
+            self.logger.warning(f"SidePanel: Requested tab key '{tab_key}' not found.")
 
     def show_tab_by_name(self, tab_name: str):
         """
