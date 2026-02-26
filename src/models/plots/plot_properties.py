@@ -1,113 +1,209 @@
-from dataclasses import dataclass, field
-from typing import Optional, Type
-
+from dataclasses import dataclass, field, asdict
+from typing import Optional, List, Dict, Any, Union
 from src.models.plots.plot_types import PlotType
 
+@dataclass
+class FontProperties:
+    family: str
+    style: str
+    variant: str
+    weight: str
+    stretch: str
+    size: float
 
 @dataclass
-class PlotMapping:
-    x: Optional[str]
-    y: list[str]
-
-    def update_from_dict(self, data: dict):
-        for key, value in data.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-
-
-@dataclass
-class AxesLimits:
-    xlim: tuple[Optional[float], Optional[float]]
-    ylim: tuple[Optional[float], Optional[float]]
-
-    def update_from_dict(self, data: dict):
-        for key, value in data.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-
+class TextProperties:
+    text: str
+    color: str
+    alpha: float
+    font: FontProperties
+    rotation: float
+    va: str
+    ha: str
+    parse_math: bool
 
 @dataclass
-class BasePlotProperties:
-    """
-    Base class for plot properties. It contains properties that are common
-    to all plot types.
-    """
-
-    title: str = ""
-    xlabel: str = ""
-    ylabel: str = ""
-    plot_mapping: PlotMapping = field(default_factory=lambda: PlotMapping(x=None, y=[]))
-    axes_limits: AxesLimits = field(
-        default_factory=lambda: AxesLimits(xlim=(None, None), ylim=(None, None))
-    )
-    plot_type: PlotType = PlotType.LINE
-
-    def update_from_dict(self, data: dict, exclude_geometry: bool = False):
-        """
-        Updates the properties of this object from a dictionary,
-        optionally excluding geometry-related properties (if any exist in subclasses).
-        """
-        for key, value in data.items():
-            # geometry is not part of BasePlotProperties
-            if hasattr(self, key):
-                current_attr = getattr(self, key)
-                if isinstance(current_attr, (PlotMapping, AxesLimits)) and isinstance(
-                    value, dict
-                ):
-                    current_attr.update_from_dict(value)
-                elif key == "plot_type":
-                    setattr(self, key, PlotType(value))
-                else:
-                    setattr(self, key, value)
-
-    @staticmethod
-    def create_properties_from_plot_type(
-        new_plot_type: PlotType,
-        current_properties: Optional["BasePlotProperties"] = None,
-    ) -> "BasePlotProperties":
-        """
-        Creates a new PlotProperties object of the specified type,
-        transferring common properties from an existing object if provided.
-        """
-        target_class = PLOT_TYPE_TO_PROPERTY_CLASS[new_plot_type]
-        if current_properties:
-            # Transfer common properties
-            common_kwargs = {
-                "title": current_properties.title,
-                "xlabel": current_properties.xlabel,
-                "ylabel": current_properties.ylabel,
-                "plot_mapping": current_properties.plot_mapping,
-                "axes_limits": current_properties.axes_limits,
-                "plot_type": new_plot_type,
-            }
-            # Add specific properties if they exist in current_properties and target_class
-            if new_plot_type == PlotType.SCATTER and isinstance(
-                current_properties, ScatterPlotProperties
-            ):
-                common_kwargs["marker_size"] = current_properties.marker_size
-
-            return target_class(**common_kwargs)
-        else:
-            return target_class(plot_type=new_plot_type)
-
+class LineProperties:
+    linewidth: float
+    linestyle: str
+    color: str
+    marker: str
+    markerfacecolor: str
+    markeredgecolor: str
+    markeredgewidth: float
+    markersize: float
+    antialiased: bool
+    alpha: float
 
 @dataclass
-class LinePlotProperties(BasePlotProperties):
-    """Properties specific to a line plot."""
-
-    pass
-
+class PatchProperties:
+    facecolor: str
+    edgecolor: str
+    linewidth: float
+    alpha: float
+    force_edgecolor: bool
+    antialiased: bool
+    hatch: Optional[str]
 
 @dataclass
-class ScatterPlotProperties(BasePlotProperties):
-    """Properties specific to a scatter plot."""
+class TickProperties:
+    major_size: float
+    minor_size: float
+    major_width: float
+    minor_width: float
+    major_pad: float
+    minor_pad: float
+    direction: str
+    color: str
+    labelcolor: str
+    labelsize: float
+    minor_visible: bool
+    major_top: bool
+    major_bottom: bool
+    minor_top: bool
+    minor_bottom: bool
+    minor_ndivs: int
 
-    marker_size: int = 10  # TODO: Move into config
-    plot_type: PlotType = PlotType.SCATTER
+@dataclass
+class SpineProperties:
+    visible: bool
+    color: str
+    linewidth: float
+    position: tuple[str, float]
 
+@dataclass
+class GridProperties:
+    visible: bool
+    color: str
+    linestyle: str
+    linewidth: float
+    alpha: float
+    axis: str
+    which: str
 
-# Mapping of PlotType enum to their respective Property classes
-PLOT_TYPE_TO_PROPERTY_CLASS: dict[PlotType, Type[BasePlotProperties]] = {
-    PlotType.LINE: LinePlotProperties,
-    PlotType.SCATTER: ScatterPlotProperties,
-}
+@dataclass
+class AxisProperties:
+    label: TextProperties
+    limits: tuple[Optional[float], Optional[float]]
+    scale: str
+    ticks: TickProperties
+    grid: GridProperties
+    margin: float
+    autolimit_mode: str
+    use_offset: bool
+    offset_threshold: int
+    scientific_limits: tuple[int, int]
+
+@dataclass
+class Cartesian2DProperties:
+    xaxis: AxisProperties
+    yaxis: AxisProperties
+    spines: Dict[str, SpineProperties]
+    facecolor: str
+    axis_below: Union[bool, str]
+    prop_cycle: List[str]
+
+@dataclass
+class Cartesian3DProperties(Cartesian2DProperties):
+    zaxis: AxisProperties
+    pane_colors: Dict[str, tuple[float, float, float, float]]
+
+@dataclass
+class PolarProperties:
+    theta_axis: AxisProperties
+    r_axis: AxisProperties
+    spine: SpineProperties
+
+@dataclass
+class ScalarMappableProperties:
+    cmap: str
+    norm_min: Optional[float]
+    norm_max: Optional[float]
+    has_colorbar: bool
+
+# --- Artist Level Properties (Data + Visuals) ---
+
+@dataclass
+class BaseArtistProperties:
+    label: str
+    visible: bool
+    zorder: int
+
+@dataclass
+class LineArtistProperties(BaseArtistProperties):
+    visuals: LineProperties
+    x_column: str
+    y_column: str
+
+@dataclass
+class ScatterArtistProperties(BaseArtistProperties):
+    visuals: LineProperties
+    x_column: str
+    y_column: str
+    size_column: Optional[str] = None
+    color_column: Optional[str] = None
+
+@dataclass
+class BarArtistProperties(BaseArtistProperties):
+    visuals: PatchProperties
+    x_column: str
+    y_column: str
+    width: float
+    align: str
+
+@dataclass
+class ImageArtistProperties(BaseArtistProperties):
+    visuals: ScalarMappableProperties
+    data_column: str  # Column containing 2D matrix/array
+    interpolation: str
+    origin: str
+    extent: Optional[tuple[float, ...]]
+
+@dataclass
+class MeshArtistProperties(BaseArtistProperties):
+    visuals: ScalarMappableProperties
+    x_column: str
+    y_column: str
+    z_column: str
+    shading: str
+    antialiased: bool
+
+@dataclass
+class ContourArtistProperties(BaseArtistProperties):
+    visuals: ScalarMappableProperties
+    z_column: str
+    levels: Union[int, List[float]]
+    filled: bool
+
+@dataclass
+class HistogramArtistProperties(BaseArtistProperties):
+    visuals: PatchProperties
+    data_column: str
+    bins: Union[int, str]
+    density: bool
+    cumulative: bool
+
+@dataclass
+class StairArtistProperties(BaseArtistProperties):
+    visuals: LineProperties
+    data_column: str
+    baseline: float
+    fill: bool
+
+@dataclass
+class PlotProperties:
+    """The root property tree for a single PlotNode."""
+    titles: Dict[str, TextProperties] # 'left', 'center', 'right'
+    coords: Union[Cartesian2DProperties, Cartesian3DProperties, PolarProperties]
+    legend: Dict[str, Any]
+    plot_type: PlotType
+    artists: List[Any] = field(default_factory=list)
+    _version: int = 0
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PlotProperties":
+        # Implementation will be completed during the serialization refactor
+        pass
