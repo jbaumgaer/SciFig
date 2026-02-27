@@ -113,4 +113,7 @@ This document lists the planned and implemented capabilities of the scientific g
 - Advanced Plot Redistribution: Intelligently redistributes existing plots onto new layout slots, preserving data and adjusting plot sizes.
 - Adding New Plot with Redistribution Options: Allows users to add new plots with choices for intelligent redistribution or free-form placement.
 - Drag-and-Drop Plot Reassignment: Enables interactive reassignment of plots by dragging and dropping them onto new positions or slots.
+- Matplotlib functions that may be relevant: https://matplotlib.org/stable/api/widgets_api.html#gui-neutral-widgets 
+- Joinstyle and Capstyle: https://matplotlib.org/stable/api/_enums_api.html#matplotlib._enums
+
 
