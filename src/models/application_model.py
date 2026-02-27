@@ -22,6 +22,7 @@ class ApplicationModel(ProjectLifecycle):
         self._event_aggregator = event_aggregator
         self.scene_root = GroupNode(name="root")
         self.selection: list[SceneNode] = []
+        self.selected_path: str = ""  # The path to a sub-component within the selection
         self._file_path: Optional[Path] = None
         self._is_dirty: bool = False
         self._current_layout_config: LayoutConfig = FreeConfig()
@@ -45,7 +46,16 @@ class ApplicationModel(ProjectLifecycle):
         """Sets the selection and publishes SELECTION_CHANGED event."""
         if self.selection != nodes:
             self.selection = nodes
+            self.selected_path = ""  # Reset sub-selection when the main selection changes
             self._event_aggregator.publish(Events.SELECTION_CHANGED, selected_node_ids=[n.id for n in nodes])
+
+    def set_selected_path(self, path: str):
+        """Sets the selected sub-component path and publishes SUB_COMPONENT_SELECTED."""
+        if self.selected_path != path:
+            self.selected_path = path
+            # Notify that a sub-component of the current selection (usually the first node) is focused
+            node_id = self.selection[0].id if self.selection else None
+            self._event_aggregator.publish(Events.SUB_COMPONENT_SELECTED, node_id=node_id, path=path)
 
 
     def set_scene_root(self, new_root: SceneNode):
