@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QMenuBar, QToolBar
 
 from src.core.application_components import ApplicationComponents
 from src.core.composition_root import CompositionRoot
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.tools import MockTool
 from src.shared.constants import ToolName
 from src.shared.exceptions import ConfigError
@@ -551,10 +551,10 @@ class TestCompositionRoot:
 
         # Verify register_builder calls
         mock_plot_properties_ui_factory.register_builder.assert_any_call(
-            PlotType.LINE, composition_root._mock_build_line_plot_ui_widgets_func
+            ArtistType.LINE, composition_root._mock_build_line_plot_ui_widgets_func
         )
         mock_plot_properties_ui_factory.register_builder.assert_any_call(
-            PlotType.SCATTER, composition_root._mock_build_scatter_plot_ui_widgets_func
+            ArtistType.SCATTER, composition_root._mock_build_scatter_plot_ui_widgets_func
         )
         assert mock_plot_properties_ui_factory.register_builder.call_count == 2
 

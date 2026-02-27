@@ -15,7 +15,7 @@ from src.models.plots.plot_properties import (
     PlotMapping,
     ScatterPlotProperties,
 )
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.commands.command_manager import CommandManager
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import LayoutMode
@@ -55,7 +55,7 @@ def properties_ui_factory_mock():
         # Simulate adding a QComboBox for plot type selection
         plot_type_combo = QComboBox(parent)
         plot_type_combo.setObjectName("plot_type_combo")
-        plot_type_combo.addItems([pt.value for pt in PlotType])
+        plot_type_combo.addItems([pt.value for pt in ArtistType])
         plot_type_combo.setCurrentText(node.plot_properties.plot_type.value)
         # Mock the signals to allow connecting in the test, but don't call real slots
         plot_type_combo.currentTextChanged = MagicMock()
@@ -68,7 +68,7 @@ def properties_ui_factory_mock():
         layout.addRow("Title:", title_edit)
 
         # Simulate specific widgets based on plot type, for testing findChild behavior
-        if node.plot_properties.plot_type == PlotType.SCATTER:
+        if node.plot_properties.plot_type == ArtistType.SCATTER:
             marker_size_edit = QLineEdit(str(node.plot_properties.marker_size), parent)
             marker_size_edit.setObjectName("marker_size_edit")
             layout.addRow("Marker Size:", marker_size_edit)
@@ -111,7 +111,7 @@ def main_controller_mock(app_model, command_manager, layout_manager_mock):
 @pytest.fixture
 def properties_view(app_model, command_manager, properties_ui_factory_mock):
     """Provides a PropertiesView instance."""
-    plot_types = [PlotType.LINE, PlotType.SCATTER]
+    plot_types = [ArtistType.LINE, ArtistType.SCATTER]
     view = PropertiesPanel(
         app_model, command_manager, plot_types, properties_ui_factory_mock
     )
@@ -128,7 +128,7 @@ def properties_view_with_layout_mocks(
     main_controller_mock,
 ):
     """Provides a PropertiesView instance with new layout-related dependencies."""
-    plot_types = [PlotType.LINE, PlotType.SCATTER]
+    plot_types = [ArtistType.LINE, ArtistType.SCATTER]
     view = PropertiesPanel(
         app_model,
         command_manager,
@@ -157,7 +157,7 @@ def test_properties_view_rebuilds_ui_on_plot_type_change(
         ylabel="Y",
         plot_mapping=PlotMapping(x="col1", y=["col2"]),
         axes_limits=AxesLimits(xlim=(0, 1), ylim=(0, 1)),
-        plot_type=PlotType.LINE,
+        plot_type=ArtistType.LINE,
     )
     app_model.set_selection([plot_node])
     qtbot.addWidget(properties_view)
@@ -169,14 +169,14 @@ def test_properties_view_rebuilds_ui_on_plot_type_change(
     )
     assert properties_view.findChild(QLineEdit, "marker_size_edit") is None
     assert isinstance(plot_node.plot_properties, LinePlotProperties)
-    assert plot_node.plot_properties.plot_type == PlotType.LINE
+    assert plot_node.plot_properties.plot_type == ArtistType.LINE
 
     # 2. Change plot type to SCATTER using the UI
     plot_type_combo = properties_view.findChild(QComboBox, "plot_type_combo")
     assert plot_type_combo is not None
-    plot_type_combo.setCurrentText(PlotType.SCATTER.value)
+    plot_type_combo.setCurrentText(ArtistType.SCATTER.value)
     properties_view._on_plot_type_changed(
-        PlotType.SCATTER.value, plot_node
+        ArtistType.SCATTER.value, plot_node
     )  # Manually trigger the slot
     qtbot.waitUntil(
         lambda: isinstance(plot_node.plot_properties, ScatterPlotProperties)
@@ -189,12 +189,12 @@ def test_properties_view_rebuilds_ui_on_plot_type_change(
     marker_size_edit = properties_view.findChild(QLineEdit, "marker_size_edit")
     assert marker_size_edit is not None
     assert isinstance(plot_node.plot_properties, ScatterPlotProperties)
-    assert plot_node.plot_properties.plot_type == PlotType.SCATTER
+    assert plot_node.plot_properties.plot_type == ArtistType.SCATTER
 
     # 4. Change plot type back to LINE using the UI
-    plot_type_combo.setCurrentText(PlotType.LINE.value)
+    plot_type_combo.setCurrentText(ArtistType.LINE.value)
     properties_view._on_plot_type_changed(
-        PlotType.LINE.value, plot_node
+        ArtistType.LINE.value, plot_node
     )  # Manually trigger the slot
     qtbot.waitUntil(lambda: isinstance(plot_node.plot_properties, LinePlotProperties))
 
@@ -204,7 +204,7 @@ def test_properties_view_rebuilds_ui_on_plot_type_change(
     )
     assert properties_view.findChild(QLineEdit, "marker_size_edit") is None
     assert isinstance(plot_node.plot_properties, LinePlotProperties)
-    assert plot_node.plot_properties.plot_type == PlotType.LINE
+    assert plot_node.plot_properties.plot_type == ArtistType.LINE
 
 
 def test_properties_view_displays_layout_controls_by_default(

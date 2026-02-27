@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call
 
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.group_node import GroupNode
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.models.plots.plot_properties import LinePlotProperties, ScatterPlotProperties
 from src.ui.panels.properties_tab import PropertiesTab
 from pathlib import Path
@@ -47,9 +47,9 @@ def create_mock_plot_node(mocker, node_id, name, plot_type, data_file_path=None)
     """Creates a mock PlotNode with specified properties."""
     node = mocker.Mock(spec=PlotNode, id=node_id, name=name)
     node.data_file_path = Path(data_file_path) if data_file_path else None
-    if plot_type == PlotType.LINE:
+    if plot_type == ArtistType.LINE:
         node.plot_properties = LinePlotProperties(title=f"{name} Title", plot_type=plot_type)
-    elif plot_type == PlotType.SCATTER:
+    elif plot_type == ArtistType.SCATTER:
         node.plot_properties = ScatterPlotProperties(title=f"{name} Title", plot_type=plot_type)
     else:
         node.plot_properties = mocker.Mock(plot_type=plot_type)
@@ -64,8 +64,8 @@ class TestPropertiesTab:
         assert isinstance(properties_tab._plot_type_group, QGroupBox)
         assert isinstance(properties_tab._dynamic_properties_area, QWidget)
 
-        assert properties_tab._plot_type_selector_combo.count() == len(PlotType)
-        for i, plot_type in enumerate(PlotType):
+        assert properties_tab._plot_type_selector_combo.count() == len(ArtistType)
+        for i, plot_type in enumerate(ArtistType):
             assert properties_tab._plot_type_selector_combo.itemText(i) == plot_type.value
 
         # In the new code, build_widgets is called inside _update_node_specific_properties_ui
@@ -76,7 +76,7 @@ class TestPropertiesTab:
 
     def test_update_content_with_single_plot_selection(self, properties_tab, mock_application_model, mock_plot_properties_ui_factory, mocker, qtbot):
         """Verify UI updates correctly when a single plot node is selected."""
-        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", PlotType.LINE, "data/data1.csv")
+        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE, "data/data1.csv")
         mock_application_model.scene_root.all_descendants.return_value = [plot_node]
         mock_application_model.selection = [plot_node]
         mock_plot_properties_ui_factory.reset_mock()
@@ -86,7 +86,7 @@ class TestPropertiesTab:
         assert properties_tab._subplot_selector_combo.count() == 1
         assert properties_tab._subplot_selector_combo.currentText() == "Plot 1" # Displays name, not name + id
         assert properties_tab._data_file_path_edit.text() == str(plot_node.data_file_path)
-        assert properties_tab._plot_type_selector_combo.currentText() == PlotType.LINE.value
+        assert properties_tab._plot_type_selector_combo.currentText() == ArtistType.LINE.value
         mock_plot_properties_ui_factory.build_widgets.assert_called_once()
         assert mock_plot_properties_ui_factory.build_widgets.call_args[0][0] == plot_node
 
@@ -107,8 +107,8 @@ class TestPropertiesTab:
 
     def test_subplot_combobox_interaction_calls_controller(self, properties_tab, mock_application_model, mock_node_controller, mocker, qtbot):
         """Verify changing the subplot combobox selection calls the node controller."""
-        plot_node1 = create_mock_plot_node(mocker, "node1", "Plot 1", PlotType.LINE)
-        plot_node2 = create_mock_plot_node(mocker, "node2", "Plot 2", PlotType.SCATTER)
+        plot_node1 = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE)
+        plot_node2 = create_mock_plot_node(mocker, "node2", "Plot 2", ArtistType.SCATTER)
         mock_application_model.scene_root.all_descendants.return_value = [plot_node1, plot_node2]
         properties_tab._update_content()
 
@@ -119,20 +119,20 @@ class TestPropertiesTab:
 
     def test_plot_type_combobox_interaction_calls_controller(self, properties_tab, mock_application_model, mock_node_controller, mocker, qtbot):
         """Verify changing the plot type combobox selection calls the node controller."""
-        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", PlotType.LINE)
+        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE)
         mock_application_model.selection = [plot_node]
         mock_application_model.scene_root.find_node_by_id.return_value = plot_node
         properties_tab._update_content()
 
-        index = properties_tab._plot_type_selector_combo.findText(PlotType.SCATTER.value)
+        index = properties_tab._plot_type_selector_combo.findText(ArtistType.SCATTER.value)
         with qtbot.wait_signal(properties_tab._plot_type_selector_combo.currentTextChanged):
             properties_tab._plot_type_selector_combo.setCurrentIndex(index)
 
-        mock_node_controller.on_plot_type_changed.assert_called_once_with(PlotType.SCATTER.value, plot_node)
+        mock_node_controller.on_plot_type_changed.assert_called_once_with(ArtistType.SCATTER.value, plot_node)
 
     def test_signal_blocking_during_update(self, properties_tab, mock_application_model, mock_node_controller, mocker):
         """Verify signals are blocked during _update_content to prevent cascade calls."""
-        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", PlotType.LINE)
+        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE)
         mock_application_model.scene_root.all_descendants.return_value = [plot_node]
         mock_application_model.selection = [plot_node]
 
@@ -148,7 +148,7 @@ class TestPropertiesTab:
 
     def test_factory_interaction_on_selection_change(self, properties_tab, mock_application_model, mock_plot_properties_ui_factory, mocker):
         """Verify the UI factory is correctly managed when the selection changes."""
-        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", PlotType.LINE)
+        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE)
         mock_application_model.selection = [plot_node]
         
         mocker.spy(properties_tab, "_clear_layout")
@@ -160,7 +160,7 @@ class TestPropertiesTab:
 
     def test_apply_data_button_calls_controller(self, properties_tab, mock_application_model, mock_node_controller, mocker, qtbot):
         """Verify clicking the 'Apply' button calls the correct controller method."""
-        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", PlotType.LINE, "path/to/test.csv")
+        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE, "path/to/test.csv")
         mock_application_model.selection = [plot_node]
         mock_application_model.scene_root.find_node_by_id.return_value = plot_node
         properties_tab._update_content()
@@ -172,7 +172,7 @@ class TestPropertiesTab:
 
     def test_select_file_button_calls_controller(self, properties_tab, mock_application_model, mock_node_controller, mocker, qtbot):
         """Verify clicking the 'Select File' button calls the correct controller method."""
-        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", PlotType.LINE)
+        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE)
         mock_application_model.selection = [plot_node]
         mock_application_model.scene_root.find_node_by_id.return_value = plot_node
         properties_tab._update_content()
@@ -184,7 +184,7 @@ class TestPropertiesTab:
         
     def test_handler_safety_when_node_not_found(self, properties_tab, mock_application_model, mock_node_controller, mocker):
         """Verify controller is not called if node is not found during an event."""
-        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", PlotType.LINE)
+        plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE)
         mock_application_model.selection = [plot_node]
         properties_tab._update_content()
         

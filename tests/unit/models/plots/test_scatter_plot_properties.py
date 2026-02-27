@@ -3,7 +3,7 @@ from src.models.plots.plot_properties import (
     PlotMapping,
     ScatterPlotProperties,
 )
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 
 
 class TestScatterPlotProperties:
@@ -22,7 +22,7 @@ class TestScatterPlotProperties:
         assert isinstance(props.axes_limits, AxesLimits)
         assert props.axes_limits.xlim == (None, None)
         assert props.axes_limits.ylim == (None, None)
-        assert props.plot_type == PlotType.SCATTER  # Default for ScatterPlotProperties
+        assert props.plot_type == ArtistType.SCATTER  # Default for ScatterPlotProperties
         assert props.marker_size == 10
 
     def test_scatter_plot_properties_initialization_custom_marker_size(self):
@@ -31,7 +31,7 @@ class TestScatterPlotProperties:
         """
         props = ScatterPlotProperties(marker_size=25)
         assert props.marker_size == 25
-        assert props.plot_type == PlotType.SCATTER  # Still default
+        assert props.plot_type == ArtistType.SCATTER  # Still default
 
     def test_scatter_plot_properties_initialization_with_custom_base_and_scatter_values(
         self,
@@ -48,7 +48,7 @@ class TestScatterPlotProperties:
             ylabel="Data Y",
             plot_mapping=custom_mapping,
             axes_limits=custom_limits,
-            plot_type=PlotType.SCATTER,  # Explicitly set
+            plot_type=ArtistType.SCATTER,  # Explicitly set
             marker_size=30,
         )
         assert props.title == "Custom Scatter Plot"
@@ -56,7 +56,7 @@ class TestScatterPlotProperties:
         assert props.ylabel == "Data Y"
         assert props.plot_mapping is custom_mapping
         assert props.axes_limits is custom_limits
-        assert props.plot_type == PlotType.SCATTER
+        assert props.plot_type == ArtistType.SCATTER
         assert props.marker_size == 30
 
     def test_scatter_plot_properties_update_from_dict_marker_size(self):
@@ -86,4 +86,4 @@ class TestScatterPlotProperties:
         assert props.xlabel == "X Axis"
         assert props.plot_mapping.x == "source_x"
         assert props.marker_size == 15
-        assert props.plot_type == PlotType.SCATTER  # Remains Scatter
+        assert props.plot_type == ArtistType.SCATTER  # Remains Scatter

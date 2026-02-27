@@ -18,7 +18,7 @@ from src.models.nodes.group_node import GroupNode # Added GroupNode import for g
 from src.models.plots.plot_properties import LinePlotProperties, PlotMapping, AxesLimits
 from src.services.commands.command_manager import CommandManager
 from src.controllers.project_controller import ProjectController
-from src.services.commands.change_property_command import ChangePropertyCommand
+from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
 from src.services.commands.change_children_order_command import ChangeChildrenOrderCommand # Added for reorder
 from src.services.commands.group_nodes_command import GroupNodesCommand # Added for group
 from src.services.commands.ungroup_nodes_command import UngroupNodesCommand # Added for ungroup
@@ -147,7 +147,7 @@ async def test_on_apply_data_clicked_success_executes_command(
         file_path, mock_plot_node_with_props
     )
     command_manager.execute_command.assert_called_once()
-    assert isinstance(command_manager.execute_command.call_args[0][0], ChangePropertyCommand)
+    assert isinstance(command_manager.execute_command.call_args[0][0], ChangePlotPropertyCommand)
 
     # Further checks on the command's effect (via execute_command mock)
     # The command should set data and data_file_path
@@ -193,7 +193,7 @@ def test_set_node_visibility_executes_command(node_controller, node_controller_d
 
     command_manager.execute_command.assert_called_once()
     command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePropertyCommand)
+    assert isinstance(command, ChangePlotPropertyCommand)
     assert command.target_object == mock_plot_node_with_props
     assert command.property_name == "visible"
     assert command.new_value == False
@@ -212,7 +212,7 @@ def test_set_node_locked_executes_command(node_controller, node_controller_deps,
 
     command_manager.execute_command.assert_called_once()
     command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePropertyCommand)
+    assert isinstance(command, ChangePlotPropertyCommand)
     assert command.target_object == mock_plot_node_with_props
     assert command.property_name == "locked"
     assert command.new_value == True
@@ -294,7 +294,7 @@ def test_rename_node_executes_command(node_controller, node_controller_deps, moc
 
     command_manager.execute_command.assert_called_once()
     command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePropertyCommand)
+    assert isinstance(command, ChangePlotPropertyCommand)
     assert command.target_object == mock_plot_node_with_props
     assert command.property_name == "name"
     assert command.new_value == new_name
@@ -327,7 +327,7 @@ def test_on_limit_editing_finished_reads_current_line_edit_values(node_controlle
 
     command_manager.execute_command.assert_called_once()
     command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePropertyCommand)
+    assert isinstance(command, ChangePlotPropertyCommand)
     assert command.target_object == mock_plot_node_with_props.plot_properties
     assert command.property_name == "axes_limits"
     assert command.new_value.xlim == (0.5, 9.5)
@@ -352,7 +352,7 @@ def test_on_plot_type_changed_updates_plot_type_property(node_controller, node_c
 
     command_manager.execute_command.assert_called_once()
     command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePropertyCommand)
+    assert isinstance(command, ChangePlotPropertyCommand)
     assert command.target_object == mock_plot_node_with_props.plot_properties
     assert command.property_name == "plot_type"
     assert command.new_value == new_plot_type

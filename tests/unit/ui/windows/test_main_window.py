@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QMenuBar, QToolBar
 from src.controllers.main_controller import MainController
 
 from src.models.application_model import ApplicationModel
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.services.layout_manager import LayoutManager
@@ -66,7 +66,7 @@ def app_context(
     figure = matplotlib.figure.Figure()
     model = ApplicationModel(figure=figure)
     mock_command_manager = MagicMock(spec=CommandManager)
-    plot_types = [PlotType.LINE, PlotType.SCATTER]
+    plot_types = [ArtistType.LINE, ArtistType.SCATTER]
 
     # Create mock objects for the new MainWindow arguments
     mock_menu_bar = QMenuBar()

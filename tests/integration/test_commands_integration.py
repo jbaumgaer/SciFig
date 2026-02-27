@@ -26,14 +26,14 @@ from src.models.plots.plot_properties import (
     LinePlotProperties,
     ScatterPlotProperties,
 )
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.commands.batch_change_plot_geometry_command import (
     BatchChangePlotGeometryCommand,
 )
 from src.services.commands.change_grid_parameters_command import (
     ChangeGridParametersCommand,
 )
-from src.services.commands.change_property_command import ChangePropertyCommand
+from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.services.layout_manager import LayoutManager
@@ -119,7 +119,7 @@ class TestCommandsIntegration:
         old_title = plot_node.plot_properties.title
         new_title = "New Plot Title"
 
-        command = ChangePropertyCommand(
+        command = ChangePlotPropertyCommand(
             node=plot_node,
             property_name="title",
             new_value=new_title,
@@ -141,7 +141,7 @@ class TestCommandsIntegration:
         # Test another property: x_label
         old_xlabel = plot_node.plot_properties.xlabel
         new_xlabel = "New X-Axis"
-        command_xlabel = ChangePropertyCommand(
+        command_xlabel = ChangePlotPropertyCommand(
             node=plot_node,
             property_name="xlabel",
             new_value=new_xlabel,
@@ -174,9 +174,9 @@ class TestCommandsIntegration:
         assert isinstance(plot_node.plot_properties, LinePlotProperties)
 
         old_plot_type = plot_node.plot_properties.plot_type
-        new_plot_type = PlotType.SCATTER
+        new_plot_type = ArtistType.SCATTER
 
-        command = ChangePropertyCommand(
+        command = ChangePlotPropertyCommand(
             node=plot_node,
             property_name="plot_type",
             new_value=new_plot_type,
@@ -333,7 +333,7 @@ class TestCommandsIntegration:
         initial_x_geometry = plot_node.geometry[0]
 
         # Command 1: Change title
-        cmd1 = ChangePropertyCommand(
+        cmd1 = ChangePlotPropertyCommand(
             node=plot_node,
             property_name="title",
             new_value="Title 1",
@@ -409,7 +409,7 @@ class TestCommandsIntegration:
         )
 
         # Execute new command after undo, should clear redo stack
-        cmd3 = ChangePropertyCommand(
+        cmd3 = ChangePlotPropertyCommand(
             node=plot_node,
             property_name="title",
             new_value="New Title 3",

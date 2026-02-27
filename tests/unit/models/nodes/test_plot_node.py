@@ -11,7 +11,7 @@ from src.models.plots.plot_properties import (
     AxesLimits,
     LinePlotProperties,
     PlotMapping,
-    PlotType,
+    ArtistType,
     ScatterPlotProperties,
 )
 
@@ -236,7 +236,7 @@ class TestPlotNode:
         assert node.geometry == (0.2, 0.2, 0.6, 0.6)
 
         assert isinstance(node.plot_properties, expected_prop_class)
-        assert node.plot_properties.plot_type == PlotType(plot_type_str)
+        assert node.plot_properties.plot_type == ArtistType(plot_type_str)
         assert node.plot_properties.title == f"Loaded {plot_type_str.capitalize()} Plot"
         assert node.plot_properties.xlabel == "X-data"
         assert node.plot_properties.plot_mapping.x == "colA"

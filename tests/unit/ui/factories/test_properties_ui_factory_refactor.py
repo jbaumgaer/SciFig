@@ -16,7 +16,7 @@ from src.models.plots.plot_properties import (
     PlotMapping,
     ScatterPlotProperties,
 )
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.ui.factories.plot_properties_ui_factory import (
     PlotPropertiesUIFactory,
     _build_base_plot_properties_ui,
@@ -46,7 +46,7 @@ def mock_scatter_node():
     """Provides a mock PlotNode with ScatterPlotProperties and data."""
     node = Mock(spec=PlotNode)
     node.plot_properties = Mock(spec=ScatterPlotProperties)
-    node.plot_properties.plot_type = PlotType.SCATTER
+    node.plot_properties.plot_type = ArtistType.SCATTER
     node.plot_properties.title = "Test Scatter"
     node.plot_properties.xlabel = "X"
     node.plot_properties.ylabel = "Y"
@@ -61,7 +61,7 @@ def mock_line_node():
     """Provides a mock PlotNode with LinePlotProperties and data."""
     node = Mock(spec=PlotNode)
     node.plot_properties = Mock(spec=LinePlotProperties)
-    node.plot_properties.plot_type = PlotType.LINE
+    node.plot_properties.plot_type = ArtistType.LINE
     node.plot_properties.title = "Test Line"
     node.plot_properties.xlabel = "X"
     node.plot_properties.ylabel = "Y"
@@ -82,7 +82,7 @@ def mock_plot_node_with_data():
         plot_mapping=PlotMapping(x="col1", y=["col2"]),
         axes_limits=AxesLimits(xlim=(0, 10), ylim=(0, 10)),
     )
-    node.plot_properties.plot_type = PlotType.LINE
+    node.plot_properties.plot_type = ArtistType.LINE
     return node
 
 
@@ -114,8 +114,8 @@ class TestPropertiesUIFactoryRefactor:
         """Verify a builder can be registered."""
         factory = mock_properties_ui_factory_instance
         mock_builder = Mock()
-        factory.register_builder(PlotType.SCATTER, mock_builder)
-        assert factory._builders[PlotType.SCATTER] == mock_builder
+        factory.register_builder(ArtistType.SCATTER, mock_builder)
+        assert factory._builders[ArtistType.SCATTER] == mock_builder
 
     def test_build_widgets_with_registered_builder(
         self, mock_properties_ui_factory_instance, mock_scatter_node, common_ui_args
@@ -123,7 +123,7 @@ class TestPropertiesUIFactoryRefactor:
         """Verify build_widgets calls the registered builder for a known plot type."""
         factory = mock_properties_ui_factory_instance
         mock_specific_builder = Mock()
-        factory.register_builder(PlotType.SCATTER, mock_specific_builder)
+        factory.register_builder(ArtistType.SCATTER, mock_specific_builder)
 
         factory.build_widgets(node=mock_scatter_node, **common_ui_args)
 
@@ -156,7 +156,7 @@ class TestPropertiesUIFactoryRefactor:
         # LINE PlotType is not registered by default in this test setup
 
         # Ensure no builder was registered for LINE
-        assert PlotType.LINE not in factory._builders
+        assert ArtistType.LINE not in factory._builders
 
         factory.build_widgets(node=mock_line_node, **common_ui_args)
 
@@ -183,15 +183,15 @@ class TestPropertiesUIFactoryRefactor:
         mock_builder_v1 = Mock(name="builder_v1")
         mock_builder_v2 = Mock(name="builder_v2")
 
-        factory.register_builder(PlotType.LINE, mock_builder_v1)
-        assert factory._builders[PlotType.LINE] == mock_builder_v1
+        factory.register_builder(ArtistType.LINE, mock_builder_v1)
+        assert factory._builders[ArtistType.LINE] == mock_builder_v1
 
-        factory.register_builder(PlotType.LINE, mock_builder_v2)
-        assert factory._builders[PlotType.LINE] == mock_builder_v2
+        factory.register_builder(ArtistType.LINE, mock_builder_v2)
+        assert factory._builders[ArtistType.LINE] == mock_builder_v2
 
         mock_node = Mock(spec=PlotNode)
         mock_node.plot_properties = Mock(spec=LinePlotProperties)
-        mock_node.plot_properties.plot_type = PlotType.LINE
+        mock_node.plot_properties.plot_type = ArtistType.LINE
 
         factory.build_widgets(node=mock_node, **common_ui_args)
 
@@ -222,8 +222,8 @@ class TestPropertiesUIFactoryRefactor:
         factory = mock_properties_ui_factory_instance
 
         # Register the concrete builder functions
-        factory.register_builder(PlotType.LINE, _build_line_plot_ui_widgets)
-        factory.register_builder(PlotType.SCATTER, _build_scatter_plot_ui_widgets)
+        factory.register_builder(ArtistType.LINE, _build_line_plot_ui_widgets)
+        factory.register_builder(ArtistType.SCATTER, _build_scatter_plot_ui_widgets)
 
         # Configure the mock _build_base_plot_properties_ui to call its sub-mocks
         def mock_base_builder_side_effect(

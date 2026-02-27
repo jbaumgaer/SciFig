@@ -6,7 +6,7 @@ from src.models.plots.plot_properties import (
     LinePlotProperties,
     PlotMapping,
 )
-from src.services.commands.change_property_command import ChangePropertyCommand
+from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def test_change_property_command_execute(mock_plot_node):
     """Tests that the command's execute method correctly changes a property."""
     # Arrange
     new_title = "My New Title"
-    cmd = ChangePropertyCommand(
+    cmd = ChangePlotPropertyCommand(
         node=mock_plot_node,
         property_name="title",
         new_value=new_title,
@@ -51,7 +51,7 @@ def test_change_property_command_undo(mock_plot_node):
     mock_plot_node.plot_properties.title = initial_title
 
     new_title = "My New Title"
-    cmd = ChangePropertyCommand(
+    cmd = ChangePlotPropertyCommand(
         node=mock_plot_node,
         property_name="title",
         new_value=new_title,
@@ -72,7 +72,7 @@ def test_change_property_command_undo_from_empty(mock_plot_node):
     """
     # Arrange
     new_title = "A Brand New Title"
-    cmd = ChangePropertyCommand(
+    cmd = ChangePlotPropertyCommand(
         node=mock_plot_node,
         property_name="title",
         new_value=new_title,

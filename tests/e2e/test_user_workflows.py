@@ -25,7 +25,7 @@ from src.models.plots.plot_properties import (
     LinePlotProperties,
     PlotMapping,
 )
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.commands.command_manager import CommandManager
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
@@ -99,9 +99,9 @@ def app_context(qtbot):
     mock_tool_bar_actions = MagicMock(spec=ToolBarActions)
 
     properties_ui_factory = PlotPropertiesUIFactory()
-    properties_ui_factory.register_builder(PlotType.LINE, _build_line_plot_ui_widgets)
+    properties_ui_factory.register_builder(ArtistType.LINE, _build_line_plot_ui_widgets)
     properties_ui_factory.register_builder(
-        PlotType.SCATTER, _build_scatter_plot_ui_widgets
+        ArtistType.SCATTER, _build_scatter_plot_ui_widgets
     )
 
     view = MainWindow(

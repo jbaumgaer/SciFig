@@ -8,7 +8,7 @@ from src.models.layout.layout_config import FreeConfig
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.layout_manager import LayoutManager
 from src.ui.renderers.renderer import Renderer
 
@@ -72,7 +72,7 @@ def plot_node(sample_data):
         title="Test Title",
         xlabel="X",
         ylabel="Y",
-        plot_type=PlotType.LINE,
+        plot_type=ArtistType.LINE,
         plot_mapping=PlotMapping(x="x_axis", y=["y_axis"]),
         axes_limits=AxesLimits(xlim=(None, None), ylim=(None, None)),
     )
@@ -102,8 +102,8 @@ def test_renderer_switches_strategy(
 
     # We need to manually replace the instances in the renderer's dictionary
     # with our mocks to track calls.
-    renderer.plotting_strategies[PlotType.LINE] = mock_line_strategy
-    renderer.plotting_strategies[PlotType.SCATTER] = mock_scatter_strategy
+    renderer.plotting_strategies[ArtistType.LINE] = mock_line_strategy
+    renderer.plotting_strategies[ArtistType.SCATTER] = mock_scatter_strategy
 
     mock_figure = Mock()
     mock_ax = mock_figure.add_axes.return_value
@@ -116,7 +116,7 @@ def test_renderer_switches_strategy(
     }
 
     # --- Test 1: Verify Line Plot Strategy is Called ---
-    plot_node.plot_properties.plot_type = PlotType.LINE
+    plot_node.plot_properties.plot_type = ArtistType.LINE
 
     # 2. Act
     renderer.render(
@@ -142,7 +142,7 @@ def test_renderer_switches_strategy(
     mock_layout_manager.get_current_layout_geometries.reset_mock()
 
     # --- Test 2: Verify Scatter Plot Strategy is Called ---
-    plot_node.plot_properties.plot_type = PlotType.SCATTER
+    plot_node.plot_properties.plot_type = ArtistType.SCATTER
     mock_application_model.scene_root.all_descendants.return_value = [plot_node]
     mock_layout_manager.get_current_layout_geometries.return_value = {
         plot_node.id: plot_node.geometry

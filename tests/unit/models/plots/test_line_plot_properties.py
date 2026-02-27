@@ -1,5 +1,5 @@
 from src.models.plots.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 
 
 class TestLinePlotProperties:
@@ -17,7 +17,7 @@ class TestLinePlotProperties:
         assert isinstance(props.axes_limits, AxesLimits)
         assert props.axes_limits.xlim == (None, None)
         assert props.axes_limits.ylim == (None, None)
-        assert props.plot_type == PlotType.LINE
+        assert props.plot_type == ArtistType.LINE
 
     def test_line_plot_properties_initialization_with_custom_base_values(self):
         """
@@ -31,14 +31,14 @@ class TestLinePlotProperties:
             ylabel="Temperature (C)",
             plot_mapping=custom_mapping,
             axes_limits=custom_limits,
-            plot_type=PlotType.LINE,  # Explicitly set, though it's the default
+            plot_type=ArtistType.LINE,  # Explicitly set, though it's the default
         )
         assert props.title == "Temp Over Time"
         assert props.xlabel == "Time (s)"
         assert props.ylabel == "Temperature (C)"
         assert props.plot_mapping is custom_mapping
         assert props.axes_limits is custom_limits
-        assert props.plot_type == PlotType.LINE
+        assert props.plot_type == ArtistType.LINE
 
     def test_line_plot_properties_update_from_dict(self):
         """
@@ -57,4 +57,4 @@ class TestLinePlotProperties:
         assert props.ylabel == ""  # Unchanged
         assert props.plot_mapping.x == "data_x_col"
         assert props.plot_mapping.y == ["data_y_col"]
-        assert props.plot_type == PlotType.LINE  # Unchanged
+        assert props.plot_type == ArtistType.LINE  # Unchanged
