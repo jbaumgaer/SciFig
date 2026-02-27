@@ -9,22 +9,53 @@ from src.models.plots.plot_properties import (
 )
 
 class ThemeIncompleteError(Exception):
-    """Raised when an .mplstyle file is missing required keys."""
+    """Raised when an .mplstyle file is missing required keys for strict construction."""
     pass
 
 class StyleService:
     """
     The Mandatory Factory for plot properties.
-    Resolves flat .mplstyle keys into hierarchical dataclasses.
+    Resolves flat .mplstyle keys into hierarchical dataclasses and enforces theme completeness.
+    No default values are allowed; every property must be present in the theme.
     """
+
+    # Expanded list of required keys covering the entire property tree.
+    # Note: Some keys are custom scifig-specific keys (e.g., text.va) to ensure strictness.
+    REQUIRED_KEYS = [
+        # Font
+        "font.family", "font.style", "font.variant", "font.weight", "font.stretch", "font.size",
+        # Text
+        "text.color", "text.alpha", "text.rotation", "text.va", "text.ha", "text.parse_math",
+        # Lines
+        "lines.linewidth", "lines.linestyle", "lines.color", "lines.marker",
+        "lines.markerfacecolor", "lines.markeredgecolor", "lines.markeredgewidth",
+        "lines.markersize", "lines.antialiased", "lines.alpha",
+        # Patch
+        "patch.facecolor", "patch.edgecolor", "patch.linewidth", "patch.alpha",
+        "patch.force_edgecolor", "patch.antialiased", "patch.hatch",
+        # Ticks (X and Y)
+        "xtick.major.size", "xtick.minor.size", "xtick.major.width", "xtick.minor.width",
+        "xtick.major.pad", "xtick.minor.pad", "xtick.direction", "xtick.color",
+        "xtick.labelcolor", "xtick.labelsize", "xtick.minor.visible",
+        "ytick.major.size", "ytick.minor.size", "ytick.major.width", "ytick.minor.width",
+        "ytick.major.pad", "ytick.minor.pad", "ytick.direction", "ytick.color",
+        "ytick.labelcolor", "ytick.labelsize", "ytick.minor.visible",
+        # Spines
+        "axes.edgecolor", "axes.linewidth", "axes.spines.visible", "axes.spines.position_type", "axes.spines.position_val",
+        # Grid
+        "axes.grid", "grid.color", "grid.linestyle", "grid.linewidth", "grid.alpha",
+        # Axis/Coordinates
+        "axes.facecolor", "axes.axisbelow", "axes.prop_cycle", "axes.xmargin", "axes.ymargin",
+        "axes.autolimit_mode", "axes.formatter.useoffset", "axes.formatter.offset_threshold",
+        "axes.formatter.limits_min", "axes.formatter.limits_max"
+    ]
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
-        # Initialize with default matplotlib rcParams
-        self._current_style: Dict[str, Any] = dict(mpl.rcParams)
+        self._current_style: Dict[str, Any] = {}
 
     def load_style(self, style_path: str):
-        """Loads a new .mplstyle file and validates its completeness."""
+        """Loads a new .mplstyle file and validates its completeness before applying."""
         try:
             # Use matplotlib's parser to handle the file correctly
             new_style = mpl.RcParams()
@@ -37,26 +68,16 @@ class StyleService:
             raise ThemeIncompleteError(f"Style validation failed for {style_path}: {e}")
 
     def _validate_style(self, style: Dict[str, Any]):
-        """
-        Ensures all keys required for the 'Strict' dataclasses are present.
-        This is a fail-fast check.
-        """
-        required_keys = [
-            "font.family", "font.size", "text.color",
-            "lines.linewidth", "lines.color", "patch.facecolor",
-            "axes.facecolor", "axes.edgecolor", "axes.linewidth",
-            "xtick.major.size", "xtick.major.width", "xtick.direction",
-            "grid.color", "grid.linestyle"
-        ]
-        missing = [k for k in required_keys if k not in style]
+        """Perform an exhaustive check for required keys. No defaults allowed."""
+        missing = [k for k in self.REQUIRED_KEYS if k not in style]
         if missing:
-            raise ThemeIncompleteError(f"Missing required style keys: {missing}")
+            raise ThemeIncompleteError(f"Theme is incomplete. Missing required keys: {missing}")
 
     def create_themed_properties(self, plot_type: PlotType) -> PlotProperties:
-        """
-        Factory method to create a fully initialized PlotProperties tree
-        derived from the current style.
-        """
+        """Factory method to create a fully initialized PlotProperties tree from the current theme."""
+        if not self._current_style:
+            raise RuntimeError("StyleService: No style loaded. Call load_style() first.")
+            
         return PlotProperties(
             titles={
                 "left": self._create_text(""),
@@ -71,17 +92,13 @@ class StyleService:
 
     def _create_font(self) -> FontProperties:
         s = self._current_style
-        # Font family is often a list in rcParams
         family = s["font.family"]
-        if isinstance(family, list):
-            family = family[0]
-        
         return FontProperties(
-            family=str(family),
-            style=str(s.get("font.style", "normal")),
-            variant=str(s.get("font.variant", "normal")),
-            weight=str(s.get("font.weight", "normal")),
-            stretch=str(s.get("font.stretch", "normal")),
+            family=str(family[0] if isinstance(family, list) else family),
+            style=str(s["font.style"]),
+            variant=str(s["font.variant"]),
+            weight=str(s["font.weight"]),
+            stretch=str(s["font.stretch"]),
             size=float(s["font.size"])
         )
 
@@ -90,56 +107,42 @@ class StyleService:
         return TextProperties(
             text=content,
             color=str(s["text.color"]),
-            alpha=1.0,
+            alpha=float(s["text.alpha"]),
             font=self._create_font(),
-            rotation=0.0,
-            va="baseline",
-            ha="center",
-            parse_math=bool(s.get("text.parse_math", True))
+            rotation=float(s["text.rotation"]),
+            va=str(s["text.va"]),
+            ha=str(s["text.ha"]),
+            parse_math=bool(s["text.parse_math"])
         )
 
-    def _create_line(self) -> LineProperties:
+    def _create_ticks(self, prefix: str) -> TickProperties:
         s = self._current_style
-        return LineProperties(
-            linewidth=float(s["lines.linewidth"]),
-            linestyle=str(s["lines.linestyle"]),
-            color=str(s["lines.color"]),
-            marker=str(s["lines.marker"]),
-            markerfacecolor=str(s["lines.markerfacecolor"]),
-            markeredgecolor=str(s["lines.markeredgecolor"]),
-            markeredgewidth=float(s["lines.markeredgewidth"]),
-            markersize=float(s["lines.markersize"]),
-            antialiased=bool(s["lines.antialiased"]),
-            alpha=1.0
-        )
-
-    def _create_ticks(self, axis_prefix: str = "x") -> TickProperties:
-        s = self._current_style
-        # We use 'x' keys as defaults for the hierarchy, can be customized per axis if needed
         return TickProperties(
-            major_size=float(s[f"{axis_prefix}tick.major.size"]),
-            minor_size=float(s[f"{axis_prefix}tick.minor.size"]),
-            major_width=float(s[f"{axis_prefix}tick.major.width"]),
-            minor_width=float(s[f"{axis_prefix}tick.minor.width"]),
-            major_pad=float(s[f"{axis_prefix}tick.major.pad"]),
-            minor_pad=float(s[f"{axis_prefix}tick.minor.pad"]),
-            direction=str(s[f"{axis_prefix}tick.direction"]),
-            color=str(s[f"{axis_prefix}tick.color"]),
-            labelcolor=str(s[f"{axis_prefix}tick.labelcolor"] if s[f"{axis_prefix}tick.labelcolor"] != "inherit" else s[f"{axis_prefix}tick.color"]),
-            labelsize=float(s[f"{axis_prefix}tick.labelsize"]) if isinstance(s[f"{axis_prefix}tick.labelsize"], (int, float)) else 10.0,
-            minor_visible=bool(s[f"{axis_prefix}tick.minor.visible"]),
-            major_top=True, major_bottom=True,
-            minor_top=True, minor_bottom=True,
-            minor_ndivs=4
+            major_size=float(s[f"{prefix}tick.major.size"]),
+            minor_size=float(s[f"{prefix}tick.minor.size"]),
+            major_width=float(s[f"{prefix}tick.major.width"]),
+            minor_width=float(s[f"{prefix}tick.minor.width"]),
+            major_pad=float(s[f"{prefix}tick.major.pad"]),
+            minor_pad=float(s[f"{prefix}tick.minor.pad"]),
+            direction=str(s[f"{prefix}tick.direction"]),
+            color=str(s[f"{prefix}tick.color"]),
+            labelcolor=str(s[f"{prefix}tick.labelcolor"]),
+            labelsize=float(s[f"{prefix}tick.labelsize"]),
+            minor_visible=bool(s[f"{prefix}tick.minor.visible"]),
+            major_top=True,
+            major_bottom=True,
+            minor_top=True,
+            minor_bottom=True,
+            minor_ndivs=4 # TODO: Default value is not good
         )
 
     def _create_spine(self) -> SpineProperties:
         s = self._current_style
         return SpineProperties(
-            visible=True,
+            visible=bool(s["axes.spines.visible"]),
             color=str(s["axes.edgecolor"]),
             linewidth=float(s["axes.linewidth"]),
-            position=("outward", 0.0)
+            position=(str(s["axes.spines.position_type"]), float(s["axes.spines.position_val"]))
         )
 
     def _create_grid(self) -> GridProperties:
@@ -149,24 +152,24 @@ class StyleService:
             color=str(s["grid.color"]),
             linestyle=str(s["grid.linestyle"]),
             linewidth=float(s["grid.linewidth"]),
-            alpha=float(s.get("grid.alpha", 1.0)),
-            axis="both",
-            which="major"
+            alpha=float(s["grid.alpha"]),
+            axis="both", # TODO: Default value is not good
+            which="major" # TODO: Default value is not good
         )
 
-    def _create_axis(self, prefix: str = "x") -> AxisProperties:
+    def _create_axis(self, prefix: str) -> AxisProperties:
         s = self._current_style
         return AxisProperties(
             label=self._create_text(""),
             limits=(None, None),
-            scale="linear",
+            scale="linear", # TODO: Default value is not good
             ticks=self._create_ticks(prefix),
             grid=self._create_grid(),
             margin=float(s[f"axes.{prefix}margin"]),
             autolimit_mode=str(s["axes.autolimit_mode"]),
-            use_offset=True,
-            offset_threshold=4,
-            scientific_limits=(-7, 7)
+            use_offset=bool(s["axes.formatter.useoffset"]),
+            offset_threshold=int(s["axes.formatter.offset_threshold"]),
+            scientific_limits=(int(s["axes.formatter.limits_min"]), int(s["axes.formatter.limits_max"]))
         )
 
     def _create_cartesian_2d(self) -> Cartesian2DProperties:
