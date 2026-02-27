@@ -9,8 +9,8 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import AxesLimits, PlotMapping
-from src.models.plots.plot_types import PlotType
-from src.services.commands.change_property_command import ChangePropertyCommand
+from src.models.plots.plot_types import ArtistType
+from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
@@ -160,7 +160,7 @@ class NodeController(QObject):
             return
 
         # Use a command to update node.data_file_path, this will also publish NODE_DATA_FILE_PATH_UPDATED
-        cmd = ChangePropertyCommand(
+        cmd = ChangePlotPropertyCommand(
             node=node,
             property_name="data_file_path",
             new_value=path,
@@ -189,7 +189,7 @@ class NodeController(QObject):
             #TODO: Instead of the node and canvas controller handling this, I should invoke a data loader service with a request
             new_data = pd.read_csv(file_path, sep=";")  # Placeholder for loaded data, replace with actual loading logic
 
-            cmd = ChangePropertyCommand(
+            cmd = ChangePlotPropertyCommand(
                 node=node,
                 property_name="data",
                 new_value=new_data,
@@ -217,7 +217,7 @@ class NodeController(QObject):
         if not new_plot_type_str:
             return
 
-        new_plot_type = PlotType(new_plot_type_str)
+        new_plot_type = ArtistType(new_plot_type_str)
 
         assert node.plot_properties is not None
         old_plot_type = node.plot_properties.plot_type
@@ -225,7 +225,7 @@ class NodeController(QObject):
         if new_plot_type == old_plot_type:
             self.logger.debug(f"NodeController: Plot type unchanged for node {node_id}")
             return
-        cmd = ChangePropertyCommand(
+        cmd = ChangePlotPropertyCommand(
             node=node,
             property_name="plot_type",
             new_value=new_plot_type,
@@ -253,7 +253,7 @@ class NodeController(QObject):
 
         # old_value = getattr(node.plot_properties, prop_name) # No longer needed, command handles comparison
 
-        cmd = ChangePropertyCommand(
+        cmd = ChangePlotPropertyCommand(
             node=node,
             property_name=prop_name,
             new_value=new_value,
@@ -276,7 +276,7 @@ class NodeController(QObject):
             self.logger.warning(f"Invalid marker size value: {new_size}. Request ignored.")
             return
         
-        cmd = ChangePropertyCommand(
+        cmd = ChangePlotPropertyCommand(
             node=node,
             property_name="marker_size",
             new_value=parsed_size,
@@ -320,7 +320,7 @@ class NodeController(QObject):
         )
 
         if old_limits != new_limits: #TODO: This comparison logic is now duplicated in the command, maybe it should be handled solely in the command
-            cmd = ChangePropertyCommand(
+            cmd = ChangePlotPropertyCommand(
                 node=node,
                 property_name="axes_limits",
                 new_value=new_limits,
@@ -351,7 +351,7 @@ class NodeController(QObject):
         old_mapping = node.plot_properties.plot_mapping
 
         if new_mapping != old_mapping:
-            cmd = ChangePropertyCommand(
+            cmd = ChangePlotPropertyCommand(
                 node=node,
                 property_name="plot_mapping",
                 new_value=new_mapping,
@@ -367,7 +367,7 @@ class NodeController(QObject):
         """
         node = self._get_node_by_id(node_id)
         if node and node.visible != visible:
-            cmd = ChangePropertyCommand(
+            cmd = ChangePlotPropertyCommand(
                 node=node,
                 property_name="visible",
                 new_value=visible,
@@ -383,7 +383,7 @@ class NodeController(QObject):
         """
         node = self._get_node_by_id(node_id)
         if node and node.locked != locked:
-            cmd = ChangePropertyCommand(
+            cmd = ChangePlotPropertyCommand(
                 node=node,
                 property_name="locked",
                 new_value=locked,
@@ -400,7 +400,7 @@ class NodeController(QObject):
         """
         node = self._get_node_by_id(node_id)
         if node and node.name != new_name:
-            cmd = ChangePropertyCommand(
+            cmd = ChangePlotPropertyCommand(
                 node=node,
                 property_name="name",
                 new_value=new_name,

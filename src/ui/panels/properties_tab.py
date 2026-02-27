@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
 from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
@@ -78,7 +78,7 @@ class PropertiesTab(QWidget):
 
         self._plot_type_selector_combo = QComboBox(self)
         self._plot_type_selector_combo.setObjectName("plot_type_selector_combo")
-        for plot_type in PlotType:
+        for plot_type in ArtistType:
             self._plot_type_selector_combo.addItem(plot_type.value)
         self._plot_type_layout.addRow("Type:", self._plot_type_selector_combo)
         

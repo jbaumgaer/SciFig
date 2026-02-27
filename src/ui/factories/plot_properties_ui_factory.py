@@ -21,7 +21,7 @@ from src.models.plots.plot_properties import (
     ScatterPlotProperties,
     BasePlotProperties,
 )
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
 
@@ -365,7 +365,7 @@ class PlotPropertiesUIFactory:
         self._builders = {}
         self._event_aggregator = event_aggregator
 
-    def register_builder(self, plot_type: PlotType, builder_func: callable):
+    def register_builder(self, plot_type: ArtistType, builder_func: callable):
         self._builders[plot_type] = builder_func
 
     def build_widgets(

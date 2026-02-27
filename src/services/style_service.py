@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 import matplotlib as mpl
-from src.models.plots.plot_types import ArtistType
+from src.models.plots.plot_types import ArtistType, AutolimitMode, AxisKey, CoordinateSystem, SpinePosition, TickDirection
 from src.models.plots.plot_properties import (
     PlotProperties, TextProperties, FontProperties, LineProperties,
     PatchProperties, TickProperties, SpineProperties, GridProperties,
@@ -23,35 +23,38 @@ class StyleService:
     """
 
     # Exhaustive list of required keys covering the entire property tree.
+    # Includes standard Matplotlib keys and custom SciFig keys for deep hierarchy.
     REQUIRED_KEYS = [
         # Font
         "font.family", "font.style", "font.variant", "font.weight", "font.stretch", "font.size",
         # Text
-        "text.color", "text.alpha", "text.rotation", "text.va", "text.ha", "text.parse_math",
+        "text.color",
         # Lines
         "lines.linewidth", "lines.linestyle", "lines.color", "lines.marker",
         "lines.markerfacecolor", "lines.markeredgecolor", "lines.markeredgewidth",
-        "lines.markersize", "lines.antialiased", "lines.alpha",
+        "lines.markersize",
         # Patch
-        "patch.facecolor", "patch.edgecolor", "patch.linewidth", "patch.alpha",
-        "patch.force_edgecolor", "patch.antialiased", "patch.hatch",
-        # Ticks (X, Y, Z)
+        "patch.facecolor", "patch.edgecolor", "patch.linewidth", "patch.force_edgecolor",
+        # Ticks (TODO: z axis cannot be handled right now)
         "xtick.major.size", "xtick.minor.size", "xtick.major.width", "xtick.minor.width",
         "xtick.major.pad", "xtick.minor.pad", "xtick.direction", "xtick.color",
-        "xtick.labelcolor", "xtick.labelsize", "xtick.minor.visible",
+        "xtick.labelcolor", "xtick.labelsize", "xtick.minor.visible", "xtick.minor.ndivs",
         "ytick.major.size", "ytick.minor.size", "ytick.major.width", "ytick.minor.width",
         "ytick.major.pad", "ytick.minor.pad", "ytick.direction", "ytick.color",
-        "ytick.labelcolor", "ytick.labelsize", "ytick.minor.visible",
+        "ytick.labelcolor", "ytick.labelsize", "ytick.minor.visible", "ytick.minor.ndivs",
         # Spines
-        "axes.edgecolor", "axes.linewidth", "axes.spines.visible", "axes.spines.position_type", "axes.spines.position_val",
+        "axes.edgecolor", "axes.linewidth", "axes.spines.bottom", "axes.spines.left",
+        "axes.spines.top", "axes.spines.right",
         # Grid
         "axes.grid", "grid.color", "grid.linestyle", "grid.linewidth", "grid.alpha",
         # Axis/Coordinates
         "axes.facecolor", "axes.axisbelow", "axes.prop_cycle", "axes.xmargin", "axes.ymargin",
         "axes.autolimit_mode", "axes.formatter.useoffset", "axes.formatter.offset_threshold",
-        "axes.formatter.limits_min", "axes.formatter.limits_max",
-        # Image/Mesh
-        "image.cmap", "image.interpolation", "image.origin", "pcolor.shading"
+        "axes.formatter.limits",
+        # Specialized Artist Keys
+        "image.cmap", "contour.linewidth", "hist.bins",
+        # 3D Specific
+        "axes3d.pane_color_x", "axes3d.pane_color_y", "axes3d.pane_color_z"
     ]
 
     def __init__(self):
@@ -59,7 +62,7 @@ class StyleService:
         # Initialize with current matplotlib defaults as baseline
         self._current_style: dict[str, Any] = dict(mpl.rcParams)
         
-        # Registry mapping PlotType to the factory method for its default artist
+        # Registry mapping ArtistType to its creation method
         self._ARTIST_FACTORIES = {
             ArtistType.LINE: self._create_line_artist,
             ArtistType.SCATTER: self._create_scatter_artist,
@@ -71,7 +74,7 @@ class StyleService:
             ArtistType.STAIR: self._create_stair_artist,
             ArtistType.POLAR_LINE: self._create_line_artist,
             ArtistType.SURFACE: self._create_mesh_artist,
-            ArtistType.BOXPLOT: self._create_line_artist, # Placeholder for BoxPlot complexity
+            ArtistType.BOXPLOT: self._create_line_artist, # Placeholder
         }
 
     def load_style(self, style_path: str):
@@ -98,7 +101,7 @@ class StyleService:
         if not self._current_style:
             raise RuntimeError("StyleService: No style loaded. Call load_style() first.")
             
-        # 1. Coordinate System Selection #TODO: Use the coordinatesystem enum 
+        # 1. Determine Coordinate System based on ArtistType
         if plot_type == ArtistType.SURFACE:
             coords = self._create_cartesian_3d()
         elif plot_type == ArtistType.POLAR_LINE:
@@ -118,78 +121,85 @@ class StyleService:
             },
             coords=coords,
             legend={},
-            plot_type=plot_type,
             artists=artists
         )
 
     # --- Artist Factories ---
+    #TODO: Lines are currently treated on a different footing. Because the linewidth can be set globally, I can take the global value and inherit it into LineProperties.
+    # However, for other kwargs that would be passed to ax.plot, I cannot do that. Maybe I need to think about why this distinction exists 
+
 
     def _create_line_artist(self) -> LineArtistProperties:
         return LineArtistProperties(
-            label="Line", visible=True, zorder=2,
+            visible=True,
+            zorder=1,
             visuals=self._create_line(),
-            x_column="", y_column=""
         )
 
     def _create_scatter_artist(self) -> ScatterArtistProperties:
         return ScatterArtistProperties(
-            label="Scatter", visible=True, zorder=2,
-            visuals=self._create_line(), # Markers uses line visual atoms
-            x_column="", y_column=""
+            visible=True, 
+            zorder=1,
+            visuals=self._create_line(), 
         )
 
     def _create_bar_artist(self) -> BarArtistProperties:
+        s = self._current_style
         return BarArtistProperties(
-            label="Bar", visible=True, zorder=2,
+            visible=True, 
+            zorder=1,
             visuals=self._create_patch(),
-            x_column="", y_column="",
-            width=0.8, align="center"
-        ) #TODO: width and align should not have default values
+            width=0.8, # These are defaults for now because matplotlib doesn't have these RC params
+            align="center"
+        )
 
     def _create_image_artist(self) -> ImageArtistProperties:
         s = self._current_style
         return ImageArtistProperties(
-            label="Image", visible=True, zorder=1,
+            visible=True, 
+            zorder=1,
             visuals=self._create_mappable(),
-            data_column="",
-            interpolation=str(s["image.interpolation"]),
-            origin=str(s["image.origin"]),
-            extent=None
         )
 
     def _create_mesh_artist(self) -> MeshArtistProperties:
         s = self._current_style
         return MeshArtistProperties(
-            label="Mesh", visible=True, zorder=1,
+            visible=True, 
+            zorder=1,
             visuals=self._create_mappable(),
-            x_column="", y_column="", z_column="",
-            shading=str(s["pcolor.shading"]),
-            antialiased=True
-        ) #TODO: width and align should not have default values
+        )
 
     def _create_contour_artist(self) -> ContourArtistProperties:
+        s = self._current_style
         return ContourArtistProperties(
-            label="Contour", visible=True, zorder=1,
+            visible=True, 
+            zorder=1,
             visuals=self._create_mappable(),
-            z_column="",
-            levels=10, filled=True
-        ) #TODO: width and align should not have default values
+            linewidth=float(s["contour.linewidth"]),
+            levels=10, #Defaults for now because matplotlib doesn't provide them
+            filled=True
+        )
 
     def _create_histogram_artist(self) -> HistogramArtistProperties:
+        s = self._current_style
         return HistogramArtistProperties(
-            label="Histogram", visible=True, zorder=1,
+            visible=True, 
+            zorder=1,
             visuals=self._create_patch(),
-            data_column="",
-            bins=10, density=False, cumulative=False
-        ) #TODO: width and align should not have default values
+            bins=s["hist.bins"], # Can be str or int
+            density=bool(s["hist.density"]),
+            cumulative=bool(s["hist.cumulative"])
+        )
 
     def _create_stair_artist(self) -> StairArtistProperties:
+        s = self._current_style
         return StairArtistProperties(
-            label="Stair", visible=True, zorder=2,
+            visible=True, 
+            zorder=1,
             visuals=self._create_line(),
-            data_column="",
-            baseline=0.0, fill=False
-        ) #TODO: width and align should not have default values
+            baseline=0.0, # Default for now because matplotlib doesn't have this RC param
+            fill=False
+        )
 
     # --- Visual Atom Factories ---
 
@@ -210,12 +220,7 @@ class StyleService:
         return TextProperties(
             text=content,
             color=str(s["text.color"]),
-            alpha=float(s["text.alpha"]),
             font=self._create_font(),
-            rotation=float(s["text.rotation"]),
-            va=str(s["text.va"]),
-            ha=str(s["text.ha"]),
-            parse_math=bool(s["text.parse_math"])
         )
 
     def _create_line(self) -> LineProperties:
@@ -229,8 +234,6 @@ class StyleService:
             markeredgecolor=str(s["lines.markeredgecolor"]),
             markeredgewidth=float(s["lines.markeredgewidth"]),
             markersize=float(s["lines.markersize"]),
-            antialiased=bool(s["lines.antialiased"]),
-            alpha=float(s["lines.alpha"])
         )
 
     def _create_patch(self) -> PatchProperties:
@@ -239,10 +242,7 @@ class StyleService:
             facecolor=str(s["patch.facecolor"]),
             edgecolor=str(s["patch.edgecolor"]),
             linewidth=float(s["patch.linewidth"]),
-            alpha=float(s["patch.alpha"]),
             force_edgecolor=bool(s["patch.force_edgecolor"]),
-            antialiased=bool(s["patch.antialiased"]),
-            hatch=str(s["patch.hatch"]) if s["patch.hatch"] else None
         )
 
     def _create_mappable(self) -> ScalarMappableProperties:
@@ -255,34 +255,30 @@ class StyleService:
 
     # --- Coordinate Factories ---
 
-    def _create_ticks(self, prefix: str) -> TickProperties:
+    def _create_ticks(self, axis_key: AxisKey) -> TickProperties:
         s = self._current_style
         return TickProperties(
-            major_size=float(s[f"{prefix}tick.major.size"]),
-            minor_size=float(s[f"{prefix}tick.minor.size"]),
-            major_width=float(s[f"{prefix}tick.major.width"]),
-            minor_width=float(s[f"{prefix}tick.minor.width"]),
-            major_pad=float(s[f"{prefix}tick.major.pad"]),
-            minor_pad=float(s[f"{prefix}tick.minor.pad"]),
-            direction=str(s[f"{prefix}tick.direction"]),
-            color=str(s[f"{prefix}tick.color"]),
-            labelcolor=str(s[f"{prefix}tick.labelcolor"]),
-            labelsize=float(s[f"{prefix}tick.labelsize"]),
-            minor_visible=bool(s[f"{prefix}tick.minor.visible"]),
-            major_top=True,
-            major_bottom=True,
-            minor_top=True,
-            minor_bottom=True,
-            minor_ndivs=4 # TODO: Default value is not good
+            major_size=float(s[f"{axis_key.value}tick.major.size"]),
+            minor_size=float(s[f"{axis_key.value}tick.minor.size"]),
+            major_width=float(s[f"{axis_key.value}tick.major.width"]),
+            minor_width=float(s[f"{axis_key.value}tick.minor.width"]),
+            major_pad=float(s[f"{axis_key.value}tick.major.pad"]),
+            minor_pad=float(s[f"{axis_key.value}tick.minor.pad"]),
+            direction=TickDirection.from_str(s[f"{axis_key.value}tick.direction"]),
+            color=str(s[f"{axis_key.value}tick.color"]),
+            labelcolor=str(s[f"{axis_key.value}tick.labelcolor"]),
+            labelsize=float(s[f"{axis_key.value}tick.labelsize"]),
+            minor_visible=bool(s[f"{axis_key.value}tick.minor.visible"]),
+            minor_ndivs=int(s[f"{axis_key.value}tick.minor.ndivs"])
         )
 
-    def _create_spine(self) -> SpineProperties:
+    def _create_spine(self, position: SpinePosition, is_visible: bool) -> SpineProperties:
         s = self._current_style
         return SpineProperties(
-            visible=bool(s["axes.spines.visible"]),
+            visible=is_visible,
             color=str(s["axes.edgecolor"]),
             linewidth=float(s["axes.linewidth"]),
-            position=(str(s["axes.spines.position_type"]), float(s["axes.spines.position_val"]))
+            position=position
         )
 
     def _create_grid(self) -> GridProperties:
@@ -293,35 +289,29 @@ class StyleService:
             linestyle=str(s["grid.linestyle"]),
             linewidth=float(s["grid.linewidth"]),
             alpha=float(s["grid.alpha"]),
-            axis="both", # TODO: Default value is not good
-            which="major" # TODO: Default value is not good
         )
 
-    def _create_axis(self, prefix: str) -> AxisProperties:
+    def _create_axis(self, axis_key: AxisKey) -> AxisProperties:
         s = self._current_style
         return AxisProperties(
-            label=self._create_text(""),
-            limits=(None, None),
-            scale="linear", # TODO: Default value is not good
-            ticks=self._create_ticks(prefix),
-            grid=self._create_grid(),
-            margin=float(s[f"axes.{prefix}margin"]),
-            autolimit_mode=str(s["axes.autolimit_mode"]),
+            ticks=self._create_ticks(axis_key),
+            margin=float(s[f"axes.{axis_key.value}margin"]),
+            autolimit_mode=AutolimitMode.from_str(str(s["axes.autolimit_mode"])),
             use_offset=bool(s["axes.formatter.useoffset"]),
             offset_threshold=int(s["axes.formatter.offset_threshold"]),
-            scientific_limits=(int(s["axes.formatter.limits_min"]), int(s["axes.formatter.limits_max"]))
+            scientific_limits=tuple(int(x) for x in s["axes.formatter.limits"])
         )
 
     def _create_cartesian_2d(self) -> Cartesian2DProperties:
         s = self._current_style
         return Cartesian2DProperties(
-            xaxis=self._create_axis("x"),
-            yaxis=self._create_axis("y"),
+            xaxis=self._create_axis(AxisKey.X),
+            yaxis=self._create_axis(AxisKey.Y),
             spines={
-                "left": self._create_spine(),
-                "bottom": self._create_spine(),
-                "top": self._create_spine(),
-                "right": self._create_spine()
+                SpinePosition.LEFT: self._create_spine(SpinePosition.LEFT, bool(s["axes.spines.left"])),
+                SpinePosition.BOTTOM: self._create_spine(SpinePosition.BOTTOM, bool(s["axes.spines.bottom"])),
+                SpinePosition.TOP: self._create_spine(SpinePosition.TOP, bool(s["axes.spines.top"])),
+                SpinePosition.RIGHT: self._create_spine(SpinePosition.RIGHT, bool(s["axes.spines.right"]))
             },
             facecolor=str(s["axes.facecolor"]),
             axis_below=s["axes.axisbelow"],
@@ -333,17 +323,27 @@ class StyleService:
         base = self._create_cartesian_2d()
         return Cartesian3DProperties(
             xaxis=base.xaxis, yaxis=base.yaxis,
-            zaxis=self._create_axis("z"),
-            spines=base.spines,
+            zaxis=self._create_axis(AxisKey.Z),
+            spines=base.spines, #TODO: 3D spine handling is more complex. This is a simplification.
             facecolor=base.facecolor,
             axis_below=base.axis_below,
             prop_cycle=base.prop_cycle,
-            pane_colors={"x": (0.9, 0.9, 0.9, 1.0), "y": (0.9, 0.9, 0.9, 1.0), "z": (0.9, 0.9, 0.9, 1.0)}
-        ) #TODO: Default pane colors are not good
+            pane_colors={
+                AxisKey.X: self._parse_rgba(s["axes3d.pane_color_x"]),
+                AxisKey.Y: self._parse_rgba(s["axes3d.pane_color_y"]),
+                AxisKey.Z: self._parse_rgba(s["axes3d.pane_color_z"])
+            }
+        )
 
     def _create_polar(self) -> PolarProperties:
         return PolarProperties(
-            theta_axis=self._create_axis("x"),
-            r_axis=self._create_axis("y"),
-            spine=self._create_spine()
-        ) #TODO: Ambiguous to map x to theta and y to r
+            theta_axis=self._create_axis(AxisKey.X), # Maps x theme keys to theta
+            r_axis=self._create_axis(AxisKey.Y),     # Maps y theme keys to r
+            spine=self._create_spine(SpinePosition.BOTTOM, bool(self._current_style["axes.spines.bottom"]))
+        )
+
+    def _parse_rgba(self, val: Any) -> tuple[float, float, float, float]:
+        """Helper to ensure a value is a 4-tuple RGBA."""
+        if not isinstance(val, (list, tuple)) or len(val) != 4:
+            raise ValueError(f"Expected a 4-tuple RGBA value, got {val}")
+        return tuple(val)

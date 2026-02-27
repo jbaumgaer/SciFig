@@ -9,7 +9,7 @@ from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Mar
 from src.models.layout.layout_engine import LayoutEngine
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import BasePlotProperties
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.config_service import ConfigService
 from src.services.event_aggregator import EventAggregator
 from src.shared.constants import LayoutMode
@@ -129,7 +129,7 @@ class LayoutManager():
                     new_slot_node.plot_properties.update_from_dict(old_state["plot_properties_dict"])
                 else:
                     old_type = old_state["plot_properties_dict"].get("plot_type", "line") #TODO: Don't hardcode default type, need a more robust way to handle missing plot type
-                    new_slot_node.plot_properties = BasePlotProperties.create_properties_from_plot_type(PlotType(old_type))
+                    new_slot_node.plot_properties = BasePlotProperties.create_properties_from_plot_type(ArtistType(old_type))
                     new_slot_node.plot_properties.update_from_dict(old_state["plot_properties_dict"])
 
                 old_plot_index += 1

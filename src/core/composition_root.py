@@ -12,7 +12,7 @@ from src.core.application_components import ApplicationComponents
 from src.models.application_model import ApplicationModel
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
-from src.models.plots.plot_types import PlotType
+from src.models.plots.plot_types import ArtistType
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.services.event_aggregator import EventAggregator
@@ -169,10 +169,10 @@ class CompositionRoot:
         )
 
         self._plot_properties_ui_factory.register_builder(
-            PlotType.LINE, _build_line_plot_ui_widgets
+            ArtistType.LINE, _build_line_plot_ui_widgets
         )
         self._plot_properties_ui_factory.register_builder(
-            PlotType.SCATTER, _build_scatter_plot_ui_widgets
+            ArtistType.SCATTER, _build_scatter_plot_ui_widgets
         )
         self._side_panel = SidePanel(event_aggregator=self._event_aggregator)
         properties_tab = PropertiesTab(

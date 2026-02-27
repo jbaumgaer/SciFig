@@ -1,11 +1,4 @@
 from enum import Enum, auto
-from pathlib import Path
-from typing import Optional
-
-# These imports are for type hinting in event payloads, not actual runtime usage within this Enum.
-# from src.models.plots.plot_types import PlotType
-# import pandas as pd
-
 
 class Events(Enum):
     """
@@ -30,19 +23,14 @@ class Events(Enum):
     NODE_POSITION_CHANGED = auto()  # Payload: node_id: str, new_position: tuple
     NODE_SIZE_CHANGED = auto()  # Payload: node_id: str, new_size: tuple
 
-    # --- Plot-Specific Property Changes ---
-    PLOT_TITLE_CHANGED = auto()  # Payload: node_id: str, new_title: str
-    PLOT_XLABEL_CHANGED = auto()  # Payload: node_id: str, new_xlabel: str
-    PLOT_YLABEL_CHANGED = auto()  # Payload: node_id: str, new_ylabel: str
-    PLOT_MARKER_SIZE_CHANGED = auto()  # Payload: node_id: str, new_size: float
-    PLOT_AXIS_LIMITS_CHANGED = auto()  # Payload: node_id: str, xlim: tuple[Optional[float], Optional[float]], ylim: tuple[Optional[float], Optional[float]]
-    PLOT_MAPPING_CHANGED = auto()  # Payload: node_id: str, x_column: str, y_columns: list[str]
-    PLOT_TYPE_CHANGED = auto()  # Payload: node_id: str, new_plot_type: str (PlotType.value)
+    # --- Generic Path-Based Property Changes (NEW) ---
+    PLOT_COMPONENT_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: any
+    SUB_COMPONENT_SELECTED = auto()  # Payload: node_id: str, path: str
 
     # --- Node Data & Structure Changes ---
-    SCENE_GRAPH_CHANGED = auto()  # Payload: new_scene_graph: dict (or a more specific structure)
+    SCENE_GRAPH_CHANGED = auto()  # Payload: new_scene_graph: dict
     NODE_DATA_FILE_PATH_UPDATED = auto()  # Payload: node_id: str, new_path: Optional[Path]
-    NODE_DATA_LOADED = auto()  # Payload: node_id: str (implies new data in model)
+    NODE_DATA_LOADED = auto()  # Payload: node_id: str
     NODE_ADDED_TO_SCENE = auto()  # Payload: parent_id: str, new_node_id: str, index: int
     NODE_REMOVED_FROM_SCENE = auto()  # Payload: parent_id: str, removed_node_id: str
     NODE_REPARENTED_IN_SCENE = auto()  # Payload: node_id: str, new_parent_id: str, new_index: int
@@ -81,14 +69,8 @@ class Events(Enum):
     CHANGE_NODE_POSITION_REQUESTED = auto()  # Payload: node_id: str, new_position: tuple
     CHANGE_NODE_SIZE_REQUESTED = auto()  # Payload: node_id: str, new_size: tuple
 
-    # --- Plot-Specific Property Change Requests ---
-    CHANGE_PLOT_TITLE_REQUESTED = auto()  # Payload: node_id: str, new_title: str
-    CHANGE_PLOT_XLABEL_REQUESTED = auto()  # Payload: node_id: str, new_xlabel: str
-    CHANGE_PLOT_YLABEL_REQUESTED = auto()  # Payload: node_id: str, new_ylabel: str
-    CHANGE_PLOT_MARKER_SIZE_REQUESTED = auto()  # Payload: node_id: str, new_size: str (from UI)
-    CHANGE_PLOT_AXIS_LIMITS_REQUESTED = auto()  # Payload: node_id: str, xlim_min: str, xlim_max: str, ylim_min: str, ylim_max: str
-    MAP_PLOT_COLUMNS_REQUESTED = auto()  # Payload: node_id: str, x_column: str, y_column: str
-    CHANGE_PLOT_TYPE_REQUESTED = auto()  # Payload: node_id: str, new_plot_type_str: str
+    # --- Generic Path-Based Property Change Requests ---
+    CHANGE_PLOT_COMPONENT_REQUESTED = auto()  # Payload: node_id: str, path: str, value: any
 
     # --- Node Data & Structure Requests ---
     SELECT_DATA_FILE_FOR_NODE_REQUESTED = auto()  # Payload: node_id: str
@@ -97,7 +79,6 @@ class Events(Enum):
     UNGROUP_NODE_REQUESTED = auto()  # Payload: node_id: str
     DATA_FILE_SELECT_REQUESTED = auto()  # Payload: node_id: str
     APPLY_DATA_FILE_REQUESTED = auto()  # Payload: node_id: str, file_path: Path
-    # Add/Remove/Reparent/Reorder requests can be added as commands are implemented.
 
     # --- Layout Requests ---
     TOGGLE_LAYOUT_MODE_REQUESTED = auto()  # Payload: is_grid_mode: bool

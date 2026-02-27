@@ -8,10 +8,8 @@ import pandas as pd
 
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import (
-    AxesLimits,
-    BasePlotProperties,
-    PlotMapping,
-    PlotType,
+    ArtistType,
+    PlotProperties,
 )
 
 
@@ -34,9 +32,9 @@ class PlotNode(SceneNode):
             0.8,
         )  # TODO: This should be set by the layout manager, not hardcoded
         # TODO: Change this from a tuple to a x, y, width, height dataclass for better readability and maintainability
-        self.plot_properties: Optional[BasePlotProperties] = None
+        self.plot_properties: Optional[PlotProperties] = None
         self.data: Optional[pd.DataFrame] = None
-        self.axes: Optional[matplotlib.axes.Axes] = None  # Store the Matplotlib Axes object
+        self.axes: Optional[matplotlib.axes.Axes] = None  # Store the Matplotlib Axes object TODO: Is this not already stored in the plot_properties?
         self.data_file_path: Optional[Path] = None  # New attribute
 
     def hit_test(self, position: tuple[float, float]) -> Optional[SceneNode]:
@@ -124,7 +122,7 @@ class PlotNode(SceneNode):
 
             # Determine the correct property class based on 'plot_type'
             plot_type_str = props_data.get("plot_type", "line")  # Use lowercase default
-            plot_type = PlotType(plot_type_str)
+            plot_type = ArtistType(plot_type_str)
             node.logger.debug(f"PlotNode.from_dict: Determined plot_type: {plot_type}")
 
             # Create the properties object using the factory method
