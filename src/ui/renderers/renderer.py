@@ -1,6 +1,6 @@
 import logging
 from dataclasses import is_dataclass, fields
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import matplotlib.figure
 import matplotlib.axes
@@ -13,7 +13,7 @@ from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.rectangle_node import RectangleNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.nodes.text_node import TextNode
-from src.models.plots.plot_properties import PlotProperties, AxisProperties, SpineProperties
+from src.models.plots.plot_properties import PlotProperties
 from src.services.layout_manager import LayoutManager
 
 class Renderer:
@@ -28,7 +28,7 @@ class Renderer:
         self.logger = logging.getLogger(self.__class__.__name__)
         
         # Track versions to avoid redundant reflection
-        self._last_synced_versions: Dict[str, int] = {} 
+        self._last_synced_versions: dict[str, int] = {} 
         self.logger.info("Renderer initialized.")
 
     def render(
@@ -106,8 +106,58 @@ class Renderer:
         # Sync Coordinates (Axis, Spines)
         self._sync_coordinates(node.axes, props.coords, "coords")
         
+        # Sync Artists (Line, Scatter, etc.)
+        self._sync_artists(node.axes, props, node)
+        
         # Update the sync version
         self._last_synced_versions[node.id] = props._version
+
+    def _sync_artists(self, ax: matplotlib.axes.Axes, props: PlotProperties, node: PlotNode):
+        """Syncs the list of data artists (Lines, Scatters, etc.) on the axes."""
+        # We ensure the number of Matplotlib artists matches the number of property objects
+        # For simplicity in this pass, we sync existing artists or create new ones
+        
+        for i, artist_props in enumerate(props.artists):
+            path = f"artists.{i}"
+            
+            # 1. Identify or Create the Matplotlib Artist
+            # We use the list index as a simple key; in a more robust system, we'd use stable IDs
+            try:
+                # Check if we already have an artist at this index in the Axes
+                mpl_artist = ax.get_lines()[i] if "Line" in str(type(artist_props)) else ax.collections[i]
+            except IndexError:
+                # Create a new artist based on type
+                if "Line" in str(type(artist_props)):
+                    mpl_artist, = ax.plot([], [])
+                elif "Scatter" in str(type(artist_props)):
+                    mpl_artist = ax.scatter([], [])
+                else:
+                    continue
+
+            # 2. Sync Visuals (Generic)
+            if hasattr(artist_props, "visuals"):
+                self._sync_component(mpl_artist, artist_props.visuals, f"{path}.visuals")
+
+            # 3. Sync Data (Specialized)
+            if node.data is not None:
+                self._sync_artist_data(mpl_artist, artist_props, node.data)
+
+    def _sync_artist_data(self, mpl_artist: Any, artist_props: Any, data: pd.DataFrame):
+        """Performs the actual plotting/data update for an artist."""
+        try:
+            if hasattr(artist_props, "x_column") and hasattr(artist_props, "y_column"):
+                x = data[artist_props.x_column]
+                y = data[artist_props.y_column]
+                
+                if hasattr(mpl_artist, "set_data"): # Line2D
+                    mpl_artist.set_data(x, y)
+                elif hasattr(mpl_artist, "set_offsets"): # PathCollection (Scatter)
+                    import numpy as np
+                    mpl_artist.set_offsets(np.column_stack((x, y)))
+                    
+        except Exception as e:
+            self.logger.warning(f"Failed to sync data for artist: {e}")
+
 
     def _sync_coordinates(self, ax: matplotlib.axes.Axes, coords: Any, path: str):
         """Syncs Axis and Spine properties."""
