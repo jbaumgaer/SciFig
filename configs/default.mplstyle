@@ -118,6 +118,9 @@ mathtext.default: regular  # The default font to use for math. Can be any of the
 
 axes.edgecolor:     black   # axes edge color
 axes.linewidth:     0.5     # edge line width
+axes.grid:          False   # display grid or not
+axes.grid.axis:     both    # which axis the grid should apply to
+axes.grid.which:    major   # grid lines at {major, minor, both} ticks
 axes.labelsize:     medium  # font size of the x and y labels
 axes.labelpad:      4.0     # space between label and axis
 axes.labelweight:   normal  # weight of the x and y labels
@@ -218,6 +221,13 @@ figure.constrained_layout.wspace: 0.02
 ## ***************************************************************************
 
 image.cmap:            viridis      # A colormap name (plasma, magma, etc.) !!!
+
+
+## ***************************************************************************
+## * CONTOUR PLOTS                                                           *
+## ***************************************************************************
+
+contour.linewidth:          0.5    # {float, None} Size of the contour line
 
 ## ***************************************************************************
 ## * ERRORBAR PLOTS                                                          *
