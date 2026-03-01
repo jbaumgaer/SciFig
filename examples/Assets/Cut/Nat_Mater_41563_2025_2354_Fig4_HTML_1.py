@@ -11,7 +11,7 @@ Q, V = np.meshgrid(qz, voltage)
 # Center of the peak shifts with voltage
 # Base center at 9.55
 # Shifts left as voltage increases (parabolic or switching behavior)
-center_shift = 0.08 * np.exp(-((V - 25)/15)**2) 
+center_shift = 0.08 * np.exp(-((V - 25)/15)**2)
 # Peak 1 (Main)
 mu1 = 9.58 - center_shift
 # Peak 2 (Shoulder/Splitting)
@@ -52,7 +52,7 @@ fig, ax = plt.subplots(figsize=(5, 6), dpi=150)
 # Diverging Colormap: RdBu_r
 levels = np.linspace(2.5, 5.2, 12)
 cmap = plt.cm.RdBu_r
-# Using Z_f but mapping Y axis to 0-45-0 or similar? 
+# Using Z_f but mapping Y axis to 0-45-0 or similar?
 # The image y-axis is 'Voltage along [001]c (V)'
 # Top panel 0-45, Bottom 5-45?
 # Let's just plot as one block 0-45 and mirrored

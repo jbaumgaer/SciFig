@@ -40,21 +40,21 @@ plt.subplots_adjust(hspace=0)
 for ax, (tot, s0, s4, lbl) in zip(axes[::-1], datasets): # Reverse order to put As-prepared at bottom
     # Scatter Raw
     ax.scatter(be[::3], tot[::3], facecolors='none', edgecolors='gray', s=20)
-    
+
     # Fit line
     ax.plot(be, s0+s4, color='#444444', lw=1)
-    
+
     # Fill S0 (Blue)
     ax.fill_between(be, 0, s0, color='#88CCEE', alpha=0.8, edgecolor='#4488BB')
-    
+
     # Fill S4 (Red)
     ax.fill_between(be, 0, s4, color='#FF9999', alpha=0.8, edgecolor='#CC4444')
-    
+
     ax.text(173.5, 0.5, lbl, fontsize=12)
-    
+
     ax.set_yticks([])
     ax.set_ylim(-0.2, 1.5)
-    
+
     # Vertical Dashed Lines
     ax.axvline(163.5, color='gray', linestyle='--', lw=1.5, zorder=0)
     ax.axvline(168.0, color='gray', linestyle='--', lw=1.5, zorder=0)

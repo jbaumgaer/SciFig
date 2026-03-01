@@ -35,10 +35,10 @@ datasets = [
 for ax, (y, col, lbl) in zip(axes, datasets):
     ax.plot(wn, y, color=col, lw=2)
     ax.text(1580, np.min(y)+5, lbl, fontsize=12)
-    
+
     ax.set_ylim(70, 105)
     ax.set_yticks([]) # Hide Y ticks mostly
-    
+
     if ax != axes[-1]:
         ax.spines['bottom'].set_visible(True)
 

@@ -44,11 +44,11 @@ plt.subplots_adjust(hspace=0)
 for ax, (tot, rup, pc, po, lbl) in zip(axes, datasets):
     # Scatter for raw data
     ax.scatter(be[::3], tot[::3], facecolors='none', edgecolors='black', s=30, lw=1)
-    
+
     # Fit line
     fit_sum = rup + pc + po
     ax.plot(be, fit_sum, color='#444444', lw=1)
-    
+
     # Fill areas
     # Ru-P (Blue)
     ax.fill_between(be, 0, rup, color='#6699CC', alpha=0.9) # Light blue
@@ -60,10 +60,10 @@ for ax, (tot, rup, pc, po, lbl) in zip(axes, datasets):
 
     # Label
     ax.text(139.5, 0.2, lbl, fontsize=11, va='bottom')
-    
+
     ax.set_yticks([])
     ax.set_ylim(-0.1, 1.5)
-    
+
     if ax == axes[0]: # Bottom one in list iteration but Top visually? No, zip order.
         pass
 

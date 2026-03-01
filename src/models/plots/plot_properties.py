@@ -1,14 +1,22 @@
-from dataclasses import dataclass, field, asdict, fields, is_dataclass
-from typing import Optional, Any, Union, Type, TypeVar, get_type_hints
-from src.models.plots.plot_types import ArtistType, AutolimitMode, CoordinateSystem, SpinePosition, TickDirection
+from dataclasses import asdict, dataclass, field, fields, is_dataclass
+from typing import Any, Optional, Type, TypeVar, Union, get_type_hints
+
+from src.models.plots.plot_types import (
+    ArtistType,
+    AutolimitMode,
+    CoordinateSystem,
+    SpinePosition,
+    TickDirection,
+)
 
 T = TypeVar("T")
+
 
 def _from_dict_recursive(cls: Type[T], data: Any) -> T:
     """Helper to recursively reconstruct dataclasses from dicts."""
     if not isinstance(data, dict):
         return data
-    
+
     if is_dataclass(cls):
         type_hints = get_type_hints(cls)
         kwargs = {}
@@ -16,7 +24,7 @@ def _from_dict_recursive(cls: Type[T], data: Any) -> T:
             if f.name in data:
                 field_value = data[f.name]
                 field_type = type_hints[f.name]
-                
+
                 origin = getattr(field_type, "__origin__", None)
                 if origin is Union:
                     args = field_type.__args__
@@ -25,7 +33,9 @@ def _from_dict_recursive(cls: Type[T], data: Any) -> T:
                         try:
                             if possible_type is type(None):
                                 continue
-                            kwargs[f.name] = _from_dict_recursive(possible_type, field_value)
+                            kwargs[f.name] = _from_dict_recursive(
+                                possible_type, field_value
+                            )
                             success = True
                             break
                         except Exception:
@@ -34,14 +44,20 @@ def _from_dict_recursive(cls: Type[T], data: Any) -> T:
                         kwargs[f.name] = field_value
                 elif origin is list:
                     item_type = field_type.__args__[0]
-                    kwargs[f.name] = [_from_dict_recursive(item_type, item) for item in field_value]
+                    kwargs[f.name] = [
+                        _from_dict_recursive(item_type, item) for item in field_value
+                    ]
                 elif origin is dict:
                     val_type = field_type.__args__[1]
-                    kwargs[f.name] = {k: _from_dict_recursive(val_type, v) for k, v in field_value.items()}
+                    kwargs[f.name] = {
+                        k: _from_dict_recursive(val_type, v)
+                        for k, v in field_value.items()
+                    }
                 else:
                     kwargs[f.name] = _from_dict_recursive(field_type, field_value)
         return cls(**kwargs)
     return data
+
 
 @dataclass
 class FontProperties:
@@ -50,19 +66,21 @@ class FontProperties:
     variant: str
     weight: str
     stretch: str
-    size: Union[float, str] # Supports aliases like 'medium'
-    #TODO: Inject not only the font family, but the actual font, maybe via a double enum?
+    size: Union[float, str]  # Supports aliases like 'medium'
+    # TODO: Inject not only the font family, but the actual font, maybe via a double enum?
+
 
 @dataclass
 class TextProperties:
     text: str
-    color: Union[str, tuple, list] #TODO: Make a color type or class
+    color: Union[str, tuple, list]  # TODO: Make a color type or class
     font: FontProperties
     # rotation: float = field(init=False)
     # va: str = field(init=False)
     # ha: str = field(init=False)
     # parse_math: bool = field(init=False)
     # alpha: float = field(init=False)
+
 
 @dataclass
 class LineProperties:
@@ -75,12 +93,14 @@ class LineProperties:
     markeredgewidth: float
     markersize: float
 
+
 @dataclass
 class PatchProperties:
     facecolor: Union[str, tuple, list]
     edgecolor: Union[str, tuple, list]
     linewidth: float
     force_edgecolor: bool
+
 
 @dataclass
 class TickProperties:
@@ -97,12 +117,14 @@ class TickProperties:
     minor_visible: bool
     minor_ndivs: Union[str, int]
 
+
 @dataclass
 class SpineProperties:
     visible: bool
     color: Union[str, tuple, list]
     linewidth: float
     position: SpinePosition
+
 
 @dataclass
 class GridProperties:
@@ -112,12 +134,14 @@ class GridProperties:
     linewidth: float
     alpha: float
 
+
 @dataclass
 class ScalarMappableProperties:
     cmap: str
     norm_min: Optional[float]
     norm_max: Optional[float]
     has_colorbar: bool
+
 
 @dataclass
 class AxisProperties:
@@ -131,10 +155,12 @@ class AxisProperties:
     limits: tuple[Optional[float], Optional[float]]
     # scale: str = field(init=False)
 
+
 @dataclass
 class CoordinateProperties:
     # coord_type: CoordinateSystem
     pass
+
 
 @dataclass
 class Cartesian2DProperties(CoordinateProperties):
@@ -145,6 +171,7 @@ class Cartesian2DProperties(CoordinateProperties):
     axis_below: Union[bool, str]
     prop_cycle: list[str]
     coord_type: CoordinateSystem = CoordinateSystem.CARTESIAN_2D
+
 
 @dataclass
 class Cartesian3DProperties(CoordinateProperties):
@@ -158,6 +185,7 @@ class Cartesian3DProperties(CoordinateProperties):
     pane_colors: dict[str, tuple[float, float, float, float]]
     coord_type: CoordinateSystem = CoordinateSystem.CARTESIAN_3D
 
+
 @dataclass
 class PolarProperties(CoordinateProperties):
     theta_axis: AxisProperties
@@ -165,11 +193,13 @@ class PolarProperties(CoordinateProperties):
     spine: SpineProperties
     coord_type: CoordinateSystem = CoordinateSystem.POLAR
 
+
 @dataclass
 class BaseArtistProperties:
     visible: bool
     zorder: int
     # artist_type: ArtistType
+
 
 @dataclass
 class LineArtistProperties(BaseArtistProperties):
@@ -178,12 +208,14 @@ class LineArtistProperties(BaseArtistProperties):
     y_column: Optional[str] = None
     artist_type: ArtistType = ArtistType.LINE
 
+
 @dataclass
 class ScatterArtistProperties(BaseArtistProperties):
     visuals: LineProperties
     x_column: Optional[str] = None
     y_column: Optional[str] = None
     artist_type: ArtistType = ArtistType.SCATTER
+
 
 @dataclass
 class BarArtistProperties(BaseArtistProperties):
@@ -192,15 +224,18 @@ class BarArtistProperties(BaseArtistProperties):
     align: str
     artist_type: ArtistType = ArtistType.BAR
 
+
 @dataclass
 class ImageArtistProperties(BaseArtistProperties):
     visuals: ScalarMappableProperties
     artist_type: ArtistType = ArtistType.IMAGE
 
+
 @dataclass
 class MeshArtistProperties(BaseArtistProperties):
     visuals: ScalarMappableProperties
     artist_type: ArtistType = ArtistType.MESH
+
 
 @dataclass
 class ContourArtistProperties(BaseArtistProperties):
@@ -210,6 +245,7 @@ class ContourArtistProperties(BaseArtistProperties):
     filled: bool
     artist_type: ArtistType = ArtistType.CONTOUR
 
+
 @dataclass
 class HistogramArtistProperties(BaseArtistProperties):
     visuals: PatchProperties
@@ -218,6 +254,7 @@ class HistogramArtistProperties(BaseArtistProperties):
     cumulative: bool
     artist_type: ArtistType = ArtistType.HISTOGRAM
 
+
 @dataclass
 class StairArtistProperties(BaseArtistProperties):
     visuals: LineProperties
@@ -225,13 +262,17 @@ class StairArtistProperties(BaseArtistProperties):
     fill: bool
     artist_type: ArtistType = ArtistType.STAIR
 
+
 @dataclass
 class PlotProperties:
     """The root property tree for a single PlotNode."""
-    titles: dict[str, TextProperties] # 'left', 'center', 'right'
+
+    titles: dict[str, TextProperties]  # 'left', 'center', 'right'
     coords: CoordinateProperties
     legend: dict[str, Any]
-    artists: list[Any] = field(default_factory=list) #TODO: There needs to be some sort of gate_keeping to ensure that we don't accidentally mix incompatible artist types
+    artists: list[Any] = field(
+        default_factory=list
+    )  # TODO: There needs to be some sort of gate_keeping to ensure that we don't accidentally mix incompatible artist types
     _version: int = 0
 
     def to_dict(self) -> dict:
@@ -240,13 +281,17 @@ class PlotProperties:
     @classmethod
     def from_dict(cls, data: dict) -> "PlotProperties":
         # 1. Resolve the specific Coordinate class (Fallback to Cartesian 2D)
-        #TODO: In the future let's not do default fallbacks
+        # TODO: In the future let's not do default fallbacks
         coords_data = data.get("coords", {})
         c_type_raw = coords_data.get("coord_type", CoordinateSystem.CARTESIAN_2D)
-        
+
         # Ensure we have a valid enum (handles strings from JSON)
         try:
-            c_type = CoordinateSystem(c_type_raw) if not isinstance(c_type_raw, CoordinateSystem) else c_type_raw
+            c_type = (
+                CoordinateSystem(c_type_raw)
+                if not isinstance(c_type_raw, CoordinateSystem)
+                else c_type_raw
+            )
         except ValueError:
             c_type = CoordinateSystem.CARTESIAN_2D
 
@@ -255,7 +300,7 @@ class PlotProperties:
             CoordinateSystem.CARTESIAN_3D: Cartesian3DProperties,
             CoordinateSystem.POLAR: PolarProperties,
         }
-        
+
         coord_cls = COORD_MAP.get(c_type, Cartesian2DProperties)
         data["coords"] = _from_dict_recursive(coord_cls, coords_data)
 
@@ -275,10 +320,14 @@ class PlotProperties:
             for a_data in data["artists"]:
                 a_type_raw = a_data.get("artist_type", ArtistType.LINE)
                 try:
-                    a_type = ArtistType(a_type_raw) if not isinstance(a_type_raw, ArtistType) else a_type_raw
+                    a_type = (
+                        ArtistType(a_type_raw)
+                        if not isinstance(a_type_raw, ArtistType)
+                        else a_type_raw
+                    )
                 except ValueError:
                     a_type = ArtistType.LINE
-                    
+
                 a_cls = ARTIST_MAP.get(a_type, LineArtistProperties)
                 new_artists.append(_from_dict_recursive(a_cls, a_data))
             data["artists"] = new_artists

@@ -1,4 +1,5 @@
 from typing import Protocol
+
 from src.models.nodes.scene_node import SceneNode
 
 

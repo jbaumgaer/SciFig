@@ -14,7 +14,7 @@ def landau_fan(vg, vb, n):
     # Slope depends on n (filling factor integer)
     slope = 0.3 + 0.1 * n
     # Distance from the line y = slope * x + intercept
-    dist = (vb - (slope * vg + 0.60)) 
+    dist = (vb - (slope * vg + 0.60))
     # Create a "plateau" width
     return np.exp(- (dist / 0.008)**2) * n
 
@@ -71,7 +71,7 @@ ax.set_xlim(-0.15, 0.18)
 # Gray patch for masked area
 # Since pcolormesh handles masking by not drawing, we manually add gray background if needed
 # But matplotlib shows white for masked. Let's add a gray polygon behind.
-ax.set_facecolor('gray') 
+ax.set_facecolor('gray')
 
 plt.tight_layout()
 plt.show()

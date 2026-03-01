@@ -68,7 +68,7 @@ class PropertiesTab(QWidget):
         self._subplot_selection_layout.addRow(
             "", h_layout_data_buttons
         )  # Empty label to align buttons
-        #TODO: Is this the tangling widget that I see in the properties?
+        # TODO: Is this the tangling widget that I see in the properties?
 
         self._main_layout.addWidget(self._subplot_selection_group)
 
@@ -81,7 +81,7 @@ class PropertiesTab(QWidget):
         for plot_type in ArtistType:
             self._plot_type_selector_combo.addItem(plot_type.value)
         self._plot_type_layout.addRow("Type:", self._plot_type_selector_combo)
-        
+
         self._main_layout.addWidget(self._plot_type_group)
 
         # --- Dynamic Properties Section ---
@@ -98,24 +98,35 @@ class PropertiesTab(QWidget):
 
         self._subscribe_to_events()
         self._connect_widgets_to_events()
-        
+
         self.logger.info("PropertiesTab initialized.")
         self._update_content()  # Initial call
 
     def _subscribe_to_events(self):
         """Subscribes to notification events to update the UI."""
         self._event_aggregator.subscribe(Events.SELECTION_CHANGED, self._update_content)
-        self._event_aggregator.subscribe(Events.NODE_RENAMED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.NODE_VISIBILITY_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.PLOT_COMPONENT_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.NODE_DATA_LOADED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(
+            Events.NODE_RENAMED, self._update_content_if_selected
+        )
+        self._event_aggregator.subscribe(
+            Events.NODE_VISIBILITY_CHANGED, self._update_content_if_selected
+        )
+        self._event_aggregator.subscribe(
+            Events.NODE_LOCKED_CHANGED, self._update_content_if_selected
+        )
+        self._event_aggregator.subscribe(
+            Events.PLOT_COMPONENT_CHANGED, self._update_content_if_selected
+        )
+        self._event_aggregator.subscribe(
+            Events.NODE_DATA_LOADED, self._update_content_if_selected
+        )
 
     def _connect_widgets_to_events(self):
         """Connects UI widgets to publish request events."""
         self._subplot_selector_combo.currentTextChanged.connect(
             lambda text: self._event_aggregator.publish(
-                Events.SUBPLOT_SELECTION_IN_UI_CHANGED, plot_id=self._subplot_selector_combo.currentData()
+                Events.SUBPLOT_SELECTION_IN_UI_CHANGED,
+                plot_id=self._subplot_selector_combo.currentData(),
             )
         )
         self._plot_type_selector_combo.currentTextChanged.connect(
@@ -167,7 +178,7 @@ class PropertiesTab(QWidget):
         """
         self.logger.debug("PropertiesTab: Updating content.")
         selected_nodes = self.model.selection
-        
+
         self._update_subplot_selection_ui(selected_nodes)
         self._update_plot_type_selector_ui(selected_nodes)
         self._update_node_specific_properties_ui(selected_nodes)
@@ -179,7 +190,7 @@ class PropertiesTab(QWidget):
         """
         self.logger.debug("PropertiesTab: Updating subplot selection UI.")
         self._subplot_selector_combo.blockSignals(True)
-        
+
         self._subplot_selector_combo.clear()
         all_plots = [
             node
@@ -251,21 +262,25 @@ class PropertiesTab(QWidget):
         current_node: Optional[PlotNode] = None
         if len(selected_nodes) == 1 and isinstance(selected_nodes[0], PlotNode):
             current_node = selected_nodes[0]
-        
+
         if current_node and current_node.plot_properties:
             # Derive plot type from the first artist, defaulting to LINE
             props = current_node.plot_properties
             current_plot_type = ArtistType.LINE
             if hasattr(props, "artists") and props.artists:
                 current_plot_type = props.artists[0].artist_type
-            
+
             self._plot_type_selector_combo.setCurrentText(current_plot_type.value)
             self._plot_type_selector_combo.setEnabled(True)
-            self.logger.debug(f"PropertiesTab: Plot type selector set to: {current_plot_type.value}")
+            self.logger.debug(
+                f"PropertiesTab: Plot type selector set to: {current_plot_type.value}"
+            )
         else:
             self._plot_type_selector_combo.setCurrentIndex(0)
             self._plot_type_selector_combo.setEnabled(False)
-            self.logger.debug("PropertiesTab: No plot selected, plot type selector disabled.")
+            self.logger.debug(
+                "PropertiesTab: No plot selected, plot type selector disabled."
+            )
 
         self._plot_type_selector_combo.blockSignals(False)
 

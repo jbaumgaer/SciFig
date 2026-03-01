@@ -1,6 +1,6 @@
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.gridspec as gridspec
 
 # --- Data Simulation ---
 # Capacity Y-axis: 0 to 1600
@@ -15,7 +15,7 @@ mask_chg = cap <= 800
 vol[mask_chg] = 3.8 + 0.2 * (cap[mask_chg]/800)**3
 # Discharge
 mask_dch = cap > 800
-vol[mask_dch] = 3.8 - 0.2 * ((cap[mask_dch]-800)/800)**0.5 # Sharp drop? 
+vol[mask_dch] = 3.8 - 0.2 * ((cap[mask_dch]-800)/800)**0.5 # Sharp drop?
 # Actually discharge usually starts high and drops.
 # Image: Line goes Up (Charge), then step, then Down (Discharge)?
 # No, it's Capacity on Y.
@@ -80,7 +80,7 @@ ax1.text(3.5, 1200, 'Discharge', rotation=90, ha='center', va='center')
 # Right: Heatmap
 ax2 = fig.add_subplot(gs[1], sharey=ax1)
 # Coolwarm or similar (Blue background, Red peaks)
-cmap = plt.cm.coolwarm 
+cmap = plt.cm.coolwarm
 im = ax2.imshow(Z.T, aspect='auto', extent=[100, 350, 0, 1600], origin='lower', cmap=cmap, vmin=-0.2, vmax=1.2)
 
 ax2.set_xlabel('Raman shift (cm$^{-1}$)', fontsize=12)

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 # --- Data Simulation ---
 def impedance_arc(r_series, r_ct, freq):
     # Z = Rs + Rct / (1 + j*w*Rct*C)
@@ -81,8 +82,8 @@ ax_sch.plot([0.85, 0.85], [0.2, 0.8], 'k-', lw=2)
 ax_sch.plot([0.85, 1.0], [0.5, 0.5], 'k-', lw=2)
 
 # Values
-ax_sch.text(0.2, 0.7, '200/500 $\Omega$', color='#4488CC', ha='right', fontsize=10) # Using dual color text is hard in one string
-ax_sch.text(0.6, -0.1, '0.55/1.05 M$\Omega$', color='#4488CC', ha='center', fontsize=10)
+ax_sch.text(0.2, 0.7, r'200/500 $\Omega$', color='#4488CC', ha='right', fontsize=10) # Using dual color text is hard in one string
+ax_sch.text(0.6, -0.1, r'0.55/1.05 M$\Omega$', color='#4488CC', ha='center', fontsize=10)
 
 plt.tight_layout()
 plt.show()

@@ -83,7 +83,9 @@ class ToolBarBuilder(QObject):
             self._actions[tool_name.value] = action  # Use tool_name.value for dict key
 
         # Connect tool service signal to update toolbar state
-        self._event_aggregator.subscribe(Events.ACTIVE_TOOL_CHANGED, self._update_tool_bar_state)
+        self._event_aggregator.subscribe(
+            Events.ACTIVE_TOOL_CHANGED, self._update_tool_bar_state
+        )
         initial_active_tool = self._tool_service.active_tool.name
         self._update_tool_bar_state(initial_active_tool)
 

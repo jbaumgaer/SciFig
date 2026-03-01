@@ -13,11 +13,11 @@ def c_shape(x, y, angle_deg):
     rad = np.deg2rad(angle_deg)
     xr = x * np.cos(rad) - y * np.sin(rad)
     yr = x * np.sin(rad) + y * np.cos(rad)
-    
+
     # C-shape: Ring segment
     r = np.sqrt(xr**2 + yr**2)
     theta = np.arctan2(yr, xr)
-    
+
     # Gaussian Ring
     ring = np.exp(-((r - 4)**2)/4)
     # Angular cut (Gap at angle 0)
@@ -26,7 +26,7 @@ def c_shape(x, y, angle_deg):
     angular_mod = np.exp(-((theta)**2)/0.5) # Gap at 0
     # Actually keep intensity away from 0
     angular_mod = 1 - 0.8 * np.exp(-((theta)**2)/1.0)
-    
+
     return ring * angular_mod
 
 # 4 Orientations
@@ -49,7 +49,7 @@ for ax, Z in zip(axes, [Z1, Z2, Z3, Z4]):
 
 # Scale Bar on first
 axes[0].plot([-8, -3], [-8, -8], color='#BB9955', lw=4)
-axes[0].text(-5.5, -6.5, '5 $\AA$', color='#BB9955', ha='center', fontweight='bold', fontsize=14)
+axes[0].text(-5.5, -6.5, r'5 $\AA$', color='#BB9955', ha='center', fontweight='bold', fontsize=14)
 
 # Colorbar text on last
 axes[-1].text(12, 8, 'Hi', fontweight='bold', fontsize=14)

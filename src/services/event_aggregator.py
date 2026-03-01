@@ -29,11 +29,15 @@ class EventAggregator:
                      This handler should accept the arguments passed during publication.
         """
         if not isinstance(event, Events):
-            self.logger.error(f"Attempted to subscribe to invalid event type: {type(event)}")
+            self.logger.error(
+                f"Attempted to subscribe to invalid event type: {type(event)}"
+            )
             return
 
         self._subscribers[event].append(handler)
-        self.logger.debug(f"Handler {handler.__name__} subscribed to event {event.name}")
+        self.logger.debug(
+            f"Handler {handler.__name__} subscribed to event {event.name}"
+        )
 
     def publish(self, event: Events, *args: any, **kwargs: any):
         """
@@ -52,7 +56,9 @@ class EventAggregator:
             self.logger.debug(f"Published event {event.name} with no subscribers.")
             return
 
-        self.logger.info(f"Publishing event: {event.name} with args: {args}, kwargs: {kwargs}")
+        self.logger.info(
+            f"Publishing event: {event.name} with args: {args}, kwargs: {kwargs}"
+        )
         for handler in self._subscribers[event]:
             try:
                 handler(*args, **kwargs)

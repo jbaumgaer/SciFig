@@ -1,7 +1,6 @@
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.gridspec as gridspec
-import matplotlib.patches as mpatches
 
 # --- Data Simulation ---
 temp = np.linspace(25, 900, 250) # More resolution
@@ -25,21 +24,21 @@ scans_temp = []
 for i, t in enumerate(temp):
     if i % 3 != 0: continue # Plot every 3rd step
     scans_temp.append(t)
-    
+
     y = np.zeros_like(two_theta) + 0.05 # Baseline
-    
+
     # --- Define Peaks based on visual analysis ---
-    
+
     # 1. Dark Blue Peak (Ni0.25Mn0.75CO3) - ~3.8 deg, T < 420
     if t < 430:
         # Sharp, intense
         y += 8.0 * np.exp(-((two_theta - 3.8)**2)/0.005)
-        
+
     # 2. Yellow Peak (O-stacking) - ~2.4 deg, T < 660
     if t < 670:
         # Broader
         y += 4.0 * np.exp(-((two_theta - 2.4)**2)/0.015)
-        
+
     # 3. Light Blue Peak (Ni0.25Mn0.75(OH)2) - ~2.8 deg, T < 180
     if t < 200:
          y += 3.0 * np.exp(-((two_theta - 2.85)**2)/0.01)
@@ -48,13 +47,13 @@ for i, t in enumerate(temp):
     if 220 < t < 660:
         # Shift calculation: 0 at 220, 1 at 660
         progress = (t - 220) / (660 - 220)
-        pos = 2.85 - (0.25 * progress) 
+        pos = 2.85 - (0.25 * progress)
         y += 4.5 * np.exp(-((two_theta - pos)**2)/0.012)
-        
+
     # 5. Cyan Peak (NiMn O) - ~6.2 deg, 400 < T < 650
     if 400 < t < 660:
         y += 3.0 * np.exp(-((two_theta - 6.25)**2)/0.01)
-        
+
     # 6. Green Peak (beta-NiMn...) - ~4.8 deg, 500 < T < 700
     if 500 < t < 700:
         y += 2.5 * np.exp(-((two_theta - 4.8)**2)/0.01)
@@ -63,11 +62,11 @@ for i, t in enumerate(temp):
     if t > 650:
         # Transition effects
         factor = min(1.0, (t - 650)/30)
-        
+
         # Doublet at low angle
         y += factor * 12.0 * np.exp(-((two_theta - 2.42)**2)/0.003) # Sharp P3
         y += factor * 6.0 * np.exp(-((two_theta - 2.55)**2)/0.005) # O3 shoulder
-        
+
         y += factor * 3.0 * np.exp(-((two_theta - 4.85)**2)/0.008)
         y += factor * 4.0 * np.exp(-((two_theta - 5.85)**2)/0.008)
         y += factor * 3.5 * np.exp(-((two_theta - 6.35)**2)/0.008)
@@ -97,9 +96,9 @@ ax1.spines['right'].set_visible(False)
 # Horizontal lines & Text
 # 3.5% Loss (~180C)
 ax1.hlines([25, 180], 70, 83, colors='gray', lw=0.5) # Bounds? No, just lines indicating steps
-# The image has lines AT the step transitions or indicating the delta. 
+# The image has lines AT the step transitions or indicating the delta.
 # Let's match the image: Green line at ~310, Blue at ~405, Pink at ~680.
-ax1.hlines(310, 80, 90, colors='#66CCAA', lw=1) 
+ax1.hlines(310, 80, 90, colors='#66CCAA', lw=1)
 ax1.hlines(405, 80, 90, colors='#6699CC', lw=1)
 ax1.hlines(680, 80, 90, colors='#CC6677', lw=1)
 
@@ -126,7 +125,7 @@ y_scale = 12
 for i, y_scan in enumerate(scans):
     t_val = scans_temp[i]
     base_y = t_val + y_scan * y_scale
-    
+
     # 1. Base Line (Grey or Red/Brown for High T)
     if t_val < 660:
         color = '#D3D3D3' # LightGray
@@ -139,39 +138,39 @@ for i, y_scan in enumerate(scans):
         if t_val > 800: color = '#5a1919' # Dark brown
         lw = 1.0
         zorder = 2
-        
+
     ax2.plot(two_theta, base_y, color=color, lw=lw, zorder=zorder)
-    
+
     # 2. Highlight Zones (Selective Coloring)
     if t_val < 660:
         # Yellow Zone (2.3 - 2.5)
         if t_val < 660:
             mask = (two_theta > 2.25) & (two_theta < 2.55)
             ax2.plot(two_theta[mask], base_y[mask], color='#F0E442', lw=1.2, zorder=3) # Yellow
-            
+
         # Dark Blue Zone (3.7 - 3.9) - Peak 1
         if t_val < 430:
             mask = (two_theta > 3.65) & (two_theta < 3.95)
             ax2.plot(two_theta[mask], base_y[mask], color='#000080', lw=1.5, zorder=3) # Navy
-            
+
         # Light Blue Zone (2.7 - 2.95) - Peak 3
         if t_val < 200:
             mask = (two_theta > 2.7) & (two_theta < 3.0)
             ax2.plot(two_theta[mask], base_y[mask], color='#56B4E9', lw=1.2, zorder=3) # Light Blue
-            
+
         # Orange Zone (Moving Peak 4)
         if 220 < t_val < 660:
             # Calculate center again to mask correctly
             progress = (t_val - 220) / (660 - 220)
-            center = 2.85 - (0.25 * progress) 
+            center = 2.85 - (0.25 * progress)
             mask = (two_theta > center - 0.15) & (two_theta < center + 0.15)
             ax2.plot(two_theta[mask], base_y[mask], color='#E69F00', lw=1.2, zorder=3) # Orange
-            
+
         # Cyan Zone (6.1 - 6.4) - Peak 5
         if 400 < t_val < 650:
             mask = (two_theta > 6.1) & (two_theta < 6.4)
             ax2.plot(two_theta[mask], base_y[mask], color='#5CC0C0', lw=1.2, zorder=3) # Cyan/Teal
-            
+
         # Green Zone (4.7 - 4.9) - Peak 6
         if 500 < t_val < 690:
             mask = (two_theta > 4.7) & (two_theta < 4.9)
@@ -182,7 +181,7 @@ for i, y_scan in enumerate(scans):
 
 # Helper for Arrows
 def add_arrow(ax, start, end, text=None, text_pos=None, color='#C4A484'):
-    ax.annotate('', xy=end, xytext=start, 
+    ax.annotate('', xy=end, xytext=start,
                 arrowprops=dict(arrowstyle='->', color=color, lw=2))
     if text and text_pos:
         ax.text(text_pos[0], text_pos[1], text, fontsize=10, color='#555555')

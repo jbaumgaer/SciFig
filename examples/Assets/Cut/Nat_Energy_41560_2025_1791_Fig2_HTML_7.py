@@ -5,12 +5,12 @@ import numpy as np
 ppm = np.linspace(8, 2.5, 1000) # Reversed
 
 def triplet(x, center, split, h):
-    return h * (0.5*np.exp(-((x-(center-split))**2)/0.005) + 
-                1.0*np.exp(-((x-center)**2)/0.005) + 
+    return h * (0.5*np.exp(-((x-(center-split))**2)/0.005) +
+                1.0*np.exp(-((x-center)**2)/0.005) +
                 0.5*np.exp(-((x-(center+split))**2)/0.005))
 
 def doublet(x, center, split, h):
-    return h * (1.0*np.exp(-((x-(center-split))**2)/0.005) + 
+    return h * (1.0*np.exp(-((x-(center-split))**2)/0.005) +
                 1.0*np.exp(-((x-(center+split))**2)/0.005))
 
 def singlet(x, center, h):
@@ -26,7 +26,7 @@ y_ipa += triplet(ppm, 3.2, 0.05, 2) # Multiplet 3.2
 
 # 2. PEAI/FIPA (Teal)
 y_fipa = np.zeros_like(ppm)
-y_fipa += triplet(ppm, 7.3, 0.05, 5) 
+y_fipa += triplet(ppm, 7.3, 0.05, 5)
 y_fipa += triplet(ppm, 7.2, 0.05, 3)
 y_fipa += singlet(ppm, 5.6, 12) # Split? No looks singlet in main, doublet in inset
 y_fipa += singlet(ppm, 4.8, 10) # Shifted

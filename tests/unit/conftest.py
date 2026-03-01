@@ -104,7 +104,7 @@ def mock_application_model():
     model.layoutConfigChanged = signals.layoutConfigChanged
     model.modelChanged = signals.modelChanged
     model.selectionChanged = signals.selectionChanged
-    
+
     return model
 
 

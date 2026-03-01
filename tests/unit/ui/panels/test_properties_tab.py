@@ -1,14 +1,18 @@
-import pytest
-from PySide6.QtWidgets import QWidget, QComboBox, QLineEdit, QPushButton, QGroupBox, QLabel, QVBoxLayout
-from PySide6.QtCore import QObject
+from pathlib import Path
 from unittest.mock import MagicMock, call
 
-from src.models.nodes.plot_node import PlotNode
+import pytest
+from PySide6.QtWidgets import (
+    QGroupBox,
+    QWidget,
+)
+
 from src.models.nodes.group_node import GroupNode
-from src.models.plots.plot_types import ArtistType
+from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_properties import LinePlotProperties, ScatterPlotProperties
+from src.models.plots.plot_types import ArtistType
 from src.ui.panels.properties_tab import PropertiesTab
-from pathlib import Path
+
 
 # Corrected fixture to manage object lifetimes properly
 @pytest.fixture
@@ -150,7 +154,7 @@ class TestPropertiesTab:
         """Verify the UI factory is correctly managed when the selection changes."""
         plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE)
         mock_application_model.selection = [plot_node]
-        
+
         mocker.spy(properties_tab, "_clear_layout")
 
         properties_tab._update_content()
@@ -176,20 +180,20 @@ class TestPropertiesTab:
         mock_application_model.selection = [plot_node]
         mock_application_model.scene_root.find_node_by_id.return_value = plot_node
         properties_tab._update_content()
-        
+
         with qtbot.wait_signal(properties_tab._select_file_button.clicked):
             properties_tab._select_file_button.click()
-            
+
         mock_node_controller.on_select_file_clicked.assert_called_once_with(plot_node)
-        
+
     def test_handler_safety_when_node_not_found(self, properties_tab, mock_application_model, mock_node_controller, mocker):
         """Verify controller is not called if node is not found during an event."""
         plot_node = create_mock_plot_node(mocker, "node1", "Plot 1", ArtistType.LINE)
         mock_application_model.selection = [plot_node]
         properties_tab._update_content()
-        
+
         mock_application_model.scene_root.find_node_by_id.return_value = None
-        
+
         properties_tab._on_plot_type_combo_changed(1)
-        
+
         mock_node_controller.on_plot_type_changed.assert_not_called()

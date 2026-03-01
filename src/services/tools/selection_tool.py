@@ -1,5 +1,5 @@
-from typing import Optional
 import logging
+from typing import Optional
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QKeyEvent, QPainter
@@ -21,7 +21,7 @@ class SelectionTool(BaseTool):
     def __init__(
         self,
         model: ApplicationModel,
-        canvas_widget=None, # Keep for base class compatibility but unused here
+        canvas_widget=None,  # Keep for base class compatibility but unused here
     ):
         super().__init__(model, canvas_widget)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -45,15 +45,17 @@ class SelectionTool(BaseTool):
         self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
     ) -> None:
         """Handles single clicks to select or deselect nodes based on node_id."""
-        self.logger.debug(f"SelectionTool: Mouse press at {fig_coords}, node_id: {node_id}")
-        
+        self.logger.debug(
+            f"SelectionTool: Mouse press at {fig_coords}, node_id: {node_id}"
+        )
+
         if node_id:
             node = self._model.scene_root.find_node_by_id(node_id)
             if node:
                 self._model.set_selection([node])
                 self.logger.info(f"Selected Node '{node.name}'.")
                 return
-        
+
         # If no node_id or node not found, clear selection
         self._model.set_selection([])
         self.logger.info("Clicked on empty space. Deselecting all.")

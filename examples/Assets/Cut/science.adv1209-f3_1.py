@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Ellipse
 
 # --- Data Simulation ---
 np.random.seed(42)
@@ -33,12 +32,12 @@ dist_right = 0.6 * gaussian(x_dist, 0.5, 1.0)
 fig, ax = plt.subplots(figsize=(6, 5), dpi=150)
 
 # 1. Main Scatter Plot
-ax.scatter(D_scatter, eta_scatter, 
-           alpha=0.7, 
-           s=60, 
-           edgecolors='black', 
+ax.scatter(D_scatter, eta_scatter,
+           alpha=0.7,
+           s=60,
+           edgecolors='black',
            linewidth=0.5,
-           color='#7aa0c4', 
+           color='#7aa0c4',
            label='Data')
 
 # Styling Main Axes

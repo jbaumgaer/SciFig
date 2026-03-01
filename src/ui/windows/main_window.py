@@ -69,12 +69,12 @@ class MainWindow(QMainWindow):
             Events.PROMPT_FOR_TEMPLATE_SELECTION_REQUESTED, self._prompt_for_template
         )
         self._event_aggregator.subscribe(
-            Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, self._prompt_for_open_path_for_node_data
+            Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED,
+            self._prompt_for_open_path_for_node_data,
         )
         self._event_aggregator.subscribe(
             Events.WINDOW_TITLE_DATA_READY, self._on_window_title_data_ready
         )
-
 
     def set_canvas_widget(self, canvas_widget: CanvasWidget):
         """Sets the canvas_widget."""
@@ -108,9 +108,13 @@ class MainWindow(QMainWindow):
             self, "New from Template", "Select a template:", templates, 0, False
         )
         if ok and template_name:
-            self._event_aggregator.publish(Events.TEMPLATE_PROVIDED_FOR_NEW, template_name=template_name)
+            self._event_aggregator.publish(
+                Events.TEMPLATE_PROVIDED_FOR_NEW, template_name=template_name
+            )
         else:
-            self._event_aggregator.publish(Events.TEMPLATE_PROVIDED_FOR_NEW, template_name=None)
+            self._event_aggregator.publish(
+                Events.TEMPLATE_PROVIDED_FOR_NEW, template_name=None
+            )
 
     def _prompt_for_open_path_for_node_data(self, node_id: str):
         """
@@ -120,8 +124,9 @@ class MainWindow(QMainWindow):
             self, "Select Data File for Node", "", "Data Files (*.csv *.tsv *.txt)"
         )
         path = Path(file_path_str) if file_path_str else None
-        self._event_aggregator.publish(Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, node_id=node_id, path=path)
-
+        self._event_aggregator.publish(
+            Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, node_id=node_id, path=path
+        )
 
     def _on_window_title_data_ready(self, title: str, is_dirty: bool):
         """

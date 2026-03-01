@@ -6,7 +6,7 @@ voltage = np.linspace(-3.5, 3.5, 50)
 
 # Control (Blue) - Standard Resistor-like but slightly non-linear
 # I = V / R
-control_current = (voltage / 5.0) * 1e-5 
+control_current = (voltage / 5.0) * 1e-5
 # Add slight curvature
 control_current += 0.05e-5 * np.sinh(voltage)
 
@@ -25,7 +25,7 @@ fig, ax = plt.subplots(figsize=(6, 5), dpi=150)
 
 # Main Plot
 # Markers: Open circles
-# Ticks formatting to show x10^-5? 
+# Ticks formatting to show x10^-5?
 # Or just divide data by 1e-5 and label axis as such.
 # Let's re-plot with scaled data for simplicity
 hdi_scaled = hdi_current / 1e-5

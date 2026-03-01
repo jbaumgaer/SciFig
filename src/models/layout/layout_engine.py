@@ -1,13 +1,14 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, Protocol # Added Protocol
+from typing import Optional  # Added Protocol
+
 from src.models.layout.layout_config import Gutters, LayoutConfig, Margins
+from src.models.layout.layout_protocols import LayoutEngineProtocol  # Added this import
 from src.models.nodes import PlotNode
 from src.shared.types import PlotID, Rect
-from src.models.layout.layout_protocols import LayoutEngineProtocol # Added this import
 
 
-class LayoutEngine(ABC, LayoutEngineProtocol): # Inherit from the protocol
+class LayoutEngine(ABC, LayoutEngineProtocol):  # Inherit from the protocol
     """
     Abstract base class for all layout engines.
     Defines the interface for calculating plot geometries based on a layout configuration.

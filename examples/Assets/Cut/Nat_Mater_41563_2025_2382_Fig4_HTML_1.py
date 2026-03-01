@@ -22,11 +22,11 @@ y4 = rabi_decay(t, T2=15.68, freq=0.4)
 y5 = rabi_decay(t, T2=6.03, freq=0.4)
 
 datasets = [
-    (y1, 'black', 'gray', 'Bulk: $T_2^* = 48.27$ $\mu$s'),
-    (y2, '#004488', '#004488', '-alkene(H): $T_2^* = 0.80$ $\mu$s'),
-    (y3, '#6699CC', '#B0C4DE', '-alkene(D): $T_2^* = 37.56$ $\mu$s'),
-    (y4, '#CC3333', '#E6A0A0', '-alkene(D)-CF$_3$(11%): $T_2^* = 15.68$ $\mu$s'),
-    (y5, '#FF6666', '#FFCCCC', '-alkene(D)-CF$_3$(100%): $T_2^* = 6.03$ $\mu$s')
+    (y1, 'black', 'gray', r'Bulk: $T_2^* = 48.27$ $\mu$s'),
+    (y2, '#004488', '#004488', r'-alkene(H): $T_2^* = 0.80$ $\mu$s'),
+    (y3, '#6699CC', '#B0C4DE', r'-alkene(D): $T_2^* = 37.56$ $\mu$s'),
+    (y4, '#CC3333', '#E6A0A0', r'-alkene(D)-CF$_3$(11%): $T_2^* = 15.68$ $\mu$s'),
+    (y5, '#FF6666', '#FFCCCC', r'-alkene(D)-CF$_3$(100%): $T_2^* = 6.03$ $\mu$s')
 ]
 
 # --- Plotting ---
@@ -35,15 +35,15 @@ plt.subplots_adjust(hspace=0)
 
 for i, (ax, (y, col, fill_col, lbl)) in enumerate(zip(axes, datasets)):
     # Calculate envelope for filling
-    env = np.exp(-(t / float(lbl.split('=')[1].split('$')[0].strip()))**2) 
+    env = np.exp(-(t / float(lbl.split('=')[1].split('$')[0].strip()))**2)
     # Or just use positive/negative max of signal for visual
-    
+
     ax.plot(t, y, color=col, linewidth=1.5)
     ax.fill_between(t, y, -y, color=fill_col, alpha=0.3)
-    
+
     # Label
     ax.text(0.98, 0.8, lbl, transform=ax.transAxes, ha='right', va='top', fontsize=11, color=col)
-    
+
     # Y Ticks
     ax.set_yticks([-1, 0, 1])
     ax.set_yticklabels(['|0>', '', '|1>'])

@@ -1,5 +1,6 @@
 from enum import Enum, auto
 
+
 class Events(Enum):
     """
     A centralized enumeration of all events used in the application's
@@ -30,12 +31,20 @@ class Events(Enum):
 
     # --- Node Data & Structure Changes ---
     SCENE_GRAPH_CHANGED = auto()  # Payload: new_scene_graph: dict
-    NODE_DATA_FILE_PATH_UPDATED = auto()  # Payload: node_id: str, new_path: Optional[Path]
+    NODE_DATA_FILE_PATH_UPDATED = (
+        auto()
+    )  # Payload: node_id: str, new_path: Optional[Path]
     NODE_DATA_LOADED = auto()  # Payload: node_id: str
-    NODE_ADDED_TO_SCENE = auto()  # Payload: parent_id: str, new_node_id: str, index: int
+    NODE_ADDED_TO_SCENE = (
+        auto()
+    )  # Payload: parent_id: str, new_node_id: str, index: int
     NODE_REMOVED_FROM_SCENE = auto()  # Payload: parent_id: str, removed_node_id: str
-    NODE_REPARENTED_IN_SCENE = auto()  # Payload: node_id: str, new_parent_id: str, new_index: int
-    NODE_ORDER_CHANGED_IN_SCENE = auto()  # Payload: parent_id: str, new_ordered_child_ids: list[str]
+    NODE_REPARENTED_IN_SCENE = (
+        auto()
+    )  # Payload: node_id: str, new_parent_id: str, new_index: int
+    NODE_ORDER_CHANGED_IN_SCENE = (
+        auto()
+    )  # Payload: parent_id: str, new_ordered_child_ids: list[str]
     SWITCH_SIDEPANEL_TAB = auto()  # Payload: tab_key: str
 
     # --- Layout Changes ---
@@ -68,12 +77,18 @@ class Events(Enum):
     RENAME_NODE_REQUESTED = auto()  # Payload: node_id: str, new_name: str
     CHANGE_NODE_VISIBILITY_REQUESTED = auto()  # Payload: node_id: str, is_visible: bool
     CHANGE_NODE_LOCKED_REQUESTED = auto()  # Payload: node_id: str, is_locked: bool
-    CHANGE_NODE_POSITION_REQUESTED = auto()  # Payload: node_id: str, new_position: tuple
+    CHANGE_NODE_POSITION_REQUESTED = (
+        auto()
+    )  # Payload: node_id: str, new_position: tuple
     CHANGE_NODE_SIZE_REQUESTED = auto()  # Payload: node_id: str, new_size: tuple
 
     # --- Generic Path-Based Property Change Requests ---
-    CHANGE_PLOT_COMPONENT_REQUESTED = auto()  # Payload: node_id: str, path: str, value: any
-    INITIALIZE_PLOT_THEME_REQUESTED = auto()  # Payload: node_id: str, plot_type: ArtistType
+    CHANGE_PLOT_COMPONENT_REQUESTED = (
+        auto()
+    )  # Payload: node_id: str, path: str, value: any
+    INITIALIZE_PLOT_THEME_REQUESTED = (
+        auto()
+    )  # Payload: node_id: str, plot_type: ArtistType
     HYDRATE_PLOT_PROPERTIES_REQUESTED = auto()  # Payload: node_id: str, overrides: dict
 
     # --- Node Data & Structure Requests ---
@@ -101,11 +116,13 @@ class Events(Enum):
     PROMPT_FOR_OPEN_PATH_REQUESTED = auto()
     PROMPT_FOR_SAVE_AS_PATH_REQUESTED = auto()
     PROMPT_FOR_TEMPLATE_SELECTION_REQUESTED = auto()
-    PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED = auto() # Payload: node_id: str
+    PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED = auto()  # Payload: node_id: str
 
     # === UI Interaction Notifications (Responses to UI Requests) ===
     # These events provide the results of a UI interaction back to the system.
     PATH_PROVIDED_FOR_OPEN = auto()  # Payload: path: Optional[Path]
     PATH_PROVIDED_FOR_SAVE_AS = auto()  # Payload: path: Optional[Path]
     TEMPLATE_PROVIDED_FOR_NEW = auto()  # Payload: template_name: Optional[str]
-    PATH_PROVIDED_FOR_NODE_DATA_OPEN = auto() # Payload: node_id: str, path: Optional[Path]
+    PATH_PROVIDED_FOR_NODE_DATA_OPEN = (
+        auto()
+    )  # Payload: node_id: str, path: Optional[Path]

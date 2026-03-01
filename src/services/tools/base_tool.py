@@ -11,6 +11,7 @@ from PySide6.QtGui import QKeyEvent, QPainter
 from src.models.application_model import ApplicationModel
 from src.ui.widgets.canvas_widget import CanvasWidget
 
+
 # Python 3: metaclass conflict with QObject and ABCMeta
 # Solution: Create a custom metaclass that inherits from both
 class ToolMeta(type(QObject), ABCMeta):

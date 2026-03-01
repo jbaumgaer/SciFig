@@ -6,7 +6,7 @@ soc = np.linspace(0, 105, 100)
 
 # Voltage Profile (Grey line)
 # Typical NCM charge curve
-vol = 3.6 + 0.005 * soc + 0.1 * np.exp((soc-50)/20) 
+vol = 3.6 + 0.005 * soc + 0.1 * np.exp((soc-50)/20)
 vol = np.clip(vol, 3.0, 4.5)
 # Add steps
 vol += 0.05 * np.tanh((soc-5)/2) # Initial rise

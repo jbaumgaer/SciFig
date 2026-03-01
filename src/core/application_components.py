@@ -10,11 +10,11 @@ from src.controllers.project_controller import ProjectController
 from src.models.application_model import ApplicationModel
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
+from src.services.data_service import DataService
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
-from src.services.data_service import DataService
 from src.services.tools.selection_tool import SelectionTool
 from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
@@ -23,6 +23,7 @@ from src.ui.windows.main_window import MainWindow
 
 if TYPE_CHECKING:
     from src.core.composition_root import CompositionRoot
+
 
 @dataclass
 class ApplicationComponents:

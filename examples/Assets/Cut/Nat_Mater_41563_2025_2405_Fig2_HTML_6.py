@@ -10,7 +10,7 @@ def peak(x, center, width, height):
 
 # References
 # Ru foil: Strong Ru-Ru at ~2.4
-y_ru = peak(r, 2.4, 0.2, 1.0) + peak(r, 4.5, 0.5, 0.1) 
+y_ru = peak(r, 2.4, 0.2, 1.0) + peak(r, 4.5, 0.5, 0.1)
 # RuO2: Ru-O at ~1.5, Ru-Ru/O at ~3.1
 y_ruo2 = peak(r, 1.5, 0.3, 0.8) + peak(r, 3.1, 0.4, 0.4)
 # KB@Ru: Mixed

@@ -1,24 +1,27 @@
-from enum import Enum
 import logging
-from dataclasses import is_dataclass, fields
-from typing import Any, Dict, List, Optional, Type
+from dataclasses import fields, is_dataclass
+from enum import Enum
+from typing import Any, Optional
 
-import matplotlib.figure
-import matplotlib.axes
 import matplotlib.patches as patches
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
-from src.models.nodes.rectangle_node import RectangleNode
 from src.models.nodes.scene_node import SceneNode
-from src.models.nodes.text_node import TextNode
 from src.services.layout_manager import LayoutManager
-from src.ui.renderers.plotting_strategies import CoordSyncStrategy, get_coord_strategy_registry, get_artist_strategy_registry
+from src.ui.renderers.plotting_strategies import (
+    CoordSyncStrategy,
+    get_artist_strategy_registry,
+    get_coord_strategy_registry,
+)
+
 
 class Renderer:
     """
-    A version-gated, recursive synchronizer that renders the scene graph 
+    A version-gated, recursive synchronizer that renders the scene graph
     onto a Matplotlib figure. Owns the lifecycle of live Matplotlib artists.
     """
 
@@ -28,18 +31,15 @@ class Renderer:
         ("Axes", "yaxis"): lambda obj: obj.yaxis,
         ("Axes", "zaxis"): lambda obj: obj.zaxis if hasattr(obj, "zaxis") else None,
         ("Axes", "spines"): lambda obj: obj.spines,
-
         # 2. Ticks & Labels: SciFig 'ticks' field maps to the Axis object itself
         # (because tick_params is called on the Axis)
         ("XAxis", "ticks"): lambda obj: obj,
         ("YAxis", "ticks"): lambda obj: obj,
         ("ZAxis", "ticks"): lambda obj: obj,
-
         # 3. Axis Labels: SciFig 'label' field -> axis.label (Text object)
         ("XAxis", "label"): lambda obj: obj.label,
         ("YAxis", "label"): lambda obj: obj.label,
         ("ZAxis", "label"): lambda obj: obj.label,
-
         # 4. Logical Redirects: Recurse on same object for visual atoms
         ("Line2D", "visuals"): lambda obj: obj,
         ("PathCollection", "visuals"): lambda obj: obj,
@@ -48,58 +48,113 @@ class Renderer:
 
     _SETTER_MAP = {
         # --- Axis Structural Properties (Delegate from Axis to parent Axes) ---
-        ("XAxis", "limits"): lambda obj, val: (obj.axes.set_xlim(*val), obj.axes.set_autoscalex_on(False)) if any(v is not None for v in val) else None,
-        ("YAxis", "limits"): lambda obj, val: (obj.axes.set_ylim(*val), obj.axes.set_autoscaley_on(False)) if any(v is not None for v in val) else None,
-        ("ZAxis", "limits"): lambda obj, val: obj.axes.set_zlim(*val) if any(v is not None for v in val) else None,
+        ("XAxis", "limits"): lambda obj, val: (
+            (obj.axes.set_xlim(*val), obj.axes.set_autoscalex_on(False))
+            if any(v is not None for v in val)
+            else None
+        ),
+        ("YAxis", "limits"): lambda obj, val: (
+            (obj.axes.set_ylim(*val), obj.axes.set_autoscaley_on(False))
+            if any(v is not None for v in val)
+            else None
+        ),
+        ("ZAxis", "limits"): lambda obj, val: (
+            obj.axes.set_zlim(*val) if any(v is not None for v in val) else None
+        ),
         ("XAxis", "margin"): lambda obj, val: obj.axes.set_xmargin(val),
         ("YAxis", "margin"): lambda obj, val: obj.axes.set_ymargin(val),
-
         # --- Tick Parameters (The 'Mega-Setter' Translation) ---
         # We use which='major'/'minor' to target the specific SciFig sub-fields
-        ("XAxis", "major_size"): lambda obj, val: obj.set_tick_params(which='major', size=val),
-        ("XAxis", "minor_size"): lambda obj, val: obj.set_tick_params(which='minor', size=val),
-        ("XAxis", "major_width"): lambda obj, val: obj.set_tick_params(which='major', width=val),
-        ("XAxis", "minor_width"): lambda obj, val: obj.set_tick_params(which='minor', width=val),
-        ("XAxis", "major_pad"): lambda obj, val: obj.set_tick_params(which='major', pad=val),
-        ("XAxis", "minor_pad"): lambda obj, val: obj.set_tick_params(which='minor', pad=val),
+        ("XAxis", "major_size"): lambda obj, val: obj.set_tick_params(
+            which="major", size=val
+        ),
+        ("XAxis", "minor_size"): lambda obj, val: obj.set_tick_params(
+            which="minor", size=val
+        ),
+        ("XAxis", "major_width"): lambda obj, val: obj.set_tick_params(
+            which="major", width=val
+        ),
+        ("XAxis", "minor_width"): lambda obj, val: obj.set_tick_params(
+            which="minor", width=val
+        ),
+        ("XAxis", "major_pad"): lambda obj, val: obj.set_tick_params(
+            which="major", pad=val
+        ),
+        ("XAxis", "minor_pad"): lambda obj, val: obj.set_tick_params(
+            which="minor", pad=val
+        ),
         ("XAxis", "direction"): lambda obj, val: obj.set_tick_params(direction=val),
         ("XAxis", "color"): lambda obj, val: obj.set_tick_params(color=val),
         ("XAxis", "labelcolor"): lambda obj, val: obj.set_tick_params(labelcolor=val),
         ("XAxis", "labelsize"): lambda obj, val: obj.set_tick_params(labelsize=val),
-
-        ("YAxis", "major_size"): lambda obj, val: obj.set_tick_params(which='major', size=val),
-        ("YAxis", "minor_size"): lambda obj, val: obj.set_tick_params(which='minor', size=val),
-        ("YAxis", "major_width"): lambda obj, val: obj.set_tick_params(which='major', width=val),
-        ("YAxis", "minor_width"): lambda obj, val: obj.set_tick_params(which='minor', width=val),
-        ("YAxis", "major_pad"): lambda obj, val: obj.set_tick_params(which='major', pad=val),
-        ("YAxis", "minor_pad"): lambda obj, val: obj.set_tick_params(which='minor', pad=val),
+        ("YAxis", "major_size"): lambda obj, val: obj.set_tick_params(
+            which="major", size=val
+        ),
+        ("YAxis", "minor_size"): lambda obj, val: obj.set_tick_params(
+            which="minor", size=val
+        ),
+        ("YAxis", "major_width"): lambda obj, val: obj.set_tick_params(
+            which="major", width=val
+        ),
+        ("YAxis", "minor_width"): lambda obj, val: obj.set_tick_params(
+            which="minor", width=val
+        ),
+        ("YAxis", "major_pad"): lambda obj, val: obj.set_tick_params(
+            which="major", pad=val
+        ),
+        ("YAxis", "minor_pad"): lambda obj, val: obj.set_tick_params(
+            which="minor", pad=val
+        ),
         ("YAxis", "direction"): lambda obj, val: obj.set_tick_params(direction=val),
         ("YAxis", "color"): lambda obj, val: obj.set_tick_params(color=val),
         ("YAxis", "labelcolor"): lambda obj, val: obj.set_tick_params(labelcolor=val),
         ("YAxis", "labelsize"): lambda obj, val: obj.set_tick_params(labelsize=val),
-
-        ("ZAxis", "major_size"): lambda obj, val: obj.set_tick_params(which='major', size=val),
-        ("ZAxis", "minor_size"): lambda obj, val: obj.set_tick_params(which='minor', size=val),
-        ("ZAxis", "major_width"): lambda obj, val: obj.set_tick_params(which='major', width=val),
-        ("ZAxis", "minor_width"): lambda obj, val: obj.set_tick_params(which='minor', width=val),
-        ("ZAxis", "major_pad"): lambda obj, val: obj.set_tick_params(which='major', pad=val),
-        ("ZAxis", "minor_pad"): lambda obj, val: obj.set_tick_params(which='minor', pad=val),
+        ("ZAxis", "major_size"): lambda obj, val: obj.set_tick_params(
+            which="major", size=val
+        ),
+        ("ZAxis", "minor_size"): lambda obj, val: obj.set_tick_params(
+            which="minor", size=val
+        ),
+        ("ZAxis", "major_width"): lambda obj, val: obj.set_tick_params(
+            which="major", width=val
+        ),
+        ("ZAxis", "minor_width"): lambda obj, val: obj.set_tick_params(
+            which="minor", width=val
+        ),
+        ("ZAxis", "major_pad"): lambda obj, val: obj.set_tick_params(
+            which="major", pad=val
+        ),
+        ("ZAxis", "minor_pad"): lambda obj, val: obj.set_tick_params(
+            which="minor", pad=val
+        ),
         ("ZAxis", "direction"): lambda obj, val: obj.set_tick_params(direction=val),
         ("ZAxis", "color"): lambda obj, val: obj.set_tick_params(color=val),
         ("ZAxis", "labelcolor"): lambda obj, val: obj.set_tick_params(labelcolor=val),
         ("ZAxis", "labelsize"): lambda obj, val: obj.set_tick_params(labelsize=val),
-
         # --- Spines ---
         ("Spine", "color"): lambda obj, val: obj.set_edgecolor(val),
-        ("Spine", "position"): lambda obj, val: obj.set_position(val) if val not in ("left", "right", "bottom", "top") else None,
-
+        ("Spine", "position"): lambda obj, val: (
+            obj.set_position(val)
+            if val not in ("left", "right", "bottom", "top")
+            else None
+        ),
         # --- Formatters ---
-        ("XAxis", "use_offset"): lambda obj, val: obj.get_major_formatter().set_useOffset(val) if hasattr(obj.get_major_formatter(), "set_useOffset") else None,
-        ("XAxis", "scientific_limits"): lambda obj, val: obj.get_major_formatter().set_powerlimits(val) if hasattr(obj.get_major_formatter(), "set_powerlimits") else None,
-
+        ("XAxis", "use_offset"): lambda obj, val: (
+            obj.get_major_formatter().set_useOffset(val)
+            if hasattr(obj.get_major_formatter(), "set_useOffset")
+            else None
+        ),
+        ("XAxis", "scientific_limits"): lambda obj, val: (
+            obj.get_major_formatter().set_powerlimits(val)
+            if hasattr(obj.get_major_formatter(), "set_powerlimits")
+            else None
+        ),
         # --- Spines ---
-        ("Spine", "position"): lambda obj, val: obj.set_position(val) if val not in ("left", "right", "bottom", "top") else None,
-
+        ("Spine", "position"): lambda obj, val: (
+            obj.set_position(val)
+            if val not in ("left", "right", "bottom", "top")
+            else None
+        ),
         # --- Scalar Mappables (Images/Meshes) ---
         ("ScalarMappable", "norm_min"): lambda obj, val: obj.set_clim(vmin=val),
         ("ScalarMappable", "norm_max"): lambda obj, val: obj.set_clim(vmax=val),
@@ -107,30 +162,32 @@ class Renderer:
         ("QuadMesh", "norm_max"): lambda obj, val: obj.set_clim(vmax=val),
     }
 
-    def __init__(self, layout_manager: LayoutManager, application_model: ApplicationModel):
+    def __init__(
+        self, layout_manager: LayoutManager, application_model: ApplicationModel
+    ):
         self._layout_manager = layout_manager
         self._application_model = application_model
         self.logger = logging.getLogger(self.__class__.__name__)
-        
+
         # Strategy registries for Coordinates and Artists
         self._coord_strategies = get_coord_strategy_registry()
         self._artist_strategies = get_artist_strategy_registry()
-        
+
         # Track live artists by node ID (since nodes are now headless)
-        self._axes_registry: dict[str, matplotlib.axes.Axes] = {}
+        self._axes_registry: dict[str, Axes] = {}
         # Track versions to avoid redundant reflection
-        self._last_synced_versions: dict[str, int] = {} 
+        self._last_synced_versions: dict[str, int] = {}
         self.logger.info("Renderer initialized.")
 
     def render(
         self,
-        figure: matplotlib.figure.Figure,
+        figure: Figure,
         root_node: SceneNode,
         selection: list[SceneNode],
     ):
         """Renders the scene graph."""
         self.logger.info("Rendering scene graph.")
-        
+
         self._render_plots(figure, root_node)
 
         # Render other node types (TextNode, RectangleNode, GroupNode)
@@ -148,24 +205,33 @@ class Renderer:
             if fig:
                 fig.delaxes(ax)
             self._last_synced_versions.pop(removed_node_id, None)
-            self.logger.info(f"Destroyed Matplotlib axes for deleted node {removed_node_id}")
+            self.logger.info(
+                f"Destroyed Matplotlib axes for deleted node {removed_node_id}"
+            )
 
-    def _render_plots(self, figure: matplotlib.figure.Figure, root_node: SceneNode):
+    def _render_plots(self, figure: Figure, root_node: SceneNode):
         """Renders PlotNodes using coordinate strategies for projection support."""
         plot_nodes = [n for n in root_node.all_descendants(of_type=PlotNode)]
         geometries = self._layout_manager.get_current_layout_geometries(plot_nodes)
 
         for node in plot_nodes:
-            if node.id not in geometries or not node.plot_properties:
+            # Defensive check: Skip nodes that haven't been hydrated yet (still dicts from template)
+            if (
+                node.id not in geometries
+                or not node.plot_properties
+                or isinstance(node.plot_properties, dict)
+            ):
                 continue
-            
+
             rect = geometries[node.id]
             props = node.plot_properties
-            
+
             # 1. Coordinate/Axes Retrieval or Creation
             coord_strategy = self._coord_strategies.get(props.coords.coord_type)
             if not coord_strategy:
-                self.logger.warning(f"No coordinate strategy found for type {type(props.coords)}")
+                self.logger.warning(
+                    f"No coordinate strategy found for type {type(props.coords)}"
+                )
                 continue
 
             ax = self._axes_registry.get(node.id)
@@ -174,7 +240,9 @@ class Renderer:
                 ax = coord_strategy.create_axes(figure, rect)
                 ax.set_navigate(True)
                 self._axes_registry[node.id] = ax
-                self.logger.debug(f"Created new axes for PlotNode {node.id} via {type(coord_strategy).__name__}")
+                self.logger.debug(
+                    f"Created new axes for PlotNode {node.id} via {type(coord_strategy).__name__}"
+                )
             else:
                 # Update geometry of existing axes
                 ax.set_position(rect)
@@ -182,16 +250,18 @@ class Renderer:
             # 2. Sync Properties (Version-Gated Orchestration)
             self._sync_plot_node(ax, node, coord_strategy)
 
-    def _sync_plot_node(self, ax: matplotlib.axes.Axes, node: PlotNode, coord_strategy: CoordSyncStrategy):
+    def _sync_plot_node(
+        self, ax: Axes, node: PlotNode, coord_strategy: CoordSyncStrategy
+    ):
         """Orchestrates the recursive synchronization of a PlotNode."""
         props = node.plot_properties
         last_version = self._last_synced_versions.get(node.id, -1)
-        
+
         if props._version <= last_version:
             return
 
         self.logger.debug(f"Syncing PlotNode {node.id} (v{props._version})")
-        
+
         # 1. Sync Titles (left, center, right)
         for key, text_props in props.titles.items():
             path = f"titles.{key}"
@@ -199,35 +269,39 @@ class Renderer:
                 ax.set_title(text_props.text)
             elif hasattr(ax, f"set_{key}_title"):
                 getattr(ax, f"set_{key}_title")(text_props.text)
-            
+
             # Sync the common text properties (color, font, etc) on the title object
             self._sync_component(ax.title, text_props, path)
-            
+
         # 2. Sync Artists (Line, Scatter, Image, etc.) via Strategy
         self._sync_artists(ax, props, node)
 
         # 3. Sync Coordinates (Axis, Spines) via Strategy
         coord_strategy.sync(ax, props.coords, "coords", self._sync_component)
-        
+
         # Update the sync version
         self._last_synced_versions[node.id] = props._version
 
-    def _sync_artists(self, ax: matplotlib.axes.Axes, props: Any, node: PlotNode):
+    def _sync_artists(self, ax: Axes, props: Any, node: PlotNode):
         """Syncs the list of data artists by delegating to type-specific strategies."""
         for i, artist_props in enumerate(props.artists):
             path = f"artists.{i}"
             strategy = self._artist_strategies.get(artist_props.artist_type)
-            
+
             if not strategy:
-                self.logger.warning(f"No sync strategy found for artist type {artist_props.artist_type}")
+                self.logger.warning(
+                    f"No sync strategy found for artist type {artist_props.artist_type}"
+                )
                 continue
 
             # 1. Identify or Create the Matplotlib Artist via Strategy
             mpl_artist = strategy.get_or_create_artist(ax, artist_props, i)
-            
+
             # 2. Sync Visuals (Generic)
             if hasattr(artist_props, "visuals"):
-                self._sync_component(mpl_artist, artist_props.visuals, f"{path}.visuals")
+                self._sync_component(
+                    mpl_artist, artist_props.visuals, f"{path}.visuals"
+                )
 
             # 3. Sync Data (Specialized Strategy)
             if node.data is not None:
@@ -239,20 +313,20 @@ class Renderer:
             return
 
         # Tag for interactive picking (Matplotlib Picking API)
-        if hasattr(mpl_obj, 'set_picker'):
+        if hasattr(mpl_obj, "set_picker"):
             mpl_obj.set_picker(True)
-            if hasattr(mpl_obj, 'set_gid'):
+            if hasattr(mpl_obj, "set_gid"):
                 mpl_obj.set_gid(path)
 
         for field in fields(props_obj):
-            if field.name.startswith('_'):
+            if field.name.startswith("_"):
                 continue
-                
+
             val = getattr(props_obj, field.name)
             # Resolve Enum to its value string for Matplotlib compatibility
             if isinstance(val, Enum):
                 val = val.value
-            
+
             # Recursive case for nested dataclasses
             if is_dataclass(val):
                 child_mpl = self._resolve_mpl_child(mpl_obj, field.name)
@@ -292,7 +366,9 @@ class Renderer:
                 self.__class__._SETTER_MAP[(obj_type, field_name)](mpl_obj, value)
                 return
             except Exception as e:
-                self.logger.warning(f"Translation failed for {obj_type}.{field_name}: {e}")
+                self.logger.warning(
+                    f"Translation failed for {obj_type}.{field_name}: {e}"
+                )
                 return
 
         # 2. Generic fallback: set_<field_name>
@@ -301,9 +377,11 @@ class Renderer:
             try:
                 getattr(mpl_obj, setter_name)(value)
             except Exception as e:
-                self.logger.warning(f"Failed to apply generic setter {setter_name} on {obj_type}: {e}")
+                self.logger.warning(
+                    f"Failed to apply generic setter {setter_name} on {obj_type}: {e}"
+                )
 
-    def _render_other_nodes(self, figure: matplotlib.figure.Figure, node: SceneNode):
+    def _render_other_nodes(self, figure: Figure, node: SceneNode):
         """Dispatches rendering of non-plot nodes."""
         if not node.visible or isinstance(node, PlotNode):
             return
@@ -316,12 +394,12 @@ class Renderer:
             # Placeholder for TextNode and RectangleNode
             pass
 
-    def _render_highlights(self, figure: matplotlib.figure.Figure, selection: list[SceneNode]):
+    def _render_highlights(self, figure: Figure, selection: list[SceneNode]):
         """Highlights the selected node and focused sub-components."""
         for node in selection:
             if not isinstance(node, PlotNode):
                 continue
-            
+
             # Primary Node Highlight (Bounding Box)
             left, bottom, width, height = node.geometry
             highlight = patches.Rectangle(
@@ -335,10 +413,10 @@ class Renderer:
                 clip_on=False,
                 # High zorder to appear on top
                 zorder=1000,
-            ) #TODO: These values should also be loaded in from a config file
+            )  # TODO: These values should also be loaded in from a config file
             figure.add_artist(highlight)
             self.logger.debug(
                 f"  Highlight rendered for PlotNode: {node.name} (ID: {node.id})."
             )
-            
+
             # TODO: Add specific highlight for selected_path sub-components

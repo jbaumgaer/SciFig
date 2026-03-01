@@ -1,6 +1,6 @@
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.gridspec as gridspec
 
 # --- Data Simulation ---
 # Y-axis: Data sequence (time/state)
@@ -10,7 +10,7 @@ steps = np.linspace(0, 100, 200)
 q1 = np.linspace(1.2, 1.5, 100)
 # Peak center shifts like a Z-shape or sine wave
 # Starts at 1.32, moves to 1.38, back to 1.32
-center_shift_1 = 1.32 + 0.06 * np.exp(-((steps - 50)/20)**2) 
+center_shift_1 = 1.32 + 0.06 * np.exp(-((steps - 50)/20)**2)
 # Add splitting behavior
 X1, Y_steps = np.meshgrid(q1, steps)
 Z1 = np.zeros_like(X1)

@@ -68,7 +68,7 @@ ax.spines['left'].set_visible(True) # Keep left spine line but no ticks
 # Custom Legends
 # Top legend
 leg1 = ax.legend(handles=[
-    plt.Line2D([],[], color='#EE5544'), 
+    plt.Line2D([],[], color='#EE5544'),
     plt.Line2D([],[], color='#555555'),
     plt.Line2D([],[], color='#4488EE')],
     labels=['Charge 800 mAh g$^{-1}$', 'Charge 400 mAh g$^{-1}$', 'Fully discharged'],

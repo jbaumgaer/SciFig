@@ -15,7 +15,7 @@ y_fipa += 0.2 * np.sin(ppm)
 
 # 2. FIPA/PbI2 (Bottom)
 # Sharp peak at -72, very flat baseline
-y_mix = lorentzian(ppm, -72, 0.15, 8) 
+y_mix = lorentzian(ppm, -72, 0.15, 8)
 y_mix += 0.05 * np.sin(ppm)
 
 # Offset

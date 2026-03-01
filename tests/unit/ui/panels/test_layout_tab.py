@@ -1,7 +1,7 @@
 import logging
 
 import pytest
-from PySide6.QtCore import Signal, Qt # Import Qt for LeftButton
+from PySide6.QtCore import Qt  # Import Qt for LeftButton
 from PySide6.QtWidgets import QStackedWidget, QToolButton, QVBoxLayout, QWidget
 
 from src.shared.constants import LayoutMode

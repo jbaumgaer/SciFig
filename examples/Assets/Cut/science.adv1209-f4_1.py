@@ -16,7 +16,7 @@ yerr = np.random.uniform(5, 15, len(time))
 fig, ax = plt.subplots(figsize=(6, 4), dpi=150)
 
 # Errorbar Plot
-ax.errorbar(time, d_data, yerr=yerr, fmt='o', color='#7aa0c4', ecolor='#3e6082', 
+ax.errorbar(time, d_data, yerr=yerr, fmt='o', color='#7aa0c4', ecolor='#3e6082',
             markersize=8, markeredgecolor='#3e6082', elinewidth=1.5, capsize=0)
 
 # Trend Line (Fit)

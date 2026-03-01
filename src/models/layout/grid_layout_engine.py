@@ -18,14 +18,14 @@ class GridLayoutEngine(LayoutEngine):
     Calculates geometries based on a GridConfig.
     """
 
-    def __init__(self): # Removed config_service
+    def __init__(self):  # Removed config_service
         super().__init__()
         self.logger.info("GridLayoutEngine initialized.")
 
     def calculate_geometries(
         self,
         plots: list[PlotNode],
-        grid_config: GridConfig, # Changed from layout_config: LayoutConfig
+        grid_config: GridConfig,  # Changed from layout_config: LayoutConfig
         use_constrained_optimization: bool = False,
     ) -> tuple[dict[PlotID, Rect], Margins, Gutters]:
         """
@@ -36,7 +36,7 @@ class GridLayoutEngine(LayoutEngine):
 
         calculated_margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
         calculated_gutters = Gutters(hspace=[], wspace=[])
-        if not isinstance(grid_config, GridConfig): # Updated to grid_config
+        if not isinstance(grid_config, GridConfig):  # Updated to grid_config
             self.logger.error(
                 f"GridLayoutEngine received incompatible config: {type(grid_config).__name__}"
             )
@@ -50,14 +50,18 @@ class GridLayoutEngine(LayoutEngine):
         try:
             if use_constrained_optimization:
                 _, final_plot_geometries, calculated_margins, calculated_gutters = (
-                    self._apply_constrained_layout(temp_fig, plots, grid_config) # Pass grid_config
+                    self._apply_constrained_layout(
+                        temp_fig, plots, grid_config
+                    )  # Pass grid_config
                 )
                 self.logger.debug(
                     f"GridLayoutEngine calculated geometries for {len(plots)} plots using constrained layout optimization."
                 )
             else:
                 _, final_plot_geometries, calculated_margins, calculated_gutters = (
-                    self._apply_fixed_layout(temp_fig, plots, grid_config) # Pass grid_config
+                    self._apply_fixed_layout(
+                        temp_fig, plots, grid_config
+                    )  # Pass grid_config
                 )
                 self.logger.debug(
                     f"GridLayoutEngine calculated geometries for {len(plots)} plots using fixed layout."
@@ -67,8 +71,8 @@ class GridLayoutEngine(LayoutEngine):
                 f"Error calculating geometries using {'constrained' if use_constrained_optimization else 'fixed'} layout: {e}"
             )
             # Fallback to current config's margins/gutters if layout calculation fails
-            calculated_margins = grid_config.margins # Updated to grid_config
-            calculated_gutters = grid_config.gutters # Updated to grid_config
+            calculated_margins = grid_config.margins  # Updated to grid_config
+            calculated_gutters = grid_config.gutters  # Updated to grid_config
         finally:
             plt.close(temp_fig)  # Ensure the temporary figure is closed
 
@@ -328,8 +332,6 @@ class GridLayoutEngine(LayoutEngine):
     #         calculated_margins,
     #         calculated_gutters,
     #     )
-
-
 
     def _apply_fixed_layout(
         self, figure: Figure, plot_nodes: list[PlotNode], grid_config: GridConfig

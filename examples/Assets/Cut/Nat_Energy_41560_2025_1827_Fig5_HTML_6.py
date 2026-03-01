@@ -25,7 +25,7 @@ for ax in [ax1, ax2]:
 
 # Break Y Axis
 # Top limits
-ax1.set_ylim(50, 70) # Show top part? No, max is 55. 
+ax1.set_ylim(50, 70) # Show top part? No, max is 55.
 # Image shows scale 0-60 roughly, but with break.
 # Let's assume break is between 10 and 25?
 # The image shows axis starting at 0, then break, then 30, 50.
@@ -39,7 +39,7 @@ ax1.tick_params(bottom=False)
 ax2.tick_params(top=False)
 
 # Diagonals for break
-d = .015 
+d = .015
 kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
 ax1.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
 # ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal

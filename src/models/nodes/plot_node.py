@@ -15,7 +15,10 @@ class PlotNode(SceneNode):
     """
 
     def __init__(
-        self, parent: Optional[SceneNode] = None, name: str = "Plot", id: Optional[str] = None
+        self,
+        parent: Optional[SceneNode] = None,
+        name: str = "Plot",
+        id: Optional[str] = None,
     ):
         super().__init__(parent, name, id)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -42,7 +45,9 @@ class PlotNode(SceneNode):
         l, b, w, h = self.geometry
 
         if l <= x <= l + w and b <= y <= b + h:
-            self.logger.debug(f"Hit test for {self.name} (ID: {self.id}): Hit at ({x}, {y}).")
+            self.logger.debug(
+                f"Hit test for {self.name} (ID: {self.id}): Hit at ({x}, {y})."
+            )
             return self
         return None
 
@@ -58,19 +63,28 @@ class PlotNode(SceneNode):
                 "height": self.geometry[3],
             }
 
-        node_dict.update({
-            "plot_properties": self.plot_properties.to_dict() if self.plot_properties else None,
-            "data_file_path": str(self.data_file_path) if self.data_file_path else None,
-        })
+        node_dict.update(
+            {
+                "plot_properties": (
+                    self.plot_properties.to_dict() if self.plot_properties else None
+                ),
+                "data_file_path": (
+                    str(self.data_file_path) if self.data_file_path else None
+                ),
+            }
+        )
         return node_dict
 
     @classmethod
     def from_dict(
-        cls, data: dict, parent: Optional[SceneNode] = None, temp_dir: Optional[Path] = None
+        cls,
+        data: dict,
+        parent: Optional[SceneNode] = None,
+        temp_dir: Optional[Path] = None,
     ) -> "PlotNode":
         """Creates a PlotNode from a dictionary using recursive property reconstruction."""
         node = super().from_dict(data, parent)
-        
+
         # 1. Geometry reconstruction
         geom = data["geometry"]
         node.geometry = (
@@ -78,7 +92,7 @@ class PlotNode(SceneNode):
             geom.get("y", 0.1),
             geom.get("width", 0.8),
             geom.get("height", 0.8),
-        ) #TODO: There shouldn't be hardcoded defaults here
+        )  # TODO: There shouldn't be hardcoded defaults here
 
         # 2. Hierarchical PlotProperties reconstruction
         props_data = data.get("plot_properties")
@@ -86,11 +100,15 @@ class PlotNode(SceneNode):
             # Check if it's a complete tree (with versioning) or a sparse dict (template)
             if isinstance(props_data, dict) and "_version" in props_data:
                 node.plot_properties = PlotProperties.from_dict(props_data)
-                node.logger.debug(f"PlotNode '{node.name}': Strict property reconstruction complete.")
+                node.logger.debug(
+                    f"PlotNode '{node.name}': Strict property reconstruction complete."
+                )
             else:
                 # Store as sparse dict for deferred reactive hydration
                 node.plot_properties = props_data
-                node.logger.debug(f"PlotNode '{node.name}': Sparse property dict stored for deferred hydration.")
+                node.logger.debug(
+                    f"PlotNode '{node.name}': Sparse property dict stored for deferred hydration."
+                )
 
         # 3. Data loading
         path_str = data.get("data_file_path")
@@ -107,8 +125,8 @@ class PlotNode(SceneNode):
                     f"PlotNode '{node.name}' loaded data from {load_path}.parquet"
                 )
             elif load_path.exists() and load_path.suffix == ".csv":
-                node.data = pd.read_csv(load_path, sep=";") # Default project separator
-                
+                node.data = pd.read_csv(load_path, sep=";")  # Default project separator
+
                 node.logger.debug(
                     f"PlotNode '{node.name}' loaded data from {load_path}.csv"
                 )
@@ -117,6 +135,8 @@ class PlotNode(SceneNode):
                     f"PlotNode '{node.name}': Data file not found at {load_path}. Data not loaded."
                 )
         else:
-            node.logger.debug(f"PlotNode '{node.name}': No data file path specified or file does not exist.")
+            node.logger.debug(
+                f"PlotNode '{node.name}': No data file path specified or file does not exist."
+            )
 
         return node

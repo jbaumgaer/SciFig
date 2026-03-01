@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 # --- Data Simulation ---
 # J-V Curve
 def solar_cell_jv(v, j_sc, v_oc, ff_factor=15):

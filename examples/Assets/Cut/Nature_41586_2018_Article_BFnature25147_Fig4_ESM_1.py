@@ -4,7 +4,7 @@ import numpy as np
 # --- Data Simulation ---
 # K-path indices
 k_nodes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-k_labels = ['$\Gamma$', '$\Delta$', 'X', 'Z', 'M', '$\Sigma$', '$\Gamma$', '$\Lambda$', 'R', 'S', 'X', 'S', 'R', 'T', 'M']
+k_labels = [r'$\Gamma$', r'$\Delta$', 'X', 'Z', 'M', r'$\Sigma$', r'$\Gamma$', r'$\Lambda$', 'R', 'S', 'X', 'S', 'R', 'T', 'M']
 # Need more nodes
 x = np.linspace(0, 14, 700)
 
@@ -55,7 +55,7 @@ for k in ticks:
 
 # Labels
 ax.set_xticks(ticks)
-ax.set_xticklabels(['$\Gamma$', '$\Delta$', 'X', 'Z', 'M', '$\Sigma$', '$\Gamma$', '$\Lambda$', 'R', 'S', 'X', 'S', 'R', 'T', 'M'])
+ax.set_xticklabels([r'$\Gamma$', r'$\Delta$', 'X', 'Z', 'M', r'$\Sigma$', r'$\Gamma$', r'$\Lambda$', 'R', 'S', 'X', 'S', 'R', 'T', 'M'])
 ax.set_ylabel('Energy (eV)', fontsize=14)
 ax.set_xlim(0, 14)
 ax.set_ylim(-3.5, 8)

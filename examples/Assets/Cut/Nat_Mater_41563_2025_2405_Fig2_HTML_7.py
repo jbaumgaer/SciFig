@@ -36,16 +36,16 @@ plt.subplots_adjust(hspace=0)
 for ax, (data, fit, col, lbl) in zip(axes, datasets):
     # Fit (Open circles)
     ax.plot(r[::3], fit[::3], 'o', mfc='none', mec='black', markersize=8, label='Fit', mew=1)
-    
+
     # Data (Solid Line)
     ax.plot(r, data, color=col, lw=1.5, label=lbl)
-    
+
     # Label
     ax.legend(frameon=False, loc='upper right', fontsize=10)
-    
+
     ax.set_ylim(-0.2, 1.5)
     ax.set_yticks([])
-    
+
     if ax != axes[-1]:
         ax.spines['bottom'].set_visible(True) # Keep border
 

@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import PolyCollection
 
 # --- Data Simulation ---
@@ -16,16 +15,16 @@ def peak_profile(l, k_val):
     # From image: Peak at L~0.25. Height decreases as K increases (2.2 -> 2.3).
     center_l = 0.25
     width_l = 0.015
-    
+
     # Height decay
     # Max height at K=2.2
     max_h = 3.5
     decay = np.exp(-(k_val - 2.20)/0.05)
     height = max_h * decay
-    
+
     # Gaussian/Lorentzian
     y = height * np.exp(-((l - center_l)**2) / (2 * width_l**2))
-    
+
     # Add noise
     y += np.random.normal(0, 0.1, len(l))
     y = np.maximum(0, y) # No negative intensity
@@ -39,7 +38,7 @@ for k in k_slices:
     # Add fit line (dashed) - smoothened
     y_fit = peak_profile(l_vals, k) # Actually just using same function without noise for fit
     # Let's store raw data for poly
-    
+
     # Close polygon: (min,0), (x,y), (max,0)
     v = [(l_vals[0], 0)] + list(zip(l_vals, y)) + [(l_vals[-1], 0)]
     verts.append(v)

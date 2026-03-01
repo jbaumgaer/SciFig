@@ -8,10 +8,10 @@ import pytest
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode  # For type hinting
 from src.models.plots.plot_properties import (
+    ArtistType,
     AxesLimits,
     LinePlotProperties,
     PlotMapping,
-    ArtistType,
     ScatterPlotProperties,
 )
 

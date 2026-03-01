@@ -3,7 +3,6 @@ from src.models.nodes import PlotNode
 from src.services.commands.base_command import BaseCommand
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
-from src.shared.events import Events
 from src.shared.types import PlotID, Rect
 
 

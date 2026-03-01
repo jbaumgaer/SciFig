@@ -22,7 +22,7 @@ def diagonal_gaussian(el, ein, slope, intercept, width):
 
 # Main Streak (Orange/Yellow)
 Z = np.zeros_like(EL)
-Z += 1.0 * diagonal_gaussian(EL, EIN, -0.8, 538, 0.5) 
+Z += 1.0 * diagonal_gaussian(EL, EIN, -0.8, 538, 0.5)
 # Modulate intensity along the streak (Resonance)
 # Intense at E_in ~ 529 and 533
 resonance = np.exp(-((EIN - 529)/1)**2) + 0.5 * np.exp(-((EIN - 533)/1.5)**2)
@@ -41,7 +41,7 @@ im = ax.imshow(Z, extent=[9, 1, 528, 534], aspect='auto', cmap=cmap, origin='low
 
 # Styling
 ax.set_xlabel('Energy loss (eV)', fontsize=14)
-ax.set_ylabel('$E_{\mathrm{in}}$ (eV)', fontsize=14)
+ax.set_ylabel(r'$E_{\mathrm{in}}$ (eV)', fontsize=14)
 ax.set_xlim(9.5, 0.5) # Reversed axis limits
 ax.set_ylim(528, 534)
 

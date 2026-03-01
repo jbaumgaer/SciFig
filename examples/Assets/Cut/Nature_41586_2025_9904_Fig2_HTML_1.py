@@ -18,7 +18,7 @@ for d, color in zip(dopants, colors):
     if d == 0:
         # Extra shoulder for d=0
         y += spectrum(x, 480, 40, 0.3)
-    
+
     ax.plot(x, y, color=color, label=f'{d}')
 
 # Annotations

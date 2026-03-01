@@ -13,7 +13,7 @@ def xanes_model(e, edge, shift=0, osc_amp=0.05, osc_freq=0.05):
     # Oscillations (EXAFS)
     k = np.sqrt(np.maximum(0, e - (edge+shift) - 20)) * 0.51
     osc = osc_amp * np.sin(2 * k * 2 + 1) * np.exp(-0.02*k) * step
-    
+
     return step + peak + osc
 
 # References

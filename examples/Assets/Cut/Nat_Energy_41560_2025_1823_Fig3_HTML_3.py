@@ -18,7 +18,7 @@ def decay(t, t1, a1, t2, a2):
     return y
 
 # 1. HDI Treated (Red) - Fast
-y_hdi = decay(time, 1.6, 0.8, 10, 0.05) 
+y_hdi = decay(time, 1.6, 0.8, 10, 0.05)
 y_hdi[time < 0] = 0.003 + np.random.normal(0, 0.0005, np.sum(time < 0))
 
 # 2. Control (Blue) - Slow

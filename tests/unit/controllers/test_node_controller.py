@@ -4,24 +4,31 @@ These tests verify the logic for property-handling methods
 (plot type changes, generic property changes, limit editing,
 column mapping changes) in its new, isolated location.
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
-from PySide6.QtCore import Qt, QPointF
-from PySide6.QtWidgets import QApplication, QLineEdit # Added QLineEdit import
+from PySide6.QtWidgets import QApplication, QLineEdit  # Added QLineEdit import
 
 from src.controllers.node_controller import NodeController
-from src.models.application_model import ApplicationModel
-from src.models.nodes.plot_node import PlotNode
-from src.models.nodes.group_node import GroupNode # Added GroupNode import for group/ungroup tests
-from src.models.plots.plot_properties import LinePlotProperties, PlotMapping, AxesLimits
-from src.services.commands.command_manager import CommandManager
 from src.controllers.project_controller import ProjectController
+from src.models.application_model import ApplicationModel
+from src.models.nodes.group_node import (
+    GroupNode,  # Added GroupNode import for group/ungroup tests
+)
+from src.models.nodes.plot_node import PlotNode
+from src.models.plots.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
+from src.services.commands.change_children_order_command import (
+    ChangeChildrenOrderCommand,  # Added for reorder
+)
 from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
-from src.services.commands.change_children_order_command import ChangeChildrenOrderCommand # Added for reorder
-from src.services.commands.group_nodes_command import GroupNodesCommand # Added for group
-from src.services.commands.ungroup_nodes_command import UngroupNodesCommand # Added for ungroup
+from src.services.commands.command_manager import CommandManager
+from src.services.commands.group_nodes_command import (
+    GroupNodesCommand,  # Added for group
+)
+from src.services.commands.ungroup_nodes_command import (
+    UngroupNodesCommand,  # Added for ungroup
+)
 from src.shared.types import PlotType
 
 
@@ -115,7 +122,7 @@ async def test_on_select_file_clicked_opens_file_dialog(
     """
     model, _, _ = node_controller_deps
     mock_file_path = "/path/to/new/data.csv"
-    
+
     # Mock QFileDialog to return a selected file
     mocker.patch(
         "PySide6.QtWidgets.QFileDialog.getOpenFileName",
@@ -226,7 +233,7 @@ def test_reorder_nodes_executes_command(node_controller, node_controller_deps, m
     model, command_manager, _ = node_controller_deps
     mock_parent_node = mocker.Mock(spec=GroupNode, id="parent_id") # Must be a GroupNode or SceneNode
     model.scene_root.find_node_by_id.return_value = mock_parent_node
-    
+
     # We directly verify the instantiation and execution of the command
     node_controller.reorder_nodes("parent_id", "child_id", 0)
 
@@ -272,7 +279,7 @@ def test_ungroup_node_executes_command(node_controller, node_controller_deps, mo
     model, command_manager, _ = node_controller_deps
     mock_group_node = mocker.Mock(spec=GroupNode, id="group_id")
     model.scene_root.find_node_by_id.return_value = mock_group_node
-    
+
     node_controller.ungroup_node("group_id")
 
     command_manager.execute_command.assert_called_once()
@@ -343,9 +350,9 @@ def test_on_plot_type_changed_updates_plot_type_property(node_controller, node_c
     the plot_type of the PlotNode's plot_properties.
     """
     model, command_manager, _ = node_controller_deps
-    
+
     # Ensure current plot_type is different from new_plot_type for a change to occur
-    mock_plot_node_with_props.plot_properties.plot_type = PlotType.LINE 
+    mock_plot_node_with_props.plot_properties.plot_type = PlotType.LINE
     new_plot_type = PlotType.SCATTER
 
     node_controller.on_plot_type_changed(mock_plot_node_with_props, new_plot_type)

@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any, Optional
 
-from PySide6.QtCore import QObject
 import pandas as pd
+from PySide6.QtCore import QObject
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
@@ -12,7 +12,6 @@ from src.models.plots.plot_types import ArtistType
 from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
-from src.services.style_service import StyleService
 from src.shared.events import Events
 
 
@@ -22,6 +21,7 @@ class NodeController(QObject):
     Orchestrates high-level node operations (Structure, Data, and High-Level properties).
     Delegates granular property updates to the generic path-based command system.
     """
+
     def __init__(
         self,
         model: ApplicationModel,
@@ -47,7 +47,8 @@ class NodeController(QObject):
             Events.SUBPLOT_SELECTION_IN_UI_CHANGED, self._on_subplot_selection_request
         )
         self._event_aggregator.subscribe(
-            Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED, self._on_select_data_file_request
+            Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED,
+            self._on_select_data_file_request,
         )
         self._event_aggregator.subscribe(
             Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, self._on_data_file_path_provided
@@ -55,14 +56,13 @@ class NodeController(QObject):
         self._event_aggregator.subscribe(
             Events.APPLY_DATA_TO_NODE_REQUESTED, self._on_apply_data_request
         )
-        self._event_aggregator.subscribe(
-            Events.NODE_DATA_LOADED, self._on_data_loaded
-        )
+        self._event_aggregator.subscribe(Events.NODE_DATA_LOADED, self._on_data_loaded)
         self._event_aggregator.subscribe(
             Events.CHANGE_PLOT_TYPE_REQUESTED, self._on_plot_type_change_request
         )
         self._event_aggregator.subscribe(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED, self._on_generic_property_change_request
+            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            self._on_generic_property_change_request,
         )
         self._event_aggregator.subscribe(
             Events.CHANGE_NODE_VISIBILITY_REQUESTED, self._on_node_visibility_request
@@ -77,8 +77,8 @@ class NodeController(QObject):
             Events.TEMPLATE_LOADED, self._on_template_loaded
         )
         self._event_aggregator.subscribe(
-           Events.SELECTION_CHANGED, self._on_selection_changed_for_ui
-       )
+            Events.SELECTION_CHANGED, self._on_selection_changed_for_ui
+        )
 
         # TODO: Add subscriptions for group, ungroup, reorder requests when commands are implemented
 
@@ -98,7 +98,9 @@ class NodeController(QObject):
                 )
 
     def _get_node_by_id(self, node_id: str) -> Optional[SceneNode]:
-        node = self.model.scene_root.find_node_by_id(node_id) #TODO: In the fugure, I might want to change this by asking the model for the node directly, instead of reaching deep into the model's scene graph
+        node = self.model.scene_root.find_node_by_id(
+            node_id
+        )  # TODO: In the fugure, I might want to change this by asking the model for the node directly, instead of reaching deep into the model's scene graph
         if not node:
             self.logger.warning(f"NodeController: Node with ID '{node_id}' not found.")
         return node
@@ -106,10 +108,12 @@ class NodeController(QObject):
     def _get_plot_node_by_id(self, node_id: str) -> Optional[PlotNode]:
         node = self._get_node_by_id(node_id)
         if not (node and isinstance(node, PlotNode)):
-            self.logger.warning(f"NodeController: PlotNode with ID '{node_id}' not found or not a PlotNode.")
+            self.logger.warning(
+                f"NodeController: PlotNode with ID '{node_id}' not found or not a PlotNode."
+            )
             return None
         return node
-    
+
     def _on_subplot_selection_request(self, node_id: str):
         """Handles selection requests from UI components like the Layers Tab."""
         node = self._get_node_by_id(node_id)
@@ -121,12 +125,18 @@ class NodeController(QObject):
         """
         node = self._get_plot_node_by_id(node_id)
         if not node:
-            self.logger.warning(f"NodeController: Cannot request data file for non-existent node with ID: {node_id}")
+            self.logger.warning(
+                f"NodeController: Cannot request data file for non-existent node with ID: {node_id}"
+            )
             return
-        self.logger.debug(f"NodeController: Requesting data file selection for node {node_id}")
-        self._event_aggregator.publish(Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, node_id=node_id)
-        #TODO: This event is currently not being answered by the ui
-    
+        self.logger.debug(
+            f"NodeController: Requesting data file selection for node {node_id}"
+        )
+        self._event_aggregator.publish(
+            Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, node_id=node_id
+        )
+        # TODO: This event is currently not being answered by the ui
+
     def _on_data_file_path_provided(self, node_id: str, path: Optional[Path]):
         """
         Handles the provided data file path from the UI and updates the node.
@@ -146,7 +156,9 @@ class NodeController(QObject):
     def _on_apply_data_request(self, node_id: str, file_path: Optional[Path]):
         """Triggers asynchronous data loading via DataService."""
         if file_path and file_path.exists():
-            self._event_aggregator.publish(Events.APPLY_DATA_FILE_REQUESTED, node_id=node_id, file_path=file_path)
+            self._event_aggregator.publish(
+                Events.APPLY_DATA_FILE_REQUESTED, node_id=node_id, file_path=file_path
+            )
 
     def _on_data_loaded(self, node_id: str, data: pd.DataFrame, file_path: Path):
         """
@@ -164,7 +176,7 @@ class NodeController(QObject):
                 self._event_aggregator.publish(
                     Events.INITIALIZE_PLOT_THEME_REQUESTED,
                     node_id=node.id,
-                    plot_type=ArtistType.LINE
+                    plot_type=ArtistType.LINE,
                 )
             self.logger.info(f"Initialized themed properties for node {node_id}")
 
@@ -172,19 +184,34 @@ class NodeController(QObject):
         if data.shape[1] >= 2 and node.plot_properties.artists:
             cols = data.columns
             # Update primary artist mapping
-            self.command_manager.execute_command(ChangePlotPropertyCommand(
-                node=node, path="artists.0.x_column", new_value=cols[0], event_aggregator=self._event_aggregator
-            ))
-            self.command_manager.execute_command(ChangePlotPropertyCommand(
-                node=node, path="artists.0.y_column", new_value=cols[1], event_aggregator=self._event_aggregator
-            ))
+            self.command_manager.execute_command(
+                ChangePlotPropertyCommand(
+                    node=node,
+                    path="artists.0.x_column",
+                    new_value=cols[0],
+                    event_aggregator=self._event_aggregator,
+                )
+            )
+            self.command_manager.execute_command(
+                ChangePlotPropertyCommand(
+                    node=node,
+                    path="artists.0.y_column",
+                    new_value=cols[1],
+                    event_aggregator=self._event_aggregator,
+                )
+            )
 
         # 3. Apply changes via Generic Path Command
         # Update Data
-        self.command_manager.execute_command(ChangePlotPropertyCommand(
-            node=node, path="data", new_value=data, event_aggregator=self._event_aggregator
-        ))
-        
+        self.command_manager.execute_command(
+            ChangePlotPropertyCommand(
+                node=node,
+                path="data",
+                new_value=data,
+                event_aggregator=self._event_aggregator,
+            )
+        )
+
     def _on_plot_type_change_request(self, node_id: str, new_plot_type_str: str):
         """Swaps the entire property tree for a new themed one of a different type."""
         node = self._get_plot_node_by_id(node_id)
@@ -192,15 +219,17 @@ class NodeController(QObject):
             return
 
         new_type = ArtistType(new_plot_type_str)
-        
+
         # Check if unchanged
-        if node.plot_properties and hasattr(node.plot_properties, "plot_type") and node.plot_properties.plot_type == new_type:
+        if (
+            node.plot_properties
+            and hasattr(node.plot_properties, "plot_type")
+            and node.plot_properties.plot_type == new_type
+        ):
             return
-        
+
         self._event_aggregator.publish(
-            Events.INITIALIZE_PLOT_THEME_REQUESTED,
-            node_id=node.id,
-            plot_type=new_type
+            Events.INITIALIZE_PLOT_THEME_REQUESTED, node_id=node.id, plot_type=new_type
         )
 
     def _on_generic_property_change_request(self, node_id: str, path: str, value: Any):
@@ -217,11 +246,16 @@ class NodeController(QObject):
                 else:
                     value = int(value)
             except ValueError:
-                pass # Keep as string if conversion fails
+                pass  # Keep as string if conversion fails
 
-        self.command_manager.execute_command(ChangePlotPropertyCommand(
-            node=node, path=path, new_value=value, event_aggregator=self._event_aggregator
-        ))
+        self.command_manager.execute_command(
+            ChangePlotPropertyCommand(
+                node=node,
+                path=path,
+                new_value=value,
+                event_aggregator=self._event_aggregator,
+            )
+        )
 
     def _on_node_visibility_request(self, node_id: str, visible: bool):
         """
@@ -270,10 +304,12 @@ class NodeController(QObject):
 
     def _on_template_loaded(self, root_node: SceneNode):
         """
-        Traverses the template root, identifies PlotNodes with sparse data, 
+        Traverses the template root, identifies PlotNodes with sparse data,
         and triggers reactive theme hydration.
         """
-        self.logger.info("NodeController: Template loaded. Scanning for nodes to hydrate.")
+        self.logger.info(
+            "NodeController: Template loaded. Scanning for nodes to hydrate."
+        )
         # Recursively find all PlotNodes in the newly loaded template tree
         for node in root_node.all_descendants(of_type=PlotNode):
             # Check if property hydration is needed (stored as sparse dict from template JSON)
@@ -281,9 +317,9 @@ class NodeController(QObject):
                 overrides = node.plot_properties
                 self.logger.debug(f"  Requesting hydration for PlotNode '{node.id}'.")
                 self._event_aggregator.publish(
-                    Events.HYDRATE_PLOT_PROPERTIES_REQUESTED, 
-                    node_id=node.id, 
-                    overrides=overrides
+                    Events.HYDRATE_PLOT_PROPERTIES_REQUESTED,
+                    node_id=node.id,
+                    overrides=overrides,
                 )
 
     # These methods are currently just warnings, actual commands need to be implemented
@@ -293,7 +329,7 @@ class NodeController(QObject):
         """
         # Placeholder for now, full implementation once command is created.
         # cmd = ChangeChildrenOrderCommand(...)
-         # self.command_manager.execute_command(cmd)
+        # self.command_manager.execute_command(cmd)
         self.logger.warning(
             "NodeController: reorder_nodes not fully implemented yet, requires ChangeChildrenOrderCommand."
         )

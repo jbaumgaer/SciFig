@@ -12,15 +12,15 @@ from src.services.commands.batch_change_plot_geometry_command import (
 )
 from src.services.commands.change_grid_parameters_command import (
     ChangeGridParametersCommand,
-) 
+)
 from src.services.commands.command_manager import CommandManager
-from src.services.event_aggregator import EventAggregator # New import
+from src.services.event_aggregator import EventAggregator  # New import
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import LayoutMode
-from src.shared.events import Events # New import
+from src.shared.events import Events  # New import
 
 
-class LayoutController():
+class LayoutController:
     """
     Manages user interactions related to layout, translating UI events into
     commands that modify the ApplicationModel's layout state.
@@ -39,25 +39,36 @@ class LayoutController():
         model: ApplicationModel,
         command_manager: CommandManager,
         layout_manager: LayoutManager,
-        event_aggregator: EventAggregator, # New dependency
+        event_aggregator: EventAggregator,  # New dependency
     ):
         self.model = model
         self.command_manager = command_manager
         self._layout_manager = layout_manager
-        self._event_aggregator = event_aggregator # Store EventAggregator
+        self._event_aggregator = event_aggregator  # Store EventAggregator
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutController initialized.")
 
-        self._subscribe_to_events() # New: Subscribe to events
+        self._subscribe_to_events()  # New: Subscribe to events
 
     def _subscribe_to_events(self):
         """Subscribes to layout-related request events."""
-        self._event_aggregator.subscribe(Events.ALIGN_PLOTS_REQUESTED, self._handle_align_plots_request)
-        self._event_aggregator.subscribe(Events.DISTRIBUTE_PLOTS_REQUESTED, self._handle_distribute_plots_request)
-        self._event_aggregator.subscribe(Events.INFER_GRID_PARAMETERS_REQUESTED, self._handle_infer_grid_parameters_request)
-        self._event_aggregator.subscribe(Events.OPTIMIZE_LAYOUT_REQUESTED, self._handle_optimize_layout_request)
-        self._event_aggregator.subscribe(Events.CHANGE_GRID_PARAMETER_REQUESTED, self._handle_change_grid_parameter_request)
-
+        self._event_aggregator.subscribe(
+            Events.ALIGN_PLOTS_REQUESTED, self._handle_align_plots_request
+        )
+        self._event_aggregator.subscribe(
+            Events.DISTRIBUTE_PLOTS_REQUESTED, self._handle_distribute_plots_request
+        )
+        self._event_aggregator.subscribe(
+            Events.INFER_GRID_PARAMETERS_REQUESTED,
+            self._handle_infer_grid_parameters_request,
+        )
+        self._event_aggregator.subscribe(
+            Events.OPTIMIZE_LAYOUT_REQUESTED, self._handle_optimize_layout_request
+        )
+        self._event_aggregator.subscribe(
+            Events.CHANGE_GRID_PARAMETER_REQUESTED,
+            self._handle_change_grid_parameter_request,
+        )
 
     def set_layout_mode(self, mode: LayoutMode):
         """
@@ -88,7 +99,7 @@ class LayoutController():
         """
         return self._layout_manager.ui_selected_layout_mode
 
-    def _handle_align_plots_request(self, edge: str): # Renamed
+    def _handle_align_plots_request(self, edge: str):  # Renamed
         """
         Aligns the currently selected plots based on an event request.
         """
@@ -116,7 +127,7 @@ class LayoutController():
         else:
             self.logger.info("No geometry changes after alignment calculation.")
 
-    def _handle_distribute_plots_request(self, axis: str): # Renamed
+    def _handle_distribute_plots_request(self, axis: str):  # Renamed
         """
         Distributes the currently selected plots based on an event request.
         """
@@ -158,7 +169,9 @@ class LayoutController():
         self._layout_manager.set_layout_mode(LayoutMode.GRID)
         self.logger.debug("Switched layout mode to GRID to snap plots.")
 
-    def _handle_change_grid_parameter_request(self, param_name: str, value: Any): # Renamed
+    def _handle_change_grid_parameter_request(
+        self, param_name: str, value: Any
+    ):  # Renamed
         """
         Handles changes from granular UI controls for grid layout parameters.
         Collects changes and dispatches a ChangeGridParametersCommand.
@@ -219,7 +232,9 @@ class LayoutController():
             try:
                 # Interpret empty string as empty list for hspace
                 new_hspace = (
-                    [float(x.strip()) for x in str(value).split(",") if x.strip()] # Cast value to str for split
+                    [
+                        float(x.strip()) for x in str(value).split(",") if x.strip()
+                    ]  # Cast value to str for split
                     if value
                     else []
                 )
@@ -236,7 +251,9 @@ class LayoutController():
             try:
                 # Interpret empty string as empty list for wspace
                 new_wspace = (
-                    [float(x.strip()) for x in str(value).split(",") if x.strip()] # Cast value to str for split
+                    [
+                        float(x.strip()) for x in str(value).split(",") if x.strip()
+                    ]  # Cast value to str for split
                     if value
                     else []
                 )
@@ -275,7 +292,7 @@ class LayoutController():
             f"Executed ChangeGridParametersCommand for {param_name} change."
         )
 
-    def _handle_infer_grid_parameters_request(self): # Renamed
+    def _handle_infer_grid_parameters_request(self):  # Renamed
         """
         Triggers the LayoutManager to infer grid parameters from the current free-form plot positions.
         This action is typically called by a UI button.
@@ -283,7 +300,7 @@ class LayoutController():
         self.logger.info("LayoutController received request to infer grid parameters.")
         self._layout_manager.infer_grid_parameters()
 
-    def _handle_optimize_layout_request(self): # Renamed
+    def _handle_optimize_layout_request(self):  # Renamed
         """
         Triggers the LayoutManager to optimize the current grid layout.
         This action is typically called by a UI button.

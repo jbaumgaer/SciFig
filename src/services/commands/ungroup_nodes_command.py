@@ -1,4 +1,5 @@
 from typing import Optional
+
 from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode  # New Import
 from src.services.commands.base_command import BaseCommand
@@ -12,7 +13,9 @@ class UngroupNodesCommand(BaseCommand):
     and removing the GroupNode itself.
     """
 
-    def __init__(self, model: ApplicationModel, event_aggregator: EventAggregator, group_id: str):
+    def __init__(
+        self, model: ApplicationModel, event_aggregator: EventAggregator, group_id: str
+    ):
         super().__init__(model, event_aggregator)
         self.group_id = group_id
         self.ungrouped_children_ids: list[str] = []

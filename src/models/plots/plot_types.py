@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class SpinePosition(str, Enum):
     TOP = "top"
     BOTTOM = "bottom"
@@ -25,19 +26,19 @@ class AxisKey(str, Enum):
         if s in ("x", "y", "z"):
             return cls(s)
         raise ValueError(f"Invalid AxisKey string: {s}")
-    
+
 
 class AutolimitMode(str, Enum):
     DATA = "data"
     ROUND_NUMBERS = "round_numbers"
-    
+
     @classmethod
     def from_str(cls, s: str) -> "AutolimitMode":
         s = s.lower()
         if s in ("data", "round_numbers"):
             return cls(s)
         raise ValueError(f"Invalid AutolimitMode string: {s}")
-    
+
 
 class RelativeFontSize(str, Enum):
     XX_SMALL = "xx-small"
@@ -51,13 +52,22 @@ class RelativeFontSize(str, Enum):
     @classmethod
     def from_str(cls, s: str) -> "RelativeFontSize":
         s = s.lower()
-        if s in ("xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"):
+        if s in (
+            "xx-small",
+            "x-small",
+            "small",
+            "medium",
+            "large",
+            "x-large",
+            "xx-large",
+        ):
             return cls(s)
         raise ValueError(f"Invalid RelativeFontSize string: {s}")
-    
+
 
 class FontStretch(str, Enum):
     """This enum is not currently implemented"""
+
     ULTRA_CONDENSED = "ultra-condensed"
     EXTRA_CONDENSED = "extra-condensed"
     CONDENSED = "condensed"
@@ -74,9 +84,17 @@ class FontStretch(str, Enum):
     def from_str(cls, s: str) -> "FontStretch":
         s = s.lower()
         if s in (
-            "ultra-condensed", "extra-condensed", "condensed", "semi-condensed",
-            "normal", "semi-expanded", "expanded", "extra-expanded",
-            "ultra-expanded", "wider", "narrower"
+            "ultra-condensed",
+            "extra-condensed",
+            "condensed",
+            "semi-condensed",
+            "normal",
+            "semi-expanded",
+            "expanded",
+            "extra-expanded",
+            "ultra-expanded",
+            "wider",
+            "narrower",
         ):
             return cls(s)
         raise ValueError(f"Invalid FontStretch string: {s}")
@@ -90,20 +108,34 @@ class FontWeight(str, Enum):
     _100 = "100"
     _200 = "200"
     _300 = "300"
-    _400 = "400" # Normal
+    _400 = "400"  # Normal
     _500 = "500"
     _600 = "600"
-    _700 = "700" # Bold
+    _700 = "700"  # Bold
     _800 = "800"
     _900 = "900"
 
     @classmethod
     def from_str(cls, s: str) -> "FontWeight":
         s = s.lower()
-        if s in ("normal", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900"):
+        if s in (
+            "normal",
+            "bold",
+            "bolder",
+            "lighter",
+            "100",
+            "200",
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900",
+        ):
             return cls(s)
         raise ValueError(f"Invalid FontWeight string: {s}")
-    
+
 
 class FontFamily(str, Enum):
     SERIF = "serif"
@@ -118,7 +150,7 @@ class FontFamily(str, Enum):
         if s in ("serif", "sans-serif", "cursive", "fantasy", "monospace"):
             return cls(s)
         raise ValueError(f"Invalid FontFamily string: {s}")
-    
+
 
 class SerifFont(str, Enum):
     TIMES_NEW_ROMAN = "Times New Roman"
@@ -151,12 +183,12 @@ class SerifFont(str, Enum):
             "bookman": cls.BOOKMAN,
             "nimbus roman no9 l": cls.NIMBUS_ROMAN_NO9_L,
             "palatino": cls.PALATINO,
-            "charter": cls.CHARTER
+            "charter": cls.CHARTER,
         }
         if s in mapping:
             return mapping[s]
         raise ValueError(f"Invalid SerifFont string: {s}")
-    
+
 
 class SansSerifFont(str, Enum):
     ARIAL = "Arial"
@@ -183,12 +215,12 @@ class SansSerifFont(str, Enum):
             "verdana": cls.VERDANA,
             "geneva": cls.GENEVA,
             "lucid": cls.LUCID,
-            "avant garde": cls.AVANT_GARDE
+            "avant garde": cls.AVANT_GARDE,
         }
         if s in mapping:
             return mapping[s]
         raise ValueError(f"Invalid SansSerifFont string: {s}")
-    
+
 
 class CursiveFont(str, Enum):
     APPLE_CHANCERY = "Apple Chancery"
@@ -211,12 +243,12 @@ class CursiveFont(str, Enum):
             "script mt": cls.SCRIPT_MT,
             "felipa": cls.FELIPA,
             "comic neue": cls.COMIC_NEUE,
-            "comic sans ms": cls.COMIC_SANS_MS
+            "comic sans ms": cls.COMIC_SANS_MS,
         }
         if s in mapping:
             return mapping[s]
         raise ValueError(f"Invalid CursiveFont string: {s}")
-    
+
 
 class FantasyFont(str, Enum):
     XKCD_SCRIPT = "xkcd script"
@@ -233,12 +265,12 @@ class FantasyFont(str, Enum):
             "chicago": cls.CHICAGO,
             "charcoal": cls.CHARCOAL,
             "impact": cls.IMPACT,
-            "western": cls.WESTERN
+            "western": cls.WESTERN,
         }
         if s in mapping:
             return mapping[s]
         raise ValueError(f"Invalid FantasyFont string: {s}")
-    
+
 
 class MonospaceFont(str, Enum):
     DEJAVU_SANS_MONO = "DejaVu Sans Mono"
@@ -263,7 +295,7 @@ class MonospaceFont(str, Enum):
             "courier new": cls.COURIER_NEW,
             "courier": cls.COURIER,
             "fixed": cls.FIXED,
-            "terminal": cls.TERMINAL
+            "terminal": cls.TERMINAL,
         }
         if s in mapping:
             return mapping[s]

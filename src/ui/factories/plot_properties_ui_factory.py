@@ -1,7 +1,5 @@
 import logging
 from functools import partial
-from typing import Optional
-from pathlib import Path
 
 from PySide6.QtGui import QDoubleValidator
 from PySide6.QtWidgets import (
@@ -42,7 +40,11 @@ def _build_data_source_ui(
     select_file_button = QPushButton("Select File", parent)
     select_file_button.setObjectName("select_file_button")
     select_file_button.clicked.connect(
-        partial(event_aggregator.publish, Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED, node_id=node.id)
+        partial(
+            event_aggregator.publish,
+            Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED,
+            node_id=node.id,
+        )
     )
 
     apply_button = QPushButton("Apply", parent)
@@ -74,7 +76,7 @@ def _build_column_selectors(
     assert node.data is not None
     assert node.plot_properties is not None
     columns = list(node.data.columns)
-    
+
     # Mapping: Use the first artist's columns
     artist = node.plot_properties.artists[0] if node.plot_properties.artists else None
     current_x = getattr(artist, "x_column", None) if artist else None
@@ -91,7 +93,7 @@ def _build_column_selectors(
             Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
             path="artists.0.x_column",
-            value=x_combo.currentText()
+            value=x_combo.currentText(),
         )
     )
     layout.addRow("X-Axis Column:", x_combo)
@@ -107,7 +109,7 @@ def _build_column_selectors(
             Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
             path="artists.0.y_column",
-            value=y_combo.currentText()
+            value=y_combo.currentText(),
         )
     )
     layout.addRow("Y-Axis Column:", y_combo)
@@ -121,7 +123,7 @@ def _build_limit_selectors(
 ):
     assert node.plot_properties is not None
     validator = QDoubleValidator()
-    
+
     # Mapping: Use axis-specific limits
     xlim = node.plot_properties.coords.xaxis.limits
     limit_edits["xlim_min"] = QLineEdit(str(xlim[0] if xlim[0] is not None else ""))
@@ -154,27 +156,45 @@ def _build_limit_selectors(
     # Connect signals to the new generic path-based event
     def publish_xlim_change():
         try:
-            v_min = float(limit_edits["xlim_min"].text()) if limit_edits["xlim_min"].text() else None
-            v_max = float(limit_edits["xlim_max"].text()) if limit_edits["xlim_max"].text() else None
+            v_min = (
+                float(limit_edits["xlim_min"].text())
+                if limit_edits["xlim_min"].text()
+                else None
+            )
+            v_max = (
+                float(limit_edits["xlim_max"].text())
+                if limit_edits["xlim_max"].text()
+                else None
+            )
             event_aggregator.publish(
                 Events.CHANGE_PLOT_COMPONENT_REQUESTED,
                 node_id=node.id,
                 path="coords.xaxis.limits",
-                value=(v_min, v_max)
+                value=(v_min, v_max),
             )
-        except ValueError: pass
+        except ValueError:
+            pass
 
     def publish_ylim_change():
         try:
-            v_min = float(limit_edits["ylim_min"].text()) if limit_edits["ylim_min"].text() else None
-            v_max = float(limit_edits["ylim_max"].text()) if limit_edits["ylim_max"].text() else None
+            v_min = (
+                float(limit_edits["ylim_min"].text())
+                if limit_edits["ylim_min"].text()
+                else None
+            )
+            v_max = (
+                float(limit_edits["ylim_max"].text())
+                if limit_edits["ylim_max"].text()
+                else None
+            )
             event_aggregator.publish(
                 Events.CHANGE_PLOT_COMPONENT_REQUESTED,
                 node_id=node.id,
                 path="coords.yaxis.limits",
-                value=(v_min, v_max)
+                value=(v_min, v_max),
             )
-        except ValueError: pass
+        except ValueError:
+            pass
 
     limit_edits["xlim_min"].editingFinished.connect(publish_xlim_change)
     limit_edits["xlim_max"].editingFinished.connect(publish_xlim_change)
@@ -194,7 +214,7 @@ def _build_base_plot_properties_ui(
     """
     Builds the base UI elements for plot properties (Title, Labels, Column Selectors, Limits).
     """
-    
+
     # Data Source Group
     data_source_group = QGroupBox("Data Source", parent)
     data_source_layout = QFormLayout(data_source_group)
@@ -221,7 +241,7 @@ def _build_base_plot_properties_ui(
             Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
             path="titles.center.text",
-            value=title_edit.text()
+            value=title_edit.text(),
         )
     )
     general_layout.addRow("Title:", title_edit)
@@ -241,7 +261,7 @@ def _build_base_plot_properties_ui(
             Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
             path="coords.xaxis.label.text",
-            value=xlabel_edit.text()
+            value=xlabel_edit.text(),
         )
     )
     axis_layout.addRow("X-Axis Label:", xlabel_edit)
@@ -255,13 +275,12 @@ def _build_base_plot_properties_ui(
             Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
             path="coords.yaxis.label.text",
-            value=ylabel_edit.text()
+            value=ylabel_edit.text(),
         )
     )
     axis_layout.addRow("Y-Axis Label:", ylabel_edit)
 
     layout.addWidget(axis_group)
-
 
     # Data Mapping Group
     data_mapping_group = QGroupBox("Data Mapping", parent)
@@ -316,7 +335,9 @@ def _build_line_plot_ui_widgets(
 
     # Line-specific properties group
     line_specific_group = QGroupBox("Line Properties", parent)
-    line_specific_layout = QFormLayout(line_specific_group) #TODO: This doesn't do anything right now
+    line_specific_layout = QFormLayout(
+        line_specific_group
+    )  # TODO: This doesn't do anything right now
     # Line-specific properties will go here later
     layout.addWidget(line_specific_group)
 

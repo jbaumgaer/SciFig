@@ -19,8 +19,8 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.scene_node import SceneNode
 from src.services.event_aggregator import EventAggregator
-from src.shared.events import Events
 from src.shared.constants import IconPath
+from src.shared.events import Events
 
 
 class LayersTab(QWidget):
@@ -98,23 +98,42 @@ class LayersTab(QWidget):
     def _subscribe_to_events(self):
         """Subscribes to relevant EventAggregator notifications for UI updates."""
         self._event_aggregator.subscribe(Events.PROJECT_WAS_RESET, self._update_content)
-        self._event_aggregator.subscribe(Events.NODE_RENAMED, self._update_content_for_node_by_id)
-        self._event_aggregator.subscribe(Events.NODE_VISIBILITY_CHANGED, self._update_content_for_node_by_id)
-        self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._update_content_for_node_by_id)
-        self._event_aggregator.subscribe(Events.SCENE_GRAPH_CHANGED, self._update_content) # Generic structure change
-        self._event_aggregator.subscribe(Events.NODE_ADDED_TO_SCENE, self._update_content) # For now, rebuild fully
-        self._event_aggregator.subscribe(Events.NODE_REMOVED_FROM_SCENE, self._update_content) # For now, rebuild fully
-        self._event_aggregator.subscribe(Events.NODE_REPARENTED_IN_SCENE, self._update_content) # For now, rebuild fully
-        self._event_aggregator.subscribe(Events.NODE_ORDER_CHANGED_IN_SCENE, self._update_content) # For now, rebuild fully
-        self._event_aggregator.subscribe(Events.SELECTION_CHANGED, self._update_selection_in_tree)
-
+        self._event_aggregator.subscribe(
+            Events.NODE_RENAMED, self._update_content_for_node_by_id
+        )
+        self._event_aggregator.subscribe(
+            Events.NODE_VISIBILITY_CHANGED, self._update_content_for_node_by_id
+        )
+        self._event_aggregator.subscribe(
+            Events.NODE_LOCKED_CHANGED, self._update_content_for_node_by_id
+        )
+        self._event_aggregator.subscribe(
+            Events.SCENE_GRAPH_CHANGED, self._update_content
+        )  # Generic structure change
+        self._event_aggregator.subscribe(
+            Events.NODE_ADDED_TO_SCENE, self._update_content
+        )  # For now, rebuild fully
+        self._event_aggregator.subscribe(
+            Events.NODE_REMOVED_FROM_SCENE, self._update_content
+        )  # For now, rebuild fully
+        self._event_aggregator.subscribe(
+            Events.NODE_REPARENTED_IN_SCENE, self._update_content
+        )  # For now, rebuild fully
+        self._event_aggregator.subscribe(
+            Events.NODE_ORDER_CHANGED_IN_SCENE, self._update_content
+        )  # For now, rebuild fully
+        self._event_aggregator.subscribe(
+            Events.SELECTION_CHANGED, self._update_selection_in_tree
+        )
 
     def _update_content_for_node_by_id(self, node_id: str, *args, **kwargs):
         """Triggers a content update for a specific node event."""
         # For now, a full rebuild is simplest. Optimize for incremental updates later.
         self._update_content()
 
-    def _update_content(self, *args, **kwargs): # Added *args, **kwargs to match event signature
+    def _update_content(
+        self, *args, **kwargs
+    ):  # Added *args, **kwargs to match event signature
         """
         Clears and rebuilds the QTreeWidget based on the current ApplicationModel.
         TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
@@ -127,10 +146,11 @@ class LayersTab(QWidget):
         self._add_node_to_tree(
             self.model.scene_root, self._tree_widget.invisibleRootItem()
         )
-        
 
         self._tree_widget.expandAll()  # Expand all nodes by default
-        self._update_selection_in_tree(self.model.selection) #TODO: This should later be requested instead of just taken
+        self._update_selection_in_tree(
+            self.model.selection
+        )  # TODO: This should later be requested instead of just taken
         self._tree_widget.blockSignals(False)  # Re-enable signals
         self.logger.debug("LayersTab: QTreeWidget content updated.")
 
@@ -150,7 +170,7 @@ class LayersTab(QWidget):
         item.setData(
             self.COL_NAME, Qt.UserRole, node.id
         )  # Store node ID in UserRole for easy retrieval
-        self._node_id_to_tree_item[node.id] = item # Store mapping
+        self._node_id_to_tree_item[node.id] = item  # Store mapping
         item.setFlags(
             item.flags()
             | Qt.ItemIsEditable
@@ -192,14 +212,22 @@ class LayersTab(QWidget):
             return
 
         if column == self.COL_NAME:  # Name or Visibility
-            if item.checkState(self.COL_NAME) != (Qt.Checked if node.visible else Qt.Unchecked):
+            if item.checkState(self.COL_NAME) != (
+                Qt.Checked if node.visible else Qt.Unchecked
+            ):
                 # Visibility changed
                 new_visibility = item.checkState(self.COL_NAME) == Qt.Checked
-                self._event_aggregator.publish(Events.CHANGE_NODE_VISIBILITY_REQUESTED, node_id=node_id, is_visible=new_visibility)
+                self._event_aggregator.publish(
+                    Events.CHANGE_NODE_VISIBILITY_REQUESTED,
+                    node_id=node_id,
+                    is_visible=new_visibility,
+                )
             elif item.text(self.COL_NAME) != node.name:
                 # Name changed
                 new_name = item.text(self.COL_NAME)
-                self._event_aggregator.publish(Events.RENAME_NODE_REQUESTED, node_id=node_id, new_name=new_name)
+                self._event_aggregator.publish(
+                    Events.RENAME_NODE_REQUESTED, node_id=node_id, new_name=new_name
+                )
         # TODO: Handle lock icon/state change in column 1 if implemented as checkbox publishing CHANGE_NODE_LOCKED_REQUESTED
 
     def _handle_item_double_clicked(self, item: QTreeWidgetItem, column: int):
@@ -213,7 +241,9 @@ class LayersTab(QWidget):
         if node and not node.locked:
             self._tree_widget.editItem(item, self.COL_NAME)
 
-    def _update_selection_in_tree(self, selected_node_ids: list[str]): # Match event signature
+    def _update_selection_in_tree(
+        self, selected_node_ids: list[str]
+    ):  # Match event signature
         """Ensures the selection in the QTreeWidget matches the model's selection."""
         self.logger.debug("LayersTab: Updating tree selection to match model.")
         self._tree_widget.blockSignals(True)
@@ -225,7 +255,9 @@ class LayersTab(QWidget):
                 item.setSelected(True)
                 self._tree_widget.scrollToItem(item)
             else:
-                self.logger.warning(f"LayersTab: Item for node ID {node_id} not found in tree map.")
+                self.logger.warning(
+                    f"LayersTab: Item for node ID {node_id} not found in tree map."
+                )
         self._tree_widget.blockSignals(False)
 
     def _group_selected_nodes(self):
@@ -236,7 +268,9 @@ class LayersTab(QWidget):
             if item.data(self.COL_NAME, Qt.UserRole)
         ]
         if len(selected_node_ids) > 1:
-            self._event_aggregator.publish(Events.GROUP_NODES_REQUESTED, node_ids=selected_node_ids)
+            self._event_aggregator.publish(
+                Events.GROUP_NODES_REQUESTED, node_ids=selected_node_ids
+            )
         else:
             QMessageBox.warning(
                 self, "Grouping Error", "Select at least two nodes to group."
@@ -244,13 +278,16 @@ class LayersTab(QWidget):
 
     def _ungroup_selected_node(self):
         """Publishes request to ungroup a selected GroupNode.
-        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture."""
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
+        """
         selected_items = self._tree_widget.selectedItems()
         if len(selected_items) == 1:
             node_id = selected_items[0].data(self.COL_NAME, Qt.UserRole)
             node = self.model.scene_root.find_node_by_id(node_id)
             if isinstance(node, GroupNode):
-                self._event_aggregator.publish(Events.UNGROUP_NODE_REQUESTED, node_id=node_id)
+                self._event_aggregator.publish(
+                    Events.UNGROUP_NODE_REQUESTED, node_id=node_id
+                )
             else:
                 QMessageBox.warning(
                     self, "Ungrouping Error", "Select a GroupNode to ungroup."
@@ -262,7 +299,8 @@ class LayersTab(QWidget):
 
     def _update_toolbar_buttons(self):
         """Updates the enabled state of toolbar buttons based on selection.
-        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture."""
+        TODO: The UI should never directly check the model for any information. That's the whole point of the MVP architecture.
+        """
         selected_items = self._tree_widget.selectedItems()
         self._group_button.setEnabled(len(selected_items) > 1)
 

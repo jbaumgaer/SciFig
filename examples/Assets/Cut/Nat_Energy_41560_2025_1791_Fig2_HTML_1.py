@@ -19,14 +19,14 @@ y_ipa += peak(wavenumber, 2880, 10, 10)
 # 2. IPA + PbI2 (Shifted/Changed)
 y_ipa_pbi2 = baseline + peak(wavenumber, 3320, 60, 25) # Shifted OH
 y_ipa_pbi2 += peak(wavenumber, 2970, 5, 40)
-y_ipa_pbi2 += peak(wavenumber, 2930, 8, 12) 
+y_ipa_pbi2 += peak(wavenumber, 2930, 8, 12)
 y_ipa_pbi2 += peak(wavenumber, 2880, 8, 8)
 # Add slope
 y_ipa_pbi2 -= (wavenumber - 2800) * 0.02
 
 # 3. FIPA
 y_fipa = baseline + peak(wavenumber, 3380, 50, 35) # Sharpish NH/OH
-y_fipa += peak(wavenumber, 3050, 20, 5) 
+y_fipa += peak(wavenumber, 3050, 20, 5)
 y_fipa += peak(wavenumber, 2950, 40, 5) # Broad underlying
 
 # 4. FIPA + PbI2
@@ -51,7 +51,7 @@ plots = [
 for ax, y, col, lbl in plots:
     ax.plot(wavenumber, y, color=col, linewidth=1.5)
     ax.text(2850, np.min(y)+5, lbl, ha='right', fontsize=12)
-    
+
     # Ticks
     ax.set_xlim(3500, 2800) # Reversed axis
     ax.tick_params(direction='out')

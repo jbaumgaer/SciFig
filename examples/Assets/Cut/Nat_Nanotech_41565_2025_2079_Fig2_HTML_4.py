@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import FancyBboxPatch, ArrowStyle
+from matplotlib.patches import FancyBboxPatch
 
 # --- Plotting ---
 fig, ax = plt.subplots(figsize=(6, 5), dpi=150)

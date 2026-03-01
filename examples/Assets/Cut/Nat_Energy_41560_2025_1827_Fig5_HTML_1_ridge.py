@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
-from matplotlib.colors import ListedColormap, BoundaryNorm
 
 # --- Data Simulation (Same as before) ---
 steps = np.linspace(0, 100, 200) # Slightly lower res for performance
-two_theta = np.linspace(18.4, 20.1, 300) 
+two_theta = np.linspace(18.4, 20.1, 300)
 TT, S = np.meshgrid(two_theta, steps)
 
 def ridge_path(s):
@@ -21,12 +20,12 @@ def ridge_path(s):
 
 def generate_z(tt, s, path1, path2, width=0.08):
     z = np.zeros_like(tt)
-    z += 0.05 
-    
+    z += 0.05
+
     # Reshape paths to (N, 1) for broadcasting against (N, M)
     p1 = path1[:, np.newaxis]
     p2 = path2[:, np.newaxis]
-    
+
     # Path 1
     z += 1.2 * np.exp(-((tt - p1)/width)**2)
     # Path 2
@@ -35,13 +34,13 @@ def generate_z(tt, s, path1, path2, width=0.08):
     # But np.exp works fine with NaNs (returns NaNs)
     z2 = 0.9 * np.exp(-((tt - p2)/width)**2)
     z += np.nan_to_num(z2)
-    
+
     z = np.clip(z, 0, 1.2)
     return z
 
 p1_sc, p2_sc = ridge_path(steps)
 mask_split = (steps > 35) & (steps < 65)
-p2_sc[mask_split] = 19.5 + 0.5 * np.sin(np.pi * (steps[mask_split]-35)/30) 
+p2_sc[mask_split] = 19.5 + 0.5 * np.sin(np.pi * (steps[mask_split]-35)/30)
 Z_sc = generate_z(TT, S, p1_sc, p2_sc)
 
 p1_ibp, p2_ibp = ridge_path(steps)
@@ -60,7 +59,7 @@ def plot_colored_line(ax, x, y, c, cmap='bwr', lw=1.5, zorder=1):
     # Create a continuous norm to map from data points to colors
     norm = plt.Normalize(0.0, 1.0) # Z is 0-1.2, but we want Blue at 0.0, Red at 1.0
     lc = LineCollection(segments, cmap=cmap, norm=norm, zorder=zorder)
-    
+
     # Set the values used for colormapping
     lc.set_array(c)
     lc.set_linewidth(lw)
@@ -92,15 +91,15 @@ def plot_ridge(ax, Z_data, title, split_text):
     # If we fill with White, we hide the blue background.
     # Let's fill with the *Background Color* of the plot, which should be the "Low Z" color.
     # bwr(0) is Blue.
-    bg_color = plt.cm.bwr(0.0) 
+    bg_color = plt.cm.bwr(0.0)
     ax.set_facecolor(bg_color)
-    
+
     # Loop
     for i in range(len(steps)-1, -1, -1):
         y_base = steps[i]
         z_row = Z_data[i, :]
         y_curve = y_base + z_row * z_scale
-        
+
         # 1. Fill to hide behind
         # We fill from y_curve down to... y_base?
         # If we fill down to y_base, we hide the line *at* y_base from the previous iteration?
@@ -111,7 +110,7 @@ def plot_ridge(ax, Z_data, title, split_text):
         # Filling with 'bg_color' makes it look like the mountain rises from the sea.
         # But if we fill with bg_color, we hide the *peaks* behind us. Correct.
         ax.fill_between(two_theta, y_base, y_curve, facecolor=bg_color, zorder=i)
-        
+
         # 2. Draw the Line with Gradient
         # But plot_colored_line is slow if called 200 times.
         # Let's try simple plot first? No, we need gradient.
@@ -121,27 +120,27 @@ def plot_ridge(ax, Z_data, title, split_text):
     ax.set_ylim(0, 100 + 1.2 * z_scale)
     ax.set_xlim(18.4, 20.1)
     ax.set_xlabel(r'2$	heta$ (degree)', fontsize=12)
-    
+
     # Remove ticks/spines for cleaner look
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
     ax.get_yaxis().set_ticks([])
-    
+
     # Title
     ax.text(19.9, 10, title, color='white', ha='right', fontsize=12, fontweight='bold', transform=ax.transData)
     ax.text(19.9, 105, '(003)', color='black', ha='right', fontsize=12, transform=ax.transData)
-    
+
     # Annotations
     y_mark = 50 + 0.6 * z_scale # Approx height of peak at step 50
     x1 = 18.7
     x2 = 19.9 if 'SC92' in title else 19.41
-    
+
     # We need to project the Z-shift into Y?
     # The dashed lines in the figure are vertical (constant Theta).
     ax.vlines(x1, 35 + 0.6*z_scale, 65 + 0.6*z_scale, colors='k', linestyles='--', alpha=0.5)
     ax.vlines(x2, 35 + 0.6*z_scale, 65 + 0.6*z_scale, colors='k', linestyles='--', alpha=0.5)
-    
+
     ax.text((x1+x2)/2, y_mark + 5, split_text, ha='center', fontsize=9)
     ax.annotate('', xy=(x1, y_mark), xytext=(x2, y_mark), arrowprops=dict(arrowstyle='<->', color='black'))
 
@@ -150,7 +149,7 @@ plot_ridge(axes[0], Z_sc, 'SC92', '1.28°')
 plot_ridge(axes[1], Z_ibp, 'IBP-SC92', '0.71°')
 
 # Guide Arrows (2D)
-ax_guide = fig.add_axes([0.02, 0.2, 0.1, 0.6]) 
+ax_guide = fig.add_axes([0.02, 0.2, 0.1, 0.6])
 ax_guide.axis('off')
 ax_guide.set_ylim(0, 100)
 ax_guide.arrow(0.5, 10, 0, 35, width=0.15, head_width=0.4, color='#7799BB', length_includes_head=True)

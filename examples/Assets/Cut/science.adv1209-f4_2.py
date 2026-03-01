@@ -34,7 +34,7 @@ ax1.spines['right'].set_visible(False)
 # --- Right Panel: Energy E vs hk ---
 k = np.linspace(-2, 2, 200)
 # Double well potential
-E = 0.5 * (k**2 - 1.5)**2 
+E = 0.5 * (k**2 - 1.5)**2
 
 ax2.plot(k, E, color='indigo', lw=3)
 
@@ -57,7 +57,7 @@ ax2.annotate('', xy=(-0.5, 1.5), xytext=(0.5, 1.5), arrowprops=dict(arrowstyle='
 ax2.text(0, 0.5, r'$\propto 1/d$', ha='center', fontsize=14)
 
 # Styling
-ax2.set_xlabel('$\hbar k$', fontsize=14)
+ax2.set_xlabel(r'$\hbar k$', fontsize=14)
 ax2.set_ylabel('Energy $E$', fontsize=14)
 ax2.set_xticks([])
 ax2.set_yticks([])

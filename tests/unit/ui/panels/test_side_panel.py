@@ -1,23 +1,22 @@
-import pytest
-from PySide6.QtWidgets import QApplication, QTabWidget, QWidget
-from PySide6.QtCore import Qt
-import logging
 
+import pytest
+from PySide6.QtWidgets import QApplication, QTabWidget
 from pytest_mock import mocker
 
-from src.models.application_model import ApplicationModel
-from src.controllers.node_controller import NodeController
 from src.controllers.layout_controller import LayoutController
-from src.services.config_service import ConfigService
+from src.controllers.node_controller import NodeController
 from src.controllers.project_controller import ProjectController
-from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
-from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.panels.side_panel import SidePanel
-from src.ui.panels.properties_tab import PropertiesTab
-from src.ui.panels.layout_tab import LayoutTab
-from src.ui.panels.layers_tab import LayersTab
+from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
+from src.services.config_service import ConfigService
+from src.ui.factories.layout_ui_factory import LayoutUIFactory
+from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
+from src.ui.panels.layers_tab import LayersTab
+from src.ui.panels.layout_tab import LayoutTab
+from src.ui.panels.properties_tab import PropertiesTab
+from src.ui.panels.side_panel import SidePanel
+
 
 @pytest.fixture
 def mock_app(qtbot):
@@ -147,9 +146,9 @@ class TestSidePanel:
         switches to the 'Properties' tab.
         """
         panel, model, _, _, _, _, _, _ = side_panel
-        
+
         # Start on a different tab to ensure a switch occurs
-        panel.setCurrentWidget(panel.layers_tab) 
+        panel.setCurrentWidget(panel.layers_tab)
 
         mock_plot_node = mocker.Mock(spec=PlotNode)
         model.selection = [mock_plot_node]
@@ -174,7 +173,7 @@ class TestSidePanel:
         panel._on_selection_changed()
 
         assert panel.currentWidget() == panel.layers_tab # Should remain on Layers tab
-        
+
     def test_on_selection_changed_does_not_switch_for_multiple_selection(self, side_panel, mocker):
         """
         Verify that when multiple nodes are selected (even if they include PlotNodes),

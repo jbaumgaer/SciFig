@@ -11,7 +11,7 @@ time = np.linspace(0, 100, 1000)
 # 3. Anneal (Ramp -> Hold Ta -> Cool)
 temp = np.zeros_like(time)
 # Base
-temp[:] = 25 
+temp[:] = 25
 # Pyrolysis: Start t=20, Ramp to 30, Hold to 40, Cool to 50
 mask_pyro_ramp = (time >= 20) & (time < 30)
 temp[mask_pyro_ramp] = 25 + (500 - 25) * (time[mask_pyro_ramp] - 20) / 10
@@ -35,7 +35,7 @@ fig, ax = plt.subplots(figsize=(10, 5), dpi=150)
 # Background Gradient
 gradient = np.linspace(0, 1, 100)
 X, Y = np.meshgrid([0, 100], np.linspace(0, 900, 100))
-Z = Y 
+Z = Y
 ax.imshow(Z, extent=[0, 100, 0, 900], aspect='auto', cmap='RdBu_r', alpha=0.3, origin='lower')
 
 # Temperature Line
@@ -43,11 +43,11 @@ ax.plot(time, temp, color='#AA3333', linewidth=2.5)
 
 # Labels and Text
 ax.text(5, 40, 'Gel', color='#883333', ha='center', fontsize=12)
-ax.text(35, 520, '$T_{\mathrm{p}}$', color='#883333', fontsize=12)
+ax.text(35, 520, r'$T_{\mathrm{p}}$', color='#883333', fontsize=12)
 ax.text(35, 420, 'Crystallization stage I', color='#660000', ha='center', fontsize=10)
-ax.text(75, 770, '$T_{\mathrm{a}}$', color='#883333', fontsize=12)
+ax.text(75, 770, r'$T_{\mathrm{a}}$', color='#883333', fontsize=12)
 ax.text(65, 650, 'Crystallization stage II', color='black', ha='center', fontsize=12)
-ax.text(10, 750, '$T_{\mathrm{p}} = 500\ ^{\circ}$C', color='#880000', fontsize=14)
+ax.text(10, 750, r'$T_{\mathrm{p}} = 500\ ^{\circ}$C', color='#880000', fontsize=14)
 
 # Phase labels
 ax.text(55, 40, 'M + amorphous', color='#883333', ha='center', fontsize=12)
@@ -55,7 +55,7 @@ ax.text(85, 40, 'M + T', color='#883333', ha='center', fontsize=12)
 
 # Horizontal dashed line (Theter,n)
 ax.axhline(400, color='gray', linestyle='-.')
-ax.text(-2, 400, '$T_{\mathrm{heter,n}}$', va='center', ha='right', fontsize=12)
+ax.text(-2, 400, r'$T_{\mathrm{heter,n}}$', va='center', ha='right', fontsize=12)
 
 # X Axis labels
 ax.text(35, -80, 'Pyrolysis', ha='center', fontsize=14)

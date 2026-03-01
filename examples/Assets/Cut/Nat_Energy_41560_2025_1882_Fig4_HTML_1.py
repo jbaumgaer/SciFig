@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import fsolve
 
 # --- Data Simulation ---
 # Single Diode Model Approximation
@@ -13,10 +12,10 @@ def solar_cell_jv(v, j_sc, v_oc, ff_factor=10):
     # j_sc is short circuit current
     # v_oc is open circuit voltage
     # Returns j
-    
+
     # Simple explicit approximation: J = Jsc * (1 - exp(A * (V - Voc)))? No
     # J = Jsc * (1 - (exp(V/Vt) - 1)/(exp(Voc/Vt) - 1))
-    
+
     vt = v_oc / ff_factor # Shape factor
     j = j_sc * (1 - (np.exp(v/vt) - 1) / (np.exp(v_oc/vt) - 1))
     return j

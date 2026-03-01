@@ -1,5 +1,6 @@
-from typing import Protocol
 from pathlib import Path
+from typing import Protocol
+
 
 class RecentFilesProvider(Protocol):
     """
@@ -11,7 +12,7 @@ class RecentFilesProvider(Protocol):
     def get_recent_files(self) -> list[str]:
         """Returns a list of recent file paths as strings."""
         ...
-    
+
     def open_project(self, file_path: Path) -> None:
         """Triggers the action to open a project from a given path."""
         ...

@@ -15,10 +15,15 @@ class SceneNode(QObject):
     """
 
     def __init__(
-        self, parent: Optional[SceneNode] = None, name: str = "", id: Optional[str] = None
+        self,
+        parent: Optional[SceneNode] = None,
+        name: str = "",
+        id: Optional[str] = None,
     ):
         super().__init__()
-        self.logger = logging.getLogger(self.__class__.__name__) #TODO: Somehow this doesn't format correctly.
+        self.logger = logging.getLogger(
+            self.__class__.__name__
+        )  # TODO: Somehow this doesn't format correctly.
         self.id = id or uuid.uuid4().hex
         self._parent = parent
         self._children: list[SceneNode] = []

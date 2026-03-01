@@ -37,7 +37,7 @@ class ChangeChildrenOrderCommand(BaseCommand):
             self._event_aggregator.publish(
                 Events.NODE_ORDER_CHANGED_IN_SCENE,
                 parent_id=self.parent_id,
-                new_ordered_child_ids=[child.id for child in parent_node.children]
+                new_ordered_child_ids=[child.id for child in parent_node.children],
             )
         else:
             self.logger.warning(
@@ -55,7 +55,7 @@ class ChangeChildrenOrderCommand(BaseCommand):
             self._event_aggregator.publish(
                 Events.NODE_ORDER_CHANGED_IN_SCENE,
                 parent_id=self.parent_id,
-                new_ordered_child_ids=[child.id for child in parent_node.children]
+                new_ordered_child_ids=[child.id for child in parent_node.children],
             )
         else:
             self.logger.warning(

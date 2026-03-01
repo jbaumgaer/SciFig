@@ -29,7 +29,7 @@ class CommandManager:
         command.execute()
         self._undo_stack.append(command)
         self._redo_stack.clear()
-        
+
         self.model.set_dirty(True)
         self._event_aggregator.publish(Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=True)
 
@@ -50,10 +50,12 @@ class CommandManager:
         command = self._undo_stack.pop()
         command.undo()
         self._redo_stack.append(command)
-        
+
         if not self._undo_stack:
             self.model.set_dirty(False)
-            self._event_aggregator.publish(Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=False)
+            self._event_aggregator.publish(
+                Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=False
+            )
 
         self.logger.info(
             f"Undid {type(command).__name__}, Redo stack size: {len(self._redo_stack)}"
@@ -70,7 +72,7 @@ class CommandManager:
         command = self._redo_stack.pop()
         command.execute()
         self._undo_stack.append(command)
-        
+
         self.model.set_dirty(True)
         self._event_aggregator.publish(Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=True)
 

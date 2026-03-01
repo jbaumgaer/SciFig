@@ -1,11 +1,9 @@
-from typing import Optional
 import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide6.QtCore import QPointF, Qt, Signal
-from PySide6.QtGui import QPainter, QMouseEvent
+from PySide6.QtGui import QMouseEvent, QPainter
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
-
 
 # Ensure the backend is set for PySide6
 matplotlib.use("QtAgg")
@@ -25,7 +23,7 @@ class CanvasWidget(QGraphicsView):
     canvasDoubleClicked = Signal(QPointF)  # New Signal
 
     def __init__(self, figure: Figure, parent: QWidget) -> None:
-        #TODO: Check if I actually initiate this with a parent
+        # TODO: Check if I actually initiate this with a parent
         super().__init__(parent)
 
         self.scene = QGraphicsScene(self)
@@ -46,21 +44,21 @@ class CanvasWidget(QGraphicsView):
     def map_to_figure(self, scene_pos: QPointF) -> tuple[float, float]:
         """
         Translates a Qt scene position into normalized 0-1 figure coordinates.
-        This handles the transformation from the QGraphicsView/Scene space 
+        This handles the transformation from the QGraphicsView/Scene space
         to the Matplotlib Figure space.
         """
         # 1. Map from Scene to the FigureCanvas widget coordinates (pixels)
         view_pos = self.mapFromScene(scene_pos)
-        
+
         # 2. Get the figure and its transform
         fig = self.figure_canvas.figure
         inv = fig.transFigure.inverted()
-        
+
         # 3. Use Matplotlib's inverse transform to get figure coordinates (0-1)
         # Note: We must invert the Y axis because Qt and Matplotlib have opposite Y origins
         height = self.figure_canvas.height()
         fig_coords = inv.transform((view_pos.x(), height - view_pos.y()))
-        
+
         return tuple(fig_coords)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):

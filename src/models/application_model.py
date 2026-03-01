@@ -1,14 +1,14 @@
 import logging
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any, Optional
 
 from src.interfaces.project_io import ProjectLifecycle
 from src.models.layout.layout_config import FreeConfig, LayoutConfig
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode, node_factory
-from src.shared.events import Events
 from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 
 
 class ApplicationModel(ProjectLifecycle):
@@ -38,16 +38,19 @@ class ApplicationModel(ProjectLifecycle):
         self.set_selection([])
         self.file_path = None
         self.current_layout_config = FreeConfig()
-        self.set_dirty(False) # Explicitly set to not dirty after a full reset
+        self.set_dirty(False)  # Explicitly set to not dirty after a full reset
         self._event_aggregator.publish(Events.PROJECT_WAS_RESET)
-
 
     def set_selection(self, nodes: list[SceneNode]):
         """Sets the selection and publishes SELECTION_CHANGED event."""
         if self.selection != nodes:
             self.selection = nodes
-            self.selected_path = ""  # Reset sub-selection when the main selection changes
-            self._event_aggregator.publish(Events.SELECTION_CHANGED, selected_node_ids=[n.id for n in nodes])
+            self.selected_path = (
+                ""  # Reset sub-selection when the main selection changes
+            )
+            self._event_aggregator.publish(
+                Events.SELECTION_CHANGED, selected_node_ids=[n.id for n in nodes]
+            )
 
     def set_selected_path(self, path: str):
         """Sets the selected sub-component path and publishes SUB_COMPONENT_SELECTED."""
@@ -55,8 +58,9 @@ class ApplicationModel(ProjectLifecycle):
             self.selected_path = path
             # Notify that a sub-component of the current selection (usually the first node) is focused
             node_id = self.selection[0].id if self.selection else None
-            self._event_aggregator.publish(Events.SUB_COMPONENT_SELECTED, node_id=node_id, path=path)
-
+            self._event_aggregator.publish(
+                Events.SUB_COMPONENT_SELECTED, node_id=node_id, path=path
+            )
 
     def set_scene_root(self, new_root: SceneNode):
         """Sets a new root for the scene graph."""
@@ -103,9 +107,12 @@ class ApplicationModel(ProjectLifecycle):
                     "plot_properties_dict": node.plot_properties.to_dict(
                         exclude_geometry=True
                     ),
-                    "id": node.id,}
+                    "id": node.id,
+                }
                 existing_plot_states.append(state)
-        self.logger.debug(f"Extracted {len(existing_plot_states)} existing plot states.")
+        self.logger.debug(
+            f"Extracted {len(existing_plot_states)} existing plot states."
+        )
         return existing_plot_states
 
     def get_node_at(self, position: tuple[float, float]) -> Optional[SceneNode]:
@@ -122,12 +129,14 @@ class ApplicationModel(ProjectLifecycle):
 
     def load_from_state(self, data: dict[str, Any], temp_dir: Path):
         """Loads the application model from a dictionary."""
-        self.reset_state() # This will publish PROJECT_WAS_RESET, SELECTION_CHANGED, LAYOUT_CONFIG_CHANGED
+        self.reset_state()  # This will publish PROJECT_WAS_RESET, SELECTION_CHANGED, LAYOUT_CONFIG_CHANGED
         self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
 
         layout_config_data = data.get("layout_config")
         if layout_config_data:
-            self.current_layout_config = LayoutConfig.from_dict(layout_config_data) # Publishes LAYOUT_CONFIG_CHANGED
+            self.current_layout_config = LayoutConfig.from_dict(
+                layout_config_data
+            )  # Publishes LAYOUT_CONFIG_CHANGED
         else:
             self.current_layout_config = FreeConfig()
 

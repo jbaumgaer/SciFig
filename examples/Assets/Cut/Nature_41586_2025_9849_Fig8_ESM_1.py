@@ -27,13 +27,13 @@ for i, (g, d, col) in enumerate(zip(groups, data, colors)):
     # Jitter x
     x_scat = g - 1.5 + np.random.uniform(-0.5, 0.5, len(d))
     ax.scatter(x_scat, d, color=col, s=40, alpha=0.9, edgecolors='none')
-    
+
     # Distribution curve (Right of group center)
     y_dist = np.linspace(min(d)-0.05, max(d)+0.05, 50)
     mu = np.mean(d)
     sig = np.std(d) + 0.01 # Avoid zero div
     x_dist = g + 0.5 + 20 * (1/(sig*np.sqrt(2*np.pi))) * np.exp(-0.5*((y_dist-mu)/sig)**2) * 0.05 # Scaling
-    
+
     # Plot curve line
     ax.plot(x_dist, y_dist, color=col, lw=1.5)
 

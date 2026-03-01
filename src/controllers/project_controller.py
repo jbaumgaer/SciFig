@@ -5,11 +5,11 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
-from src.services.event_aggregator import EventAggregator
-from src.shared.events import Events
 from src.interfaces.project_io import ProjectLifecycle
 from src.models.nodes.scene_node import node_factory
 from src.services.commands.command_manager import CommandManager
+from src.services.event_aggregator import EventAggregator
+from src.shared.events import Events
 
 RECENT_FILES_KEY = "recentFiles"
 
@@ -67,11 +67,11 @@ class ProjectController:
         else:
             base_title = "Untitled[*] - SciFig"
 
-        self.logger.debug(f"Publishing WINDOW_TITLE_DATA_READY: title='{base_title}', is_dirty={is_dirty}")
+        self.logger.debug(
+            f"Publishing WINDOW_TITLE_DATA_READY: title='{base_title}', is_dirty={is_dirty}"
+        )
         self._event_aggregator.publish(
-            Events.WINDOW_TITLE_DATA_READY,
-            title=base_title,
-            is_dirty=is_dirty
+            Events.WINDOW_TITLE_DATA_READY, title=base_title, is_dirty=is_dirty
         )
 
     def get_template_names(self) -> list[str]:
@@ -110,7 +110,7 @@ class ProjectController:
     def handle_save_as_project_request(self) -> None:
         self.logger.info("Handling save as project request.")
         self._event_aggregator.publish(Events.PROMPT_FOR_SAVE_AS_PATH_REQUESTED)
-        
+
     def handle_open_recent_project(self, file_path: Path) -> None:
         """Handles opening a specific project file from the recent file list."""
         self.logger.info(f"Opening project directly from path: {file_path}")
@@ -132,18 +132,24 @@ class ProjectController:
             template_root = node_factory(template_data)
             self._lifecycle.set_scene_root(template_root)
             self._lifecycle.file_path = None
-            
+
             # 1. Reset project state
             self._event_aggregator.publish(Events.PROJECT_WAS_RESET)
-            
+
             # 2. Trigger reactive hydration for sparse template nodes
-            self._event_aggregator.publish(Events.TEMPLATE_LOADED, root_node=template_root)
-            
+            self._event_aggregator.publish(
+                Events.TEMPLATE_LOADED, root_node=template_root
+            )
+
             # 3. Mark as dirty
-            self._lifecycle.set_dirty(True) #TODO: I should use events instead
-            self._event_aggregator.publish(Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=True)
+            self._lifecycle.set_dirty(True)  # TODO: I should use events instead
+            self._event_aggregator.publish(
+                Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=True
+            )
         except (IOError, json.JSONDecodeError) as e:
-            self.logger.error(f"Error loading template {template_path}: {e}", exc_info=True)
+            self.logger.error(
+                f"Error loading template {template_path}: {e}", exc_info=True
+            )
 
     def on_open_path_provided(self, path: Optional[Path]) -> None:
         self.logger.info(f"Open path provided: {path}")
@@ -176,7 +182,9 @@ class ProjectController:
             # self._add_to_recent_files(path) # TODO: Re-implement via settings service/event
             self.logger.info(f"Project saved to {path}")
             self._lifecycle.set_dirty(False)
-            self._event_aggregator.publish(Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=False)
+            self._event_aggregator.publish(
+                Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=False
+            )
         except (IOError, zipfile.BadZipFile, Exception) as e:
             self.logger.error(f"Error saving project to '{path}': {e}", exc_info=True)
 
@@ -194,11 +202,22 @@ class ProjectController:
             self._lifecycle.file_path = path
             # self._add_to_recent_files(path) # TODO: Re-implement via settings service/event
             self.logger.info(f"Project loaded from {path}")
-            self._event_aggregator.publish(Events.PROJECT_OPENED, project_metadata={'file_path': str(path)})
+            self._event_aggregator.publish(
+                Events.PROJECT_OPENED, project_metadata={"file_path": str(path)}
+            )
             self._lifecycle.set_dirty(False)
-            self._event_aggregator.publish(Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=False)
-        except (zipfile.BadZipFile, FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-            self.logger.error(f"Error opening project file '{path}': {e}", exc_info=True)
+            self._event_aggregator.publish(
+                Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=False
+            )
+        except (
+            zipfile.BadZipFile,
+            FileNotFoundError,
+            json.JSONDecodeError,
+            KeyError,
+        ) as e:
+            self.logger.error(
+                f"Error opening project file '{path}': {e}", exc_info=True
+            )
 
     # def _add_to_recent_files(self, file_path: Path):
     #     # This logic needs to be moved to a settings service or handled by the View

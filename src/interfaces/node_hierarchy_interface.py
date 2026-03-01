@@ -1,4 +1,5 @@
 from typing import Protocol
+
 from src.models.nodes.scene_node import SceneNode
 
 
@@ -40,7 +41,7 @@ class NodeHierarchyInterface(Protocol):
         Get the parent node of the specified child node.
         """
         raise NotImplementedError
-    
+
     def get_all_nodes(self) -> list[SceneNode]:
         """
         Get a list of all nodes in the hierarchy.

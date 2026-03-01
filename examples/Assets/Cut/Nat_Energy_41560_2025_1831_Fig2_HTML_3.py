@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 # --- Data Simulation ---
 # Voltage Profile
 def voltage_profile(capacity, cap_max, charge=True):
@@ -25,26 +26,26 @@ fig, ax = plt.subplots(figsize=(5, 5), dpi=150)
 
 for i, (cyc, col) in enumerate(zip(cycles, colors)):
     cap_max = 1200 - i * 100 # Capacity fading
-    
+
     # Charge
     q_chg = np.linspace(0, cap_max, 100)
     v_chg = 3.4 + (q_chg/cap_max) * 0.8 + 0.1 * np.exp((q_chg - cap_max)/100)
     v_chg[0] = 3.0 # Start
     # Smooth start
-    
+
     # Simple polynomial fit for visual look
     x = np.linspace(0, 1, 100)
     v_chg = 3.4 + 0.6 * x + 0.2 * x**3 + 0.3 * np.exp(10*(x-1))
     v_chg = np.clip(v_chg, 2.8, 4.5)
-    
+
     # Discharge
     v_dch = 4.4 - 0.6 * (1-x) - 0.2 * (1-x)**3 - 0.4 * np.exp(10*((1-x)-1))
     v_dch = np.clip(v_dch, 2.8, 4.5)
-    
+
     # Hysteresis increase
     v_chg += i * 0.02
     v_dch -= i * 0.02
-    
+
     ax.plot(q_chg * cap_max, v_chg, color=col, lw=1.5)
     ax.plot(q_chg * cap_max, v_dch, color=col, lw=1.5)
 

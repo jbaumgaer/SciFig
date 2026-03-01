@@ -10,7 +10,7 @@ x = np.arange(len(labels))
 # NaDCA (Red)
 # S=0, S*=-1.08, ...
 y_nadca = [0, -1.08, -1.08, 1.52, 1.98, 3.66, 3.33] # Last step drops? Image shows 3.33 < 3.68? No, 3.33 vs 3.68 is Blue vs Red comparison?
-# Image: 
+# Image:
 # Step 1: S (0) -> -0.85 (Blue), -1.08 (Red)
 # Step 2: -> 1.90 (Blue), 1.74 (Red)
 # Step 3: -> 1.98 (Blue), 1.52 (Red)
@@ -19,8 +19,8 @@ y_nadca = [0, -1.08, -1.08, 1.52, 1.98, 3.66, 3.33] # Wait, looks like I missed 
 # Let's just approximate the stairs based on visual
 y_nadca = [0, -1.08, 1.74, 1.52, 1.98, 3.66, 9.5] # The last step is huge jump?
 # Image shows 3.66 -> 3.68? No, looks like 3.66 -> 5.8 -> 9.0?
-# The numbers on plot are: -0.85, -1.08, 1.90, 1.74, 1.98, 1.52, 4.41, 3.66, 3.68, 3.33? 
-# Wait, 3.68 is likely for SCl3*? 
+# The numbers on plot are: -0.85, -1.08, 1.90, 1.74, 1.98, 1.52, 4.41, 3.66, 3.68, 3.33?
+# Wait, 3.68 is likely for SCl3*?
 # Let's just pick points visually.
 y_nacl = [0, -0.85, 1.90, 1.98, 4.41, 7.2, 11.0]
 y_nadca = [0, -1.08, 1.74, 1.52, 3.66, 5.8, 9.0]

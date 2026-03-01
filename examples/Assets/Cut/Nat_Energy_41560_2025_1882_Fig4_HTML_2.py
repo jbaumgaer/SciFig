@@ -17,9 +17,9 @@ whiskerprops = dict(linewidth=2, color='#335577')
 capprops = dict(linewidth=2, color='#335577')
 
 # Boxplot Control
-bp1 = ax.boxplot([ctrl_data], positions=[1], widths=0.4, 
-                 boxprops=boxprops, medianprops=medianprops, 
-                 whiskerprops=whiskerprops, capprops=capprops, 
+bp1 = ax.boxplot([ctrl_data], positions=[1], widths=0.4,
+                 boxprops=boxprops, medianprops=medianprops,
+                 whiskerprops=whiskerprops, capprops=capprops,
                  showfliers=False, patch_artist=False)
 
 # Boxplot Target
@@ -27,9 +27,9 @@ boxprops['color'] = '#AA4433'
 medianprops['color'] = '#AA4433'
 whiskerprops['color'] = '#AA4433'
 capprops['color'] = '#AA4433'
-bp2 = ax.boxplot([trgt_data], positions=[2], widths=0.4, 
-                 boxprops=boxprops, medianprops=medianprops, 
-                 whiskerprops=whiskerprops, capprops=capprops, 
+bp2 = ax.boxplot([trgt_data], positions=[2], widths=0.4,
+                 boxprops=boxprops, medianprops=medianprops,
+                 whiskerprops=whiskerprops, capprops=capprops,
                  showfliers=False, patch_artist=False)
 
 # Scatter + Distribution (Raincloud style simulation)

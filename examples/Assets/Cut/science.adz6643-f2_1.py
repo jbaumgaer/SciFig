@@ -23,7 +23,7 @@ for _ in range(num_blobs):
         x1 = x0 + offset * np.cos(angle)
         y1 = y0 + offset * np.sin(angle)
         Z += np.exp(-((X - x1)**2 + (Y - y1)**2) / 0.3)
-        
+
     Z += np.exp(-((X - x0)**2 + (Y - y0)**2) / 0.3)
 
 # Background

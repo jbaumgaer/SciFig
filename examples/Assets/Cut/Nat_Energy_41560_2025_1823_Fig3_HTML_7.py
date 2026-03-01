@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 # --- Data Simulation ---
 # Generate full Nyquist plot with Warburg (Line at 45 deg) or just huge second arc
 def impedance_curve(Rs, R1, C1, R2, C2, freq):

@@ -8,7 +8,7 @@ voltage = np.array([0, 15, 30, 45, 60, 70])
 # c_T (Left Axis, Blue squares)
 c_t = 4.02 + 0.0006 * voltage
 # c_M (Right Axis, Red squares)
-c_m = 3.945 + 0.0005 * voltage 
+c_m = 3.945 + 0.0005 * voltage
 
 # Bottom Panel
 # Calculated Strain
@@ -52,7 +52,6 @@ ax2.set_facecolor('#E6E0E6')
 # Dashed line fit
 ax2.plot(voltage, strain, '--', color=color_purple, lw=2)
 # Points
-from matplotlib.colors import LinearSegmentedColormap
 # Gradient spheres
 ax2.scatter(voltage, strain, s=100, c=strain, cmap='Purples', edgecolors='white', zorder=5)
 

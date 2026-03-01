@@ -1,4 +1,5 @@
 from typing import Optional
+
 from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode  # New Import
 from src.models.nodes.scene_node import SceneNode
@@ -17,7 +18,7 @@ class GroupNodesCommand(BaseCommand):
         model: ApplicationModel,
         event_aggregator: EventAggregator,
         node_ids: list[str],
-        group_name: str = "Group"
+        group_name: str = "Group",
     ):
         super().__init__(model, event_aggregator)
         self.node_ids = node_ids

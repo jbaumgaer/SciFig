@@ -6,7 +6,7 @@ voltage = np.linspace(3.4, 4.5, 30)
 
 # Top Panel: c axis
 # SC92 (Red) - Collapses
-c_sc92 = 14.25 + 0.2 * np.exp(-((voltage - 4.0)/0.3)**2) 
+c_sc92 = 14.25 + 0.2 * np.exp(-((voltage - 4.0)/0.3)**2)
 # Actually it goes up then down
 c_sc92 = 14.25 + 0.2 * (voltage - 3.4)
 mask_drop = voltage > 4.1
@@ -35,12 +35,12 @@ ax1.hlines(13.86, 3.5, 4.3, color='#D64030', linestyle='--')
 ax1.hlines(13.50, 3.5, 4.5, color='#D64030', linestyle='--')
 ax1.annotate('', xy=(3.5, 14.45), xytext=(3.5, 13.86), arrowprops=dict(arrowstyle='<->', color='#D64030'))
 ax1.annotate('', xy=(3.5, 13.86), xytext=(3.5, 13.50), arrowprops=dict(arrowstyle='<->', color='#D64030'))
-ax1.text(3.6, 13.7, '0.95 $\AA$ ($\Delta c = 6.7\%$)', color='#D64030')
+ax1.text(3.6, 13.7, r'0.95 $\AA$ ($\Delta c = 6.7\%$)', color='#D64030')
 
 # Blue annotation
 ax1.hlines(13.95, 4.3, 4.6, color='#5B9BD5', linestyle='--')
 ax1.annotate('', xy=(4.55, 14.45), xytext=(4.55, 13.95), arrowprops=dict(arrowstyle='<->', color='#5B9BD5'))
-ax1.text(4.35, 14.2, '0.48 $\AA$', color='#5B9BD5')
+ax1.text(4.35, 14.2, r'0.48 $\AA$', color='#5B9BD5')
 
 # Bottom Panel (a axis)
 ax2.plot(voltage, a_sc92, 'o-', color='#D64030', mfc='white', mew=2, label='SC92')

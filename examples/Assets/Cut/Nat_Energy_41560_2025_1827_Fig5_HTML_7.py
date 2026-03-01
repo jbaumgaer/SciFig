@@ -18,16 +18,16 @@ def peak_evolution(tt, t, transition_temp, start_pos, end_pos):
     # Low T: Strong peak at ~18.3
     # High T: Weak/No peak
     # Transition is sharp
-    
+
     # 1. Main Peak (003)R
     # Position shifts slightly left with T?
     pos = start_pos - 0.0005 * (t - 50)
     width = 0.1
     # Intensity kills at transition
     intensity = 1.0 / (1 + np.exp((t - transition_temp)/5))
-    
+
     peak1 = intensity * np.exp(-((tt - pos)/width)**2)
-    
+
     # 2. New Peak (111)S?
     # Appears at higher angle?
     # Image: (111)S points to the fading tip? Or is it the new phase?
@@ -36,7 +36,7 @@ def peak_evolution(tt, t, transition_temp, start_pos, end_pos):
     pos2 = end_pos
     intensity2 = 1.0 / (1 + np.exp(-(t - transition_temp)/5))
     peak2 = 0.3 * intensity2 * np.exp(-((tt - pos2)/0.15)**2) # Broader, weaker
-    
+
     return peak1 + peak2
 
 # SC92 (Left) - Transition ~160
@@ -74,10 +74,10 @@ for ax in [ax1, ax2]:
     ax.set_xticks([18, 19])
     ax.set_xlabel(r'2$	heta$ (degree)', fontsize=14)
     # Peak labels
-    ax.text(19.4, 60, '(003)$_{\mathrm{R}}$', color='white', ha='right')
+    ax.text(19.4, 60, r'(003)$_{\mathrm{R}}$', color='white', ha='right')
     ax.arrow(19.4, 60, -0.4, 0, color='white', head_width=5)
-    
-    ax.text(19.4, 175, '(111)$_{\mathrm{S}}$', color='white', ha='right')
+
+    ax.text(19.4, 175, r'(111)$_{\mathrm{S}}$', color='white', ha='right')
     ax.arrow(19.4, 175, -0.4, 0, color='white', head_width=5)
 
 ax1.set_yticks([50, 150, 190, 230])

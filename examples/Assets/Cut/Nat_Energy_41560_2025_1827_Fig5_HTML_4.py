@@ -45,7 +45,7 @@ ax2.legend(frameon=False, loc='upper left', fontsize=10)
 
 # Styling
 ax2.set_xlabel('Energy (eV)', fontsize=14)
-ax1.set_ylabel('Normalized $\chi\mu$ (a.u.)', fontsize=14) # Shared Y label logic better placed manually?
+ax1.set_ylabel(r'Normalized $\chi\mu$ (a.u.)', fontsize=14) # Shared Y label logic better placed manually?
 # Just putting it on top panel
 # ax1.yaxis.set_label_coords(-0.1, 0) # Center?
 

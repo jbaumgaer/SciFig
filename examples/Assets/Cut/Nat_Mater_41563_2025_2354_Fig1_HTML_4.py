@@ -46,7 +46,7 @@ ax.tick_params(direction='in', which='both', top=True, right=True)
 
 # Right axis label (Time)
 ax2 = ax.twinx()
-ax2.set_ylabel('$t_{\mathrm{p}} = 180$ s', fontsize=14, rotation=270, labelpad=15)
+ax2.set_ylabel(r'$t_{\mathrm{p}} = 180$ s', fontsize=14, rotation=270, labelpad=15)
 ax2.set_yticks([])
 
 plt.tight_layout()

@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LightSource
 
 # --- Data Simulation ---
 # Y-axis: State of Charge (Steps)
@@ -17,25 +16,25 @@ def ridge_path(s, split_point=50, shift_mag=1.0):
     # Starts at ~18.9
     # Shifts to ~18.7 (lower angle)
     # Then jumps to ~19.9 (high angle) at top of charge
-    
+
     center = np.ones_like(s) * 18.9
-    
+
     # Lower half (Charging)
     mask_low = s < 50
     # Parabolic shift left
     center[mask_low] = 18.9 - 0.2 * np.sin(np.pi * s[mask_low] / 50)
-    
+
     # Upper half (Discharging) - Mirror?
     mask_high = s >= 50
     center[mask_high] = 18.7 + 0.2 * np.sin(np.pi * (s[mask_high]-50) / 50)
-    
+
     # The Split/Jump part (High Voltage Phase)
     # At s ~ 40-60, there is a second peak at higher angle
     center2 = np.ones_like(s) * np.nan
     mask_split = (s > 35) & (s < 65)
     # Grows from 19.5 to 19.9 then back?
     center2[mask_split] = 19.5 + 0.4 * np.sin(np.pi * (s[mask_split]-35)/30)
-    
+
     return center, center2
 
 # Generate Intensity Z

@@ -1,12 +1,12 @@
 import logging
 from typing import Optional
 
-from PySide6.QtCore import QObject, Signal
 from src.models.application_model import ApplicationModel
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
 from src.models.layout.layout_engine import LayoutEngine
+from src.models.layout.layout_protocols import FreeFormLayoutCapabilities
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_types import ArtistType
 from src.services.config_service import ConfigService
@@ -14,10 +14,9 @@ from src.services.event_aggregator import EventAggregator
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
 from src.shared.types import PlotID, Rect
-from src.models.layout.layout_protocols import FreeFormLayoutCapabilities
 
 
-class LayoutManager():
+class LayoutManager:
     """
     Orchestrates the layout engines, manages the active layout mode,
     and provides the interface for main application components to
@@ -78,8 +77,10 @@ class LayoutManager():
         if self._ui_selected_layout_mode != mode:
             self.logger.info(f"UI selected layout mode changed to: {mode.value}")
             self._ui_selected_layout_mode = mode
-            self._event_aggregator.publish(Events.UI_LAYOUT_MODE_CHANGED, ui_layout_mode=mode) #Who is subscribed to this signal?
-    
+            self._event_aggregator.publish(
+                Events.UI_LAYOUT_MODE_CHANGED, ui_layout_mode=mode
+            )  # Who is subscribed to this signal?
+
     def on_model_reset(self) -> None:
         """
         Public slot to be connected to a signal indicating a major model reset
@@ -125,21 +126,25 @@ class LayoutManager():
                 old_state = plot_states[old_plot_index]
                 new_slot_node.data = old_state["data"]
                 if new_slot_node.plot_properties:
-                    new_slot_node.plot_properties.update_from_dict(old_state["plot_properties_dict"])
+                    new_slot_node.plot_properties.update_from_dict(
+                        old_state["plot_properties_dict"]
+                    )
                 else:
                     # Point 3: Request themed properties via event
-                    old_type_str = old_state["plot_properties_dict"].get("plot_type", "line")
+                    old_type_str = old_state["plot_properties_dict"].get(
+                        "plot_type", "line"
+                    )
                     try:
                         old_type = ArtistType(old_type_str)
                     except ValueError:
                         old_type = ArtistType.LINE
-                        
+
                     self._event_aggregator.publish(
                         Events.INITIALIZE_PLOT_THEME_REQUESTED,
                         node_id=new_slot_node.id,
-                        plot_type=old_type
+                        plot_type=old_type,
                     )
-                    # Note: The data mapping will be handled by the update_from_dict 
+                    # Note: The data mapping will be handled by the update_from_dict
                     # after the theme is initialized and applied by the NodeController.
 
                 old_plot_index += 1
@@ -339,8 +344,12 @@ class LayoutManager():
             self.logger.debug("Active layout mode set to FREE_FORM.")
 
         self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=mode)
-        self.logger.debug("Publishing ACTIVE_LAYOUT_MODE_CHANGED event from set_layout_mode.")
-        self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=current_config) #TODO: Not sure what needs to go in as config
+        self.logger.debug(
+            "Publishing ACTIVE_LAYOUT_MODE_CHANGED event from set_layout_mode."
+        )
+        self._event_aggregator.publish(
+            Events.LAYOUT_CONFIG_CHANGED, config=current_config
+        )  # TODO: Not sure what needs to go in as config
         self.logger.info(f"Active layout mode successfully switched to {mode.value}.")
 
     def update_grid_config_and_apply(
@@ -358,9 +367,13 @@ class LayoutManager():
             new_grid_config  # Update stored last grid config for next time
         )
 
-        self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID)
+        self._event_aggregator.publish(
+            Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID
+        )
         self.logger.debug("Publishing ACTIVE_LAYOUT_MODE_CHANGED event for GRID mode.")
-        self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=new_grid_config)
+        self._event_aggregator.publish(
+            Events.LAYOUT_CONFIG_CHANGED, config=new_grid_config
+        )
 
         all_plots = list(
             self._application_model.scene_root.all_descendants(of_type=PlotNode)
@@ -402,7 +415,9 @@ class LayoutManager():
         if isinstance(self._free_engine, FreeFormLayoutCapabilities):
             return self._free_engine.perform_align(plots, edge)
         else:
-            self.logger.error("FreeLayoutEngine does not support FreeFormLayoutCapabilities as expected for perform_align.")
+            self.logger.error(
+                "FreeLayoutEngine does not support FreeFormLayoutCapabilities as expected for perform_align."
+            )
             return {}
 
     def perform_distribute(
@@ -421,7 +436,9 @@ class LayoutManager():
         if isinstance(self._free_engine, FreeFormLayoutCapabilities):
             return self._free_engine.perform_distribute(plots, axis)
         else:
-            self.logger.error("FreeLayoutEngine does not support FreeFormLayoutCapabilities as expected for perform_distribute.")
+            self.logger.error(
+                "FreeLayoutEngine does not support FreeFormLayoutCapabilities as expected for perform_distribute."
+            )
             return {}
 
     def infer_grid_parameters(self):
@@ -456,7 +473,9 @@ class LayoutManager():
         self._last_grid_config = new_inferred_grid_config
 
         # Emit signal to update UI fields
-        self._event_aggregator.publish(Events.GRID_CONFIG_PARAMETERS_CHANGED, grid_config=new_inferred_grid_config)
+        self._event_aggregator.publish(
+            Events.GRID_CONFIG_PARAMETERS_CHANGED, grid_config=new_inferred_grid_config
+        )
         self.logger.info(f"Inferred grid parameters: {new_inferred_grid_config}")
 
     def optimize_layout_action(self):
@@ -512,12 +531,16 @@ class LayoutManager():
                 if plot_node:
                     plot_node.geometry = rect
             self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)  # Redraw canvas
-    
-        self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID)
+
+        self._event_aggregator.publish(
+            Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID
+        )
         self.logger.debug(
             "Publishing LAYOUT_CONFIG_CHANGED event to update UI with optimized parameters."
         )
-        self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=updated_grid_config)
+        self._event_aggregator.publish(
+            Events.LAYOUT_CONFIG_CHANGED, config=updated_grid_config
+        )
         self.logger.info(f"Optimized layout applied with config: {updated_grid_config}")
 
     def update_grid_layout_parameters(

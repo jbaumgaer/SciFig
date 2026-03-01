@@ -1,10 +1,11 @@
-import numpy as np
-from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Union
 
-    
+import numpy as np
+
+
 def cm2inch(*size: Union[float, tuple[float, ...]]) -> tuple[float, ...]:
     inch = 2.54
     if isinstance(size[0], tuple):
@@ -75,7 +76,7 @@ class IRDataSet(DataSet):
 
 class CharacterizationMethod(Enum):
     IR = "IR"
-    
+
 
 ir_data_set_1 = IRDataSet(
     x=np.linspace(3500, 2800, 500),

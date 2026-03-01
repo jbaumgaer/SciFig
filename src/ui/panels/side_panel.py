@@ -1,13 +1,8 @@
 import logging
 from typing import Optional
 
-from PySide6.QtWidgets import (
-    QVBoxLayout,
-    QWidget,
-    QTabWidget
-)
+from PySide6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
-from src.models.nodes.plot_node import PlotNode
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
 from src.ui.panels.layers_tab import LayersTab
@@ -21,10 +16,7 @@ class SidePanel(QTabWidget):
     for the currently selected object(s) in the scene.
     """
 
-    def __init__(
-        self,
-        event_aggregator: EventAggregator
-    ):
+    def __init__(self, event_aggregator: EventAggregator):
         super().__init__()
         self._tabs: dict[str, QWidget] = {}
         self._event_aggregator = event_aggregator
@@ -32,7 +24,9 @@ class SidePanel(QTabWidget):
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Connect model signals to the new _on_selection_changed method
-        self._event_aggregator.subscribe(Events.SWITCH_SIDEPANEL_TAB, self._on_switch_tab)
+        self._event_aggregator.subscribe(
+            Events.SWITCH_SIDEPANEL_TAB, self._on_switch_tab
+        )
         self.logger.info("SidePanel initialized.")
 
     def add_tab(self, tab_key: str, tab_widget: QWidget, tab_name: str):
@@ -50,17 +44,19 @@ class SidePanel(QTabWidget):
     @property
     def properties_tab(self) -> Optional[PropertiesTab]:
         return self._tabs.get("properties")
-    
+
     @property
     def layout_tab(self) -> Optional[LayoutTab]:
         return self._tabs.get("layout")
-    
+
     @property
     def layers_tab(self) -> Optional[LayersTab]:
         return self._tabs.get("layers")
 
     # _clear_layout is no longer strictly needed in SidePanel, but kept for consistency if tabs need it internally
-    def _clear_layout(self, layout: Optional[QVBoxLayout]): # Changed type hint to Optional[QVBoxLayout]
+    def _clear_layout(
+        self, layout: Optional[QVBoxLayout]
+    ):  # Changed type hint to Optional[QVBoxLayout]
         """Recursively clears all widgets and sub-layouts."""
         if layout is None:
             return
@@ -89,9 +85,7 @@ class SidePanel(QTabWidget):
         """
         Programmatically switches to the specified tab by name.
         """
-        index = self.indexOf(
-            getattr(self, f"{tab_name.lower().replace(' ', '_')}_tab")
-        )
+        index = self.indexOf(getattr(self, f"{tab_name.lower().replace(' ', '_')}_tab"))
         if index != -1:
             self.setCurrentIndex(index)
             self.logger.debug(f"SidePanel: Switched to tab: {tab_name}")
