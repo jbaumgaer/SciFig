@@ -17,10 +17,6 @@ from PySide6.QtWidgets import (
 )
 
 from src.models.nodes.plot_node import PlotNode
-from src.models.plots.plot_properties import (
-    ScatterPlotProperties,
-    BasePlotProperties,
-)
 from src.models.plots.plot_types import ArtistType
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
@@ -78,10 +74,11 @@ def _build_column_selectors(
     assert node.data is not None
     assert node.plot_properties is not None
     columns = list(node.data.columns)
-    current_mapping = node.plot_properties.plot_mapping
-    current_x = current_mapping.x
-    current_y_list = current_mapping.y
-    current_y = current_y_list[0] if current_y_list else None
+    
+    # Mapping: Use the first artist's columns
+    artist = node.plot_properties.artists[0] if node.plot_properties.artists else None
+    current_x = getattr(artist, "x_column", None) if artist else None
+    current_y = getattr(artist, "y_column", None) if artist else None
 
     x_combo.blockSignals(True)
     x_combo.clear()
@@ -91,10 +88,10 @@ def _build_column_selectors(
     x_combo.blockSignals(False)
     x_combo.currentTextChanged.connect(
         lambda text: event_aggregator.publish(
-            Events.MAP_PLOT_COLUMNS_REQUESTED,
+            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
-            x_column=x_combo.currentText(),
-            y_column=y_combo.currentText(),
+            path="artists.0.x_column",
+            value=x_combo.currentText()
         )
     )
     layout.addRow("X-Axis Column:", x_combo)
@@ -107,10 +104,10 @@ def _build_column_selectors(
     y_combo.blockSignals(False)
     y_combo.currentTextChanged.connect(
         lambda text: event_aggregator.publish(
-            Events.MAP_PLOT_COLUMNS_REQUESTED,
+            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
-            x_column=x_combo.currentText(),
-            y_column=y_combo.currentText(),
+            path="artists.0.y_column",
+            value=y_combo.currentText()
         )
     )
     layout.addRow("Y-Axis Column:", y_combo)
@@ -124,9 +121,9 @@ def _build_limit_selectors(
 ):
     assert node.plot_properties is not None
     validator = QDoubleValidator()
-    current_limits = node.plot_properties.axes_limits
-
-    xlim = current_limits.xlim
+    
+    # Mapping: Use axis-specific limits
+    xlim = node.plot_properties.coords.xaxis.limits
     limit_edits["xlim_min"] = QLineEdit(str(xlim[0] if xlim[0] is not None else ""))
     limit_edits["xlim_min"].setObjectName("xlim_min_edit")
     limit_edits["xlim_max"] = QLineEdit(str(xlim[1] if xlim[1] is not None else ""))
@@ -140,7 +137,7 @@ def _build_limit_selectors(
     lim_layout_x.addWidget(limit_edits["xlim_max"])
     layout.addRow("X-Axis Limits:", lim_layout_x)
 
-    ylim = current_limits.ylim
+    ylim = node.plot_properties.coords.yaxis.limits
     limit_edits["ylim_min"] = QLineEdit(str(ylim[0] if ylim[0] is not None else ""))
     limit_edits["ylim_min"].setObjectName("ylim_min_edit")
     limit_edits["ylim_max"] = QLineEdit(str(ylim[1] if ylim[1] is not None else ""))
@@ -154,19 +151,35 @@ def _build_limit_selectors(
     lim_layout_y.addWidget(limit_edits["ylim_max"])
     layout.addRow("Y-Axis Limits:", lim_layout_y)
 
-    # Connect signals after all QLineEdit widgets are defined
-    def publish_limit_change():
-        event_aggregator.publish(
-            Events.CHANGE_PLOT_AXIS_LIMITS_REQUESTED,
-            node_id=node.id,
-            xlim_min=limit_edits["xlim_min"].text(),
-            xlim_max=limit_edits["xlim_max"].text(),
-            ylim_min=limit_edits["ylim_min"].text(),
-            ylim_max=limit_edits["ylim_max"].text(),
-        )
+    # Connect signals to the new generic path-based event
+    def publish_xlim_change():
+        try:
+            v_min = float(limit_edits["xlim_min"].text()) if limit_edits["xlim_min"].text() else None
+            v_max = float(limit_edits["xlim_max"].text()) if limit_edits["xlim_max"].text() else None
+            event_aggregator.publish(
+                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                node_id=node.id,
+                path="coords.xaxis.limits",
+                value=(v_min, v_max)
+            )
+        except ValueError: pass
 
-    for w in (limit_edits["xlim_min"], limit_edits["xlim_max"], limit_edits["ylim_min"], limit_edits["ylim_max"]):
-        w.editingFinished.connect(publish_limit_change)
+    def publish_ylim_change():
+        try:
+            v_min = float(limit_edits["ylim_min"].text()) if limit_edits["ylim_min"].text() else None
+            v_max = float(limit_edits["ylim_max"].text()) if limit_edits["ylim_max"].text() else None
+            event_aggregator.publish(
+                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                node_id=node.id,
+                path="coords.yaxis.limits",
+                value=(v_min, v_max)
+            )
+        except ValueError: pass
+
+    limit_edits["xlim_min"].editingFinished.connect(publish_xlim_change)
+    limit_edits["xlim_max"].editingFinished.connect(publish_xlim_change)
+    limit_edits["ylim_min"].editingFinished.connect(publish_ylim_change)
+    limit_edits["ylim_max"].editingFinished.connect(publish_ylim_change)
 
 
 def _build_base_plot_properties_ui(
@@ -182,7 +195,7 @@ def _build_base_plot_properties_ui(
     Builds the base UI elements for plot properties (Title, Labels, Column Selectors, Limits).
     """
     
-    # Data Source Group (Moved from PropertiesTab for cleaner separation)
+    # Data Source Group
     data_source_group = QGroupBox("Data Source", parent)
     data_source_layout = QFormLayout(data_source_group)
     _build_data_source_ui(
@@ -199,15 +212,16 @@ def _build_base_plot_properties_ui(
     general_group = QGroupBox("General Properties", parent)
     general_layout = QFormLayout(general_group)
 
-    # --- Title ---
-    title_edit = QLineEdit(props.title, parent)
+    # Mapping: Title -> titles.center.text
+    title_text = props.titles.get("center").text if props.titles.get("center") else ""
+    title_edit = QLineEdit(title_text, parent)
     title_edit.setObjectName("title_edit")
     title_edit.editingFinished.connect(
-        partial(
-            event_aggregator.publish,
-            Events.CHANGE_PLOT_TITLE_REQUESTED,
+        lambda: event_aggregator.publish(
+            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
-            new_title=title_edit.text(),
+            path="titles.center.text",
+            value=title_edit.text()
         )
     )
     general_layout.addRow("Title:", title_edit)
@@ -218,28 +232,30 @@ def _build_base_plot_properties_ui(
     axis_group = QGroupBox("Axis Labels", parent)
     axis_layout = QFormLayout(axis_group)
 
-    # --- X Label ---
-    xlabel_edit = QLineEdit(props.xlabel, parent)
+    # Mapping: X Label -> coords.xaxis.label.text
+    xlabel_text = props.coords.xaxis.label.text
+    xlabel_edit = QLineEdit(xlabel_text, parent)
     xlabel_edit.setObjectName("xlabel_edit")
     xlabel_edit.editingFinished.connect(
-        partial(
-            event_aggregator.publish,
-            Events.CHANGE_PLOT_XLABEL_REQUESTED,
+        lambda: event_aggregator.publish(
+            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
-            new_xlabel=xlabel_edit.text(),
+            path="coords.xaxis.label.text",
+            value=xlabel_edit.text()
         )
     )
     axis_layout.addRow("X-Axis Label:", xlabel_edit)
 
-    # --- Y Label ---
-    ylabel_edit = QLineEdit(props.ylabel, parent)
+    # Mapping: Y Label -> coords.yaxis.label.text
+    ylabel_text = props.coords.yaxis.label.text
+    ylabel_edit = QLineEdit(ylabel_text, parent)
     ylabel_edit.setObjectName("ylabel_edit")
     ylabel_edit.editingFinished.connect(
-        partial(
-            event_aggregator.publish,
-            Events.CHANGE_PLOT_YLABEL_REQUESTED,
+        lambda: event_aggregator.publish(
+            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
             node_id=node.id,
-            new_ylabel=ylabel_edit.text(),
+            path="coords.yaxis.label.text",
+            value=ylabel_edit.text()
         )
     )
     axis_layout.addRow("Y-Axis Label:", ylabel_edit)
@@ -337,17 +353,16 @@ def _build_scatter_plot_ui_widgets(
     scatter_specific_layout = QFormLayout(scatter_specific_group)
 
     props = node.plot_properties
-    if isinstance(
-        props, ScatterPlotProperties
-    ):  # This check is still needed here as builder expects ScatterPlotProperties
-        marker_size_edit = QLineEdit(str(props.marker_size), parent)
+    if props.artists and props.artists[0].artist_type == ArtistType.SCATTER:
+        artist = props.artists[0]
+        marker_size_edit = QLineEdit(str(artist.visuals.markersize), parent)
         marker_size_edit.setObjectName("marker_size_edit")
         marker_size_edit.editingFinished.connect(
-            partial(
-                event_aggregator.publish,
-                Events.CHANGE_PLOT_MARKER_SIZE_REQUESTED,
+            lambda: event_aggregator.publish(
+                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
                 node_id=node.id,
-                new_size=marker_size_edit.text(),
+                path="artists.0.visuals.markersize",
+                value=marker_size_edit.text(),
             )
         )
         scatter_specific_layout.addRow("Marker Size:", marker_size_edit)
@@ -388,7 +403,12 @@ class PlotPropertiesUIFactory:
             layout.addWidget(QLabel("No plot properties available for selected node."))
             return
 
-        builder = self._builders.get(props.plot_type)
+        # Derive plot type from the first artist, defaulting to LINE
+        plot_type = ArtistType.LINE
+        if hasattr(props, "artists") and props.artists:
+            plot_type = props.artists[0].artist_type
+
+        builder = self._builders.get(plot_type)
 
         if builder:
             # Call the registered builder, passing all necessary arguments

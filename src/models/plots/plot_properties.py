@@ -50,13 +50,13 @@ class FontProperties:
     variant: str
     weight: str
     stretch: str
-    size: float
+    size: Union[float, str] # Supports aliases like 'medium'
     #TODO: Inject not only the font family, but the actual font, maybe via a double enum?
 
 @dataclass
 class TextProperties:
     text: str
-    color: str
+    color: Union[str, tuple, list] #TODO: Make a color type or class
     font: FontProperties
     # rotation: float = field(init=False)
     # va: str = field(init=False)
@@ -67,18 +67,18 @@ class TextProperties:
 @dataclass
 class LineProperties:
     linewidth: float
-    linestyle: str
-    color: str
+    linestyle: Union[str, tuple]
+    color: Union[str, tuple, list]
     marker: str
-    markerfacecolor: str
-    markeredgecolor: str
+    markerfacecolor: Union[str, tuple, list]
+    markeredgecolor: Union[str, tuple, list]
     markeredgewidth: float
     markersize: float
 
 @dataclass
 class PatchProperties:
-    facecolor: str
-    edgecolor: str
+    facecolor: Union[str, tuple, list]
+    edgecolor: Union[str, tuple, list]
     linewidth: float
     force_edgecolor: bool
 
@@ -91,24 +91,24 @@ class TickProperties:
     major_pad: float
     minor_pad: float
     direction: TickDirection
-    color: str
-    labelcolor: str
-    labelsize: float
+    color: Union[str, tuple, list]
+    labelcolor: Union[str, tuple, list]
+    labelsize: Union[float, str]
     minor_visible: bool
-    minor_ndivs: int
+    minor_ndivs: Union[str, int]
 
 @dataclass
 class SpineProperties:
     visible: bool
-    color: str
+    color: Union[str, tuple, list]
     linewidth: float
     position: SpinePosition
 
 @dataclass
 class GridProperties:
     visible: bool
-    color: str
-    linestyle: str
+    color: Union[str, tuple, list]
+    linestyle: Union[str, tuple]
     linewidth: float
     alpha: float
 
@@ -127,27 +127,34 @@ class AxisProperties:
     use_offset: bool
     offset_threshold: int
     scientific_limits: tuple[int, int]
-    # label: TextProperties = field(init=False)
-    # limits: tuple[Optional[float], Optional[float]] = field(init=False)
+    label: TextProperties
+    limits: tuple[Optional[float], Optional[float]]
     # scale: str = field(init=False)
 
 @dataclass
 class CoordinateProperties:
-    coord_type: CoordinateSystem
+    # coord_type: CoordinateSystem
+    pass
 
 @dataclass
 class Cartesian2DProperties(CoordinateProperties):
     xaxis: AxisProperties
     yaxis: AxisProperties
     spines: dict[str, SpineProperties]
-    facecolor: str
+    facecolor: Union[str, tuple, list]
     axis_below: Union[bool, str]
     prop_cycle: list[str]
     coord_type: CoordinateSystem = CoordinateSystem.CARTESIAN_2D
 
 @dataclass
-class Cartesian3DProperties(Cartesian2DProperties):
+class Cartesian3DProperties(CoordinateProperties):
+    xaxis: AxisProperties
+    yaxis: AxisProperties
     zaxis: AxisProperties
+    spines: dict[str, SpineProperties]
+    facecolor: Union[str, tuple, list]
+    axis_below: Union[bool, str]
+    prop_cycle: list[str]
     pane_colors: dict[str, tuple[float, float, float, float]]
     coord_type: CoordinateSystem = CoordinateSystem.CARTESIAN_3D
 
@@ -162,16 +169,20 @@ class PolarProperties(CoordinateProperties):
 class BaseArtistProperties:
     visible: bool
     zorder: int
-    artist_type: ArtistType
+    # artist_type: ArtistType
 
 @dataclass
 class LineArtistProperties(BaseArtistProperties):
     visuals: LineProperties
+    x_column: Optional[str] = None
+    y_column: Optional[str] = None
     artist_type: ArtistType = ArtistType.LINE
 
 @dataclass
 class ScatterArtistProperties(BaseArtistProperties):
     visuals: LineProperties
+    x_column: Optional[str] = None
+    y_column: Optional[str] = None
     artist_type: ArtistType = ArtistType.SCATTER
 
 @dataclass
@@ -202,7 +213,7 @@ class ContourArtistProperties(BaseArtistProperties):
 @dataclass
 class HistogramArtistProperties(BaseArtistProperties):
     visuals: PatchProperties
-    bins: Union[int, str]
+    bins: Union[int, str, list]
     density: bool
     cumulative: bool
     artist_type: ArtistType = ArtistType.HISTOGRAM
@@ -228,23 +239,28 @@ class PlotProperties:
 
     @classmethod
     def from_dict(cls, data: dict) -> "PlotProperties":
-        # 1. Resolve the specific Coordinate class
+        # 1. Resolve the specific Coordinate class (Fallback to Cartesian 2D)
+        #TODO: In the future let's not do default fallbacks
         coords_data = data.get("coords", {})
-        c_type = coords_data.get("coord_type")
+        c_type_raw = coords_data.get("coord_type", CoordinateSystem.CARTESIAN_2D)
+        
+        # Ensure we have a valid enum (handles strings from JSON)
+        try:
+            c_type = CoordinateSystem(c_type_raw) if not isinstance(c_type_raw, CoordinateSystem) else c_type_raw
+        except ValueError:
+            c_type = CoordinateSystem.CARTESIAN_2D
 
         COORD_MAP = {
             CoordinateSystem.CARTESIAN_2D: Cartesian2DProperties,
             CoordinateSystem.CARTESIAN_3D: Cartesian3DProperties,
             CoordinateSystem.POLAR: PolarProperties,
         }
-        # Reconstruct the coordinate branch first
-        coord_cls = COORD_MAP.get(c_type)
-        if coord_cls is None:
-            raise ValueError(f"Unknown coordinate type: {c_type}")
+        
+        coord_cls = COORD_MAP.get(c_type, Cartesian2DProperties)
         data["coords"] = _from_dict_recursive(coord_cls, coords_data)
 
         # 2. Resolve the specific Artist classes
-        if "artists" in data:
+        if "artists" in data and isinstance(data["artists"], list):
             ARTIST_MAP = {
                 ArtistType.LINE: LineArtistProperties,
                 ArtistType.SCATTER: ScatterArtistProperties,
@@ -257,12 +273,19 @@ class PlotProperties:
             }
             new_artists = []
             for a_data in data["artists"]:
-                a_type = a_data.get("artist_type")
-                a_cls = ARTIST_MAP.get(a_type)
-                if a_cls is None:
-                    raise ValueError(f"Unknown artist type: {a_type}")
+                a_type_raw = a_data.get("artist_type", ArtistType.LINE)
+                try:
+                    a_type = ArtistType(a_type_raw) if not isinstance(a_type_raw, ArtistType) else a_type_raw
+                except ValueError:
+                    a_type = ArtistType.LINE
+                    
+                a_cls = ARTIST_MAP.get(a_type, LineArtistProperties)
                 new_artists.append(_from_dict_recursive(a_cls, a_data))
             data["artists"] = new_artists
+        else:
+            # Fallback for sparse data: Ensure at least one artist slot exists
+            # This allows the StyleService to populate it later if needed
+            data["artists"] = []
 
         # 3. Final recursive reconstruction of the root
         return _from_dict_recursive(cls, data)

@@ -8,7 +8,6 @@ from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
 from src.models.layout.layout_engine import LayoutEngine
 from src.models.nodes.plot_node import PlotNode
-from src.models.plots.plot_properties import BasePlotProperties
 from src.models.plots.plot_types import ArtistType
 from src.services.config_service import ConfigService
 from src.services.event_aggregator import EventAggregator
@@ -128,9 +127,20 @@ class LayoutManager():
                 if new_slot_node.plot_properties:
                     new_slot_node.plot_properties.update_from_dict(old_state["plot_properties_dict"])
                 else:
-                    old_type = old_state["plot_properties_dict"].get("plot_type", "line") #TODO: Don't hardcode default type, need a more robust way to handle missing plot type
-                    new_slot_node.plot_properties = BasePlotProperties.create_properties_from_plot_type(ArtistType(old_type))
-                    new_slot_node.plot_properties.update_from_dict(old_state["plot_properties_dict"])
+                    # Point 3: Request themed properties via event
+                    old_type_str = old_state["plot_properties_dict"].get("plot_type", "line")
+                    try:
+                        old_type = ArtistType(old_type_str)
+                    except ValueError:
+                        old_type = ArtistType.LINE
+                        
+                    self._event_aggregator.publish(
+                        Events.INITIALIZE_PLOT_THEME_REQUESTED,
+                        node_id=new_slot_node.id,
+                        plot_type=old_type
+                    )
+                    # Note: The data mapping will be handled by the update_from_dict 
+                    # after the theme is initialized and applied by the NodeController.
 
                 old_plot_index += 1
 

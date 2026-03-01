@@ -1,13 +1,10 @@
 import logging
+from pathlib import Path
 
-from PySide6.QtCore import QObject, QPointF, QThread
+from PySide6.QtCore import QObject, QPointF
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
-from src.models.plots.plot_properties import (
-    LinePlotProperties,
-    PlotMapping,
-)
 from src.processing.data_loader import DataLoader
 from src.services.event_aggregator import EventAggregator
 from src.services.tool_service import ToolService
@@ -17,8 +14,8 @@ from src.ui.widgets.canvas_widget import CanvasWidget
 
 class CanvasController(QObject):
     """
-    Manages user interactions on the canvas by delegating to a ToolManager.
-    Also handles drag-and-drop data loading.
+    Acts as a Sanitizer between the coupled View/Backend and the headless Tools.
+    Translates Matplotlib/Qt events into backend-neutral SciFig messages.
     """
 
     def __init__(
@@ -33,163 +30,83 @@ class CanvasController(QObject):
         self._event_aggregator = event_aggregator
         self.view = canvas_widget
         self.tool_manager = tool_manager
-        self.canvas = self.view.figure_canvas #TODO: I don't think the canvas controller should have such knowledge of the view's internal representation of a figure
         self.logger = logging.getLogger(self.__class__.__name__)
-
-        self.thread = None
-        self.worker = None
 
         self._connect_events()
         self.logger.info("CanvasController initialized.")
 
     def _connect_events(self):
         """
-        Connects canvas signals to the appropriate handlers or dispatchers.
-        Tool-related events are dispatched directly to the ToolManager.
+        Connects backend signals to sanitizer handlers.
         """
         self.logger.debug("Connecting canvas events.")
-        # Connect tool events to the ToolManager
-        self.canvas.mpl_connect(
-            "button_press_event", self.tool_manager.dispatch_mouse_press_event
-        )
-        self.canvas.mpl_connect(
-            "motion_notify_event", self.tool_manager.dispatch_mouse_move_event
-        )
-        self.canvas.mpl_connect(
-            "button_release_event", self.tool_manager.dispatch_mouse_release_event
-        )
-        self.logger.debug("Connected Matplotlib events to ToolManager.")
+        canvas = self.view.figure_canvas #TODO: I don't think the canvas controller should have such knowledge of the view's internal representation of a figure
+        
+        # 1. Matplotlib Event Translation
+        canvas.mpl_connect("button_press_event", self._on_mouse_press)
+        canvas.mpl_connect("motion_notify_event", self._on_mouse_move)
+        canvas.mpl_connect("button_release_event", self._on_mouse_release)
+        canvas.mpl_connect("pick_event", self._on_pick)
 
-        # Connect data-related events
+        # 2. Qt View Signal Translation
         self.view.fileDropped.connect(self.on_file_dropped)
-        self.logger.debug("Connected fileDropped signal to on_file_dropped.")
 
-    # --- Data Loading ---
-
-    def _convert_qt_scene_to_mpl_figure_coords(
-        self, scene_pos: QPointF
-    ) -> tuple[float, float]:
-        canvas_width = self.canvas.width()
-        canvas_height = self.canvas.height()
-        if canvas_width == 0 or canvas_height == 0:
-            self.logger.warning(
-                "Canvas has zero width or height. Cannot convert scene coordinates."
-            )
-            return -1.0, -1.0
-        x_ratio = scene_pos.x() / canvas_width
-        y_ratio_from_top = scene_pos.y() / canvas_height
-        y_ratio_from_bottom = 1.0 - y_ratio_from_top
-        self.logger.debug(
-            f"Converted scene_pos {scene_pos} to figure coords ({x_ratio}, {y_ratio_from_bottom})."
-        )
-        return (x_ratio, y_ratio_from_bottom)
-
-    def on_file_dropped(self, file_path: str, scene_pos: QPointF):
-        """
-        Handles the file drop event, finds the target node, and starts the
-        data loading process.
-        """
-        self.logger.info(f"File dropped: {file_path} at scene position {scene_pos}.")
-        if not file_path.lower().endswith(".csv"):
-            self.logger.warning(f"Dropped file '{file_path}' is not a CSV. Ignoring.")
+    def _on_mouse_press(self, event):
+        """Translates Matplotlib button press into a headless tool call."""
+        if event.inaxes is None and event.xdata is None:
+            # Click outside figure - clear selection
+            self._event_aggregator.publish(Events.SELECTION_CHANGED, selected_node_ids=[])
             return
 
-        fig_coords = self._convert_qt_scene_to_mpl_figure_coords(scene_pos)
+        fig_coords = self._get_fig_coords(event)
+        node = self.model.get_node_at(fig_coords)
+        node_id = node.id if node else None
+        
+        # Pass backend-neutral data to the tool manager
+        self.tool_manager.dispatch_mouse_press_event(node_id, fig_coords, event.button)
+
+    def _on_mouse_move(self, event):
+        """Translates Matplotlib motion into a headless tool call."""
+        fig_coords = self._get_fig_coords(event)
+        self.tool_manager.dispatch_mouse_move_event(fig_coords)
+
+    def _on_mouse_release(self, event):
+        """Translates Matplotlib release into a headless tool call."""
+        fig_coords = self._get_fig_coords(event)
+        self.tool_manager.dispatch_mouse_release_event(fig_coords)
+
+    def _on_pick(self, event):
+        """Translates Matplotlib picking into a sub-selection event."""
+        artist = event.artist
+        path = artist.get_gid()
+        if not path:
+            return
+
+        # Identify which node this artist belongs to
+        fig_coords = self._get_fig_coords(event.mouseevent)
+        node = self.model.get_node_at(fig_coords)
+        
+        if node:
+            self.logger.info(f"Sub-component picked: {path} on node {node.id}")
+            self._event_aggregator.publish(Events.SUB_COMPONENT_SELECTED, node_id=node.id, path=path)
+
+    def _get_fig_coords(self, event) -> tuple[float, float]:
+        """Safely extracts 0-1 figure coordinates from a Matplotlib event."""
+        fig = self.view.figure_canvas.figure
+        inv = fig.transFigure.inverted()
+        # Matplotlib's event.x and event.y are in display (pixel) coordinates
+        return tuple(inv.transform((event.x, event.y)))
+
+    def on_file_dropped(self, file_path: str, scene_pos: QPointF):
+        """Handles file drop by resolving the target node and requesting data load."""
+        fig_coords = self.view.map_to_figure(scene_pos)
         node = self.model.get_node_at(fig_coords)
 
         if node and isinstance(node, PlotNode):
-            self.logger.info(
-                f"Dropped file '{file_path}' onto PlotNode '{node.name}' (ID: {node.id})."
+            self.logger.info(f"File dropped onto PlotNode '{node.name}'.")
+            # Request data load via event-driven command workflow
+            self._event_aggregator.publish(
+                Events.APPLY_DATA_FILE_REQUESTED, 
+                node_id=node.id, 
+                file_path=Path(file_path)
             )
-            self.load_data_into_node(file_path, node)
-        else:
-            self.logger.warning(
-                f"Dropped file '{file_path}' did not hit a PlotNode at figure coordinates {fig_coords}. Ignoring."
-            )
-
-    def load_data_into_node(self, file_path: str, node: PlotNode):
-        """
-        Loads data from a file into a specific PlotNode using a background thread.
-        This method is separate from the drop event handler to improve testability.
-        """
-        self.logger.info(
-            f"Starting background data load for '{file_path}' into PlotNode '{node.name}' (ID: {node.id})."
-        )
-        self.thread = QThread()
-        self.worker = DataLoader()
-        self.worker.moveToThread(self.thread)
-
-        # Pass the file path and the target node to the worker
-        self.thread.started.connect(lambda: self.worker.process_data(file_path, node))
-        self.logger.debug(
-            f"DataLoader worker assigned to thread for file: {file_path}."
-        )
-
-        self.worker.dataReady.connect(self.on_data_ready)
-        self.worker.errorOccurred.connect(self.on_data_load_error)
-
-        # Clean up the thread when the worker is finished
-        self.worker.dataReady.connect(self.thread.quit)
-        self.worker.errorOccurred.connect(self.thread.quit)
-        self.thread.finished.connect(self.thread.deleteLater)
-
-        self.thread.start()
-        self.logger.debug("Data loading thread started.")
-
-    def on_data_ready(self, dataframe, node: PlotNode):
-        """
-        Slot to receive the loaded data and update the model.
-        Also sets a default plot mapping, updating existing properties if necessary.
-        """
-        self.logger.info(
-            f"Data ready for PlotNode '{node.name}' (ID: {node.id}). DataFrame shape: {dataframe.shape}."
-        )
-        if node in self.model.scene_root.children:
-            node.data = dataframe
-            self.logger.debug(f"Data assigned to PlotNode '{node.name}'.")
-
-            # Ensure plot_properties exist, creating defaults if necessary
-            if not node.plot_properties:
-                node.plot_properties = LinePlotProperties(
-                    title=node.name
-                )  # Create a basic one if not existing
-                self.logger.debug(
-                    f"Created basic PlotProperties for '{node.name}' as none existed."
-                )
-
-            # Now, update plot_properties with default column mappings if the dataframe has enough columns
-            if dataframe.shape[1] >= 2:
-                col1 = dataframe.columns[0]
-                col2 = dataframe.columns[1]
-
-                # Check if plot_mapping is already set or if it's the default empty one
-                if (
-                    node.plot_properties.plot_mapping.x is None
-                    and not node.plot_properties.plot_mapping.y
-                ):
-                    node.plot_properties.plot_mapping = PlotMapping(x=col1, y=[col2])
-                    node.plot_properties.xlabel = col1
-                    node.plot_properties.ylabel = col2
-                    self.logger.info(
-                        f"Default plot mapping set for '{col1}' and '{col2}' on '{node.name}'."
-                    )
-                else:
-                    self.logger.debug(
-                        f"PlotNode '{node.name}' already has a custom plot mapping. Skipping default mapping."
-                    )
-            else:
-                self.logger.warning(
-                    f"PlotNode '{node.name}' has insufficient columns ({dataframe.shape[1]}) for default plot mapping."
-                )
-
-            self._event_aggregator.publish(Events.NODE_DATA_LOADED, node_id=node.id)
-            self.logger.debug(
-                f"NODE_DATA_LOADED event published after data load for '{node.name}'."
-            )
-        else:
-            self.logger.warning(
-                f"Data ready for node '{node.name}' (ID: {node.id}) but it's no longer in the scene_root's children. Data not assigned."
-            )
-
-    def on_data_load_error(self, error_message):
-        self.logger.error(f"Error loading data: {error_message}", exc_info=True)

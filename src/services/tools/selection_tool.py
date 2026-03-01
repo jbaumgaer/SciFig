@@ -1,18 +1,19 @@
+from typing import Optional
 import logging
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QKeyEvent, QMouseEvent, QPainter
+from PySide6.QtGui import QKeyEvent, QPainter
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.services.tools.base_tool import BaseTool
 from src.shared.constants import IconPath
-from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 class SelectionTool(BaseTool):
     """
-    A tool for selecting, deselecting, and (eventually) moving nodes.
+    A tool for selecting and deselecting nodes.
+    Operates on backend-neutral identifiers and coordinates.
     """
 
     plot_double_clicked = Signal(PlotNode)
@@ -20,7 +21,7 @@ class SelectionTool(BaseTool):
     def __init__(
         self,
         model: ApplicationModel,
-        canvas_widget: CanvasWidget,
+        canvas_widget=None, # Keep for base class compatibility but unused here
     ):
         super().__init__(model, canvas_widget)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -32,8 +33,7 @@ class SelectionTool(BaseTool):
 
     @property
     def icon_path(self) -> str:
-        # Get icon path from ConfigService via IconPath class
-        return IconPath.get_path("tool_icons.select")  # Modified to use ConfigService
+        return IconPath.get_path("tool_icons.select")
 
     def on_activated(self):
         self.logger.info("SelectionTool activated.")
@@ -41,48 +41,27 @@ class SelectionTool(BaseTool):
     def on_deactivated(self):
         self.logger.info("SelectionTool deactivated.")
 
-    def mouse_press_event(self, event: QMouseEvent):
-        """Handles single clicks to select or deselect nodes."""
-        self.logger.debug(f"Mouse press event at: ({event.xdata}, {event.ydata})")
-        # Ignore clicks outside of any axes
-        if event.xdata is None or event.ydata is None:
-            # Deselect if clicking outside
-            self._model.set_selection([])
-            self.logger.debug("Click outside axes. Deselecting all.")
-            return
+    def mouse_press_event(
+        self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
+    ) -> None:
+        """Handles single clicks to select or deselect nodes based on node_id."""
+        self.logger.debug(f"SelectionTool: Mouse press at {fig_coords}, node_id: {node_id}")
+        
+        if node_id:
+            node = self._model.scene_root.find_node_by_id(node_id)
+            if node:
+                self._model.set_selection([node])
+                self.logger.info(f"Selected Node '{node.name}'.")
+                return
+        
+        # If no node_id or node not found, clear selection
+        self._model.set_selection([])
+        self.logger.info("Clicked on empty space. Deselecting all.")
 
-        # TODO: Maybe refactor this to a utility function later or give this a more descriptive name
-        # TODO: Should the selection tool really be responsible for this transformation?
-        fig_coords = (
-            self._canvas_widget.figure_canvas.figure.transFigure.inverted().transform(
-                (event.x, event.y)
-            )
-        )
-        node_hit = self._model.get_node_at(fig_coords)
-        self.logger.debug(
-            f"Node hit: {node_hit.name if node_hit else 'None'} at figure coords: {fig_coords}"
-        )
-
-        if event.dblclick:
-            if node_hit and isinstance(node_hit, PlotNode):
-                self.plot_double_clicked.emit(node_hit)
-                self.logger.info(
-                    f"Double-clicked on PlotNode '{node_hit.name}'. Emitting plot_double_clicked signal."
-                )
-        else:
-            if node_hit:
-                self._model.set_selection([node_hit])
-                self.logger.info(f"Selected PlotNode '{node_hit.name}'.")
-            else:
-                self._model.set_selection([])
-                self.logger.info("Clicked on empty space. Deselecting all.")
-
-    def mouse_move_event(self, event: QMouseEvent):
-        # To be implemented later (for dragging)
+    def mouse_move_event(self, fig_coords: tuple[float, float]) -> None:
         pass
 
-    def mouse_release_event(self, event: QMouseEvent):
-        # To be implemented later (for dragging)
+    def mouse_release_event(self, fig_coords: tuple[float, float]) -> None:
         pass
 
     def key_press_event(self, event: QKeyEvent) -> None:

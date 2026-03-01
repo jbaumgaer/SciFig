@@ -6,6 +6,7 @@ class SpinePosition(str, Enum):
     LEFT = "left"
     RIGHT = "right"
 
+    @classmethod
     def from_str(cls, s: str) -> "SpinePosition":
         s = s.lower()
         if s in ("top", "bottom", "left", "right"):
@@ -18,6 +19,7 @@ class AxisKey(str, Enum):
     Y = "y"
     Z = "z"
 
+    @classmethod
     def from_str(cls, s: str) -> "AxisKey":
         s = s.lower()
         if s in ("x", "y", "z"):
@@ -28,7 +30,8 @@ class AxisKey(str, Enum):
 class AutolimitMode(str, Enum):
     DATA = "data"
     ROUND_NUMBERS = "round_numbers"
-
+    
+    @classmethod
     def from_str(cls, s: str) -> "AutolimitMode":
         s = s.lower()
         if s in ("data", "round_numbers"):
@@ -45,6 +48,7 @@ class RelativeFontSize(str, Enum):
     X_LARGE = "x-large"
     XX_LARGE = "xx-large"
 
+    @classmethod
     def from_str(cls, s: str) -> "RelativeFontSize":
         s = s.lower()
         if s in ("xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large"):
@@ -66,6 +70,7 @@ class FontStretch(str, Enum):
     WIDER = "wider"
     NARROWER = "narrower"
 
+    @classmethod
     def from_str(cls, s: str) -> "FontStretch":
         s = s.lower()
         if s in (
@@ -82,16 +87,17 @@ class FontWeight(str, Enum):
     BOLD = "bold"
     BOLDER = "bolder"
     LIGHTER = "lighter"
-    100 = "100"
-    200 = "200"
-    300 = "300"
-    400 = "400" # Normal
-    500 = "500"
-    600 = "600"
-    700 = "700" # Bold
-    800 = "800"
-    900 = "900"
+    _100 = "100"
+    _200 = "200"
+    _300 = "300"
+    _400 = "400" # Normal
+    _500 = "500"
+    _600 = "600"
+    _700 = "700" # Bold
+    _800 = "800"
+    _900 = "900"
 
+    @classmethod
     def from_str(cls, s: str) -> "FontWeight":
         s = s.lower()
         if s in ("normal", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900"):
@@ -106,6 +112,7 @@ class FontFamily(str, Enum):
     FANTASY = "fantasy"
     MONOSPACE = "monospace"
 
+    @classmethod
     def from_str(cls, s: str) -> "FontFamily":
         s = s.lower()
         if s in ("serif", "sans-serif", "cursive", "fantasy", "monospace"):
@@ -128,6 +135,7 @@ class SerifFont(str, Enum):
     PALATINO = "Palatino"
     CHARTER = "Charter"
 
+    @classmethod
     def from_str(cls, s: str) -> "SerifFont":
         s = s.lower()
         mapping = {
@@ -162,6 +170,7 @@ class SansSerifFont(str, Enum):
     LUCID = "Lucid"
     AVANT_GARDE = "Avant Garde"
 
+    @classmethod
     def from_str(cls, s: str) -> "SansSerifFont":
         s = s.lower()
         mapping = {
@@ -191,6 +200,7 @@ class CursiveFont(str, Enum):
     COMIC_NEUE = "Comic Neue"
     COMIC_SANS_MS = "Comic Sans MS"
 
+    @classmethod
     def from_str(cls, s: str) -> "CursiveFont":
         s = s.lower()
         mapping = {
@@ -215,6 +225,7 @@ class FantasyFont(str, Enum):
     IMPACT = "Impact"
     WESTERN = "Western"
 
+    @classmethod
     def from_str(cls, s: str) -> "FantasyFont":
         s = s.lower()
         mapping = {
@@ -240,6 +251,7 @@ class MonospaceFont(str, Enum):
     FIXED = "Fixed"
     TERMINAL = "Terminal"
 
+    @classmethod
     def from_str(cls, s: str) -> "MonospaceFont":
         s = s.lower()
         mapping = {
@@ -263,6 +275,7 @@ class JoinStyle(str, Enum):
     ROUND = "round"
     BEVEL = "bevel"
 
+    @classmethod
     def from_str(cls, s: str) -> "JoinStyle":
         s = s.lower()
         if s in ("miter", "round", "bevel"):
@@ -275,6 +288,7 @@ class CapStyle(str, Enum):
     ROUND = "round"
     PROJECTING = "projecting"
 
+    @classmethod
     def from_str(cls, s: str) -> "CapStyle":
         s = s.lower()
         if s in ("butt", "round", "projecting"):
@@ -290,6 +304,7 @@ class MarkerFillStyle(str, Enum):
     TOP = "top"
     NONE = "none"
 
+    @classmethod
     def from_str(cls, s: str) -> "MarkerFillStyle":
         s = s.lower()
         if s in ("full", "left", "right", "bottom", "top", "none"):
@@ -302,6 +317,7 @@ class TickDirection(str, Enum):
     OUT = "out"
     INOUT = "inout"
 
+    @classmethod
     def from_str(cls, s: str) -> "TickDirection":
         s = s.lower()
         if s in ("in", "out", "inout"):
@@ -314,6 +330,7 @@ class CoordinateSystem(str, Enum):
     CARTESIAN_3D = "cartesian_3d"
     POLAR = "polar"
 
+    @classmethod
     def from_str(cls, s: str) -> "CoordinateSystem":
         s = s.lower()
         if s in ("cartesian_2d", "cartesian_3d", "polar"):

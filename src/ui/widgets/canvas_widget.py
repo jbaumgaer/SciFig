@@ -43,6 +43,26 @@ class CanvasWidget(QGraphicsView):
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setInteractive(True)
 
+    def map_to_figure(self, scene_pos: QPointF) -> tuple[float, float]:
+        """
+        Translates a Qt scene position into normalized 0-1 figure coordinates.
+        This handles the transformation from the QGraphicsView/Scene space 
+        to the Matplotlib Figure space.
+        """
+        # 1. Map from Scene to the FigureCanvas widget coordinates (pixels)
+        view_pos = self.mapFromScene(scene_pos)
+        
+        # 2. Get the figure and its transform
+        fig = self.figure_canvas.figure
+        inv = fig.transFigure.inverted()
+        
+        # 3. Use Matplotlib's inverse transform to get figure coordinates (0-1)
+        # Note: We must invert the Y axis because Qt and Matplotlib have opposite Y origins
+        height = self.figure_canvas.height()
+        fig_coords = inv.transform((view_pos.x(), height - view_pos.y()))
+        
+        return tuple(fig_coords)
+
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         """
         Overrides the mouse double-click event to perform hit-testing on PlotNodes

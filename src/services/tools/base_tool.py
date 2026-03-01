@@ -3,9 +3,10 @@ This module defines the abstract base class for all interactive tools in the app
 """
 
 from abc import ABC, ABCMeta, abstractmethod
+from typing import Optional
 
 from PySide6.QtCore import QObject
-from PySide6.QtGui import QKeyEvent, QMouseEvent, QPainter
+from PySide6.QtGui import QKeyEvent, QPainter
 
 from src.models.application_model import ApplicationModel
 from src.ui.widgets.canvas_widget import CanvasWidget
@@ -58,13 +59,15 @@ class BaseTool(QObject, ABC, metaclass=ToolMeta):
     def on_deactivated(self) -> None:
         """Called by the ToolManager when the tool is deactivated."""
 
-    def mouse_press_event(self, event: QMouseEvent) -> None:
+    def mouse_press_event(
+        self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
+    ) -> None:
         """Handles the mouse press event on the canvas."""
 
-    def mouse_move_event(self, event: QMouseEvent) -> None:
+    def mouse_move_event(self, fig_coords: tuple[float, float]) -> None:
         """Handles the mouse move event on the canvas."""
 
-    def mouse_release_event(self, event: QMouseEvent) -> None:
+    def mouse_release_event(self, fig_coords: tuple[float, float]) -> None:
         """Handles the mouse release event on the canvas."""
 
     def key_press_event(self, event: QKeyEvent) -> None:

@@ -108,14 +108,7 @@ class PropertiesTab(QWidget):
         self._event_aggregator.subscribe(Events.NODE_RENAMED, self._update_content_if_selected)
         self._event_aggregator.subscribe(Events.NODE_VISIBILITY_CHANGED, self._update_content_if_selected)
         self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.PLOT_TITLE_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.PLOT_XLABEL_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.PLOT_YLABEL_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.PLOT_MARKER_SIZE_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.PLOT_AXIS_LIMITS_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.PLOT_MAPPING_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.PLOT_TYPE_CHANGED, self._update_content_if_selected)
-        self._event_aggregator.subscribe(Events.NODE_DATA_FILE_PATH_UPDATED, self._update_content_if_selected)
+        self._event_aggregator.subscribe(Events.PLOT_COMPONENT_CHANGED, self._update_content_if_selected)
         self._event_aggregator.subscribe(Events.NODE_DATA_LOADED, self._update_content_if_selected)
 
     def _connect_widgets_to_events(self):
@@ -260,7 +253,12 @@ class PropertiesTab(QWidget):
             current_node = selected_nodes[0]
         
         if current_node and current_node.plot_properties:
-            current_plot_type = current_node.plot_properties.plot_type
+            # Derive plot type from the first artist, defaulting to LINE
+            props = current_node.plot_properties
+            current_plot_type = ArtistType.LINE
+            if hasattr(props, "artists") and props.artists:
+                current_plot_type = props.artists[0].artist_type
+            
             self._plot_type_selector_combo.setCurrentText(current_plot_type.value)
             self._plot_type_selector_combo.setEnabled(True)
             self.logger.debug(f"PropertiesTab: Plot type selector set to: {current_plot_type.value}")

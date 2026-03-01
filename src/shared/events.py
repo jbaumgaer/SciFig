@@ -26,6 +26,7 @@ class Events(Enum):
     # --- Generic Path-Based Property Changes (NEW) ---
     PLOT_COMPONENT_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: any
     SUB_COMPONENT_SELECTED = auto()  # Payload: node_id: str, path: str
+    TEMPLATE_LOADED = auto()  # Payload: root_node: SceneNode
 
     # --- Node Data & Structure Changes ---
     SCENE_GRAPH_CHANGED = auto()  # Payload: new_scene_graph: dict
@@ -63,6 +64,7 @@ class Events(Enum):
     WINDOW_TITLE_REQUESTED = auto()
 
     # --- Node Property Change Requests ---
+    CHANGE_PLOT_TYPE_REQUESTED = auto()  # Payload: node_id: str, new_plot_type: str
     RENAME_NODE_REQUESTED = auto()  # Payload: node_id: str, new_name: str
     CHANGE_NODE_VISIBILITY_REQUESTED = auto()  # Payload: node_id: str, is_visible: bool
     CHANGE_NODE_LOCKED_REQUESTED = auto()  # Payload: node_id: str, is_locked: bool
@@ -71,6 +73,8 @@ class Events(Enum):
 
     # --- Generic Path-Based Property Change Requests ---
     CHANGE_PLOT_COMPONENT_REQUESTED = auto()  # Payload: node_id: str, path: str, value: any
+    INITIALIZE_PLOT_THEME_REQUESTED = auto()  # Payload: node_id: str, plot_type: ArtistType
+    HYDRATE_PLOT_PROPERTIES_REQUESTED = auto()  # Payload: node_id: str, overrides: dict
 
     # --- Node Data & Structure Requests ---
     SELECT_DATA_FILE_FOR_NODE_REQUESTED = auto()  # Payload: node_id: str

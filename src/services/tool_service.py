@@ -54,20 +54,22 @@ class ToolService(QObject):
         self._event_aggregator.publish(Events.ACTIVE_TOOL_CHANGED, tool_name=tool_name)
         
 
-    def dispatch_mouse_press_event(self, event: QMouseEvent) -> None:
-        """Dispatches the mouse press event to the active tool."""
+    def dispatch_mouse_press_event(
+        self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
+    ) -> None:
+        """Dispatches a backend-neutral mouse press event to the active tool."""
         if self.active_tool:
-            self.active_tool.mouse_press_event(event)
+            self.active_tool.mouse_press_event(node_id, fig_coords, button)
 
-    def dispatch_mouse_move_event(self, event: QMouseEvent) -> None:
-        """Dispatches the mouse move event to the active tool."""
+    def dispatch_mouse_move_event(self, fig_coords: tuple[float, float]) -> None:
+        """Dispatches a backend-neutral mouse move event to the active tool."""
         if self.active_tool:
-            self.active_tool.mouse_move_event(event)
+            self.active_tool.mouse_move_event(fig_coords)
 
-    def dispatch_mouse_release_event(self, event: QMouseEvent) -> None:
-        """Dispatches the mouse release event to the active tool."""
+    def dispatch_mouse_release_event(self, fig_coords: tuple[float, float]) -> None:
+        """Dispatches a backend-neutral mouse release event to the active tool."""
         if self.active_tool:
-            self.active_tool.mouse_release_event(event)
+            self.active_tool.mouse_release_event(fig_coords)
 
     def dispatch_key_press_event(self, event: QKeyEvent) -> None:
         """Dispatches the key press event to the active tool."""

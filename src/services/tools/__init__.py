@@ -1,4 +1,5 @@
 # This file makes the 'tools' directory a Python package.
+from typing import Optional
 from unittest.mock import Mock
 
 from .base_tool import BaseTool
@@ -28,13 +29,15 @@ class MockTool(BaseTool):
     def on_deactivated(self) -> None:
         pass
 
-    def mouse_press_event(self, event) -> None:
+    def mouse_press_event(
+        self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
+    ) -> None:
         pass
 
-    def mouse_move_event(self, event) -> None:
+    def mouse_move_event(self, fig_coords: tuple[float, float]) -> None:
         pass
 
-    def mouse_release_event(self, event) -> None:
+    def mouse_release_event(self, fig_coords: tuple[float, float]) -> None:
         pass
 
     def key_press_event(self, event) -> None:

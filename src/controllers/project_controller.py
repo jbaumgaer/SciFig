@@ -132,7 +132,14 @@ class ProjectController:
             template_root = node_factory(template_data)
             self._lifecycle.set_scene_root(template_root)
             self._lifecycle.file_path = None
+            
+            # 1. Reset project state
             self._event_aggregator.publish(Events.PROJECT_WAS_RESET)
+            
+            # 2. Trigger reactive hydration for sparse template nodes
+            self._event_aggregator.publish(Events.TEMPLATE_LOADED, root_node=template_root)
+            
+            # 3. Mark as dirty
             self._lifecycle.set_dirty(True) #TODO: I should use events instead
             self._event_aggregator.publish(Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=True)
         except (IOError, json.JSONDecodeError) as e:

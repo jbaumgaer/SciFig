@@ -16,9 +16,11 @@ from src.models.plots.plot_types import ArtistType
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.services.event_aggregator import EventAggregator
+from src.services.style_service import StyleService
 from src.shared.events import Events
 from src.services.layout_manager import LayoutManager
 from src.services.tool_service import ToolService
+from src.services.data_service import DataService
 from src.services.tools import MockTool
 from src.services.tools.selection_tool import SelectionTool
 from src.shared.constants import IconPath, ToolName
@@ -27,8 +29,6 @@ from src.ui.builders.tool_bar_builder import ToolBarActions, ToolBarBuilder
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
 from src.ui.factories.plot_properties_ui_factory import (
     PlotPropertiesUIFactory,
-    _build_line_plot_ui_widgets,
-    _build_scatter_plot_ui_widgets,
 )
 from src.ui.panels.layers_tab import LayersTab
 from src.ui.panels.layout_tab import LayoutTab
@@ -51,6 +51,8 @@ class CompositionRoot:
 
         self._app = app
         self._config_service = config_service
+        self._style_service: Optional[StyleService] = None
+        self._data_service: Optional[DataService] = None
         self._application_model: Optional[ApplicationModel] = None
         self._view: Optional[MainWindow] = None
         self._project_controller: Optional[ProjectController] = None
@@ -98,7 +100,11 @@ class CompositionRoot:
         self._command_manager = CommandManager(
             model=self._application_model, event_aggregator=self._event_aggregator
         )
-
+        self._style_service = StyleService(event_aggregator=self._event_aggregator)
+        self._data_service = DataService(
+            model=self._application_model, 
+            event_aggregator=self._event_aggregator
+        )
         self._layout_manager = LayoutManager(
             application_model=self._application_model,
             free_engine=FreeLayoutEngine(),
@@ -163,16 +169,8 @@ class CompositionRoot:
             layout_manager=self._layout_manager,
             event_aggregator=self._event_aggregator,
         )
-        self._plot_types = list(self._renderer.plotting_strategies.keys())
         self._plot_properties_ui_factory = PlotPropertiesUIFactory(
             event_aggregator=self._event_aggregator,
-        )
-
-        self._plot_properties_ui_factory.register_builder(
-            ArtistType.LINE, _build_line_plot_ui_widgets
-        )
-        self._plot_properties_ui_factory.register_builder(
-            ArtistType.SCATTER, _build_scatter_plot_ui_widgets
         )
         self._side_panel = SidePanel(event_aggregator=self._event_aggregator)
         properties_tab = PropertiesTab(
@@ -231,7 +229,8 @@ class CompositionRoot:
         self._main_menu_actions.exit_action.triggered.connect(self._app.quit)
 
     def _subscribe_to_events(self):
-        """Subscribe handlers to events via the EventAggregator."""
+        """Subscribe handlers to events via the EventAggregator.
+        TODO: Unify handle and on naming convention"""
         self.logger.debug("Subscribing to application events.")
 
         # --- Project Lifecycle Requests ---
@@ -270,29 +269,30 @@ class CompositionRoot:
         self._event_aggregator.subscribe(Events.REDO_REQUESTED, self._command_manager.redo)
 
         # --- NodeController Request Subscriptions ---
-        self._event_aggregator.subscribe(Events.SUBPLOT_SELECTION_IN_UI_CHANGED, self._node_controller._handle_subplot_selection_changed_request)
-        self._event_aggregator.subscribe(Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED, self._node_controller._handle_select_data_file_request)
-        self._event_aggregator.subscribe(Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, self._node_controller._handle_data_file_path_provided)
-        self._event_aggregator.subscribe(Events.APPLY_DATA_TO_NODE_REQUESTED, self._node_controller._handle_apply_data_request)
-        self._event_aggregator.subscribe(Events.CHANGE_PLOT_TYPE_REQUESTED, self._node_controller._handle_plot_type_change_request)
-        self._event_aggregator.subscribe(Events.CHANGE_PLOT_TITLE_REQUESTED, self._node_controller._handle_generic_property_change_request)
-        self._event_aggregator.subscribe(Events.CHANGE_PLOT_XLABEL_REQUESTED, self._node_controller._handle_generic_property_change_request)
-        self._event_aggregator.subscribe(Events.CHANGE_PLOT_YLABEL_REQUESTED, self._node_controller._handle_generic_property_change_request)
-        self._event_aggregator.subscribe(Events.CHANGE_PLOT_MARKER_SIZE_REQUESTED, self._node_controller._handle_marker_size_change_request)
-        self._event_aggregator.subscribe(Events.CHANGE_PLOT_AXIS_LIMITS_REQUESTED, self._node_controller._handle_limit_editing_request)
-        self._event_aggregator.subscribe(Events.MAP_PLOT_COLUMNS_REQUESTED, self._node_controller._handle_column_mapping_request)
-        self._event_aggregator.subscribe(Events.CHANGE_NODE_VISIBILITY_REQUESTED, self._node_controller._handle_node_visibility_request)
-        self._event_aggregator.subscribe(Events.RENAME_NODE_REQUESTED, self._node_controller._handle_rename_node_request)
-        self._event_aggregator.subscribe(Events.CHANGE_NODE_LOCKED_REQUESTED, self._node_controller._handle_node_locked_request)
+        self._event_aggregator.subscribe(Events.SUBPLOT_SELECTION_IN_UI_CHANGED, self._node_controller._on_subplot_selection_request)
+        self._event_aggregator.subscribe(Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED, self._node_controller._on_select_data_file_request)
+        self._event_aggregator.subscribe(Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, self._node_controller._on_data_file_path_provided)
+        self._event_aggregator.subscribe(Events.APPLY_DATA_TO_NODE_REQUESTED, self._node_controller._on_apply_data_request)
+        self._event_aggregator.subscribe(Events.NODE_DATA_LOADED, self._node_controller._on_data_loaded)
+        self._event_aggregator.subscribe(Events.CHANGE_PLOT_TYPE_REQUESTED, self._node_controller._on_plot_type_change_request)
+        self._event_aggregator.subscribe(Events.CHANGE_PLOT_COMPONENT_REQUESTED, self._node_controller._on_generic_property_change_request)
+        self._event_aggregator.subscribe(Events.CHANGE_NODE_VISIBILITY_REQUESTED, self._node_controller._on_node_visibility_request)
+        self._event_aggregator.subscribe(Events.RENAME_NODE_REQUESTED, self._node_controller._on_rename_node_request)
+        self._event_aggregator.subscribe(Events.CHANGE_NODE_LOCKED_REQUESTED, self._node_controller._on_node_locked_request)
+
+        # --- DataService Subscriptions ---
+        self._event_aggregator.subscribe(Events.APPLY_DATA_FILE_REQUESTED, self._data_service.handle_load_request)
 
         # --- MainWindow Subscriptions (for node data dialogs) ---
         self._event_aggregator.subscribe(Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, self._view._prompt_for_open_path_for_node_data)
 
+        # --- Renderer Subscriptions (Lifecycle) ---
+        self._event_aggregator.subscribe(Events.NODE_REMOVED_FROM_SCENE, self._renderer.handle_node_removal)
 
         # --- LayoutManager Subscriptions ---
         self._event_aggregator.subscribe(Events.PROJECT_WAS_RESET, self._layout_manager.on_model_reset)
 
-        # --- Redraw Canvas Callbacks (Granular Events) ---
+        # --- Redraw Canvas Callbacks (Consolidated Generic Events) ---
         self._event_aggregator.subscribe(Events.SCENE_GRAPH_CHANGED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.SELECTION_CHANGED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.PROJECT_OPENED, self._redraw_canvas_callback)
@@ -301,13 +301,7 @@ class CompositionRoot:
         self._event_aggregator.subscribe(Events.NODE_LOCKED_CHANGED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_POSITION_CHANGED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_SIZE_CHANGED, self._redraw_canvas_callback)
-        self._event_aggregator.subscribe(Events.PLOT_TITLE_CHANGED, self._redraw_canvas_callback)
-        self._event_aggregator.subscribe(Events.PLOT_XLABEL_CHANGED, self._redraw_canvas_callback)
-        self._event_aggregator.subscribe(Events.PLOT_YLABEL_CHANGED, self._redraw_canvas_callback)
-        self._event_aggregator.subscribe(Events.PLOT_MARKER_SIZE_CHANGED, self._redraw_canvas_callback)
-        self._event_aggregator.subscribe(Events.PLOT_AXIS_LIMITS_CHANGED, self._redraw_canvas_callback)
-        self._event_aggregator.subscribe(Events.PLOT_MAPPING_CHANGED, self._redraw_canvas_callback)
-        self._event_aggregator.subscribe(Events.PLOT_TYPE_CHANGED, self._redraw_canvas_callback)
+        self._event_aggregator.subscribe(Events.PLOT_COMPONENT_CHANGED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_DATA_FILE_PATH_UPDATED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_DATA_LOADED, self._redraw_canvas_callback)
         self._event_aggregator.subscribe(Events.NODE_ADDED_TO_SCENE, self._redraw_canvas_callback)
@@ -355,7 +349,10 @@ class CompositionRoot:
             main_menu_actions=self._main_menu_actions,
             tool_bar_actions=self._tool_bar_actions,
             config_service=self._config_service,
+            style_service=self._style_service,
+            data_service=self._data_service,
             layout_manager=self._layout_manager,
             layout_ui_factory=self._layout_ui_factory,
             event_aggregator=self._event_aggregator,
         )
+            

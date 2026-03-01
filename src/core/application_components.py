@@ -12,7 +12,9 @@ from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
+from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
+from src.services.data_service import DataService
 from src.services.tools.selection_tool import SelectionTool
 from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
@@ -44,5 +46,7 @@ class ApplicationComponents:
     main_menu_actions: "MainMenuActions"
     tool_bar_actions: "ToolBarActions"
     config_service: "ConfigService"
+    style_service: "StyleService"
+    data_service: "DataService"
     layout_manager: "LayoutManager"
     layout_ui_factory: "LayoutUIFactory"
