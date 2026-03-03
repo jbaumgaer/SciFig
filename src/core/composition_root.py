@@ -18,6 +18,7 @@ from src.services.config_service import ConfigService
 from src.services.data_service import DataService
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
+from src.services.property_service import PropertyService
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
 from src.services.tools import MockTool
@@ -59,6 +60,7 @@ class CompositionRoot:
         self._layout_controller: Optional[LayoutController] = None
         self._node_controller: Optional[NodeController] = None
         self._canvas_controller: Optional[CanvasController] = None
+        self._property_service: Optional[PropertyService] = None
         self._command_manager: Optional[CommandManager] = None
         self._layout_manager: Optional[LayoutManager] = None
         self._event_aggregator: Optional[EventAggregator] = None
@@ -102,6 +104,7 @@ class CompositionRoot:
         self._command_manager = CommandManager(
             model=self._application_model, event_aggregator=self._event_aggregator
         )
+        self._property_service = PropertyService() 
         self._style_service = StyleService(event_aggregator=self._event_aggregator)
         self._data_service = DataService(
             model=self._application_model, event_aggregator=self._event_aggregator
@@ -122,6 +125,7 @@ class CompositionRoot:
         self._node_controller = NodeController(
             model=self._application_model,
             command_manager=self._command_manager,
+            property_service=self._property_service,
             event_aggregator=self._event_aggregator,
         )
         self._renderer = Renderer(
@@ -415,6 +419,7 @@ class CompositionRoot:
         self.logger.debug(f"Finished canvas.draw() for redraw {self._redraw_count}")
 
         # Sync back the 'real' Matplotlib limits to the model
+        # TODO: Use matplotlib callbacks instead of syncing on every redraw
         node_id = kwargs.get("node_id")
         if isinstance(node_id, str):
             self._renderer.sync_back_limits(node_id)
@@ -437,6 +442,7 @@ class CompositionRoot:
             composition_root=self,
             app=self._app,
             application_model=self._application_model,
+            property_service=self._property_service,
             command_manager=self._command_manager,
             project_controller=self._project_controller,
             layout_controller=self._layout_controller,

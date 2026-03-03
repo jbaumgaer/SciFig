@@ -197,8 +197,7 @@ class Renderer:
     def sync_back_limits(self, node_id: str):
         """
         Reads the current 'real' limits from the Matplotlib axes and
-        publishes a request to update the model if they differ significantly.
-        This ensures that Matplotlib's autoscale (including margins) is synced back.
+        publishes a reconciliation request.
         """
         ax = self._axes_registry.get(node_id)
         if not ax:
@@ -214,12 +213,11 @@ class Renderer:
 
         # 1. X-Axis Sync
         mpl_xlim = ax.get_xlim()
-        # In SciFig, limits are (min, max)
         model_xlim = props.coords.xaxis.limits
         if self._limits_differ(mpl_xlim, model_xlim):
-            self.logger.debug(f"Syncing back X-limits for node {node_id}: {mpl_xlim}")
+            self.logger.debug(f"Requesting back-sync for X-limits of node {node_id}: {mpl_xlim}")
             self._event_aggregator.publish(
-                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
                 node_id=node_id,
                 path="coords.xaxis.limits",
                 value=tuple(mpl_xlim),
@@ -229,9 +227,9 @@ class Renderer:
         mpl_ylim = ax.get_ylim()
         model_ylim = props.coords.yaxis.limits
         if self._limits_differ(mpl_ylim, model_ylim):
-            self.logger.debug(f"Syncing back Y-limits for node {node_id}: {mpl_ylim}")
+            self.logger.debug(f"Requesting back-sync for Y-limits of node {node_id}: {mpl_ylim}")
             self._event_aggregator.publish(
-                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
                 node_id=node_id,
                 path="coords.yaxis.limits",
                 value=tuple(mpl_ylim),
@@ -246,7 +244,7 @@ class Renderer:
         """Checks if two sets of limits differ significantly."""
         for m_lim, model_lim in zip(mpl_limits, model_limits):
             if model_lim is None:
-                return True  # If model is None, it definitely differs from a numeric value
+                return True
             if not math.isclose(m_lim, model_lim, rel_tol=tol):
                 return True
         return False

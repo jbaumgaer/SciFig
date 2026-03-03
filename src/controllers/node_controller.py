@@ -13,6 +13,7 @@ from src.services.commands.apply_data_to_node_command import ApplyDataToNodeComm
 from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
+from src.services.property_service import PropertyService
 from src.shared.events import Events
 
 
@@ -21,6 +22,7 @@ class NodeController(QObject):
     TODO: In the future, there will be different node controllers, e.g. PlotNodeController.
     Orchestrates high-level node operations (Structure, Data, and High-Level properties).
     Delegates granular property updates to the generic path-based command system.
+    Now supports the 'Bypass Pattern' for silent model reconciliation.
     """
 
     def __init__(
@@ -28,22 +30,22 @@ class NodeController(QObject):
         model: ApplicationModel,
         command_manager: CommandManager,
         event_aggregator: EventAggregator,
+        property_service: PropertyService,
     ):
         super().__init__()
         self.model = model
         self.command_manager = command_manager
         self._event_aggregator = event_aggregator
+        self._property_service = property_service
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self._subscribe_to_events()
         self.logger.info("NodeController initialized.")
 
     def _subscribe_to_events(self):
-        """
-        Subscribes to high-level orchestration requests.
-        Granular property updates now use a single generic event.
-        """
-        """Subscribes to all relevant application events. TODO: Unsure if subscribing should be handled by the controller itself or if there should be a separate layer (currently the composition root) responsible for wiring up event subscriptions."""
+        """Subscribes to all relevant application events. 
+        TODO: Unsure if subscribing should be handled by the controller itself or if there should be a separate layer 
+        (currently the composition root) responsible for wiring up event subscriptions."""
         self._event_aggregator.subscribe(
             Events.SUBPLOT_SELECTION_IN_UI_CHANGED, self._on_subplot_selection_request
         )
@@ -80,8 +82,49 @@ class NodeController(QObject):
         self._event_aggregator.subscribe(
             Events.SELECTION_CHANGED, self._on_selection_changed_for_ui
         )
+        self._event_aggregator.subscribe(
+            Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
+            self.reconcile_node_property,
+        )
 
         # TODO: Add subscriptions for group, ungroup, reorder requests when commands are implemented
+
+
+    def reconcile_node_property(self, node_id: str, path: str, value: Any):
+        """
+        Implementation of the 'Bypass Pattern'. 
+        Updates the model directly via PropertyService, bypassing the CommandManager.
+        Publishes a RECONCILED event instead of a CHANGED event to avoid redraw loops.
+        """
+        node = self._get_node_by_id(node_id)
+        if not node:
+            return
+
+        # 1. Determine the root for the path (Node or PlotProperties)
+        first_part = path.split(".")[0]
+        root = node
+        if hasattr(node, "plot_properties") and node.plot_properties:
+            if hasattr(node.plot_properties, first_part) or first_part == "artists":
+                root = node.plot_properties
+
+        try:
+            # 2. Update the value silently
+            self._property_service.set_value(root, path, value)
+            
+            # 3. Version bump for sync integrity (Aesthetic changes still need tracking)
+            if hasattr(node, "plot_properties") and node.plot_properties:
+                node.plot_properties._version += 1
+                
+            # 4. Publish specific reconciled event (Property Panel listens, Renderer ignores)
+            self._event_aggregator.publish(
+                Events.PLOT_COMPONENT_RECONCILED,
+                node_id=node_id,
+                path=path,
+                new_value=value
+            )
+            self.logger.debug(f"Reconciled {node_id}.{path} to {value}")
+        except Exception as e:
+            self.logger.error(f"Reconciliation failed for {node_id}.{path}: {e}")
 
     def _on_selection_changed_for_ui(self, selected_node_ids: list[str]):
         """
@@ -103,14 +146,14 @@ class NodeController(QObject):
             node_id
         )  # TODO: In the fugure, I might want to change this by asking the model for the node directly, instead of reaching deep into the model's scene graph
         if not node:
-            self.logger.warning(f"NodeController: Node with ID '{node_id}' not found.")
+            self.logger.warning(f"Node with ID '{node_id}' not found.")
         return node
 
     def _get_plot_node_by_id(self, node_id: str) -> Optional[PlotNode]:
         node = self._get_node_by_id(node_id)
         if not (node and isinstance(node, PlotNode)):
             self.logger.warning(
-                f"NodeController: PlotNode with ID '{node_id}' not found or not a PlotNode."
+                f"PlotNode with ID '{node_id}' not found or not a PlotNode."
             )
             return None
         return node
@@ -136,7 +179,6 @@ class NodeController(QObject):
         self._event_aggregator.publish(
             Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, node_id=node_id
         )
-        # TODO: This event is currently not being answered by the ui
 
     def _on_data_file_path_provided(self, node_id: str, path: Optional[Path]):
         """
@@ -145,12 +187,13 @@ class NodeController(QObject):
         node = self._get_plot_node_by_id(node_id)
         if not node:
             return
-
+        
         cmd = ChangePlotPropertyCommand(
             node=node,
             path="data_file_path",
             new_value=path,
             event_aggregator=self._event_aggregator,
+            property_service=self._property_service,
         )
         self.command_manager.execute_command(cmd)
 
@@ -170,7 +213,6 @@ class NodeController(QObject):
         if not node:
             return
 
-        # 1. Ensure PlotProperties exist (Strict Theming)
         if not node.plot_properties:
             # Default to LINE plot for new data. This could be made configurable.
             self._event_aggregator.publish(
@@ -185,13 +227,13 @@ class NodeController(QObject):
         # 2. Heuristic: Default Column Mapping (First two columns)
         if data.shape[1] >= 2 and node.plot_properties.artists:
             cols = data.columns
-            # Update primary artist mapping
             commands.append(
                 ChangePlotPropertyCommand(
                     node=node,
                     path="artists.0.x_column",
                     new_value=cols[0],
                     event_aggregator=self._event_aggregator,
+                    property_service=self._property_service,
                 )
             )
             commands.append(
@@ -200,6 +242,7 @@ class NodeController(QObject):
                     path="artists.0.y_column",
                     new_value=cols[1],
                     event_aggregator=self._event_aggregator,
+                    property_service=self._property_service,
                 )
             )
 
@@ -210,6 +253,7 @@ class NodeController(QObject):
                 path="data",
                 new_value=data,
                 event_aggregator=self._event_aggregator,
+                property_service=self._property_service,
             )
         )
 
@@ -220,10 +264,9 @@ class NodeController(QObject):
                 path="data_file_path",
                 new_value=file_path,
                 event_aggregator=self._event_aggregator,
+                property_service=self._property_service,
             )
         )
-
-        # 5. Reset Limits to (None, None) to trigger Matplotlib Autoscale
         # Resolve path based on coordinate system
         is_polar = (
             node.plot_properties.coords.coord_type == ArtistType.POLAR_LINE
@@ -238,6 +281,7 @@ class NodeController(QObject):
                 path=x_path,
                 new_value=(None, None),
                 event_aggregator=self._event_aggregator,
+                property_service=self._property_service,
             )
         )
         commands.append(
@@ -246,10 +290,10 @@ class NodeController(QObject):
                 path=y_path,
                 new_value=(None, None),
                 event_aggregator=self._event_aggregator,
+                property_service=self._property_service,
             )
         )
 
-        # Execute as a single atomic transaction to avoid redundant redraws
         macro_cmd = ApplyDataToNodeCommand(
             node=node, 
             commands=commands, 
@@ -282,23 +326,13 @@ class NodeController(QObject):
         node = self._get_node_by_id(node_id)
         if not node:
             return
-
-        # Simple type conversion for common numeric inputs from UI
-        if isinstance(value, str):
-            try:
-                if "." in value:
-                    value = float(value)
-                else:
-                    value = int(value)
-            except ValueError:
-                pass  # Keep as string if conversion fails
-
         self.command_manager.execute_command(
             ChangePlotPropertyCommand(
                 node=node,
                 path=path,
                 new_value=value,
                 event_aggregator=self._event_aggregator,
+                property_service=self._property_service,
             )
         )
 
@@ -314,6 +348,7 @@ class NodeController(QObject):
                 path="visible",
                 new_value=visible,
                 event_aggregator=self._event_aggregator,
+                property_service=self._property_service,
             )
             self.command_manager.execute_command(cmd)
 
@@ -329,6 +364,7 @@ class NodeController(QObject):
                 path="locked",
                 new_value=locked,
                 event_aggregator=self._event_aggregator,
+                property_service=self._property_service,
             )
             self.command_manager.execute_command(cmd)
 
@@ -344,6 +380,7 @@ class NodeController(QObject):
                 path="name",
                 new_value=new_name,
                 event_aggregator=self._event_aggregator,
+                property_service=self._property_service,
             )
             self.command_manager.execute_command(cmd)
 

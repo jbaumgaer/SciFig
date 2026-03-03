@@ -358,8 +358,8 @@ To ensure high testability and separation of concerns, the application strictly 
 All modifications to the application state must be reversible and traceable.
 
 1.  **Command Pattern Mandate:**
-    *   Every operation that modifies the `ApplicationModel` or any `SceneNode` property MUST be encapsulated in a subclass of `BaseCommand`.
-    *   Directly setting attributes on nodes from a Controller is a critical architectural violation.
+    *   Every operation reflecting a user-initiated action MUST be encapsulated in a subclass of `BaseCommand`. Background system reconciliation (e.g., Matplotlib autoscale sync) MUST use the `NodeController.reconcile_node_property` bypass path.
+    *   Directly setting attributes on nodes from a Controller is a critical architectural violation. All state changes must flow through a `BaseCommand` (Intent) or the `PropertyService` (Sync).
 
 2.  **Undo/Redo Symmetry:**
     *   `BaseCommand.execute()` and `BaseCommand.undo()` must be perfectly symmetrical.

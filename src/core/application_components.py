@@ -13,6 +13,7 @@ from src.services.config_service import ConfigService
 from src.services.data_service import DataService
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
+from src.services.property_service import PropertyService
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
@@ -36,6 +37,7 @@ class ApplicationComponents:
     app: QApplication
     event_aggregator: "EventAggregator"
     application_model: "ApplicationModel"
+    property_service: "PropertyService"
     command_manager: "CommandManager"
     project_controller: "ProjectController"
     layout_controller: "LayoutController"

@@ -25,7 +25,8 @@ class Events(Enum):
     NODE_SIZE_CHANGED = auto()  # Payload: node_id: str, new_size: tuple
 
     # --- Generic Path-Based Property Changes (NEW) ---
-    PLOT_COMPONENT_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: any
+    PLOT_COMPONENT_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: Any
+    PLOT_COMPONENT_RECONCILED = auto()# Payload: node_id: str, path: str, new_value: Any (Sync only, no redraw)
     SUB_COMPONENT_SELECTED = auto()  # Payload: node_id: str, path: str
     TEMPLATE_LOADED = auto()  # Payload: root_node: SceneNode
 
@@ -77,18 +78,13 @@ class Events(Enum):
     RENAME_NODE_REQUESTED = auto()  # Payload: node_id: str, new_name: str
     CHANGE_NODE_VISIBILITY_REQUESTED = auto()  # Payload: node_id: str, is_visible: bool
     CHANGE_NODE_LOCKED_REQUESTED = auto()  # Payload: node_id: str, is_locked: bool
-    CHANGE_NODE_POSITION_REQUESTED = (
-        auto()
-    )  # Payload: node_id: str, new_position: tuple
+    CHANGE_NODE_POSITION_REQUESTED = auto()# Payload: node_id: str, new_position: tuple
     CHANGE_NODE_SIZE_REQUESTED = auto()  # Payload: node_id: str, new_size: tuple
 
     # --- Generic Path-Based Property Change Requests ---
-    CHANGE_PLOT_COMPONENT_REQUESTED = (
-        auto()
-    )  # Payload: node_id: str, path: str, value: any
-    INITIALIZE_PLOT_THEME_REQUESTED = (
-        auto()
-    )  # Payload: node_id: str, plot_type: ArtistType
+    CHANGE_PLOT_COMPONENT_REQUESTED = auto() # Payload: node_id: str, path: str, value: any
+    PLOT_COMPONENT_RECONCILIATION_REQUESTED = auto() # Payload: node_id: str, path: str, value: any
+    INITIALIZE_PLOT_THEME_REQUESTED = auto() # Payload: node_id: str, plot_type: ArtistType
     HYDRATE_PLOT_PROPERTIES_REQUESTED = auto()  # Payload: node_id: str, overrides: dict
 
     # --- Node Data & Structure Requests ---
