@@ -34,7 +34,7 @@ class ChangePlotPropertyCommand(BaseCommand):
         # expansion_map: concrete_path -> old_value
         self._expansion_map: dict[str, Any] = {}
 
-    def execute(self):
+    def execute(self, publish: bool = True):
         """Resolves the path (expanding wildcards), captures old state, and applies the change."""
         root = self._get_root()
         concrete_paths = self._resolve_concrete_paths(root, self.path)
@@ -63,14 +63,15 @@ class ChangePlotPropertyCommand(BaseCommand):
         if hasattr(self.node, "plot_properties") and self.node.plot_properties:
             self.node.plot_properties._version += 1
 
-        self._event_aggregator.publish(
-            Events.PLOT_COMPONENT_CHANGED,
-            node_id=self.node.id,
-            path=self.path,
-            new_value=self.new_value,
-        )
+        if publish:
+            self._event_aggregator.publish(
+                Events.PLOT_COMPONENT_CHANGED,
+                node_id=self.node.id,
+                path=self.path,
+                new_value=self.new_value,
+            )
 
-    def undo(self):
+    def undo(self, publish: bool = True):
         """Restores the original values using the expansion map."""
         root = self._get_root()
         for path, old_value in self._expansion_map.items():
@@ -85,12 +86,13 @@ class ChangePlotPropertyCommand(BaseCommand):
             self.node.plot_properties._version += 1
 
         # We publish the path change with the last restored value (if multiple, we use the original intent path)
-        self._event_aggregator.publish(
-            Events.PLOT_COMPONENT_CHANGED,
-            node_id=self.node.id,
-            path=self.path,
-            new_value=None,  # Indicates a bulk or complex revert
-        )
+        if publish:
+            self._event_aggregator.publish(
+                Events.PLOT_COMPONENT_CHANGED,
+                node_id=self.node.id,
+                path=self.path,
+                new_value=None,  # Indicates a bulk or complex revert
+            )
 
     def _get_root(self):
         """Determines if the path starts from the node or its plot properties."""

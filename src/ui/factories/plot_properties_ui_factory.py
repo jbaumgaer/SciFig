@@ -82,6 +82,12 @@ def _build_column_selectors(
     current_x = getattr(artist, "x_column", None) if artist else None
     current_y = getattr(artist, "y_column", None) if artist else None
 
+    # Disconnect existing handlers to prevent signal accumulation on persistent widgets
+    try:
+        x_combo.currentTextChanged.disconnect()
+    except (TypeError, RuntimeError):
+        pass
+
     x_combo.blockSignals(True)
     x_combo.clear()
     x_combo.addItems(columns)
@@ -97,6 +103,12 @@ def _build_column_selectors(
         )
     )
     layout.addRow("X-Axis Column:", x_combo)
+
+    # Disconnect existing handlers to prevent signal accumulation on persistent widgets
+    try:
+        y_combo.currentTextChanged.disconnect()
+    except (TypeError, RuntimeError):
+        pass
 
     y_combo.blockSignals(True)
     y_combo.clear()

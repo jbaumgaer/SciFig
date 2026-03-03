@@ -1,4 +1,5 @@
 import logging
+import math
 from dataclasses import fields, is_dataclass
 from enum import Enum
 from typing import Any, Optional
@@ -11,7 +12,9 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
+from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
+from src.shared.events import Events
 from src.ui.renderers.plotting_strategies import (
     CoordSyncStrategy,
     get_artist_strategy_registry,
@@ -51,12 +54,20 @@ class Renderer:
         ("XAxis", "limits"): lambda obj, val: (
             (obj.axes.set_xlim(*val), obj.axes.set_autoscalex_on(False))
             if any(v is not None for v in val)
-            else None
+            else (
+                obj.axes.set_autoscalex_on(True),
+                obj.axes.relim(),
+                obj.axes.autoscale_view(scalex=True, scaley=False),
+            )
         ),
         ("YAxis", "limits"): lambda obj, val: (
             (obj.axes.set_ylim(*val), obj.axes.set_autoscaley_on(False))
             if any(v is not None for v in val)
-            else None
+            else (
+                obj.axes.set_autoscaley_on(True),
+                obj.axes.relim(),
+                obj.axes.autoscale_view(scalex=False, scaley=True),
+            )
         ),
         ("ZAxis", "limits"): lambda obj, val: (
             obj.axes.set_zlim(*val) if any(v is not None for v in val) else None
@@ -163,10 +174,14 @@ class Renderer:
     }
 
     def __init__(
-        self, layout_manager: LayoutManager, application_model: ApplicationModel
+        self,
+        layout_manager: LayoutManager,
+        application_model: ApplicationModel,
+        event_aggregator: EventAggregator,
     ):
         self._layout_manager = layout_manager
         self._application_model = application_model
+        self._event_aggregator = event_aggregator
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Strategy registries for Coordinates and Artists
@@ -178,6 +193,63 @@ class Renderer:
         # Track versions to avoid redundant reflection
         self._last_synced_versions: dict[str, int] = {}
         self.logger.info("Renderer initialized.")
+
+    def sync_back_limits(self, node_id: str):
+        """
+        Reads the current 'real' limits from the Matplotlib axes and
+        publishes a request to update the model if they differ significantly.
+        This ensures that Matplotlib's autoscale (including margins) is synced back.
+        """
+        ax = self._axes_registry.get(node_id)
+        if not ax:
+            return
+
+        node = self._application_model.scene_root.find_node_by_id(node_id)
+        if not (node and isinstance(node, PlotNode)):
+            return
+
+        props = node.plot_properties
+        if not (props and props.coords):
+            return
+
+        # 1. X-Axis Sync
+        mpl_xlim = ax.get_xlim()
+        # In SciFig, limits are (min, max)
+        model_xlim = props.coords.xaxis.limits
+        if self._limits_differ(mpl_xlim, model_xlim):
+            self.logger.debug(f"Syncing back X-limits for node {node_id}: {mpl_xlim}")
+            self._event_aggregator.publish(
+                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                node_id=node_id,
+                path="coords.xaxis.limits",
+                value=tuple(mpl_xlim),
+            )
+
+        # 2. Y-Axis Sync
+        mpl_ylim = ax.get_ylim()
+        model_ylim = props.coords.yaxis.limits
+        if self._limits_differ(mpl_ylim, model_ylim):
+            self.logger.debug(f"Syncing back Y-limits for node {node_id}: {mpl_ylim}")
+            self._event_aggregator.publish(
+                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                node_id=node_id,
+                path="coords.yaxis.limits",
+                value=tuple(mpl_ylim),
+            )
+
+    def _limits_differ(
+        self,
+        mpl_limits: tuple[float, float],
+        model_limits: tuple[Optional[float], Optional[float]],
+        tol: float = 1e-5,
+    ) -> bool:
+        """Checks if two sets of limits differ significantly."""
+        for m_lim, model_lim in zip(mpl_limits, model_limits):
+            if model_lim is None:
+                return True  # If model is None, it definitely differs from a numeric value
+            if not math.isclose(m_lim, model_lim, rel_tol=tol):
+                return True
+        return False
 
     def render(
         self,
@@ -360,7 +432,11 @@ class Renderer:
         """Applies a SciFig property to a Matplotlib object using translation overrides."""
         obj_type = type(mpl_obj).__name__
 
-        # 1. Check for explicit setter translation (Solves the 'limits' problem)
+        # 1. Ignore 'inherit' values which are Matplotlib RC defaults but invalid for some setters
+        if value == "inherit":
+            return
+
+        # 2. Check for explicit setter translation (Solves the 'limits' problem)
         if (obj_type, field_name) in self.__class__._SETTER_MAP:
             try:
                 self.__class__._SETTER_MAP[(obj_type, field_name)](mpl_obj, value)
@@ -396,6 +472,11 @@ class Renderer:
 
     def _render_highlights(self, figure: Figure, selection: list[SceneNode]):
         """Highlights the selected node and focused sub-components."""
+        # Cleanup old highlights by removing artists tagged with 'gid=highlight'
+        for artist in list(figure.artists):
+            if artist.get_gid() == "selection_highlight":
+                artist.remove()
+
         for node in selection:
             if not isinstance(node, PlotNode):
                 continue
@@ -411,6 +492,7 @@ class Renderer:
                 linewidth=2,
                 transform=figure.transFigure,
                 clip_on=False,
+                gid="selection_highlight",  # Tag for removal
                 # High zorder to appear on top
                 zorder=1000,
             )  # TODO: These values should also be loaded in from a config file

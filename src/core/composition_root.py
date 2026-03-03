@@ -127,6 +127,7 @@ class CompositionRoot:
         self._renderer = Renderer(
             layout_manager=self._layout_manager,
             application_model=self._application_model,
+            event_aggregator=self._event_aggregator,
         )
 
     def _assemble_project_controller(self):
@@ -330,46 +331,6 @@ class CompositionRoot:
             Events.REDO_REQUESTED, self._command_manager.redo
         )
 
-        # --- NodeController Request Subscriptions ---
-        self._event_aggregator.subscribe(
-            Events.SUBPLOT_SELECTION_IN_UI_CHANGED,
-            self._node_controller._on_subplot_selection_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED,
-            self._node_controller._on_select_data_file_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN,
-            self._node_controller._on_data_file_path_provided,
-        )
-        self._event_aggregator.subscribe(
-            Events.APPLY_DATA_TO_NODE_REQUESTED,
-            self._node_controller._on_apply_data_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.NODE_DATA_LOADED, self._node_controller._on_data_loaded
-        )
-        self._event_aggregator.subscribe(
-            Events.CHANGE_PLOT_TYPE_REQUESTED,
-            self._node_controller._on_plot_type_change_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
-            self._node_controller._on_generic_property_change_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.CHANGE_NODE_VISIBILITY_REQUESTED,
-            self._node_controller._on_node_visibility_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.RENAME_NODE_REQUESTED, self._node_controller._on_rename_node_request
-        )
-        self._event_aggregator.subscribe(
-            Events.CHANGE_NODE_LOCKED_REQUESTED,
-            self._node_controller._on_node_locked_request,
-        )
-
         # --- DataService Subscriptions ---
         self._event_aggregator.subscribe(
             Events.APPLY_DATA_FILE_REQUESTED, self._data_service.handle_load_request
@@ -423,9 +384,6 @@ class CompositionRoot:
             Events.NODE_DATA_FILE_PATH_UPDATED, self._redraw_canvas_callback
         )
         self._event_aggregator.subscribe(
-            Events.NODE_DATA_LOADED, self._redraw_canvas_callback
-        )
-        self._event_aggregator.subscribe(
             Events.NODE_ADDED_TO_SCENE, self._redraw_canvas_callback
         )
         self._event_aggregator.subscribe(
@@ -443,13 +401,23 @@ class CompositionRoot:
 
     def _redraw_canvas_callback(self, *args, **kwargs):
         """Callback to trigger canvas redraw."""
-        self.logger.debug("CompositionRoot._redraw_canvas_callback called")
+        if not hasattr(self, "_redraw_count"):
+            self._redraw_count = 0
+        self._redraw_count += 1
+        self.logger.debug(f"CompositionRoot._redraw_canvas_callback called (Count: {self._redraw_count})")
         self._renderer.render(
             self._figure,
             self._application_model.scene_root,
             self._application_model.selection,
         )
+        self.logger.debug(f"Starting canvas.draw() for redraw {self._redraw_count}")
         self._canvas_widget.figure_canvas.draw()
+        self.logger.debug(f"Finished canvas.draw() for redraw {self._redraw_count}")
+
+        # Sync back the 'real' Matplotlib limits to the model
+        node_id = kwargs.get("node_id")
+        if isinstance(node_id, str):
+            self._renderer.sync_back_limits(node_id)
 
     def assemble(self) -> ApplicationComponents:
         """Assembles and wires all components of the application."""

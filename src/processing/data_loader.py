@@ -39,6 +39,7 @@ class DataLoader(QObject):
             dataframe = pd.read_csv(file_path, sep=";")
 
             # Emit the signal with the result and the target node
+            self.logger.debug(f"Data with shape ({dataframe.shape}) loaded, emitting dataReady signal for node {node.id}")
             self.dataReady.emit(dataframe, node)
             self.logger.info("Data loader finished successfully.")
 

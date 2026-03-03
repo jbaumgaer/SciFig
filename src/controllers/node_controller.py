@@ -9,6 +9,7 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_types import ArtistType
+from src.services.commands.apply_data_to_node_command import ApplyDataToNodeCommand
 from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
@@ -172,19 +173,20 @@ class NodeController(QObject):
         # 1. Ensure PlotProperties exist (Strict Theming)
         if not node.plot_properties:
             # Default to LINE plot for new data. This could be made configurable.
-            if not node.plot_properties:
-                self._event_aggregator.publish(
-                    Events.INITIALIZE_PLOT_THEME_REQUESTED,
-                    node_id=node.id,
-                    plot_type=ArtistType.LINE,
-                )
+            self._event_aggregator.publish(
+                Events.INITIALIZE_PLOT_THEME_REQUESTED,
+                node_id=node.id,
+                plot_type=ArtistType.LINE,
+            )
             self.logger.info(f"Initialized themed properties for node {node_id}")
+
+        commands = []
 
         # 2. Heuristic: Default Column Mapping (First two columns)
         if data.shape[1] >= 2 and node.plot_properties.artists:
             cols = data.columns
             # Update primary artist mapping
-            self.command_manager.execute_command(
+            commands.append(
                 ChangePlotPropertyCommand(
                     node=node,
                     path="artists.0.x_column",
@@ -192,7 +194,7 @@ class NodeController(QObject):
                     event_aggregator=self._event_aggregator,
                 )
             )
-            self.command_manager.execute_command(
+            commands.append(
                 ChangePlotPropertyCommand(
                     node=node,
                     path="artists.0.y_column",
@@ -201,9 +203,8 @@ class NodeController(QObject):
                 )
             )
 
-        # 3. Apply changes via Generic Path Command
-        # Update Data
-        self.command_manager.execute_command(
+        # 3. Update Data
+        commands.append(
             ChangePlotPropertyCommand(
                 node=node,
                 path="data",
@@ -211,6 +212,50 @@ class NodeController(QObject):
                 event_aggregator=self._event_aggregator,
             )
         )
+
+        # 4. Update data_file_path (for persistence)
+        commands.append(
+            ChangePlotPropertyCommand(
+                node=node,
+                path="data_file_path",
+                new_value=file_path,
+                event_aggregator=self._event_aggregator,
+            )
+        )
+
+        # 5. Reset Limits to (None, None) to trigger Matplotlib Autoscale
+        # Resolve path based on coordinate system
+        is_polar = (
+            node.plot_properties.coords.coord_type == ArtistType.POLAR_LINE
+        )  # CoordinateSystem.POLAR is used for POLAR_LINE artist
+        # TODO: Refactor ArtistType/CoordinateSystem alignment
+        x_path = "coords.theta_axis.limits" if is_polar else "coords.xaxis.limits"
+        y_path = "coords.r_axis.limits" if is_polar else "coords.yaxis.limits"
+
+        commands.append(
+            ChangePlotPropertyCommand(
+                node=node,
+                path=x_path,
+                new_value=(None, None),
+                event_aggregator=self._event_aggregator,
+            )
+        )
+        commands.append(
+            ChangePlotPropertyCommand(
+                node=node,
+                path=y_path,
+                new_value=(None, None),
+                event_aggregator=self._event_aggregator,
+            )
+        )
+
+        # Execute as a single atomic transaction to avoid redundant redraws
+        macro_cmd = ApplyDataToNodeCommand(
+            node=node, 
+            commands=commands, 
+            event_aggregator=self._event_aggregator
+        )
+        self.command_manager.execute_command(macro_cmd)
 
     def _on_plot_type_change_request(self, node_id: str, new_plot_type_str: str):
         """Swaps the entire property tree for a new themed one of a different type."""

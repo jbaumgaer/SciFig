@@ -59,6 +59,12 @@ class EventAggregator:
         self.logger.info(
             f"Publishing event: {event.name} with args: {args}, kwargs: {kwargs}"
         )
+        # Add a counter to detect potential infinite loops in the log
+        if not hasattr(self, "_publish_count"):
+            self._publish_count = 0
+        self._publish_count += 1
+        self.logger.debug(f"Event counter: {self._publish_count}")
+
         for handler in self._subscribers[event]:
             try:
                 handler(*args, **kwargs)

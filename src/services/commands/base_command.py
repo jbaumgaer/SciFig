@@ -15,10 +15,10 @@ class BaseCommand:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.debug(f"Command initialized: {self.description}")
 
-    def execute(self):
+    def execute(self, publish: bool = True):
         """Applies the forward action of the command."""
         raise NotImplementedError
 
-    def undo(self):
+    def undo(self, publish: bool = True):
         """Reverses the action of the command."""
         raise NotImplementedError
