@@ -303,3 +303,8 @@ examples/UI/Menu_Bar_Insert.png
 examples/UI/Menu_Bar_Layout.png
 examples/UI/Properties Panel.png
 src/services/__pycache__/property_service.cpython-313.pyc
+examples/UI/Colors.png
+examples/UI/Format.png
+examples/UI/Margins.png
+src/ui/widgets/__pycache__/ribbon_bar.cpython-313.pyc
+src/ui/builders/__pycache__/ribbon_bar_builder.cpython-313.pyc

@@ -36,8 +36,10 @@ class MainMenuActions:
     cut_action: QAction
     copy_action: QAction
     paste_action: QAction
-    colors_action: QAction
     settings_action: QAction
+    insert_tab_action: QAction
+    design_tab_action: QAction
+    layout_tab_action: QAction
 
 
 class MenuBarBuilder:
@@ -194,8 +196,6 @@ class MenuBarBuilder:
         paste_action = edit_menu.addAction("&Paste")
         paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         edit_menu.addSeparator()
-        colors_action = edit_menu.addAction("&Colors...")
-        colors_action.setShortcut(QKeySequence("Ctrl+Shift+C"))
         settings_action = edit_menu.addAction("&Settings...")
         settings_action.setShortcut(QKeySequence("Ctrl+,"))
 
@@ -206,7 +206,6 @@ class MenuBarBuilder:
             cut_action,
             copy_action,
             paste_action,
-            colors_action,
             settings_action,
         )
 
@@ -240,9 +239,13 @@ class MenuBarBuilder:
             cut_action,
             copy_action,
             paste_action,
-            colors_action,
             settings_action,
         ) = self._build_edit_menu(menu_bar)
+
+        # Build Ribbon Tab Selectors as Menu Items
+        insert_tab_action = menu_bar.addAction("Insert")
+        design_tab_action = menu_bar.addAction("Design")
+        layout_tab_action = menu_bar.addAction("Layout")
 
         actions = MainMenuActions(
             file_menu=file_menu,
@@ -269,7 +272,9 @@ class MenuBarBuilder:
             cut_action=cut_action,
             copy_action=copy_action,
             paste_action=paste_action,
-            colors_action=colors_action,
             settings_action=settings_action,
+            insert_tab_action=insert_tab_action,
+            design_tab_action=design_tab_action,
+            layout_tab_action=layout_tab_action,
         )
         return menu_bar, actions

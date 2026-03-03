@@ -9,14 +9,18 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenuBar,
     QToolBar,
+    QVBoxLayout,
+    QWidget,
 )
 
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
 from src.ui.builders.menu_bar_builder import MainMenuActions
+from src.ui.builders.ribbon_bar_builder import RibbonActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.ui.panels.side_panel import SidePanel
 from src.ui.widgets.canvas_widget import CanvasWidget
+from src.ui.widgets.ribbon_bar import RibbonBar
 
 
 class MainWindow(QMainWindow):
@@ -30,6 +34,8 @@ class MainWindow(QMainWindow):
         self,
         menu_bar: QMenuBar,
         main_menu_actions: MainMenuActions,
+        ribbon_bar: RibbonBar,
+        ribbon_actions: RibbonActions,
         tool_bar: QToolBar,
         tool_bar_actions: ToolBarActions,
         side_panel: SidePanel,
@@ -37,7 +43,7 @@ class MainWindow(QMainWindow):
     ):
         super().__init__()
         self.setWindowTitle("SciFig")
-        self.setGeometry(50, 50, 800, 600)  # TODO: Inject these from the config service
+        self.setGeometry(50, 50, 800, 700)  # Reverted to more standard size
 
         self._event_aggregator = event_aggregator
 
@@ -47,6 +53,18 @@ class MainWindow(QMainWindow):
         self.main_menu_actions = main_menu_actions
         self.setMenuBar(self.menu_bar)
 
+        self.ribbon_bar = ribbon_bar
+        self.ribbon_actions = ribbon_actions
+
+        # Central container for Ribbon and Canvas
+        self.central_container = QWidget()
+        self.main_layout = QVBoxLayout(self.central_container)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
+        self.main_layout.addWidget(self.ribbon_bar)
+
+        self.setCentralWidget(self.central_container)
+
         self.tool_bar = tool_bar
         self.tool_bar_actions = tool_bar_actions
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.tool_bar)
@@ -54,7 +72,20 @@ class MainWindow(QMainWindow):
         self.canvas_widget: Optional[CanvasWidget] = None
 
         self._subscribe_to_events()
+        self._connect_ribbon_controls()
         self._event_aggregator.publish(Events.WINDOW_TITLE_REQUESTED)
+
+    def _connect_ribbon_controls(self):
+        """Connects MenuBar actions to RibbonBar tab switching."""
+        self.main_menu_actions.insert_tab_action.triggered.connect(
+            lambda: self.ribbon_bar.setCurrentIndex(0)
+        )
+        self.main_menu_actions.design_tab_action.triggered.connect(
+            lambda: self.ribbon_bar.setCurrentIndex(1)
+        )
+        self.main_menu_actions.layout_tab_action.triggered.connect(
+            lambda: self.ribbon_bar.setCurrentIndex(2)
+        )
 
     def _subscribe_to_events(self):
         """Subscribes to all relevant application events."""
@@ -79,7 +110,7 @@ class MainWindow(QMainWindow):
     def set_canvas_widget(self, canvas_widget: CanvasWidget):
         """Sets the canvas_widget."""
         self.canvas_widget = canvas_widget
-        self.setCentralWidget(self.canvas_widget)
+        self.main_layout.addWidget(self.canvas_widget)
 
     # --- Event Handlers for UI Services (File Dialogs) ---
 

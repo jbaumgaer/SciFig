@@ -26,6 +26,7 @@ from src.services.tools.selection_tool import SelectionTool
 from src.shared.constants import IconPath, ToolName
 from src.shared.events import Events
 from src.ui.builders.menu_bar_builder import MainMenuActions, MenuBarBuilder
+from src.ui.builders.ribbon_bar_builder import RibbonActions, RibbonBarBuilder
 from src.ui.builders.tool_bar_builder import ToolBarActions, ToolBarBuilder
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
 from src.ui.factories.plot_properties_ui_factory import (
@@ -37,6 +38,7 @@ from src.ui.panels.properties_tab import PropertiesTab
 from src.ui.panels.side_panel import SidePanel
 from src.ui.renderers.renderer import Renderer
 from src.ui.widgets.canvas_widget import CanvasWidget
+from src.ui.widgets.ribbon_bar import RibbonBar
 from src.ui.windows.main_window import MainWindow
 
 
@@ -66,6 +68,8 @@ class CompositionRoot:
         self._event_aggregator: Optional[EventAggregator] = None
         self._menu_bar: Optional[QMenuBar] = None
         self._main_menu_actions: Optional[MainMenuActions] = None
+        self._ribbon_bar: Optional[RibbonBar] = None
+        self._ribbon_actions: Optional[RibbonActions] = None
         self._tool_bar: Optional[QToolBar] = None
         self._tool_bar_actions: Optional[ToolBarActions] = None
         self._layout_ui_factory: Optional[LayoutUIFactory] = None
@@ -153,6 +157,12 @@ class CompositionRoot:
         self.logger.info("Assembling menus.")
         menu_builder = MenuBarBuilder(event_aggregator=self._event_aggregator)
         self._menu_bar, self._main_menu_actions = menu_builder.build()
+
+    def _assemble_ribbon(self):
+        """Assemble the ribbon bar and its actions."""
+        self.logger.info("Assembling ribbon bar.")
+        ribbon_builder = RibbonBarBuilder(event_aggregator=self._event_aggregator)
+        self._ribbon_bar, self._ribbon_actions = ribbon_builder.build()
 
     def _assemble_tooling(self):
         """Assemble the tool manager, individual tools, and the toolbar."""
@@ -254,6 +264,8 @@ class CompositionRoot:
         self._view = MainWindow(
             menu_bar=self._menu_bar,
             main_menu_actions=self._main_menu_actions,
+            ribbon_bar=self._ribbon_bar,
+            ribbon_actions=self._ribbon_actions,
             tool_bar=self._tool_bar,
             tool_bar_actions=self._tool_bar_actions,
             side_panel=self._side_panel,
@@ -429,6 +441,7 @@ class CompositionRoot:
         self._assemble_core_components()
         self._assemble_project_controller()  # Must be assembled after core, before menus/main_window
         self._assemble_menus()
+        self._assemble_ribbon()
         self._assemble_tooling()
         self._assemble_side_panel()
         self._assemble_main_window()
