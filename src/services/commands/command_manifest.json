@@ -1,0 +1,261 @@
+{
+  "metadata": {
+    "RenameNode": {
+      "atom": "update",
+      "target": "SceneNode",
+      "path": "name",
+      "event": "NODE_RENAMED"
+    },
+    "SetNodeVisibility": {
+      "atom": "update",
+      "target": "SceneNode",
+      "path": "visible",
+      "event": "NODE_VISIBILITY_CHANGED"
+    },
+    "SetNodeLocked": {
+      "atom": "update",
+      "target": "SceneNode",
+      "path": "locked",
+      "event": "NODE_LOCKED_CHANGED"
+    }
+  },
+  "structure": {
+    "AddNode": {
+      "atom": "insert",
+      "target": "ApplicationModel",
+      "event": "SCENE_GRAPH_CHANGED"
+    },
+    "RemoveNode": {
+      "atom": "remove",
+      "target": "ApplicationModel",
+      "event": "SCENE_GRAPH_CHANGED"
+    },
+    "MoveNode": {
+      "atom": "move",
+      "target": "ApplicationModel",
+      "event": "NODE_ORDER_CHANGED_IN_SCENE"
+    },
+    "GroupNodes": {
+      "atom": "composite",
+      "target": "ApplicationModel",
+      "steps": [
+        { "command": "AddNode", "node": "$new_group", "parent_id": "$common_parent" },
+        { "command": "MoveNode", "node_id": "$selection", "parent_id": "$new_group_id" }
+      ],
+      "event": "SCENE_GRAPH_CHANGED"
+    },
+    "UngroupNodes": {
+      "atom": "composite",
+      "target": "ApplicationModel",
+      "steps": [
+        { "command": "MoveNode", "node_id": "$target_children", "parent_id": "$grandparent_id" },
+        { "command": "RemoveNode", "node_id": "$target_id" }
+      ],
+      "event": "SCENE_GRAPH_CHANGED"
+    }
+  },
+  "styling": {
+    "SetPlotGeometry": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.geometry",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetPlotTitleText": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.titles.{position}.text",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetPlotTitleFont": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.titles.{position}.font.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetPlotTitleVisuals": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.titles.{position}.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetAxisLabelText": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.{axis}.label.text",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetAxisLabelFont": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.{axis}.label.font.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetAxisLabelVisuals": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.{axis}.label.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetAxisLimits": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.{axis}.limits",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetAxisMargin": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.{axis}.margin",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetAxisAutolimitMode": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.{axis}.autolimit_mode",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetAxisScientificNotation": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.{axis}.use_offset",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetTickParameters": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.{axis}.ticks.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetSpineVisuals": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.spines.{spine}.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetGridVisuals": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.grid.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetPlotFacecolor": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.coords.facecolor",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetArtistVisibility": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.{index}.visible",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetArtistZOrder": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.{index}.zorder",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetArtistDataMapping": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.{index}.{axis}_column",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetArtistVisuals": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.{index}.visuals.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetPatchVisuals": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.{index}.visuals.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetMappableVisuals": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.{index}.visuals.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetContourParameters": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.{index}.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetHistogramParameters": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.{index}.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "SetGlobalVisuals": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "plot_properties.artists.*.visuals.{property}",
+      "event": "PLOT_PROPERTY_CHANGED"
+    }
+  },
+  "data": {
+    "UpdateDataframe": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "data.dataframe",
+      "event": "NODE_DATA_LOADED"
+    },
+    "UpdateDataPath": {
+      "atom": "update",
+      "target": "PlotNode",
+      "path": "data.file_path",
+      "event": "NODE_DATA_FILE_PATH_UPDATED"
+    },
+    "LoadAndApplyData": {
+      "atom": "composite",
+      "target": "PlotNode",
+      "steps": [
+        { "command": "UpdateDataPath", "value": "{path}" },
+        { "command": "UpdateDataframe", "value": "{df}" },
+        { "command": "SetArtistDataMapping", "index": "{index}", "axis": "x", "value": "{col_x}" },
+        { "command": "SetArtistDataMapping", "index": "{index}", "axis": "y", "value": "{col_y}" }
+      ],
+      "event": "NODE_DATA_LOADED"
+    }
+  },
+  "layout": {
+    "SwitchLayoutMode": {
+      "atom": "update",
+      "target": "ApplicationModel",
+      "path": "current_layout_config",
+      "event": "ACTIVE_LAYOUT_MODE_CHANGED"
+    },
+    "BatchAlignPlots": {
+      "atom": "update_batch",
+      "target": "ApplicationModel",
+      "path": "plot_properties.geometry",
+      "event": "PLOT_PROPERTY_CHANGED"
+    },
+    "UpdateGridParameters": {
+      "atom": "composite",
+      "target": "ApplicationModel",
+      "steps": [
+        { "command": "SwitchLayoutMode", "value": "{new_config}" },
+        { "command": "BatchAlignPlots", "values": "{new_geometries}" }
+      ],
+      "event": "LAYOUT_CONFIG_CHANGED"
+    },
+    "ApplyLayoutTemplate": {
+      "atom": "composite",
+      "target": "ApplicationModel",
+      "steps": [
+        { "command": "RemoveNode", "node_id": "$root_id" },
+        { "command": "AddNode", "node": "{template_root}", "parent_id": "scene_root" },
+        { "command": "BatchAlignPlots", "values": "$old_data_map" }
+      ],
+      "event": "PROJECT_WAS_RESET"
+    }
+  }
+}
