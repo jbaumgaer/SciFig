@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px">
+  <!-- Document Body -->
+  <path d="M5 4h10l4 4v12H5V4z" fill="none" stroke="#E3E3E3" stroke-width="1.2"/>
+  <path d="M15 4v4h4" fill="none" stroke="#E3E3E3" stroke-width="1.2"/>
+  
+  <!-- Horizontal Dimension Line (Blue) -->
+  <line x1="5" y1="2" x2="19" y2="2" stroke="#42A5F5" stroke-width="1.2"/>
+  <line x1="5" y1="1" x2="5" y2="3" stroke="#42A5F5" stroke-width="1.2"/>
+  <line x1="19" y1="1" x2="19" y2="3" stroke="#42A5F5" stroke-width="1.2"/>
+  
+  <!-- Vertical Dimension Line (Blue) -->
+  <line x1="21" y1="4" x2="21" y2="20" stroke="#42A5F5" stroke-width="1.2"/>
+  <line x1="20" y1="4" x2="22" y2="4" stroke="#42A5F5" stroke-width="1.2"/>
+  <line x1="20" y1="20" x2="22" y2="20" stroke="#42A5F5" stroke-width="1.2"/>
+</svg>

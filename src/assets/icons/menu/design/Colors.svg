@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px">
+  <rect x="3" y="3" width="18" height="18" fill="none" stroke="#E3E3E3" stroke-width="1"/>
+  <rect x="4" y="4" width="8" height="8" fill="#0D2339"/> <!-- Dark Blue -->
+  <rect x="12" y="4" width="8" height="8" fill="#E0E0E0"/> <!-- Light Grey -->
+  <rect x="4" y="12" width="8" height="8" fill="#14668A"/> <!-- Teal/Blue -->
+  <rect x="12" y="12" width="8" height="8" fill="#ED7D31"/> <!-- Orange -->
+</svg>

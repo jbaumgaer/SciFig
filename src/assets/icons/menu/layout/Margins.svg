@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px">
+  <!-- Outer Page Border -->
+  <rect x="4" y="4" width="16" height="16" fill="none" stroke="#E3E3E3" stroke-width="1.2"/>
+  
+  <!-- Margin Guides (Blue) -->
+  <line x1="7" y1="4" x2="7" y2="20" stroke="#42A5F5" stroke-width="1" stroke-dasharray="1,1"/>
+  <line x1="17" y1="4" x2="17" y2="20" stroke="#42A5F5" stroke-width="1" stroke-dasharray="1,1"/>
+  <line x1="4" y1="7" x2="20" y2="7" stroke="#42A5F5" stroke-width="1" stroke-dasharray="1,1"/>
+  <line x1="4" y1="17" x2="20" y2="17" stroke="#42A5F5" stroke-width="1" stroke-dasharray="1,1"/>
+  
+  <!-- Solid cross lines as in the PNG -->
+  <line x1="7" y1="4" x2="7" y2="20" stroke="#42A5F5" stroke-width="0.8"/>
+  <line x1="17" y1="4" x2="17" y2="20" stroke="#42A5F5" stroke-width="0.8"/>
+  <line x1="4" y1="7" x2="20" y2="7" stroke="#42A5F5" stroke-width="0.8"/>
+  <line x1="4" y1="17" x2="20" y2="17" stroke="#42A5F5" stroke-width="0.8"/>
+</svg>
