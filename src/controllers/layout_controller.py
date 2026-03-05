@@ -285,7 +285,11 @@ class LayoutController:
             f"Creating ChangeGridParametersCommand with new_grid_config gutters: {new_grid_config.gutters}"
         )
         command = ChangeGridParametersCommand(
-            self.model, self._layout_manager, old_grid_config, new_grid_config
+            self.model,
+            self._event_aggregator,
+            self._layout_manager,
+            old_grid_config,
+            new_grid_config,
         )
         self.command_manager.execute_command(command)
         self.logger.debug(
@@ -303,7 +307,27 @@ class LayoutController:
     def _handle_optimize_layout_request(self):  # Renamed
         """
         Triggers the LayoutManager to optimize the current grid layout.
-        This action is typically called by a UI button.
+        This action is encapsulated in a command for undo/redo support.
         """
         self.logger.info("LayoutController received request to optimize layout.")
-        self._layout_manager.optimize_layout_action()
+
+        # 1. Get current (old) grid config
+        old_grid_config = self._layout_manager.get_last_grid_config()
+
+        # 2. Get optimized (new) grid config
+        new_grid_config = self._layout_manager.get_optimized_grid_config()
+
+        if new_grid_config:
+            # 3. Encapsulate in command
+            command = ChangeGridParametersCommand(
+                self.model,
+                self._event_aggregator,
+                self._layout_manager,
+                old_grid_config,
+                new_grid_config,
+                description="Optimize Layout",
+            )
+            self.command_manager.execute_command(command)
+            self.logger.info("Executed ChangeGridParametersCommand for layout optimization.")
+        else:
+            self.logger.warning("Could not calculate optimized grid config. No command executed.")

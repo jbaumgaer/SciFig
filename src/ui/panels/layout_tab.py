@@ -134,10 +134,10 @@ class LayoutTab(QWidget):
         else:
             self._layout_mode_toggle_button.setText("Switch to Grid Layout Controls")
 
-    def _handle_grid_parameters_inferred(self, config: GridConfig):
+    def _handle_grid_parameters_inferred(self, grid_config: GridConfig):
         """Handler for when grid parameters are inferred, to update UI."""
         self.logger.debug(
-            f"LayoutTab: Grid parameters inferred. Updating UI with {config}."
+            f"LayoutTab: Grid parameters inferred. Updating UI with {grid_config}."
         )
         # Force update the grid view if the current UI mode is GRID
         if self.layout_controller.get_ui_selected_layout_mode() == LayoutMode.GRID:

@@ -478,22 +478,21 @@ class LayoutManager:
         )
         self.logger.info(f"Inferred grid parameters: {new_inferred_grid_config}")
 
-    def optimize_layout_action(self):
+    def get_optimized_grid_config(self) -> Optional[GridConfig]:
         """
-        Optimizes the current grid layout using Matplotlib's constrained_layout,
-        based on the current grid parameters in the model.
-        Updates the model with the actual calculated margins/gutters and triggers a redraw.
+        Calculates and returns an optimized GridConfig based on Matplotlib's
+        constrained_layout, without applying it to the model.
+        Returns None if no plots are available for optimization.
         """
-        self.logger.info("LayoutManager received request to optimize layout.")
+        self.logger.info("LayoutManager calculating optimized grid config.")
 
-        # Ensure active layout mode is GRID
+        # Ensure active layout mode is GRID for calculation context
         if self._application_model.current_layout_config.mode != LayoutMode.GRID:
             self.logger.debug(
                 "Active layout mode not GRID, switching to GRID before optimizing layout."
             )
             self.set_layout_mode(LayoutMode.GRID)
 
-        # _last_grid_config is guaranteed to be non-None here because set_layout_mode initializes it.
         current_grid_config: GridConfig = self._last_grid_config
 
         all_plots = list(
@@ -501,18 +500,17 @@ class LayoutManager:
         )
         if not all_plots:
             self.logger.warning("No plots in scene to optimize layout for.")
-            return
+            return None
 
         # Use calculate_geometries with constrained optimization
-        # This will return the geometries and the *calculated* margins/gutters from constrained_layout
-        plot_geometries, calculated_margins, calculated_gutters = (
+        _, calculated_margins, calculated_gutters = (
             self._grid_engine.calculate_geometries(
                 all_plots, current_grid_config, use_constrained_optimization=True
             )
         )
 
-        # Update the grid config with the *actual calculated* margins and gutters from constrained_layout
-        updated_grid_config = GridConfig(
+        # Create the optimized config
+        optimized_grid_config = GridConfig(
             rows=current_grid_config.rows,
             cols=current_grid_config.cols,
             row_ratios=current_grid_config.row_ratios,
@@ -520,28 +518,7 @@ class LayoutManager:
             margins=calculated_margins,
             gutters=calculated_gutters,
         )
-
-        # Apply the updated config and geometries
-        self._application_model.current_layout_config = updated_grid_config
-        self._last_grid_config = updated_grid_config
-
-        if plot_geometries:
-            for plot_id, rect in plot_geometries.items():
-                plot_node = self._application_model.scene_root.find_node_by_id(plot_id)
-                if plot_node:
-                    plot_node.geometry = rect
-            self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)  # Redraw canvas
-
-        self._event_aggregator.publish(
-            Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID
-        )
-        self.logger.debug(
-            "Publishing LAYOUT_CONFIG_CHANGED event to update UI with optimized parameters."
-        )
-        self._event_aggregator.publish(
-            Events.LAYOUT_CONFIG_CHANGED, config=updated_grid_config
-        )
-        self.logger.info(f"Optimized layout applied with config: {updated_grid_config}")
+        return optimized_grid_config
 
     def update_grid_layout_parameters(
         self,
