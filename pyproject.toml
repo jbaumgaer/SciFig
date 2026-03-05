@@ -17,6 +17,7 @@ classifiers = [
 
 dependencies = [
     "PySide6",
+    "PySideSix-Frameless-Window",
     "matplotlib",
     "pandas",
     "pyarrow",

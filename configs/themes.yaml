@@ -41,6 +41,25 @@ themes:
           background-color: #3d3d3d;
           border: 1px solid #4d4d4d;
       }
+      QMenuBar#IntegratedMenuBar {
+          background-color: transparent;
+          border: none;
+          color: #e3e3e3;
+          padding-left: 5px;
+      }
+      QMenuBar#IntegratedMenuBar::item {
+          background: transparent;
+          padding: 4px 10px;
+          border-radius: 4px;
+          margin-top: 4px;
+          margin-bottom: 4px;
+      }
+      QMenuBar#IntegratedMenuBar::item:selected {
+          background-color: #3d3d3d;
+      }
+      QMenuBar#IntegratedMenuBar::item:pressed {
+          background-color: #4d4d4d;
+      }
   light:
     style: "Fusion"
     palette:

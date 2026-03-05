@@ -2,16 +2,17 @@ from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QDockWidget,
     QFileDialog,
     QInputDialog,
-    QMainWindow,
     QMenuBar,
     QToolBar,
     QVBoxLayout,
     QWidget,
 )
+from qframelesswindow import FramelessMainWindow, StandardTitleBar
 
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
@@ -23,7 +24,7 @@ from src.ui.widgets.canvas_widget import CanvasWidget
 from src.ui.widgets.ribbon_bar import RibbonBar
 
 
-class MainWindow(QMainWindow):
+class MainWindow(FramelessMainWindow):
     """
     The main application window (View). It acts as the primary container for
     the application's UI components and responds to events to provide UI
@@ -42,8 +43,11 @@ class MainWindow(QMainWindow):
         event_aggregator: EventAggregator,
     ):
         super().__init__()
+        self.setTitleBar(StandardTitleBar(self))
+        self.titleBar.setIcon(QIcon("src/assets/icons/menu/insert/plots/Line.svg"))
+        
         self.setWindowTitle("SciFig")
-        self.setGeometry(50, 50, 800, 700)  # Reverted to more standard size
+        self.setGeometry(50, 50, 800, 700)
 
         self._event_aggregator = event_aggregator
 
@@ -51,7 +55,12 @@ class MainWindow(QMainWindow):
 
         self.menu_bar = menu_bar
         self.main_menu_actions = main_menu_actions
-        self.setMenuBar(self.menu_bar)
+        
+        # Configure and integrate menu bar into title bar
+        self.menu_bar.setNativeMenuBar(False)
+        self.menu_bar.setObjectName("IntegratedMenuBar")
+        self.titleBar.titleLabel.hide()
+        self.titleBar.hBoxLayout.insertWidget(2, self.menu_bar)
 
         self.ribbon_bar = ribbon_bar
         self.ribbon_actions = ribbon_actions
@@ -68,6 +77,12 @@ class MainWindow(QMainWindow):
         self.tool_bar = tool_bar
         self.tool_bar_actions = tool_bar_actions
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.tool_bar)
+
+        # Fix layout overlap by pushing content down below the title bar
+        # Note: We use sizeHint().height() because height() might be 0 before the window is shown
+        title_bar_height = self.titleBar.height() if self.titleBar.height() > 0 else self.titleBar.sizeHint().height()
+        self.setContentsMargins(0, title_bar_height, 0, 0)
+        self.titleBar.raise_()
 
         self.canvas_widget: Optional[CanvasWidget] = None
 
