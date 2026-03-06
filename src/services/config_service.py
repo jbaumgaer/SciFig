@@ -7,17 +7,19 @@ from src.shared.exceptions import ConfigError
 
 
 class ConfigService:
-    _instance = None
+    """
+    A service for managing application configuration loaded from YAML files.
+    Standardized as a standard class to support Dependency Injection and 
+    isolated testing.
+    """
 
-    def __new__(cls, config_path: Path = None):
-        if cls._instance is None:
-            cls._instance = super(ConfigService, cls).__new__(cls)
-            cls._instance._config = {}
-            cls._instance._initialized = False
-            cls._instance.logger = logging.getLogger(cls.__name__)
-            if config_path:
-                cls._instance._load_config(config_path)
-        return cls._instance
+    def __init__(self, config_path: Path = None):
+        self._config = {}
+        self._initialized = False
+        self.logger = logging.getLogger(self.__class__.__name__)
+        
+        if config_path:
+            self._load_config(config_path)
 
     def _load_config(self, config_path: Path):
         self.logger.info(f"Attempting to load configuration from: {config_path}")
@@ -25,12 +27,12 @@ class ConfigService:
             self.logger.error(
                 f"Configuration file not found at {config_path}. Using empty configuration."
             )
-            self._config = {}  # Use empty config if file not found
-            self._initialized = False  # Not fully initialized
+            self._config = {}
+            self._initialized = False
             return
         try:
             with open(config_path, "r") as f:
-                self._config = yaml.safe_load(f) or {}  # Handle empty YAML file
+                self._config = yaml.safe_load(f) or {}
             self._config["config_path"] = config_path
             self._initialized = True
             self.logger.info(f"Configuration loaded successfully from: {config_path}")
@@ -38,11 +40,10 @@ class ConfigService:
             self.logger.error(
                 f"Error parsing YAML configuration from {config_path}: {e}. Using empty configuration."
             )
-            self._config = {}  # Use empty config on parsing error
-            self._initialized = False  # Not fully initialized
+            self._config = {}
+            self._initialized = False
 
     def get(self, key_path: str, default=None):
-        # TODO: Somehow this method is constantly being called together with LayoutTab Updating content for UI layout mode: grid and LayoutUIFactory - DEBUG - Building layout controls for UI selected mode: grid
         self.logger.debug(
             f"Getting config key: '{key_path}' with default: '{default}'."
         )
