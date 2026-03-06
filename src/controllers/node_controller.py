@@ -225,7 +225,7 @@ class NodeController(QObject):
         commands = []
 
         # 2. Heuristic: Default Column Mapping (First two columns)
-        if data.shape[1] >= 2 and node.plot_properties.artists:
+        if data.shape[1] >= 2 and node.plot_properties and node.plot_properties.artists:
             cols = data.columns
             commands.append(
                 ChangePlotPropertyCommand(
@@ -268,31 +268,32 @@ class NodeController(QObject):
             )
         )
         # Resolve path based on coordinate system
-        is_polar = (
-            node.plot_properties.coords.coord_type == ArtistType.POLAR_LINE
-        )  # CoordinateSystem.POLAR is used for POLAR_LINE artist
-        # TODO: Refactor ArtistType/CoordinateSystem alignment
-        x_path = "coords.theta_axis.limits" if is_polar else "coords.xaxis.limits"
-        y_path = "coords.r_axis.limits" if is_polar else "coords.yaxis.limits"
+        if node.plot_properties: #TODO: Should I make this a guard clause instead?
+            is_polar = (
+                node.plot_properties.coords.coord_type == ArtistType.POLAR_LINE
+            )  # CoordinateSystem.POLAR is used for POLAR_LINE artist
+            # TODO: Refactor ArtistType/CoordinateSystem alignment
+            x_path = "coords.theta_axis.limits" if is_polar else "coords.xaxis.limits"
+            y_path = "coords.r_axis.limits" if is_polar else "coords.yaxis.limits"
 
-        commands.append(
-            ChangePlotPropertyCommand(
-                node=node,
-                path=x_path,
-                new_value=(None, None),
-                event_aggregator=self._event_aggregator,
-                property_service=self._property_service,
+            commands.append(
+                ChangePlotPropertyCommand(
+                    node=node,
+                    path=x_path,
+                    new_value=(None, None),
+                    event_aggregator=self._event_aggregator,
+                    property_service=self._property_service,
+                )
             )
-        )
-        commands.append(
-            ChangePlotPropertyCommand(
-                node=node,
-                path=y_path,
-                new_value=(None, None),
-                event_aggregator=self._event_aggregator,
-                property_service=self._property_service,
+            commands.append(
+                ChangePlotPropertyCommand(
+                    node=node,
+                    path=y_path,
+                    new_value=(None, None),
+                    event_aggregator=self._event_aggregator,
+                    property_service=self._property_service,
+                )
             )
-        )
 
         macro_cmd = ApplyDataToNodeCommand(
             node=node, 

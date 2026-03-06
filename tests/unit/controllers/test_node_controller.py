@@ -1,366 +1,273 @@
-"""
-Unit tests for the NodeController.
-These tests verify the logic for property-handling methods
-(plot type changes, generic property changes, limit editing,
-column mapping changes) in its new, isolated location.
-"""
-from unittest.mock import patch
-
-import pandas as pd
 import pytest
-from PySide6.QtWidgets import QApplication, QLineEdit  # Added QLineEdit import
+from unittest.mock import MagicMock, ANY, create_autospec
+from pathlib import Path
+import pandas as pd
+import logging
 
 from src.controllers.node_controller import NodeController
-from src.controllers.project_controller import ProjectController
-from src.models.application_model import ApplicationModel
-from src.models.nodes.group_node import (
-    GroupNode,  # Added GroupNode import for group/ungroup tests
-)
 from src.models.nodes.plot_node import PlotNode
-from src.models.plots.plot_properties import AxesLimits, LinePlotProperties, PlotMapping
-from src.services.commands.change_children_order_command import (
-    ChangeChildrenOrderCommand,  # Added for reorder
-)
+from src.models.nodes.group_node import GroupNode
+from src.models.plots.plot_properties import PlotProperties
+from src.models.plots.plot_types import ArtistType
+from src.services.commands.apply_data_to_node_command import ApplyDataToNodeCommand
 from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
-from src.services.commands.command_manager import CommandManager
-from src.services.commands.group_nodes_command import (
-    GroupNodesCommand,  # Added for group
-)
-from src.services.commands.ungroup_nodes_command import (
-    UngroupNodesCommand,  # Added for ungroup
-)
-from src.shared.types import PlotType
+from src.shared.events import Events
 
 
 @pytest.fixture
-def mock_app(qtbot):
-    """Provides a QApplication instance for tests."""
-    app = QApplication.instance()
-    if not app:
-        app = QApplication([])
-    return app
-
-
-@pytest.fixture
-def node_controller_deps(mocker, mock_app):
-    """Provides mocked dependencies for NodeController."""
-    model = mocker.Mock(spec=ApplicationModel)
-    model.selection = []
-    model.modelChanged = mocker.Mock()
-    model.selectionChanged = mocker.Mock()
-    model.scene_root = mocker.Mock(spec=GroupNode) # Mock as GroupNode for find_node_by_id
-    model.scene_root.find_node_by_id.return_value = None
-    model.create_group_node = mocker.Mock(spec=GroupNode) # For group_nodes
-
-    command_manager = mocker.Mock(spec=CommandManager)
-    command_manager.execute_command = mocker.Mock()
-
-    project_controller = mocker.Mock(spec=ProjectController)
-    project_controller.load_data_into_plot_node = mocker.AsyncMock() # Async mock
-
-    return model, command_manager, project_controller
-
-
-@pytest.fixture
-def node_controller(node_controller_deps):
-    """Provides a NodeController instance with mocked dependencies."""
-    model, command_manager, project_controller = node_controller_deps
+def node_controller(
+    mock_application_model, mock_command_manager, mock_event_aggregator, mock_property_service
+):
+    """Provides a NodeController instance with all dependencies mocked."""
     return NodeController(
-        model=model,
-        command_manager=command_manager,
-        project_controller=project_controller,
+        model=mock_application_model,
+        command_manager=mock_command_manager,
+        event_aggregator=mock_event_aggregator,
+        property_service=mock_property_service,
     )
 
 
-@pytest.fixture
-def mock_plot_node_with_props(mocker):
-    """Provides a mock PlotNode with basic plot properties."""
-    plot_node = mocker.Mock(spec=PlotNode)
-    plot_node.id = "test_plot_id"
-    plot_node.name = "Test Plot"
-    plot_node.data = pd.DataFrame({"x": [1, 2], "y": [1, 2]})
-    plot_node.visible = True # Default for scene_node
-    plot_node.locked = False # Default for scene_node
-    plot_node.plot_properties = LinePlotProperties(
-        title="Initial Title",
-        plot_type=PlotType.LINE,
-        plot_mapping=PlotMapping(x="x", y=["y"]),
-        axes_limits=AxesLimits(xlim=(0, 10), ylim=(0, 10)),
-    )
-    return plot_node
+class TestNodeController:
 
+    # --- Initialization & Event Binding ---
 
-# --- Existing tests would go here if there were any ---
+    def test_initialization_subscribes_to_events(self, mock_event_aggregator):
+        """Verifies that the controller hooks into all required application events."""
+        local_event_mock = MagicMock()
+        NodeController(MagicMock(), MagicMock(), local_event_mock, MagicMock())
+        
+        expected_events = [
+            Events.SUBPLOT_SELECTION_IN_UI_CHANGED,
+            Events.SELECT_DATA_FILE_FOR_NODE_REQUESTED,
+            Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN,
+            Events.APPLY_DATA_TO_NODE_REQUESTED,
+            Events.NODE_DATA_LOADED,
+            Events.CHANGE_PLOT_TYPE_REQUESTED,
+            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_NODE_VISIBILITY_REQUESTED,
+            Events.RENAME_NODE_REQUESTED,
+            Events.CHANGE_NODE_LOCKED_REQUESTED,
+            Events.TEMPLATE_LOADED,
+            Events.SELECTION_CHANGED,
+            Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED
+        ]
+        
+        for event in expected_events:
+            local_event_mock.subscribe.assert_any_call(event, ANY)
 
-# --- New tests to be added ---
+    # --- Bypass Pattern (Reconciliation) ---
 
+    def test_reconcile_node_property_updates_model_silently(
+        self, node_controller, mock_application_model, mock_property_service, mock_event_aggregator
+    ):
+        """Tests the Bypass Pattern: direct property updates with version bumping."""
+        node = PlotNode(id="p1")
+        node.plot_properties = MagicMock()
+        node.plot_properties._version = 10
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        # Trigger reconciliation
+        node_controller.reconcile_node_property("p1", "coords.xaxis.margin", 0.1)
+        
+        # Verify direct update via PropertyService
+        mock_property_service.set_value.assert_called_once_with(node.plot_properties, "coords.xaxis.margin", 0.1)
+        # Verify version bump
+        assert node.plot_properties._version == 11
+        # Verify reconciled event (not changed event)
+        mock_event_aggregator.publish.assert_called_once_with(
+            Events.PLOT_COMPONENT_RECONCILED, node_id="p1", path="coords.xaxis.margin", new_value=0.1
+        )
 
-def test_on_subplot_selection_changed_updates_selection_model(
-    node_controller, node_controller_deps, mock_plot_node_with_props
-):
-    """
-    Verify that on_subplot_selection_changed correctly updates the application
-    model's selection with the identified PlotNode.
-    """
-    model, _, _ = node_controller_deps
-    plot_id = mock_plot_node_with_props.id
-    model.scene_root.find_node_by_id.return_value = mock_plot_node_with_props
+    # --- Data Integration Logic ---
 
-    node_controller.on_subplot_selection_changed(plot_id)
+    def test_on_data_loaded_orchestrates_theming_and_mapping(
+        self, node_controller, mock_application_model, mock_event_aggregator, mock_command_manager
+    ):
+        """Tests the complex logic when data is loaded into an empty plot node."""
+        node = PlotNode(id="p1")
+        node.plot_properties = None # Start uninitialized
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        df = pd.DataFrame({"X_Col": [1, 2], "Y_Col": [3, 4]})
+        file_path = Path("test.csv")
+        
+        # Trigger
+        node_controller._on_data_loaded("p1", df, file_path)
+        
+        # 1. Verify theme initialization request (since props were None)
+        mock_event_aggregator.publish.assert_any_call(
+            Events.INITIALIZE_PLOT_THEME_REQUESTED, node_id="p1", plot_type=ArtistType.LINE
+        )
+        
+        # 2. Verify macro-command dispatch
+        mock_command_manager.execute_command.assert_called_once()
+        command = mock_command_manager.execute_command.call_args[0][0]
+        assert isinstance(command, ApplyDataToNodeCommand)
 
-    model.set_selection.assert_called_once_with([mock_plot_node_with_props])
-    model.selectionChanged.emit.assert_called_once()
+    def test_on_data_loaded_with_existing_props_triggers_heuristic(
+        self, node_controller, mock_application_model, mock_command_manager
+    ):
+        """Tests that heuristic column mapping is applied if props exist."""
+        node = PlotNode(id="p1")
+        node.plot_properties = MagicMock()
+        node.plot_properties.artists = [MagicMock()]
+        node.plot_properties.coords.coord_type = ArtistType.LINE
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        df = pd.DataFrame({"A": [1], "B": [2]})
+        node_controller._on_data_loaded("p1", df, Path("test.csv"))
+        
+        mock_command_manager.execute_command.assert_called_once()
+        macro = mock_command_manager.execute_command.call_args[0][0]
+        # Verify that column mapping commands were included in the macro
+        paths = [c.path for c in macro.commands]
+        assert "artists.0.x_column" in paths
+        assert "artists.0.y_column" in paths
 
+    # --- UI & Selection Logic ---
 
-@pytest.mark.asyncio
-async def test_on_select_file_clicked_opens_file_dialog(
-    node_controller, node_controller_deps, mock_plot_node_with_props, mocker
-):
-    """
-    Verify that on_select_file_clicked opens a file dialog and updates
-    the data_file_path of the plot node temporarily.
-    """
-    model, _, _ = node_controller_deps
-    mock_file_path = "/path/to/new/data.csv"
+    def test_on_selection_changed_for_ui_requests_tab_switch(self, node_controller, 
+                                                           mock_application_model, mock_event_aggregator):
+        """Verifies that single PlotNode selection triggers a switch to properties tab."""
+        node = PlotNode(id="p1")
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        node_controller._on_selection_changed_for_ui(["p1"])
+        
+        mock_event_aggregator.publish.assert_called_once_with(
+            Events.SWITCH_SIDEPANEL_TAB, tab_key="properties"
+        )
 
-    # Mock QFileDialog to return a selected file
-    mocker.patch(
-        "PySide6.QtWidgets.QFileDialog.getOpenFileName",
-        return_value=(mock_file_path, "CSV Files (*.csv)"),
-    )
+    # --- Template Hydration ---
 
-    await node_controller.on_select_file_clicked(mock_plot_node_with_props)
+    def test_on_template_loaded_triggers_hydration_for_sparse_nodes(self, node_controller, mock_event_aggregator):
+        """Tests that sparse nodes in a template are identified for hydration."""
+        root = GroupNode(name="Template")
+        sparse_node = PlotNode(id="p1")
+        sparse_node.plot_properties = {"some": "template_data"} # sparse dict
+        root.add_child(sparse_node)
+        
+        node_controller._on_template_loaded(root)
+        
+        # Verify hydration request for sparse node only
+        mock_event_aggregator.publish.assert_called_once_with(
+            Events.HYDRATE_PLOT_PROPERTIES_REQUESTED, node_id="p1", overrides={"some": "template_data"}
+        )
 
-    assert mock_plot_node_with_props.data_file_path == mock_file_path
+    # --- Property Requests (Command Dispatch) ---
 
+    def test_node_visibility_request(self, node_controller, mock_application_model, mock_command_manager):
+        """Verifies visibility requests are wrapped in commands."""
+        node = PlotNode(id="p1")
+        node.visible = True
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        node_controller._on_node_visibility_request("p1", False)
+        
+        mock_command_manager.execute_command.assert_called_once()
+        command = mock_command_manager.execute_command.call_args[0][0]
+        assert isinstance(command, ChangePlotPropertyCommand)
+        assert command.path == "visible"
+        assert command.new_value is False
 
-@pytest.mark.asyncio
-async def test_on_apply_data_clicked_success_executes_command(
-    node_controller, node_controller_deps, mock_plot_node_with_props, mocker
-):
-    """
-    Verify that on_apply_data_clicked successfully loads data and executes a
-    ChangePropertyCommand to update the plot node's data and data_file_path.
-    """
-    model, command_manager, project_controller = node_controller_deps
-    file_path = "/path/to/data.csv"
-    mock_dataframe = pd.DataFrame({"new_x": [10, 20], "new_y": [10, 20]})
+    def test_node_locked_request(self, node_controller, mock_application_model, mock_command_manager):
+        """Verifies locked requests are wrapped in commands."""
+        node = PlotNode(id="p1")
+        node.locked = False
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        node_controller._on_node_locked_request("p1", True)
+        
+        mock_command_manager.execute_command.assert_called_once()
+        command = mock_command_manager.execute_command.call_args[0][0]
+        assert command.path == "locked"
+        assert command.new_value is True
 
-    project_controller.load_data_into_plot_node.return_value = mock_dataframe
+    def test_rename_node_request(self, node_controller, mock_application_model, mock_command_manager):
+        """Verifies rename requests are wrapped in commands."""
+        node = PlotNode(id="p1", name="Old")
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        node_controller._on_rename_node_request("p1", "NewName")
+        
+        mock_command_manager.execute_command.assert_called_once()
+        command = mock_command_manager.execute_command.call_args[0][0]
+        assert command.path == "name"
+        assert command.new_value == "NewName"
 
-    await node_controller.on_apply_data_clicked(mock_plot_node_with_props, file_path)
+    # --- Edge Cases & Robustness ---
 
-    project_controller.load_data_into_plot_node.assert_called_once_with(
-        file_path, mock_plot_node_with_props
-    )
-    command_manager.execute_command.assert_called_once()
-    assert isinstance(command_manager.execute_command.call_args[0][0], ChangePlotPropertyCommand)
+    def test_reconcile_node_property_root_resolution(
+        self, node_controller, mock_application_model, mock_property_service
+    ):
+        """Verifies that reconciliation correctly identifies if the root is the node or properties."""
+        node = PlotNode(id="p1", name="Plot")
+        # Use a spec to ensure hasattr(node.plot_properties, "name") returns False
+        node.plot_properties = create_autospec(PlotProperties, instance=True)
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        # 1. Target Node directly (e.g. name)
+        node_controller.reconcile_node_property("p1", "name", "NewName")
+        mock_property_service.set_value.assert_called_with(node, "name", "NewName")
+        
+        # 2. Target Properties via "artists"
+        node_controller.reconcile_node_property("p1", "artists.0.color", "red")
+        mock_property_service.set_value.assert_called_with(node.plot_properties, "artists.0.color", "red")
 
-    # Further checks on the command's effect (via execute_command mock)
-    # The command should set data and data_file_path
-    assert mock_plot_node_with_props.data is mock_dataframe
-    assert mock_plot_node_with_props.data_file_path == file_path
-    assert mock_plot_node_with_props.plot_properties.plot_mapping.x == "new_x"
-    assert mock_plot_node_with_props.plot_properties.plot_mapping.y == ["new_y"]
-    assert mock_plot_node_with_props.plot_properties.xlabel == "new_x"
-    assert mock_plot_node_with_props.plot_properties.ylabel == "new_y"
-    model.modelChanged.emit.assert_called_once()
+    def test_idempotent_property_requests_do_not_dispatch_commands(
+        self, node_controller, mock_application_model, mock_command_manager
+    ):
+        """Ensures that requesting a change to the current value is a no-op."""
+        node = PlotNode(id="p1", name="SameName")
+        node.visible = True
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        # Request same name
+        node_controller._on_rename_node_request("p1", "SameName")
+        # Request same visibility
+        node_controller._on_node_visibility_request("p1", True)
+        
+        mock_command_manager.execute_command.assert_not_called()
 
+    def test_on_data_loaded_resets_polar_limits(
+        self, node_controller, mock_application_model, mock_command_manager
+    ):
+        """Verifies that for Polar plots, theta and r limits are reset instead of x/y."""
+        node = PlotNode(id="p1")
+        node.plot_properties = MagicMock()
+        # Set type to Polar
+        node.plot_properties.coords.coord_type = ArtistType.POLAR_LINE
+        mock_application_model.scene_root.find_node_by_id.return_value = node
+        
+        df = pd.DataFrame({"A": [1], "B": [2]})
+        node_controller._on_data_loaded("p1", df, Path("test.csv"))
+        
+        macro = mock_command_manager.execute_command.call_args[0][0]
+        paths = [c.path for c in macro.commands]
+        
+        assert "coords.theta_axis.limits" in paths
+        assert "coords.r_axis.limits" in paths
+        assert "coords.xaxis.limits" not in paths
 
-@pytest.mark.asyncio
-async def test_on_apply_data_clicked_failure_handles_error(
-    node_controller, node_controller_deps, mock_plot_node_with_props, mocker
-):
-    """
-    Verify that on_apply_data_clicked handles data loading errors gracefully
-    and does not execute a command.
-    """
-    model, command_manager, project_controller = node_controller_deps
-    file_path = "/path/to/invalid.csv"
+    def test_handlers_graceful_on_invalid_node_id(
+        self, node_controller, mock_application_model, mock_command_manager, caplog
+    ):
+        """Ensures the controller doesn't crash if an event provides a non-existent ID."""
+        mock_application_model.scene_root.find_node_by_id.return_value = None
+        
+        with caplog.at_level(logging.WARNING):
+            node_controller._on_rename_node_request("ghost_id", "Ghost")
+            node_controller.reconcile_node_property("ghost_id", "path", 1)
+            
+        assert "Node with ID 'ghost_id' not found" in caplog.text
+        mock_command_manager.execute_command.assert_not_called()
 
-    project_controller.load_data_into_plot_node.side_effect = Exception("Load error")
-
-    with patch.object(node_controller.logger, "error") as mock_logger_error:
-        await node_controller.on_apply_data_clicked(mock_plot_node_with_props, file_path)
-        mock_logger_error.assert_called_once()
-
-    command_manager.execute_command.assert_not_called()
-    model.modelChanged.emit.assert_not_called() # No change on error
-
-
-def test_set_node_visibility_executes_command(node_controller, node_controller_deps, mock_plot_node_with_props):
-    """
-    Verify that set_node_visibility executes a ChangePropertyCommand to update
-    the PlotNode's visible property.
-    """
-    model, command_manager, _ = node_controller_deps
-    model.scene_root.find_node_by_id.return_value = mock_plot_node_with_props
-
-    node_controller.set_node_visibility(mock_plot_node_with_props.id, False)
-
-    command_manager.execute_command.assert_called_once()
-    command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePlotPropertyCommand)
-    assert command.target_object == mock_plot_node_with_props
-    assert command.property_name == "visible"
-    assert command.new_value == False
-    assert command.old_value == True # Mock default for visible
-
-
-def test_set_node_locked_executes_command(node_controller, node_controller_deps, mock_plot_node_with_props):
-    """
-    Verify that set_node_locked executes a ChangePropertyCommand to update
-    the PlotNode's locked property.
-    """
-    model, command_manager, _ = node_controller_deps
-    model.scene_root.find_node_by_id.return_value = mock_plot_node_with_props
-
-    node_controller.set_node_locked(mock_plot_node_with_props.id, True)
-
-    command_manager.execute_command.assert_called_once()
-    command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePlotPropertyCommand)
-    assert command.target_object == mock_plot_node_with_props
-    assert command.property_name == "locked"
-    assert command.new_value == True
-    assert command.old_value == False # Mock default for locked
-
-
-def test_reorder_nodes_executes_command(node_controller, node_controller_deps, mocker):
-    """
-    Verify that reorder_nodes executes a ChangeChildrenOrderCommand.
-    """
-    model, command_manager, _ = node_controller_deps
-    mock_parent_node = mocker.Mock(spec=GroupNode, id="parent_id") # Must be a GroupNode or SceneNode
-    model.scene_root.find_node_by_id.return_value = mock_parent_node
-
-    # We directly verify the instantiation and execution of the command
-    node_controller.reorder_nodes("parent_id", "child_id", 0)
-
-    command_manager.execute_command.assert_called_once()
-    command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangeChildrenOrderCommand)
-    assert command.target_node == mock_parent_node
-    assert command.dragged_node_id == "child_id"
-    assert command.new_index == 0
-
-
-def test_group_nodes_executes_command(node_controller, node_controller_deps, mocker):
-    """
-    Verify that group_nodes executes a GroupNodesCommand.
-    """
-    model, command_manager, _ = node_controller_deps
-    mock_node_ids = ["id1", "id2"]
-    mock_node1 = mocker.Mock(spec=PlotNode, id="id1")
-    mock_node2 = mocker.Mock(spec=PlotNode, id="id2")
-
-    # Mock finding nodes and creating a new group
-    model.scene_root.find_node_by_id.side_effect = lambda node_id: {
-        "id1": mock_node1, "id2": mock_node2
-    }.get(node_id)
-    mock_new_group_node = mocker.Mock(spec=GroupNode, id="new_group_id")
-    model.create_group_node.return_value = mock_new_group_node
-
-    node_controller.group_nodes(mock_node_ids)
-
-    model.create_group_node.assert_called_once()
-    command_manager.execute_command.assert_called_once()
-    command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, GroupNodesCommand)
-    assert command.parent_node == model.scene_root
-    assert command.nodes_to_group == [mock_node1, mock_node2]
-    assert command.new_group == mock_new_group_node
-
-
-def test_ungroup_node_executes_command(node_controller, node_controller_deps, mocker):
-    """
-    Verify that ungroup_node executes an UngroupNodesCommand.
-    """
-    model, command_manager, _ = node_controller_deps
-    mock_group_node = mocker.Mock(spec=GroupNode, id="group_id")
-    model.scene_root.find_node_by_id.return_value = mock_group_node
-
-    node_controller.ungroup_node("group_id")
-
-    command_manager.execute_command.assert_called_once()
-    command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, UngroupNodesCommand)
-    assert command.group_node == mock_group_node
-
-
-def test_rename_node_executes_command(node_controller, node_controller_deps, mock_plot_node_with_props):
-    """
-    Verify that rename_node executes a ChangePropertyCommand to update
-    the Node's name property.
-    """
-    model, command_manager, _ = node_controller_deps
-    model.scene_root.find_node_by_id.return_value = mock_plot_node_with_props
-    new_name = "New Plot Name"
-
-    node_controller.rename_node(mock_plot_node_with_props.id, new_name)
-
-    command_manager.execute_command.assert_called_once()
-    command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePlotPropertyCommand)
-    assert command.target_object == mock_plot_node_with_props
-    assert command.property_name == "name"
-    assert command.new_value == new_name
-    assert command.old_value == "Test Plot"
-
-
-def test_on_limit_editing_finished_reads_current_line_edit_values(node_controller, node_controller_deps, mock_plot_node_with_props, mocker):
-    """
-    Verify that on_limit_editing_finished reads values from provided QLineEdits
-    and executes a ChangePropertyCommand to update the AxesLimits.
-    """
-    model, command_manager, _ = node_controller_deps
-    mock_xlim_min_edit = mocker.Mock(spec=QLineEdit)
-    mock_xlim_max_edit = mocker.Mock(spec=QLineEdit)
-    mock_ylim_min_edit = mocker.Mock(spec=QLineEdit)
-    mock_ylim_max_edit = mocker.Mock(spec=QLineEdit)
-
-    mock_xlim_min_edit.text.return_value = "0.5"
-    mock_xlim_max_edit.text.return_value = "9.5"
-    mock_ylim_min_edit.text.return_value = "-1.0"
-    mock_ylim_max_edit.text.return_value = "15.0"
-
-    node_controller.on_limit_editing_finished(
-        mock_plot_node_with_props,
-        mock_xlim_min_edit,
-        mock_xlim_max_edit,
-        mock_ylim_min_edit,
-        mock_ylim_max_edit,
-    )
-
-    command_manager.execute_command.assert_called_once()
-    command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePlotPropertyCommand)
-    assert command.target_object == mock_plot_node_with_props.plot_properties
-    assert command.property_name == "axes_limits"
-    assert command.new_value.xlim == (0.5, 9.5)
-    assert command.new_value.ylim == (-1.0, 15.0)
-    # Verify conversion to float
-    assert isinstance(command.new_value.xlim[0], float)
-    assert isinstance(command.new_value.ylim[0], float)
-
-
-def test_on_plot_type_changed_updates_plot_type_property(node_controller, node_controller_deps, mock_plot_node_with_props):
-    """
-    Verify that on_plot_type_changed executes a ChangePropertyCommand to update
-    the plot_type of the PlotNode's plot_properties.
-    """
-    model, command_manager, _ = node_controller_deps
-
-    # Ensure current plot_type is different from new_plot_type for a change to occur
-    mock_plot_node_with_props.plot_properties.plot_type = PlotType.LINE
-    new_plot_type = PlotType.SCATTER
-
-    node_controller.on_plot_type_changed(mock_plot_node_with_props, new_plot_type)
-
-    command_manager.execute_command.assert_called_once()
-    command = command_manager.execute_command.call_args[0][0]
-    assert isinstance(command, ChangePlotPropertyCommand)
-    assert command.target_object == mock_plot_node_with_props.plot_properties
-    assert command.property_name == "plot_type"
-    assert command.new_value == new_plot_type
-    assert command.old_value == PlotType.LINE
+    def test_on_selection_changed_for_ui_multi_selection_no_op(
+        self, node_controller, mock_event_aggregator
+    ):
+        """Verifies that multi-selection does NOT trigger tab switching."""
+        # 2 nodes selected
+        node_controller._on_selection_changed_for_ui(["p1", "p2"])
+        
+        # Verify no tab switch request
+        mock_event_aggregator.publish.assert_not_called()

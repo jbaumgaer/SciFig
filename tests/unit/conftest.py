@@ -39,6 +39,7 @@ from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
+from src.services.property_service import PropertyService
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
 from src.shared.events import Events
@@ -72,6 +73,12 @@ def mock_figure():
 def mock_event_aggregator():
     """Provides a mock EventAggregator instance."""
     return MagicMock(spec=EventAggregator)
+
+
+@pytest.fixture(scope="function")
+def mock_property_service():
+    """Provides a mock PropertyService instance."""
+    return MagicMock(spec=PropertyService)
 
 
 @pytest.fixture(scope="function")
