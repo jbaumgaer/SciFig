@@ -312,3 +312,4 @@ tests/unit/models/layout/__pycache__/test_grid_layout_engine_gutter_conversion.c
 tests/unit/models/layout/__pycache__/test_layout_engine.cpython-313-pytest-9.0.2.pyc
 tests/unit/models/layout/__pycache__/test_free_layout_engine.cpython-313-pytest-9.0.2.pyc
 tests/unit/models/layout/__pycache__/test_grid_layout_engine.cpython-313-pytest-9.0.2.pyc
+tests/unit/models/plots/__pycache__/test_plot_properties.cpython-313-pytest-9.0.2.pyc

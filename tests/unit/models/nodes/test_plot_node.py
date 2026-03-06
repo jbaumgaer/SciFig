@@ -6,62 +6,8 @@ from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import (
     PlotProperties,
-    TextProperties,
-    FontProperties,
-    Cartesian2DProperties,
-    AxisProperties,
-    TickProperties,
     LineArtistProperties,
-    LineProperties,
-    SpineProperties,
 )
-from src.models.plots.plot_types import (
-    AutolimitMode,
-    SpinePosition,
-    TickDirection,
-)
-
-
-# --- Fixtures ---
-
-@pytest.fixture
-def sample_font():
-    return FontProperties(
-        family="Arial", style="normal", variant="normal", weight="normal", stretch="normal", size=10
-    )
-
-@pytest.fixture
-def sample_text(sample_font):
-    return TextProperties(text="Test", color="black", font=sample_font)
-
-@pytest.fixture
-def sample_plot_properties(sample_text):
-    """Provides a complete, versioned PlotProperties tree."""
-    ticks = TickProperties(5, 2, 1, 0.5, 3, 3, TickDirection.OUT, "black", "black", 10, True, 2)
-    axis = AxisProperties(ticks, 0.05, AutolimitMode.DATA, True, 4, (-4, 5), sample_text, (None, None))
-    return PlotProperties(
-        titles={"left": sample_text, "center": sample_text, "right": sample_text},
-        coords=Cartesian2DProperties(
-            xaxis=axis, yaxis=axis,
-            spines={"left": SpineProperties(True, "black", 1.0, SpinePosition.LEFT)},
-            facecolor="white", axis_below=True, prop_cycle=["C0"]
-        ),
-        legend={},
-        artists=[LineArtistProperties(True, 1, LineProperties(1.0, "-", "C0", "None", "C0", "black", 0.5, 5.0))],
-        _version=1
-    )
-
-@pytest.fixture
-def minimal_plot_dict():
-    return {
-        "id": "p1",
-        "type": "PlotNode",
-        "name": "Minimal",
-        "visible": True,
-        "locked": False,
-        "children": [],
-        "geometry": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8}
-    }
 
 
 class TestPlotNode:

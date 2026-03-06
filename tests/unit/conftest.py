@@ -1,6 +1,7 @@
 # tests/unit/conftest.py
 import uuid
 from unittest.mock import MagicMock, Mock, create_autospec
+from pathlib import Path
 
 import matplotlib.figure
 import pandas as pd
@@ -19,9 +20,20 @@ from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import (
-    CoordinateProperties,
-    BaseArtistProperties,
     PlotProperties,
+    TextProperties,
+    FontProperties,
+    Cartesian2DProperties,
+    AxisProperties,
+    TickProperties,
+    LineArtistProperties,
+    LineProperties,
+    SpineProperties,
+)
+from src.models.plots.plot_types import (
+    AutolimitMode,
+    SpinePosition,
+    TickDirection,
 )
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
@@ -257,18 +269,23 @@ def sample_dataframe():
     )
 
 
+# --- Scene Node Fixtures ---
+
 @pytest.fixture(scope="function")
 def mock_scene_node():
     """Provides a mock SceneNode."""
     mock = create_autospec(SceneNode, instance=True)
     mock.id = str(uuid.uuid4())
     mock.name = "MockNode"
+    mock.visible = True
+    mock.locked = False
     mock.to_dict.return_value = {
         "id": mock.id,
         "name": mock.name,
         "type": "SceneNode",
         "children": [],
         "visible": True,
+        "locked": False
     }
     return mock
 
@@ -280,6 +297,8 @@ def mock_group_node():
     mock.id = str(uuid.uuid4())
     mock.name = "MockGroup"
     mock.children = []
+    mock.visible = True
+    mock.locked = False
     mock.add_child.side_effect = lambda node: mock.children.append(node)
     mock.to_dict.return_value = {
         "id": mock.id,
@@ -287,6 +306,7 @@ def mock_group_node():
         "type": "GroupNode",
         "children": [],
         "visible": True,
+        "locked": False
     }
     mock.hit_test.return_value = None
     return mock
@@ -294,30 +314,103 @@ def mock_group_node():
 
 @pytest.fixture
 def mock_plot_node():
+    """Provides a mock PlotNode with basic properties."""
     plot_node = MagicMock(spec=PlotNode)
     plot_node.id = "test_plot_id"
     plot_node.data = MagicMock(spec=pd.DataFrame)
     plot_node.plot_properties = MagicMock()
     plot_node.plot_properties.to_dict.return_value = {"plot_type": "line"}
+    plot_node.geometry = (0.1, 0.1, 0.8, 0.8)
     return plot_node
 
 
 @pytest.fixture
-def plot_node_empty_props():
-    """Provides a PlotNode with empty plot_properties."""
-    node = PlotNode()
-    return node
+def minimal_plot_dict():
+    """Provides a minimal serialized PlotNode dictionary."""
+    return {
+        "id": "p1",
+        "type": "PlotNode",
+        "name": "Minimal",
+        "visible": True,
+        "locked": False,
+        "children": [],
+        "geometry": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8}
+    }
 
 
-# @pytest.fixture
-# def plot_node_with_mapping():
-#     """Provides a PlotNode with an existing plot_mapping."""
-#     node = PlotNode()
-#     node.plot_properties = LinePlotProperties(
-#         title="Existing Title",
-#         xlabel="Existing X Label",
-#         ylabel="Existing Y Label",
-#         plot_mapping=PlotMapping(x="ExistingX", y=["ExistingY"]),
-#         axes_limits=AxesLimits(xlim=(0, 1), ylim=(0, 1)),
-#     )
-#     return node
+# --- Plot Property Fixtures ---
+
+@pytest.fixture
+def sample_font():
+    return FontProperties(
+        family="Arial", style="normal", variant="normal", weight="normal", stretch="normal", size=10
+    )
+
+
+@pytest.fixture
+def sample_text(sample_font):
+    return TextProperties(text="Test", color="black", font=sample_font)
+
+
+@pytest.fixture
+def sample_ticks():
+    return TickProperties(
+        major_size=5,
+        minor_size=2,
+        major_width=1,
+        minor_width=0.5,
+        major_pad=3,
+        minor_pad=3,
+        direction=TickDirection.OUT,
+        color="black",
+        labelcolor="black",
+        labelsize=10,
+        minor_visible=True,
+        minor_ndivs=2,
+    )
+
+
+@pytest.fixture
+def sample_axis(sample_ticks, sample_text):
+    return AxisProperties(
+        ticks=sample_ticks,
+        margin=0.05,
+        autolimit_mode=AutolimitMode.DATA,
+        use_offset=True,
+        offset_threshold=4,
+        scientific_limits=(-4, 5),
+        label=sample_text,
+        limits=(None, None),
+    )
+
+
+@pytest.fixture
+def sample_plot_properties(sample_axis, sample_text):
+    """Provides a complete, versioned PlotProperties tree."""
+    return PlotProperties(
+        titles={
+            "left": sample_text,
+            "center": sample_text,
+            "right": sample_text,
+        },
+        coords=Cartesian2DProperties(
+            xaxis=sample_axis,
+            yaxis=sample_axis,
+            spines={
+                "left": SpineProperties(True, "black", 1.0, SpinePosition.LEFT),
+                "bottom": SpineProperties(True, "black", 1.0, SpinePosition.BOTTOM),
+            },
+            facecolor="white",
+            axis_below=True,
+            prop_cycle=["C0", "C1"],
+        ),
+        legend={},
+        artists=[
+            LineArtistProperties(
+                visible=True,
+                zorder=1,
+                visuals=LineProperties(1.0, "-", "C0", "None", "C0", "black", 0.5, 5.0),
+            )
+        ],
+        _version=1,
+    )
