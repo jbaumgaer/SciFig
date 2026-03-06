@@ -1,16 +1,20 @@
-from unittest.mock import MagicMock, Mock
-
 import pytest
-
+from unittest.mock import MagicMock, ANY
 from src.services.tool_service import ToolService
 from src.services.tools.base_tool import BaseTool
+from src.shared.events import Events
 
 
 class MockTool(BaseTool):
-    def __init__(self, model, command_manager, canvas_widget):
-        super().__init__(model, command_manager, canvas_widget)
-        self._name = "mock_tool"
-        self._icon_path = "path/to/icon"
+    """A concrete mock tool for testing."""
+    def __init__(self, name="mock_tool"):
+        # We bypass BaseTool.__init__ complexity for simple registration tests
+        self._name = name
+        self.on_activated = MagicMock()
+        self.on_deactivated = MagicMock()
+        self.mouse_press_event = MagicMock()
+        self.mouse_move_event = MagicMock()
+        self.mouse_release_event = MagicMock()
 
     @property
     def name(self) -> str:
@@ -18,114 +22,91 @@ class MockTool(BaseTool):
 
     @property
     def icon_path(self) -> str:
-        return self._icon_path
-
-    def on_activated(self) -> None:
-        pass
-
-    def on_deactivated(self) -> None:
-        pass
-
-    def mouse_press_event(self, event) -> None:
-        pass
+        return ""
 
 
 @pytest.fixture
-def tool_manager():
-    """Fixture to create a ToolManager with mock dependencies."""
-    model = Mock()
-    command_manager = Mock()
-    return ToolService(model, command_manager)
+def tool_service(mock_event_aggregator):
+    """Provides a ToolService instance with mocked event aggregator."""
+    return ToolService(event_aggregator=mock_event_aggregator)
 
 
-def test_add_tool(tool_manager):
-    """Test that a tool can be added to the manager."""
-    model = Mock()
-    command_manager = Mock()
-    canvas_widget = Mock()
-    tool = MockTool(model, command_manager, canvas_widget)
-    tool_manager.add_tool(tool)
-    assert tool_manager._tools["mock_tool"] == tool
+class TestToolService:
 
+    def test_add_tool(self, tool_service):
+        """Tests tool registration."""
+        tool = MockTool("tool1")
+        tool_service.add_tool(tool)
+        assert tool_service._tools["tool1"] is tool
 
-def test_add_duplicate_tool_raises_error(tool_manager):
-    """Test that adding a tool with a duplicate name raises a ValueError."""
-    model = Mock()
-    command_manager = Mock()
-    canvas_widget = Mock()
-    tool = MockTool(model, command_manager, canvas_widget)
-    tool_manager.add_tool(tool)
-    with pytest.raises(ValueError):
-        tool_manager.add_tool(tool)
+    def test_add_duplicate_tool_raises_error(self, tool_service):
+        """Ensures unique tool names."""
+        tool_service.add_tool(MockTool("dup"))
+        with pytest.raises(ValueError, match="already exists"):
+            tool_service.add_tool(MockTool("dup"))
 
+    def test_set_active_tool_lifecycle_and_events(self, tool_service, mock_event_aggregator):
+        """Verifies tool switching triggers lifecycle methods and events."""
+        t1 = MockTool("t1")
+        t2 = MockTool("t2")
+        tool_service.add_tool(t1)
+        tool_service.add_tool(t2)
+        
+        # 1. Activate T1
+        tool_service.set_active_tool("t1")
+        assert tool_service.active_tool is t1
+        t1.on_activated.assert_called_once()
+        mock_event_aggregator.publish.assert_any_call(Events.ACTIVE_TOOL_CHANGED, tool_name="t1")
+        
+        # 2. Switch to T2
+        tool_service.set_active_tool("t2")
+        assert tool_service.active_tool is t2
+        t1.on_deactivated.assert_called_once()
+        t2.on_activated.assert_called_once()
+        mock_event_aggregator.publish.assert_any_call(Events.ACTIVE_TOOL_CHANGED, tool_name="t2")
 
-def test_set_active_tool(tool_manager, qtbot):
-    """Test setting an active tool and that the correct signals are emitted."""
-    model = Mock()
-    command_manager = Mock()
-    canvas_widget = Mock()
-    tool1 = MockTool(model, command_manager, canvas_widget)
-    tool1.on_activated = MagicMock()
-    tool1.on_deactivated = MagicMock()
+    def test_set_active_tool_idempotency(self, tool_service, mock_event_aggregator):
+        """Ensures setting the same tool twice does nothing."""
+        t1 = MockTool("t1")
+        tool_service.add_tool(t1)
+        tool_service.set_active_tool("t1")
+        
+        mock_event_aggregator.publish.reset_mock()
+        t1.on_activated.reset_mock()
+        
+        # Set again
+        tool_service.set_active_tool("t1")
+        
+        t1.on_activated.assert_not_called()
+        mock_event_aggregator.publish.assert_not_called()
 
-    tool2 = MockTool(model, command_manager, canvas_widget)
-    tool2._name = "mock_tool_2"
-    tool2.on_activated = MagicMock()
+    def test_dispatch_events_proxies_to_active_tool(self, tool_service):
+        """Verifies that events are correctly forwarded to the active tool."""
+        tool = MockTool("t1")
+        tool_service.add_tool(tool)
+        tool_service.set_active_tool("t1")
+        
+        coords = (0.5, 0.5)
+        
+        # Mouse Press
+        tool_service.dispatch_mouse_press_event("node1", coords, 1)
+        tool.mouse_press_event.assert_called_once_with("node1", coords, 1)
+        
+        # Mouse Move
+        tool_service.dispatch_mouse_move_event(coords)
+        tool.mouse_move_event.assert_called_once_with(coords)
+        
+        # Mouse Release
+        tool_service.dispatch_mouse_release_event(coords)
+        tool.mouse_release_event.assert_called_once_with(coords)
 
-    tool_manager.add_tool(tool1)
-    tool_manager.add_tool(tool2)
+    def test_dispatch_events_no_active_tool_is_safe(self, tool_service):
+        """Ensures no crash if events are dispatched without an active tool."""
+        # Should just return without error
+        tool_service.dispatch_mouse_press_event(None, (0,0), 1)
+        tool_service.dispatch_mouse_move_event((0,0))
 
-    with qtbot.waitSignal(tool_manager.active_tool_changed) as blocker:
-        tool_manager.set_active_tool("mock_tool")
-
-    assert blocker.args == ["mock_tool"]
-    assert tool_manager.active_tool == tool1
-    tool1.on_activated.assert_called_once()
-
-    with qtbot.waitSignal(tool_manager.active_tool_changed) as blocker:
-        tool_manager.set_active_tool("mock_tool_2")
-
-    assert blocker.args == ["mock_tool_2"]
-    tool1.on_deactivated.assert_called_once()
-    tool2.on_activated.assert_called_once()
-
-
-def test_set_unknown_tool_raises_error(tool_manager):
-    """Test that setting an unknown tool raises a ValueError."""
-    with pytest.raises(ValueError):
-        tool_manager.set_active_tool("unknown_tool")
-
-
-def test_event_dispatching(tool_manager):
-    """Test that events are dispatched to the active tool."""
-    model = Mock()
-    command_manager = Mock()
-    canvas_widget = Mock()
-    tool = MockTool(model, command_manager, canvas_widget)
-    tool.mouse_press_event = MagicMock()
-    tool.mouse_move_event = MagicMock()
-    tool.mouse_release_event = MagicMock()
-    tool.key_press_event = MagicMock()
-    tool.paint_event = MagicMock()
-
-    tool_manager.add_tool(tool)
-    tool_manager.set_active_tool("mock_tool")
-
-    mouse_event = Mock()
-    key_event = Mock()
-    painter = Mock()
-
-    tool_manager.dispatch_mouse_press_event(mouse_event)
-    tool.mouse_press_event.assert_called_once_with(mouse_event)
-
-    tool_manager.dispatch_mouse_move_event(mouse_event)
-    tool.mouse_move_event.assert_called_once_with(mouse_event)
-
-    tool_manager.dispatch_mouse_release_event(mouse_event)
-    tool.mouse_release_event.assert_called_once_with(mouse_event)
-
-    tool_manager.dispatch_key_press_event(key_event)
-    tool.key_press_event.assert_called_once_with(key_event)
-
-    tool_manager.dispatch_paint_event(painter)
-    tool.paint_event.assert_called_once_with(painter)
+    def test_set_unknown_tool_raises_error(self, tool_service):
+        """Ensures ValueError for missing tool names."""
+        with pytest.raises(ValueError, match="No tool with name"):
+            tool_service.set_active_tool("ghost")
