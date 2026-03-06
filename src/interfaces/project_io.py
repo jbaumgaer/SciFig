@@ -14,7 +14,10 @@ class ProjectLifecycle:
     """
 
     @property
-    def is_modified(self) -> bool:
+    def is_dirty(self) -> bool:
+        raise NotImplementedError
+
+    def set_dirty(self, is_dirty: bool) -> None:
         raise NotImplementedError
 
     @property

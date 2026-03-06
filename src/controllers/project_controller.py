@@ -83,10 +83,13 @@ class ProjectController:
     # --- Event Handlers for UI Requests ---
 
     def handle_new_project(self) -> None:
+        """
+        Handles the user request to start a new project.
+        Delegates the state reset to the model, which will publish the 
+        appropriate reset and dirty-state events.
+        """
         self.logger.info("Handling new project action.")
         self._lifecycle.reset_state()
-        self._event_aggregator.publish(Events.PROJECT_WAS_RESET)
-        self._event_aggregator.publish(Events.PROJECT_IS_DIRTY_CHANGED, is_dirty=False)
 
     def handle_new_from_template_request(self) -> None:
         self.logger.info("Handling 'New from Template' request.")
