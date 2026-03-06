@@ -1,100 +1,89 @@
-"""
-Test suite for the BatchChangePlotGeometryCommand.
-"""
-
-from unittest.mock import MagicMock
-
 import pytest
-from src.models.geometry import Rect
-
-from src.models.nodes import PlotNode, SceneNode
-
-
-@pytest.fixture
-def mock_plot_node_1():
-    """Fixture for a mock PlotNode."""
-    plot = MagicMock(spec=PlotNode)
-    plot.id = "plot1"
-    plot.geometry = Rect(0, 0, 10, 10)
-    plot.parent = MagicMock(spec=SceneNode)
-    plot.parent.modelChanged = MagicMock()
-    return plot
-
-
-@pytest.fixture
-def mock_plot_node_2():
-    """Fixture for another mock PlotNode."""
-    plot = MagicMock(spec=PlotNode)
-    plot.id = "plot2"
-    plot.geometry = Rect(20, 20, 5, 5)
-    plot.parent = MagicMock(spec=SceneNode)
-    plot.parent.modelChanged = MagicMock()
-    return plot
+from unittest.mock import MagicMock
+from src.services.commands.batch_change_plot_geometry_command import BatchChangePlotGeometryCommand
+from src.models.nodes.plot_node import PlotNode
+from src.shared.events import Events
 
 
 class TestBatchChangePlotGeometryCommand:
-    """
-    Tests for the BatchChangePlotGeometryCommand.
-    """
 
-    def test_execute(self, mock_plot_node_1, mock_plot_node_2):
-        """
-        Test that the execute method correctly applies new geometries to plots
-        and notifies model changes.
-        """
-        # old_geometries = {
-        #     mock_plot_node_1.id: mock_plot_node_1.geometry,
-        #     mock_plot_node_2.id: mock_plot_node_2.geometry,
-        # }
-        # new_geometries = {
-        #     mock_plot_node_1.id: Rect(1, 1, 11, 11),
-        #     mock_plot_node_2.id: Rect(21, 21, 6, 6),
-        # }
-        # plots = {mock_plot_node_1.id: mock_plot_node_1, mock_plot_node_2.id: mock_plot_node_2}
+    def test_initialization_captures_current_state(self, mock_application_model, mock_event_aggregator):
+        """Verifies that the command captures current geometries during init."""
+        p1 = PlotNode(id="p1")
+        p1.geometry = (0, 0, 0.5, 0.5)
+        mock_application_model.scene_root.all_descendants.return_value = [p1]
+        
+        new_geoms = {"p1": (0.1, 0.1, 0.4, 0.4)}
+        command = BatchChangePlotGeometryCommand(
+            mock_application_model, mock_event_aggregator, new_geoms, "Move p1"
+        )
+        
+        assert command._old_geometries["p1"] == (0, 0, 0.5, 0.5)
 
-        # command = BatchChangePlotGeometryCommand(plots, new_geometries)
-        # command.execute()
+    def test_execute_applies_new_geometries_and_publishes(self, mock_application_model, mock_event_aggregator):
+        """Tests applying changes to multiple nodes."""
+        p1 = PlotNode(id="p1"); p1.name = "P1"
+        p2 = PlotNode(id="p2"); p2.name = "P2"
+        mock_application_model.scene_root.all_descendants.return_value = [p1, p2]
+        
+        # Helper for find_node_by_id logic in execute
+        def find_side_effect(node_id):
+            return {"p1": p1, "p2": p2}.get(node_id)
+        mock_application_model.scene_root.find_node_by_id.side_effect = find_side_effect
+        
+        new_geoms = {
+            "p1": (0.1, 0.1, 0.1, 0.1),
+            "p2": (0.2, 0.2, 0.2, 0.2)
+        }
+        command = BatchChangePlotGeometryCommand(
+            mock_application_model, mock_event_aggregator, new_geoms, "Batch Move"
+        )
+        
+        command.execute()
+        
+        assert p1.geometry == (0.1, 0.1, 0.1, 0.1)
+        assert p2.geometry == (0.2, 0.2, 0.2, 0.2)
+        mock_event_aggregator.publish.assert_called_with(Events.SCENE_GRAPH_CHANGED)
 
-        # assert mock_plot_node_1.geometry == new_geometries[mock_plot_node_1.id]
-        # assert mock_plot_node_2.geometry == new_geometries[mock_plot_node_2.id]
-        # mock_plot_node_1.parent.modelChanged.emit.assert_called_once()
-        # mock_plot_node_2.parent.modelChanged.emit.assert_called_once()
+    def test_undo_reverts_state(self, mock_application_model, mock_event_aggregator):
+        """Verifies that undo restores the captured geometries."""
+        p1 = PlotNode(id="p1")
+        p1.geometry = (0.5, 0.5, 0.5, 0.5)
+        mock_application_model.scene_root.all_descendants.return_value = [p1]
+        mock_application_model.scene_root.find_node_by_id.return_value = p1
+        
+        new_geoms = {"p1": (0, 0, 1, 1)}
+        command = BatchChangePlotGeometryCommand(
+            mock_application_model, mock_event_aggregator, new_geoms, "Full Size"
+        )
+        
+        command.execute()
+        assert p1.geometry == (0, 0, 1, 1)
+        
+        command.undo()
+        assert p1.geometry == (0.5, 0.5, 0.5, 0.5)
+        assert mock_event_aggregator.publish.call_count == 2 # 1 for execute, 1 for undo
 
-    def test_undo(self, mock_plot_node_1, mock_plot_node_2):
-        """
-        Test that the undo method correctly reverts plots to their previous geometries
-        and notifies model changes.
-        """
-        # old_geometries = {
-        #     mock_plot_node_1.id: mock_plot_node_1.geometry,
-        #     mock_plot_node_2.id: mock_plot_node_2.geometry,
-        # }
-        # new_geometries = {
-        #     mock_plot_node_1.id: Rect(1, 1, 11, 11),
-        #     mock_plot_node_2.id: Rect(21, 21, 6, 6),
-        # }
-        # plots = {mock_plot_node_1.id: mock_plot_node_1, mock_plot_node_2.id: mock_plot_node_2}
+    def test_missing_node_is_handled_gracefully(self, mock_application_model, mock_event_aggregator, caplog):
+        """Ensures command logs a warning but doesn't crash if a node is missing."""
+        mock_application_model.scene_root.all_descendants.return_value = []
+        mock_application_model.scene_root.find_node_by_id.return_value = None
+        
+        new_geoms = {"ghost": (0, 0, 1, 1)}
+        command = BatchChangePlotGeometryCommand(
+            mock_application_model, mock_event_aggregator, new_geoms, "Ghost Move"
+        )
+        
+        with caplog.at_level("WARNING"):
+            command.execute()
+            
+        assert "Could not find PlotNode with ID ghost" in caplog.text
 
-        # command = BatchChangePlotGeometryCommand(plots, new_geometries)
-        # command.execute()  # Apply new geometries first
-        # mock_plot_node_1.parent.modelChanged.emit.reset_mock() # Reset mock after execute
-        # mock_plot_node_2.parent.modelChanged.emit.reset_mock()
-
-        # command.undo()
-
-        # assert mock_plot_node_1.geometry == old_geometries[mock_plot_node_1.id]
-        # assert mock_plot_node_2.geometry == old_geometries[mock_plot_node_2.id]
-        # mock_plot_node_1.parent.modelChanged.emit.assert_called_once()
-        # mock_plot_node_2.parent.modelChanged.emit.assert_called_once()
-
-    def test_empty_plots_or_geometries(self):
-        """
-        Test that the command handles empty plots or new_geometries dictionaries gracefully
-        without errors and without emitting modelChanged.
-        """
-        # plots = {}
-        # new_geometries = {}
-        # command = BatchChangePlotGeometryCommand(plots, new_geometries)
-        # command.execute()
-        # command.undo()
-        # # Assert no errors and no modelChanged signals were emitted
+    def test_empty_request_is_safe(self, mock_application_model, mock_event_aggregator):
+        """Tests that empty geometry dict is a safe no-op."""
+        command = BatchChangePlotGeometryCommand(
+            mock_application_model, mock_event_aggregator, {}, "No-op"
+        )
+        command.execute()
+        command.undo()
+        # Should not crash
