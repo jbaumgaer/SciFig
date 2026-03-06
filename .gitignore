@@ -308,3 +308,7 @@ examples/UI/Format.png
 examples/UI/Margins.png
 src/ui/widgets/__pycache__/ribbon_bar.cpython-313.pyc
 src/ui/builders/__pycache__/ribbon_bar_builder.cpython-313.pyc
+tests/unit/models/layout/__pycache__/test_grid_layout_engine_gutter_conversion.cpython-313-pytest-9.0.2.pyc
+tests/unit/models/layout/__pycache__/test_layout_engine.cpython-313-pytest-9.0.2.pyc
+tests/unit/models/layout/__pycache__/test_free_layout_engine.cpython-313-pytest-9.0.2.pyc
+tests/unit/models/layout/__pycache__/test_grid_layout_engine.cpython-313-pytest-9.0.2.pyc
