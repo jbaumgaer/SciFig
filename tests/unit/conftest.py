@@ -25,9 +25,11 @@ from src.models.plots.plot_properties import (
 )
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
+from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
+from src.shared.events import Events
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
 from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
 from src.ui.renderers.renderer import Renderer
@@ -41,6 +43,7 @@ class MockSignals(QObject):
     modelChanged = Signal()
     selectionChanged = Signal(list)
 
+
 @pytest.fixture(scope="function")
 def mock_qapplication():
     """Provides a mock QApplication."""
@@ -51,6 +54,18 @@ def mock_qapplication():
 def mock_figure():
     """Provides a mock matplotlib figure."""
     return create_autospec(matplotlib.figure.Figure)
+
+
+@pytest.fixture(scope="function")
+def mock_event_aggregator():
+    """Provides a mock EventAggregator instance."""
+    return MagicMock(spec=EventAggregator)
+
+
+@pytest.fixture(scope="function")
+def real_event_aggregator():
+    """Provides a real EventAggregator instance."""
+    return EventAggregator()
 
 
 @pytest.fixture(scope="function")
@@ -90,7 +105,7 @@ def mock_config_service():
 
 
 @pytest.fixture(scope="function")
-def mock_application_model():
+def mock_application_model(mock_event_aggregator):
     """Fixture for a mock ApplicationModel with real signals."""
     model = MagicMock(spec=ApplicationModel)
     model.figure = Mock()
@@ -98,6 +113,7 @@ def mock_application_model():
     mock_scene_root_instance.children = []
     model.scene_root = mock_scene_root_instance
     model.selection = []
+    model._event_aggregator = mock_event_aggregator
 
     # Use a QObject with real signals
     signals = MockSignals()

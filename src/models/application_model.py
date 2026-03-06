@@ -104,9 +104,7 @@ class ApplicationModel(ProjectLifecycle):
             if isinstance(node, PlotNode) and node.data is not None:
                 state = {
                     "data": node.data,
-                    "plot_properties_dict": node.plot_properties.to_dict(
-                        exclude_geometry=True
-                    ),
+                    "plot_properties_dict": node.plot_properties.to_dict(),
                     "id": node.id,
                 }
                 existing_plot_states.append(state)
