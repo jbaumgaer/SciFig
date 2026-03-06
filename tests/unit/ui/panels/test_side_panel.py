@@ -1,191 +1,114 @@
-
 import pytest
-from PySide6.QtWidgets import QApplication, QTabWidget
-from pytest_mock import mocker
+from unittest.mock import MagicMock
+from PySide6.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QPushButton
 
-from src.controllers.layout_controller import LayoutController
-from src.controllers.node_controller import NodeController
-from src.controllers.project_controller import ProjectController
-from src.models.application_model import ApplicationModel
-from src.models.nodes.plot_node import PlotNode
-from src.models.nodes.scene_node import SceneNode
-from src.services.config_service import ConfigService
-from src.ui.factories.layout_ui_factory import LayoutUIFactory
-from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
-from src.ui.panels.layers_tab import LayersTab
-from src.ui.panels.layout_tab import LayoutTab
-from src.ui.panels.properties_tab import PropertiesTab
 from src.ui.panels.side_panel import SidePanel
+from src.shared.events import Events
 
 
 @pytest.fixture
-def mock_app(qtbot):
-    """Fixture to ensure QApplication exists."""
-    app = QApplication.instance()
-    if not app:
-        app = QApplication([])
-    yield app
-    # No need to quit app here if it's reused by qtbot
-
-@pytest.fixture
-def mock_dependencies(mocker, mock_app):
-    """Mocks common dependencies for SidePanel."""
-    model = mocker.Mock(spec=ApplicationModel)
-    model.selectionChanged = mocker.Mock()
-    model.selection = [] # Default empty selection
-
-    node_controller = mocker.Mock(spec=NodeController)
-    layout_controller = mocker.Mock(spec=LayoutController)
-    plot_properties_ui_factory = mocker.Mock(spec=PlotPropertiesUIFactory)
-    layout_ui_factory = mocker.Mock(spec=LayoutUIFactory)
-    project_controller = mocker.Mock(spec=ProjectController)
-    config_service = mocker.Mock(spec=ConfigService)
-
-    # Mock tab instantiations to ensure SidePanel doesn't create real widgets prematurely
-    mocker.patch('src.ui.panels.properties_tab.PropertiesTab', autospec=True)
-    mocker.patch('src.ui.panels.layout_tab.LayoutTab', autospec=True)
-    mocker.patch('src.ui.panels.layers_tab.LayersTab', autospec=True)
-
-    # Return mocked instances that SidePanel expects to construct
-    mock_properties_tab_instance = mocker.Mock(spec=PropertiesTab)
-    mock_layout_tab_instance = mocker.Mock(spec=LayoutTab)
-    mock_layers_tab_instance = mocker.Mock(spec=LayersTab)
-
-    mock_properties_tab_instance.return_value = mock_properties_tab_instance
-    mock_layout_tab_instance.return_value = mock_layout_tab_instance
-    mock_layers_tab_instance.return_value = mock_layers_tab_instance
-
-    return model, node_controller, layout_controller, plot_properties_ui_factory, \
-        layout_ui_factory, project_controller, config_service, \
-        mock_properties_tab_instance, mock_layout_tab_instance, mock_layers_tab_instance
-
-@pytest.fixture
-def side_panel(qtbot, mock_dependencies):
-    """Fixture to create a SidePanel instance."""
-    model, node_controller, layout_controller, plot_properties_ui_factory, \
-    layout_ui_factory, project_controller, config_service, \
-    mock_properties_tab_instance, mock_layout_tab_instance, mock_layers_tab_instance = mock_dependencies
-
-    # Create the panel with actual tab instances instead of mocks
-    panel = SidePanel(
-        model=model,
-        node_controller=node_controller,
-        layout_controller=layout_controller,
-        plot_properties_ui_factory=plot_properties_ui_factory,
-        layout_ui_factory=layout_ui_factory,
-        project_controller=project_controller,
-        config_service=config_service
-    )
-
-    # Manually assign mocked tab instances to the panel for verification,
-    # as the SidePanel __init__ will have called the patched constructors.
-    panel.properties_tab = mock_properties_tab_instance
-    panel.layout_tab = mock_layout_tab_instance
-    panel.layers_tab = mock_layers_tab_instance
-
+def side_panel(mock_event_aggregator, qtbot):
+    """Provides a fresh SidePanel instance initialized with a mock event aggregator."""
+    panel = SidePanel(mock_event_aggregator)
     qtbot.addWidget(panel)
-    return panel, model, node_controller, layout_controller, plot_properties_ui_factory, \
-           layout_ui_factory, project_controller, config_service
+    return panel
+
 
 class TestSidePanel:
+    """
+    Unit tests for SidePanel.
+    Verifies tab management and event-driven tab switching.
+    """
 
-    def test_initialization_of_tabs_and_qtabwidget(self, side_panel, mock_dependencies, mocker):
-        """
-        Verify that SidePanel initializes as a QTabWidget and correctly creates
-        and adds its constituent tabs (PropertiesTab, LayoutTab, LayersTab).
-        """
-        panel, model, nc, lc, ppuf, luf, pc, cs = side_panel
-        mp_tab_instance, ml_tab_instance, ml_tab_instance = mock_dependencies[7:] # Unpack the mocked tab instances
+    def test_initial_state(self, side_panel):
+        """Verifies that the side panel starts empty and as a QTabWidget."""
+        assert isinstance(side_panel, QTabWidget)
+        assert side_panel.count() == 0
+        assert side_panel._tabs == {}
 
-        assert isinstance(panel, QTabWidget)
-        assert panel.count() == 3
+    def test_add_tab_logic(self, side_panel):
+        """Verifies that add_tab correctly adds widgets and tracks them in the internal dict."""
+        mock_widget = QWidget()
+        side_panel.add_tab("test_key", mock_widget, "Test Tab")
+        
+        assert side_panel.count() == 1
+        assert side_panel.tabText(0) == "Test Tab"
+        assert side_panel._tabs["test_key"] == mock_widget
+        assert side_panel.widget(0) == mock_widget
 
-        # Verify correct types of tabs are added by checking the return values of the mocked constructors
-        mp_tab_instance.assert_called_once_with(
-            model=model, node_controller=nc, plot_properties_ui_factory=ppuf,
-            project_controller=pc, config_service=cs, parent=panel
-        )
-        ml_tab_instance.assert_called_once_with(
-            model=model, layout_controller=lc, layout_ui_factory=luf, parent=panel
-        )
-        ml_tab_instance.assert_called_once_with(
-            model=model, node_controller=nc, config_service=cs, parent=panel
-        )
+    def test_duplicate_tab_key_logs_warning(self, side_panel, caplog):
+        """Ensures that adding a tab with an existing key is ignored and logged."""
+        side_panel.add_tab("key1", QWidget(), "Tab 1")
+        
+        # Try adding again with same key
+        side_panel.add_tab("key1", QWidget(), "Tab 2")
+        
+        assert side_panel.count() == 1
+        assert "already exists" in caplog.text
 
-        assert panel.tabText(panel.indexOf(panel.properties_tab)) == "Properties"
-        assert panel.tabText(panel.indexOf(panel.layout_tab)) == "Layout"
-        assert panel.tabText(panel.indexOf(panel.layers_tab)) == "Layers"
+    def test_property_accessors(self, side_panel):
+        """Verifies that the convenience properties return the correct tab instances."""
+        prop_tab = QWidget()
+        layout_tab = QWidget()
+        layers_tab = QWidget()
+        
+        side_panel.add_tab("properties", prop_tab, "Properties")
+        side_panel.add_tab("layout", layout_tab, "Layout")
+        side_panel.add_tab("layers", layers_tab, "Layers")
+        
+        assert side_panel.properties_tab == prop_tab
+        assert side_panel.layout_tab == layout_tab
+        assert side_panel.layers_tab == layers_tab
 
-        # Verify initial tab is PropertiesTab (default by SidePanel implementation)
-        assert panel.currentWidget() == panel.properties_tab
+    def test_on_switch_tab_event(self, side_panel, mock_event_aggregator):
+        """Verifies that the panel switches tabs when the SWITCH_SIDEPANEL_TAB event is published."""
+        tab1 = QWidget()
+        tab2 = QWidget()
+        side_panel.add_tab("tab1", tab1, "Tab 1")
+        side_panel.add_tab("tab2", tab2, "Tab 2")
+        
+        # Start at tab1
+        side_panel.setCurrentWidget(tab1)
+        assert side_panel.currentWidget() == tab1
+        
+        # Simulate event publication
+        # SidePanel subscribed to this event in __init__
+        callback = mock_event_aggregator.subscribe.call_args_list[0][0][1]
+        callback("tab2")
+        
+        assert side_panel.currentWidget() == tab2
 
-    def test_tab_switching_by_name(self, side_panel, qtbot):
-        """
-        Verify that the show_tab_by_name method correctly switches the active tab.
-        """
-        panel, _, _, _, _, _, _, _ = side_panel
+    def test_on_switch_tab_invalid_key_logs_warning(self, side_panel, caplog):
+        """Ensures that switching to a non-existent tab key is handled gracefully."""
+        side_panel.add_tab("tab1", QWidget(), "Tab 1")
+        
+        side_panel._on_switch_tab("non_existent")
+        
+        assert "not found" in caplog.text
+        # Current tab should not have changed (index 0)
+        assert side_panel.currentIndex() == 0
 
-        panel.show_tab_by_name("Layout")
-        assert panel.currentWidget() == panel.layout_tab
+    def test_show_tab_by_name(self, side_panel):
+        """Verifies the programmatic switching by name logic."""
+        prop_tab = QWidget()
+        side_panel.add_tab("properties", prop_tab, "Properties")
+        
+        # We need to manually set up the property if we aren't using real tab classes
+        # But SidePanel uses getattr(self, f"{tab_name...}_tab")
+        # In reality, properties_tab is a property returning the dict value.
+        
+        # Switch to properties
+        side_panel.show_tab_by_name("Properties")
+        assert side_panel.currentWidget() == prop_tab
 
-        panel.show_tab_by_name("Layers")
-        assert panel.currentWidget() == panel.layers_tab
-
-        panel.show_tab_by_name("Properties")
-        assert panel.currentWidget() == panel.properties_tab
-
-        # Test with invalid tab name, ensuring it logs a warning and current tab doesn't change
-        with mocker.patch.object(panel.logger, 'warning') as mock_warning:
-            panel.show_tab_by_name("NonExistentTab")
-            mock_warning.assert_called_once_with("SidePanel: Tab 'NonExistentTab' not found.")
-        assert panel.currentWidget() == panel.properties_tab # Should not change
-
-    def test_on_selection_changed_switches_to_properties_tab_for_plotnode(self, side_panel, mocker):
-        """
-        Verify that when a single PlotNode is selected, the SidePanel automatically
-        switches to the 'Properties' tab.
-        """
-        panel, model, _, _, _, _, _, _ = side_panel
-
-        # Start on a different tab to ensure a switch occurs
-        panel.setCurrentWidget(panel.layers_tab)
-
-        mock_plot_node = mocker.Mock(spec=PlotNode)
-        model.selection = [mock_plot_node]
-
-        # Call the private method directly as we're testing its logic upon signal emission
-        panel._on_selection_changed()
-
-        assert panel.currentWidget() == panel.properties_tab
-        # model.selectionChanged.assert_called_once() # This will be called from outside the panel
-
-    def test_on_selection_changed_does_not_switch_for_non_plotnode(self, side_panel, mocker):
-        """
-        Verify that when a single non-PlotNode (e.g., SceneNode) is selected,
-        the SidePanel does NOT automatically switch to the 'Properties' tab.
-        """
-        panel, model, _, _, _, _, _, _ = side_panel
-        panel.setCurrentWidget(panel.layers_tab) # Start on a different tab
-
-        mock_scene_node = mocker.Mock(spec=SceneNode)
-        model.selection = [mock_scene_node]
-
-        panel._on_selection_changed()
-
-        assert panel.currentWidget() == panel.layers_tab # Should remain on Layers tab
-
-    def test_on_selection_changed_does_not_switch_for_multiple_selection(self, side_panel, mocker):
-        """
-        Verify that when multiple nodes are selected (even if they include PlotNodes),
-        the SidePanel does NOT automatically switch to the 'Properties' tab.
-        """
-        panel, model, _, _, _, _, _, _ = side_panel
-        panel.setCurrentWidget(panel.layers_tab) # Start on a different tab
-
-        mock_plot_node1 = mocker.Mock(spec=PlotNode)
-        mock_plot_node2 = mocker.Mock(spec=PlotNode)
-        model.selection = [mock_plot_node1, mock_plot_node2]
-
-        panel._on_selection_changed()
-
-        assert panel.currentWidget() == panel.layers_tab # Should remain on Layers tab
+    def test_clear_layout_recursively_deletes_widgets(self, side_panel, qtbot):
+        """Verifies that _clear_layout recursively cleans up widgets."""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        child = QPushButton("Test")
+        layout.addWidget(child)
+        
+        side_panel._clear_layout(layout)
+        
+        # Verify the widget is slated for deletion (or no longer in layout)
+        assert layout.count() == 0

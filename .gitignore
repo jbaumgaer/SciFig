@@ -331,3 +331,5 @@ tests/unit/services/__pycache__/test_style_service.cpython-313-pytest-9.0.2.pyc
 tests/unit/services/commands/__pycache__/test_children_order_command.cpython-313-pytest-9.0.2.pyc
 tests/unit/services/commands/__pycache__/test_command_manager.cpython-313-pytest-9.0.2.pyc
 tests/unit/services/commands/__pycache__/test_group_commands.cpython-313-pytest-9.0.2.pyc
+tests/unit/ui/builders/__pycache__/test_ribbon_bar_builder.cpython-313-pytest-9.0.2.pyc
+tests/unit/ui/builders/__pycache__/test_tool_bar_builder.cpython-313-pytest-9.0.2.pyc

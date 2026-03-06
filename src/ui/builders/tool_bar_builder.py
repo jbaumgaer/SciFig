@@ -86,7 +86,8 @@ class ToolBarBuilder(QObject):
         self._event_aggregator.subscribe(
             Events.ACTIVE_TOOL_CHANGED, self._update_tool_bar_state
         )
-        initial_active_tool = self._tool_service.active_tool.name
+        active_tool = self._tool_service.active_tool
+        initial_active_tool = active_tool.name if active_tool else None
         self._update_tool_bar_state(initial_active_tool)
 
         # Return a ToolBarActions dataclass for easy access to specific actions
