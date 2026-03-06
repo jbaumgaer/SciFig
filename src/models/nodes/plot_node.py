@@ -63,11 +63,17 @@ class PlotNode(SceneNode):
                 "height": self.geometry[3],
             }
 
+        # Handle both object and dict (sparse) properties
+        props_data = None
+        if self.plot_properties:
+            if isinstance(self.plot_properties, dict):
+                props_data = self.plot_properties
+            else:
+                props_data = self.plot_properties.to_dict()
+
         node_dict.update(
             {
-                "plot_properties": (
-                    self.plot_properties.to_dict() if self.plot_properties else None
-                ),
+                "plot_properties": props_data,
                 "data_file_path": (
                     str(self.data_file_path) if self.data_file_path else None
                 ),

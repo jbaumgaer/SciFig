@@ -32,3 +32,17 @@ class TestGroupNode:
         assert node.name == "LoadedGroup"
         assert node.visible is True
         assert node.children == []
+
+    def test_group_node_hit_test_delegation(self, mocker):
+        """Ensures GroupNode delegates hit testing to its children."""
+        group = GroupNode(name="group")
+        child = SceneNode(parent=group, name="child")
+        
+        # Mock child's hit_test
+        mocker.patch.object(child, "hit_test", return_value=child)
+        
+        # Point hit
+        hit = group.hit_test((0.5, 0.5))
+        
+        assert hit is child
+        child.hit_test.assert_called_once_with((0.5, 0.5))

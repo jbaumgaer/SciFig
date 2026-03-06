@@ -1,6 +1,7 @@
 import pytest
 
-from src.models.nodes.scene_node import SceneNode, node_factory
+import src.models.nodes.scene_node as scene_node
+from src.models.nodes.scene_node import SceneNode
 
 # --- Fixtures ---
 
@@ -106,12 +107,7 @@ def patch_node_factory_for_mock_scene_node(mocker):
             "MockSceneNode": MockSceneNode,
         }
 
-        cls = _test_node_class_map.get(node_type_str)
-
-        if cls is None:
-            raise ValueError(
-                f"Unknown node type '{node_type_str}' for custom_node_factory."
-            )
+        cls = _test_node_class_map.get(node_type_str, src.models.nodes.scene_node.SceneNode)
 
         if node_type_str == "PlotNode":
             node = cls.from_dict(data, parent=parent, temp_dir=temp_dir)
@@ -126,8 +122,9 @@ def patch_node_factory_for_mock_scene_node(mocker):
 
         return node
 
-    # Patch the node_factory function that is imported into test_scene_node.py
-    mocker.patch("test_scene_node.node_factory", side_effect=custom_node_factory)
+    # Patch the node_factory function everywhere it is used
+    mocker.patch("src.models.nodes.scene_node.node_factory", side_effect=custom_node_factory)
+    return custom_node_factory
 
 
 # --- Tests for SceneNode ---
@@ -143,6 +140,7 @@ class TestSceneNode:
         assert len(node.id) == 32  # UUID hex string length
         assert node.name == ""
         assert node.visible is True
+        assert node.locked is False
 
     def test_initialization_with_custom_values(self):
         """Test initialization with custom name, ID, and parent."""
@@ -152,6 +150,13 @@ class TestSceneNode:
         assert node.name == "ChildNode"
         assert node.id == "custom_id"
         assert node in parent.children
+
+    def test_initialization_locked(self):
+        """Tests initializing a node in locked state."""
+        node = SceneNode()
+        assert node.locked is False
+        node.locked = True
+        assert node.locked is True
 
     def test_add_child(self, root_node):
         """Test adding a child to a node."""
@@ -220,20 +225,10 @@ class TestSceneNode:
 
     def test_hit_test_miss(self, setup_tree):
         """Test a hit test that misses all children (should return root_node for MockSceneNode)."""
-        # (15, 15) misses child1 (0,0,10,10), child2 (10,0,10,10) and child3 (0,10,10,10, invisible)
-        # but hits the root_node (0,0,10,10 - assuming default mock size if not set otherwise)
-        # Let's ensure root_node's effective bounding box covers the children
-        # In setup_tree, child1 is at 0,0 size 10,10, child2 at 10,0 size 10,10, child3 at 0,10 size 10,10.
-        # A hit at (15,15) would only hit child2 if it's visible, but it's not (10,0,10,10).
-        # We need to explicitly define the root_node's hit_test area for this test.
-        # For setup_tree, root_node has name "root", and children are spread out.
-        # Let's assume the root_node itself would be hit if no children are hit AND position is within root's area.
-        # The MockSceneNode's hit_test for parent ensures this.
         assert setup_tree.hit_test((15, 15)) is setup_tree
 
     def test_hit_test_hit_single_child(self, setup_tree):
         """Test a hit test that hits a single child."""
-        child1 = setup_tree.find_node_by_id("child1_id")
         assert setup_tree.hit_test((5, 5)) == setup_tree.find_node_by_id("nested1_1_id")
 
     def test_hit_test_hits_topmost_child(self, root_node):
@@ -328,6 +323,7 @@ class TestSceneNode:
         assert node_dict["type"] == "MockSceneNode"
         assert node_dict["name"] == "root"
         assert node_dict["visible"] is True
+        assert node_dict["locked"] is False
         assert node_dict["children"] == []
 
     def test_to_dict_nested_nodes(self, setup_tree):
@@ -350,6 +346,7 @@ class TestSceneNode:
             "type": "SceneNode",
             "name": "LoadedNode",
             "visible": False,
+            "locked": True,
             "children": [],
         }
         node = SceneNode.from_dict(data)
@@ -357,9 +354,10 @@ class TestSceneNode:
         assert node.id == "12345"
         assert node.name == "LoadedNode"
         assert node.visible is False
+        assert node.locked is True
         assert node.children == []
 
-    def test_node_factory_simple_node(self):
+    def test_node_factory_simple_node(self, patch_node_factory_for_mock_scene_node):
         """Test node_factory for creating a simple node."""
         data = {
             "id": "new_node_id",
@@ -370,7 +368,7 @@ class TestSceneNode:
             "pos": (1, 1),
             "size": (5, 5),
         }
-        node = node_factory(data)
+        node = scene_node.node_factory(data)
         assert isinstance(node, MockSceneNode)
         assert node.id == "new_node_id"
         assert node.name == "NewNode"
@@ -379,7 +377,7 @@ class TestSceneNode:
         assert node.size == (5, 5)
         assert node.children == []
 
-    def test_node_factory_nested_nodes(self):
+    def test_node_factory_nested_nodes(self, patch_node_factory_for_mock_scene_node):
         """Test node_factory for creating a nested node tree."""
         data = {
             "id": "parent_id",
@@ -419,7 +417,7 @@ class TestSceneNode:
                 },
             ],
         }
-        root = node_factory(data)
+        root = scene_node.node_factory(data)
         assert isinstance(root, MockSceneNode)
         assert root.id == "parent_id"
         assert len(root.children) == 2
