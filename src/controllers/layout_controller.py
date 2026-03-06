@@ -118,7 +118,7 @@ class LayoutController:
         if new_geometries:
             # Wrap changes in a command for undo/redo
             command = BatchChangePlotGeometryCommand(
-                self.model, new_geometries, "Align Plots"
+                self.model, self._event_aggregator, new_geometries, "Align Plots"
             )
             self.command_manager.execute_command(command)
             self.logger.debug(
@@ -145,7 +145,7 @@ class LayoutController:
         new_geometries = self._layout_manager.perform_distribute(selected_plots, axis)
         if new_geometries:
             command = BatchChangePlotGeometryCommand(
-                self.model, new_geometries, "Distribute Plots"
+                self.model, self._event_aggregator, new_geometries, "Distribute Plots"
             )
             self.command_manager.execute_command(command)
             self.logger.debug(
