@@ -19,9 +19,9 @@ from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import (
-    AxesLimits,
-    LinePlotProperties,
-    PlotMapping,
+    CoordinateProperties,
+    BaseArtistProperties,
+    PlotProperties,
 )
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
@@ -293,15 +293,15 @@ def plot_node_empty_props():
     return node
 
 
-@pytest.fixture
-def plot_node_with_mapping():
-    """Provides a PlotNode with an existing plot_mapping."""
-    node = PlotNode()
-    node.plot_properties = LinePlotProperties(
-        title="Existing Title",
-        xlabel="Existing X Label",
-        ylabel="Existing Y Label",
-        plot_mapping=PlotMapping(x="ExistingX", y=["ExistingY"]),
-        axes_limits=AxesLimits(xlim=(0, 1), ylim=(0, 1)),
-    )
-    return node
+# @pytest.fixture
+# def plot_node_with_mapping():
+#     """Provides a PlotNode with an existing plot_mapping."""
+#     node = PlotNode()
+#     node.plot_properties = LinePlotProperties(
+#         title="Existing Title",
+#         xlabel="Existing X Label",
+#         ylabel="Existing Y Label",
+#         plot_mapping=PlotMapping(x="ExistingX", y=["ExistingY"]),
+#         axes_limits=AxesLimits(xlim=(0, 1), ylim=(0, 1)),
+#     )
+#     return node
