@@ -16,14 +16,15 @@ class UngroupNodesCommand(BaseCommand):
     def __init__(
         self, model: ApplicationModel, event_aggregator: EventAggregator, group_id: str
     ):
-        super().__init__(model, event_aggregator)
+        description = f"Ungroup node {group_id}"
+        super().__init__(description, event_aggregator)
+        self.model = model
         self.group_id = group_id
         self.ungrouped_children_ids: list[str] = []
         self.original_parent_id: Optional[str] = None
         self.original_group_index: Optional[int] = (
             None  # To restore group's original position
         )
-        self.description = f"Ungroup node {group_id}"
 
     def execute(self):
         group_node = self.model.scene_root.find_node_by_id(self.group_id)

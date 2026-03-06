@@ -5,6 +5,7 @@ from PySide6.QtCore import QPointF
 
 from src.controllers.canvas_controller import CanvasController
 from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.group_node import GroupNode
 from src.shared.events import Events
 
 
@@ -140,7 +141,6 @@ class TestCanvasController:
                                                     mock_event_aggregator, mock_canvas_widget):
         """Verifies that dropping files onto GroupNodes (not PlotNodes) does nothing."""
         mock_canvas_widget.map_to_figure.return_value = (0.3, 0.3)
-        from src.models.nodes.group_node import GroupNode
         group_node = GroupNode(name="Group")
         mock_application_model.get_node_at.return_value = group_node
         

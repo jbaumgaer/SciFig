@@ -4,7 +4,6 @@ import matplotlib.figure
 import pytest
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QApplication, QMenu, QMenuBar, QToolBar
-from src.controllers.main_controller import MainController
 
 from src.models.application_model import ApplicationModel
 from src.models.plots.plot_types import ArtistType

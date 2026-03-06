@@ -20,12 +20,13 @@ class GroupNodesCommand(BaseCommand):
         node_ids: list[str],
         group_name: str = "Group",
     ):
-        super().__init__(model, event_aggregator)
+        description = f"Group nodes: {', '.join(node_ids)}"
+        super().__init__(description, event_aggregator)
+        self.model = model
         self.node_ids = node_ids
         self.group_name = group_name
         self.group_id: Optional[str] = None  # Will be set during execute
         self.original_parents: dict[str, str] = {}  # Store original parent IDs
-        self.description = f"Group nodes: {', '.join(node_ids)}"
 
     def execute(self):
         nodes_to_group: list[SceneNode] = []
