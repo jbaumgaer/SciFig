@@ -1,427 +1,231 @@
-from unittest.mock import MagicMock
-
 import pytest
+from unittest.mock import MagicMock, call
+from pathlib import Path
 
-from src.models.application_model import ApplicationModel
-from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
-from src.models.layout.layout_engine import (
-    FreeLayoutEngine,
-    GridLayoutEngine,
-    LayoutMode,
-)
-from src.models.nodes import GroupNode, PlotNode
-from src.services.config_service import ConfigService
 from src.services.layout_manager import LayoutManager
-
-
-@pytest.fixture
-def mock_application_model():
-    model = MagicMock(spec=ApplicationModel)
-    model.scene_root = GroupNode(name="root_mock")
-    model.modelChanged = MagicMock()
-    model.layoutConfigChanged = MagicMock()
-    # Ensure current_layout_config is an attribute that can be set and read
-    model._current_layout_config = FreeConfig()  # Default or initial state
-    type(model).current_layout_config = property(
-        lambda self: self._current_layout_config,
-        lambda self, value: setattr(self, "_current_layout_config", value),
-    )
-    return model
-
-
-@pytest.fixture
-def mock_free_engine():
-    engine = MagicMock(spec=FreeLayoutEngine)
-    engine.calculate_geometries.return_value = {}
-    return engine
-
-
-@pytest.fixture
-def mock_grid_engine():
-    engine = MagicMock(spec=GridLayoutEngine)
-    engine.calculate_geometries.return_value = {}  # Default empty return
-    return engine
-
-
-@pytest.fixture
-def mock_config_service():
-    config = MagicMock(spec=ConfigService)
-    config.get.side_effect = lambda key, default: {
-        "ui.default_layout_mode": "free_form",
-        "layout.default_grid_rows": 2,
-        "layout.default_grid_cols": 2,
-        "layout.grid_margin_top": 0.05,
-        "layout.grid_margin_bottom": 0.05,
-        "layout.grid_margin_left": 0.05,
-        "layout.grid_margin_right": 0.05,
-        "layout.grid_hspace": [],
-        "layout.grid_wspace": [],
-    }.get(key, default)
-    return config
+from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
+from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.group_node import GroupNode
+from src.shared.constants import LayoutMode
+from src.shared.events import Events
+from src.models.plots.plot_types import ArtistType
 
 
 @pytest.fixture
 def layout_manager(
-    mock_application_model, mock_free_engine, mock_grid_engine, mock_config_service
+    mock_application_model,
+    mock_free_layout_engine,
+    mock_grid_layout_engine,
+    mock_config_service,
+    mock_event_aggregator,
 ):
+    """Provides a LayoutManager instance with all dependencies mocked."""
+    # Override conftest side_effect to provide the required key
+    mock_config_service.get_required.side_effect = lambda k: "free_form"
+    # Ensure model has an initial config to prevent NoneType error in init
+    mock_application_model.current_layout_config = FreeConfig()
+    
     return LayoutManager(
-        mock_application_model, mock_free_engine, mock_grid_engine, mock_config_service
+        application_model=mock_application_model,
+        free_engine=mock_free_layout_engine,
+        grid_engine=mock_grid_layout_engine,
+        config_service=mock_config_service,
+        event_aggregator=mock_event_aggregator,
     )
 
 
-# --- New Test Cases for LayoutManager ---
+class TestLayoutManager:
 
+    # --- Core Lifecycle Tests ---
 
-def test_layout_manager_init(layout_manager, mock_application_model):
-    """
-    Test LayoutManager initialization sets _last_grid_config to None and current_layout_config to FreeConfig.
-    """
-    assert layout_manager._last_grid_config is None
-    assert isinstance(layout_manager._last_free_form_config, FreeConfig)
-    assert layout_manager.layout_mode == LayoutMode.FREE_FORM  # Default mode
-    assert isinstance(mock_application_model.current_layout_config, FreeConfig)
-
-
-def test_layout_manager_init_default_grid_mode_config(
-    mock_application_model, mock_free_engine, mock_grid_engine, mock_config_service
-):
-    """
-    Test LayoutManager initialization when default_layout_mode is 'grid'.
-    _last_grid_config should be set via set_layout_mode with a minimal config.
-    """
-    mock_config_service.get.side_effect = lambda key, default: {
-        "ui.default_layout_mode": "grid",
-        "layout.default_grid_rows": 3,
-        "layout.default_grid_cols": 3,
-        "layout.grid_margin_top": 0.1,
-        "layout.grid_margin_bottom": 0.1,
-        "layout.grid_margin_left": 0.1,
-        "layout.grid_margin_right": 0.1,
-        "layout.grid_hspace": [0.05],
-        "layout.grid_wspace": [0.05],
-    }.get(key, default)
-    manager = LayoutManager(
-        mock_application_model, mock_free_engine, mock_grid_engine, mock_config_service
-    )
-
-    assert manager.layout_mode == LayoutMode.GRID
-    assert manager.ui_selected_layout_mode == LayoutMode.GRID  # New assertion
-    assert isinstance(
-        manager._last_grid_config, GridConfig
-    )  # Should be initialized by set_layout_mode
-    assert manager._last_grid_config.rows == 3  # From mock config
-    assert isinstance(mock_application_model.current_layout_config, GridConfig)
-    assert mock_application_model.current_layout_config.rows == 3
-
-
-def test_create_minimal_grid_config(layout_manager):
-    """
-    Test that _create_minimal_grid_config returns a valid GridConfig with expected defaults.
-    """
-    minimal_config = layout_manager._create_minimal_grid_config()
-    assert isinstance(minimal_config, GridConfig)
-    assert (
-        minimal_config.rows == 2
-    )  # From mock_config_service.get("layout.default_grid_rows", 2)
-    assert (
-        minimal_config.cols == 2
-    )  # From mock_config_service.get("layout.default_grid_cols", 2)
-    assert minimal_config.margins.top == 0.05
-    assert minimal_config.gutters.hspace == []
-
-
-def test_set_layout_mode_to_grid_initializes_last_grid_config(
-    layout_manager, mock_application_model
-):
-    """
-    Test that setting layout mode to GRID for the first time initializes _last_grid_config
-    with a minimal config.
-    """
-    # Ensure _last_grid_config is None initially
-    layout_manager._last_grid_config = None
-    mock_application_model.current_layout_config = FreeConfig()
-
-    layout_manager.set_layout_mode(LayoutMode.GRID)
-
-    assert layout_manager.layout_mode == LayoutMode.GRID
-    assert isinstance(layout_manager._last_grid_config, GridConfig)
-    assert isinstance(mock_application_model.current_layout_config, GridConfig)
-    # Check some properties of the minimal config
-    assert layout_manager._last_grid_config.rows == 2
-    assert layout_manager._last_grid_config.margins.top == 0.05
-    mock_application_model.layoutConfigChanged.emit.assert_called_once()
-    layout_manager.layoutModeChanged.emit.assert_called_once_with(LayoutMode.GRID)
-
-
-def test_set_layout_mode_to_grid_preserves_last_grid_config(
-    layout_manager, mock_application_model
-):
-    """
-    Test that setting layout mode to GRID when _last_grid_config already exists
-    uses the existing _last_grid_config.
-    """
-    initial_margins = Margins(top=0.1, bottom=0.1, left=0.1, right=0.1)
-    initial_gutters = Gutters(hspace=[0.01], wspace=[0.01])
-    initial_grid_config = GridConfig(
-        rows=5,
-        cols=5,
-        row_ratios=[1.0] * 5,
-        col_ratios=[1.0] * 5,
-        margins=initial_margins,
-        gutters=initial_gutters,
-    )
-    layout_manager._last_grid_config = initial_grid_config
-    mock_application_model.current_layout_config = FreeConfig()
-
-    layout_manager.set_layout_mode(LayoutMode.GRID)
-
-    assert layout_manager.layout_mode == LayoutMode.GRID
-    assert (
-        layout_manager._last_grid_config is initial_grid_config
-    )  # Should be the same object
-    assert mock_application_model.current_layout_config is initial_grid_config
-    mock_application_model.layoutConfigChanged.emit.assert_called_once()
-    layout_manager.layoutModeChanged.emit.assert_called_once_with(LayoutMode.GRID)
-
-
-def test_set_layout_mode_to_free_from_grid_saves_grid_config(
-    layout_manager, mock_application_model
-):
-    """
-    Test that switching from GRID to FREE_FORM saves the current GridConfig
-    to _last_grid_config.
-    """
-    # First, ensure we are in GRID mode with a specific config
-    layout_manager.set_layout_mode(LayoutMode.GRID)
-    original_grid_config = layout_manager._last_grid_config
-    mock_application_model.layoutConfigChanged.reset_mock()
-    layout_manager.layoutModeChanged.reset_mock()
-
-    layout_manager.set_layout_mode(LayoutMode.FREE_FORM)
-
-    assert layout_manager.layout_mode == LayoutMode.FREE_FORM
-    assert (
-        layout_manager._last_grid_config is original_grid_config
-    )  # Should have been saved
-    assert isinstance(mock_application_model.current_layout_config, FreeConfig)
-    mock_application_model.layoutConfigChanged.emit.assert_called_once()
-    layout_manager.layoutModeChanged.emit.assert_called_once_with(LayoutMode.FREE_FORM)
-
-
-def test_update_grid_layout_parameters(
-    layout_manager, mock_application_model, mock_grid_engine
-):
-    """
-    Test update_grid_layout_parameters correctly updates GridConfig and applies layout.
-    Ensures _last_grid_config is correctly initialized if None.
-    Also verifies ui_selected_layout_mode is unchanged and set_layout_mode is called.
-    """
-    # Ensure _last_grid_config starts as None
-    layout_manager._last_grid_config = None
-    # Ensure app starts in FREE_FORM and UI also selected FREE_FORM
-    mock_application_model.current_layout_config = FreeConfig()
-    layout_manager._ui_selected_layout_mode = LayoutMode.FREE_FORM
-
-    # Mock scene with plots for inference
-    plot_mocks = [
-        MagicMock(spec=PlotNode, id=f"p{i}", geometry=(0.1 * i, 0.1 * i, 0.2, 0.2))
-        for i in range(4)
-    ]
-    mock_application_model.scene_root.all_descendants.return_value = plot_mocks
-
-    # Mock calculate_geometries return value
-    mock_grid_engine.calculate_geometries.return_value = (
-        {f"p{i}": (0, 0, 0.5, 0.5) for i in range(4)},
-        Margins(0, 0, 0, 0),
-        Gutters([], []),
-    )
-
-    with patch.object(layout_manager, "set_layout_mode") as mock_set_layout_mode:
-        # Call with some explicit parameters
-        updated_geometries = layout_manager.update_grid_layout_parameters(
-            rows=2,
-            cols=2,
-            margin_top=0.1,
-            margin_bottom=0.1,
-            margin_left=0.1,
-            margin_right=0.1,
-            hspace_str="0.05",
-            wspace_str="0.05",
+    def test_init(self, mock_config_service, mock_application_model):
+        """Verifies correct initialization and default mode setting."""
+        mock_config_service.get_required.side_effect = lambda k: "free_form"
+        mock_application_model.current_layout_config = FreeConfig()
+        
+        manager = LayoutManager(
+            mock_application_model, MagicMock(), MagicMock(), mock_config_service, MagicMock()
         )
-        mock_set_layout_mode.assert_called_once_with(LayoutMode.GRID)
+        
+        assert manager.ui_selected_layout_mode == LayoutMode.FREE_FORM
+        assert manager._last_grid_config is None
+        assert isinstance(manager._last_free_form_config, FreeConfig)
 
-    assert isinstance(updated_geometries, dict)
-    assert layout_manager.layout_mode == LayoutMode.GRID
-    assert isinstance(layout_manager._last_grid_config, GridConfig)
-    assert layout_manager._last_grid_config.rows == 2
-    assert layout_manager._last_grid_config.cols == 2
-    assert layout_manager._last_grid_config.margins.top == 0.1
-    assert layout_manager._last_grid_config.gutters.hspace == [0.05]
-    mock_grid_engine.calculate_geometries.assert_called_once()
-    mock_application_model.layoutConfigChanged.emit.assert_called()
-    layout_manager.layoutModeChanged.emit.assert_called_with(
-        LayoutMode.GRID
-    )  # Emitted by internal set_layout_mode
-    # The UI selected mode should remain unchanged by this action
-    assert layout_manager.ui_selected_layout_mode == LayoutMode.FREE_FORM
+    def test_init_default_grid_mode(self, mock_config_service, mock_application_model):
+        """Verifies initialization when default mode is GRID."""
+        mock_config_service.get_required.side_effect = lambda k: "grid"
+        mock_application_model.current_layout_config = FreeConfig()
+        
+        manager = LayoutManager(
+            mock_application_model, MagicMock(), MagicMock(), mock_config_service, MagicMock()
+        )
+        
+        assert manager.layout_mode == LayoutMode.GRID
+        assert isinstance(manager._last_grid_config, GridConfig)
 
+    def test_on_model_reset(self, layout_manager):
+        """Ensures that model reset clears the layout caches."""
+        layout_manager._last_grid_config = MagicMock(spec=GridConfig)
+        layout_manager.on_model_reset()
+        assert layout_manager._last_grid_config is None
 
-def test_infer_grid_parameters(layout_manager, mock_application_model):
-    """
-    Test infer_grid_parameters correctly infers and updates _last_grid_config,
-    initializing it if it's None.
-    Also verifies ui_selected_layout_mode is unchanged and set_layout_mode is called.
-    """
-    # Setup: ensure _last_grid_config is None initially
-    layout_manager._last_grid_config = None
-    # Ensure app starts in FREE_FORM and UI also selected FREE_FORM
-    mock_application_model.current_layout_config = FreeConfig()
-    layout_manager._ui_selected_layout_mode = LayoutMode.FREE_FORM
+    # --- Mode Management Tests ---
 
-    plot_mocks = [
-        MagicMock(spec=PlotNode, id=f"p{i}", geometry=(0.1 * i, 0.1 * i, 0.2, 0.2))
-        for i in range(4)
-    ]
-    mock_application_model.scene_root.all_descendants.return_value = plot_mocks
+    def test_set_layout_mode_to_grid_initializes_cache(self, layout_manager, mock_application_model):
+        """Tests that switching to GRID for the first time creates a minimal config."""
+        layout_manager._last_grid_config = None
+        layout_manager.set_layout_mode(LayoutMode.GRID)
+        
+        assert isinstance(layout_manager._last_grid_config, GridConfig)
+        assert mock_application_model.current_layout_config is layout_manager._last_grid_config
 
-    with patch.object(layout_manager, "set_layout_mode") as mock_set_layout_mode:
-        layout_manager.infer_grid_parameters()
-        mock_set_layout_mode.assert_called_once_with(LayoutMode.GRID)
+    def test_set_layout_mode_preserves_existing_cache(self, layout_manager, mock_application_model):
+        """Tests that switching to GRID uses the existing cached config if present."""
+        existing = GridConfig(5, 5, [1]*5, [1]*5, Margins(0,0,0,0), Gutters([],[]))
+        layout_manager._last_grid_config = existing
+        
+        layout_manager.set_layout_mode(LayoutMode.GRID)
+        
+        assert mock_application_model.current_layout_config is existing
 
-    assert isinstance(layout_manager._last_grid_config, GridConfig)
-    assert layout_manager._last_grid_config.rows > 0
-    assert layout_manager._last_grid_config.cols > 0
-    # The active layout mode should now be GRID
-    assert layout_manager.layout_mode == LayoutMode.GRID
-    # The UI selected mode should remain unchanged by this action
-    assert layout_manager.ui_selected_layout_mode == LayoutMode.FREE_FORM
-    mock_application_model.layoutConfigChanged.emit.assert_called()
-    layout_manager.layoutModeChanged.emit.assert_called_once_with(
-        LayoutMode.GRID
-    )  # Emitted by internal set_layout_mode
+    def test_ui_selected_layout_mode_setter(self, layout_manager, mock_event_aggregator):
+        """Tests the property setter and its event publication."""
+        layout_manager.ui_selected_layout_mode = LayoutMode.GRID
+        mock_event_aggregator.publish.assert_any_call(
+            Events.UI_LAYOUT_MODE_CHANGED, ui_layout_mode=LayoutMode.GRID
+        )
 
+    # --- Orchestration & Delegation Tests ---
 
-def test_optimize_layout_action_none_config(
-    layout_manager, mock_application_model, mock_grid_engine
-):
-    """
-    Test optimize_layout_action correctly handles _last_grid_config being None,
-    logging an error and returning early.
-    Also verifies ui_selected_layout_mode is unchanged and set_layout_mode is called.
-    """
-    layout_manager._last_grid_config = None
-    # Ensure app starts in FREE_FORM and UI also selected FREE_FORM
-    mock_application_model.current_layout_config = FreeConfig()
-    layout_manager._ui_selected_layout_mode = LayoutMode.FREE_FORM
+    def test_get_active_engine(self, layout_manager, mock_application_model, 
+                               mock_free_layout_engine, mock_grid_layout_engine):
+        """Verifies engine selection based on current model state."""
+        mock_application_model.current_layout_config = FreeConfig()
+        assert layout_manager.get_active_engine() is mock_free_layout_engine
+        
+        mock_application_model.current_layout_config = GridConfig(1,1,[1],[1], Margins(0,0,0,0), Gutters([],[]))
+        assert layout_manager.get_active_engine() is mock_grid_layout_engine
 
-    plot_mocks = [MagicMock(spec=PlotNode, id="p1")]  # Some plots
-    mock_application_model.scene_root.all_descendants.return_value = plot_mocks
+    def test_get_current_layout_geometries(self, layout_manager, mock_free_layout_engine, mock_application_model):
+        """Verifies coordination with engines to get geometries."""
+        plot = PlotNode(id="p1")
+        mock_free_layout_engine.calculate_geometries.return_value = ({"p1": (0,0,1,1)}, None, None)
+        
+        geoms = layout_manager.get_current_layout_geometries([plot])
+        
+        assert geoms == {"p1": (0,0,1,1)}
+        mock_free_layout_engine.calculate_geometries.assert_called_once_with(
+            [plot], mock_application_model.current_layout_config
+        )
 
-    with patch.object(layout_manager, "set_layout_mode") as mock_set_layout_mode:
-        with patch.object(layout_manager.logger, "error") as mock_logger_error:
-            layout_manager.optimize_layout_action()
-            mock_set_layout_mode.assert_called_once_with(
-                LayoutMode.GRID
-            )  # Should try to activate grid mode
-            mock_logger_error.assert_called_once_with(
-                "optimize_layout_action called but _last_grid_config is None. Cannot optimize without a grid config."
-            )
+    # --- Inference Logic Tests ---
 
-    mock_grid_engine.calculate_geometries.assert_not_called()
-    mock_application_model.layoutConfigChanged.emit.assert_not_called()
-    layout_manager.layoutModeChanged.emit.assert_not_called()  # No actual mode change, so no emit
-    # The UI selected mode should remain unchanged by this action
-    assert layout_manager.ui_selected_layout_mode == LayoutMode.FREE_FORM
-    # The active layout mode should now be GRID due to set_layout_mode call
-    assert layout_manager.layout_mode == LayoutMode.GRID
+    def test_infer_grid_dimensions(self, layout_manager):
+        """Tests the square-ish dimension inference logic."""
+        assert layout_manager._infer_grid_dimensions(4) == (2, 2)
+        assert layout_manager._infer_grid_dimensions(2) == (1, 2)
+        assert layout_manager._infer_grid_dimensions(3) == (1, 3)
 
+    def test_infer_grid_config_from_plots(self, layout_manager):
+        """Tests that heuristics correctly identify grid parameters from free positions."""
+        p1 = PlotNode(id="p1"); p1.geometry = (0.1, 0.1, 0.4, 0.4)
+        p2 = PlotNode(id="p2"); p2.geometry = (0.5, 0.1, 0.4, 0.4)
+        
+        config = layout_manager.infer_grid_config_from_plots([p1, p2], None)
+        
+        assert config.rows == 1
+        assert config.cols == 2
+        assert config.margins.left == 0.1
+        assert config.margins.bottom == 0.1
+        # Right margin = 1.0 - (0.5 + 0.4) = 0.1
+        assert config.margins.right == 0.1
 
-def test_optimize_layout_action(
-    layout_manager, mock_application_model, mock_grid_engine
-):
-    """
-    Test optimize_layout_action updates _last_grid_config with calculated margins/gutters.
-    Also verifies ui_selected_layout_mode is unchanged and set_layout_mode is called.
-    """
-    # Setup: ensure _last_grid_config is a valid GridConfig
-    layout_manager._last_grid_config = GridConfig(
-        rows=1,
-        cols=1,
-        row_ratios=[1.0],
-        col_ratios=[1.0],
-        margins=Margins(top=0.0, bottom=0.0, left=0.0, right=0.0),
-        gutters=Gutters(hspace=[], wspace=[]),
-    )
-    # Ensure app starts in FREE_FORM and UI also selected FREE_FORM
-    mock_application_model.current_layout_config = FreeConfig()
-    layout_manager._ui_selected_layout_mode = LayoutMode.FREE_FORM
+    # --- Grid Parameter Updates (The big one) ---
 
-    plot_mocks = [MagicMock(spec=PlotNode, id="p1")]
-    mock_application_model.scene_root.all_descendants.return_value = plot_mocks
+    def test_update_grid_layout_parameters(self, layout_manager, mock_grid_layout_engine, mocker):
+        """Tests merging logic of update_grid_layout_parameters."""
+        # 1. Setup base state
+        base_config = GridConfig(1, 1, [1.0], [1.0], Margins(0.05, 0.05, 0.05, 0.05), Gutters([], []))
+        layout_manager._last_grid_config = base_config
+        
+        # Mock set_layout_mode to avoid side effects
+        mocker.patch.object(layout_manager, "set_layout_mode")
+        
+        # Mock engine return
+        mock_grid_layout_engine.calculate_geometries.return_value = ({}, base_config.margins, base_config.gutters)
+        
+        # 2. Update only rows and top margin
+        layout_manager.update_grid_layout_parameters(rows=3, margin_top=0.2, hspace_str="0.1, 0.1")
+        
+        # 3. Verify resulting config
+        updated = layout_manager._last_grid_config
+        assert updated.rows == 3
+        assert updated.cols == 1 # preserved from base
+        assert updated.margins.top == 0.2
+        assert updated.margins.bottom == 0.05 # preserved from base
+        assert updated.gutters.hspace == [0.1, 0.1] # parsed from string
 
-    # Mock calculate_geometries to return specific calculated margins/gutters
-    mock_grid_engine.calculate_geometries.return_value = (
-        {plot_mocks[0]: (0.1, 0.1, 0.8, 0.8)},
-        Margins(top=0.05, bottom=0.05, left=0.05, right=0.05),
-        Gutters(hspace=[0.02], wspace=[0.02]),
-    )
+    # --- Template & Optimization Tests ---
 
-    with patch.object(layout_manager, "set_layout_mode") as mock_set_layout_mode:
-        layout_manager.optimize_layout_action()
-        mock_set_layout_mode.assert_called_once_with(LayoutMode.GRID)
+    def test_apply_layout_template(self, layout_manager, mock_application_model, mock_event_aggregator):
+        """Tests that redistribution correctly populates a new scene graph."""
+        old_state = [{"data": "df1", "plot_properties_dict": {"plot_type": "scatter"}, "id": "old1"}]
+        mock_application_model.extract_plot_states.return_value = old_state
+        
+        new_root = GroupNode(name="Template")
+        new_plot = PlotNode(id="new1")
+        new_root.add_child(new_plot)
+        
+        layout_manager.apply_layout_template(new_root)
+        
+        assert new_plot.data == "df1"
+        mock_event_aggregator.publish.assert_any_call(
+            Events.INITIALIZE_PLOT_THEME_REQUESTED, node_id="new1", plot_type=ArtistType.SCATTER
+        )
 
-    assert layout_manager._last_grid_config.margins.top == 0.05
-    assert layout_manager._last_grid_config.gutters.hspace == [0.02]
-    # The active layout mode should now be GRID
-    assert layout_manager.layout_mode == LayoutMode.GRID
-    # The UI selected mode should remain unchanged by this action
-    assert layout_manager.ui_selected_layout_mode == LayoutMode.FREE_FORM
-    mock_grid_engine.calculate_geometries.assert_called_once_with(
-        plot_mocks, layout_manager._last_grid_config, use_constrained_optimization=True
-    )
-    mock_application_model.layoutConfigChanged.emit.assert_called()
-    layout_manager.layoutModeChanged.emit.assert_called_once_with(
-        LayoutMode.GRID
-    )  # Emitted by internal set_layout_mode
+    def test_get_optimized_grid_config(self, layout_manager, mock_application_model, mock_grid_layout_engine):
+        """Verifies correct call to grid engine for constrained optimization."""
+        real_config = GridConfig(1, 1, [1.0], [1.0], Margins(0,0,0,0), Gutters([],[]))
+        layout_manager._last_grid_config = real_config
+        
+        # Ensure plots are present to avoid None return
+        plot = PlotNode()
+        mock_application_model.scene_root.all_descendants.return_value = [plot]
+        
+        mock_grid_layout_engine.calculate_geometries.return_value = (
+            {}, Margins(0.1, 0.1, 0.1, 0.1), Gutters([], [])
+        )
+        
+        opt_config = layout_manager.get_optimized_grid_config()
+        
+        assert opt_config.margins.top == 0.1
+        args, kwargs = mock_grid_layout_engine.calculate_geometries.call_args
+        assert kwargs["use_constrained_optimization"] is True
 
+    # --- Utility Tests ---
 
-# Test cases for get_active_engine
-def test_get_active_engine_free_form(layout_manager, mock_free_engine):
-    """Test get_active_engine returns FreeLayoutEngine in FREE_FORM mode."""
-    layout_manager.set_layout_mode(LayoutMode.FREE_FORM)
-    assert layout_manager.get_active_engine() is mock_free_engine
+    def test_create_minimal_grid_config(self, layout_manager, mock_config_service):
+        """Verifies that minimal config correctly uses values from ConfigService."""
+        mock_config_service.get.side_effect = lambda k, d: {
+            "layout.default_grid_rows": 4,
+            "layout.grid_margin_top": 0.15
+        }.get(k, d)
+        
+        config = layout_manager._create_minimal_grid_config()
+        
+        assert config.rows == 4
+        assert config.margins.top == 0.15
 
-
-def test_get_active_engine_grid(layout_manager, mock_grid_engine):
-    """Test get_active_engine returns GridLayoutEngine in GRID mode."""
-    layout_manager.set_layout_mode(LayoutMode.GRID)
-    assert layout_manager.get_active_engine() is mock_grid_engine
-
-
-# Test cases for get_current_layout_geometries
-def test_get_current_layout_geometries_free_form(
-    layout_manager, mock_free_engine, mock_application_model
-):
-    """Test get_current_layout_geometries in FREE_FORM mode."""
-    layout_manager.set_layout_mode(LayoutMode.FREE_FORM)
-    plot_mock = MagicMock(spec=PlotNode, id="plot_free")
-    mock_free_engine.calculate_geometries.return_value = {plot_mock: (0, 0, 0.5, 0.5)}
-    geometries = layout_manager.get_current_layout_geometries([plot_mock])
-    mock_free_engine.calculate_geometries.assert_called_once_with(
-        [plot_mock], mock_application_model.current_layout_config
-    )
-    assert geometries == {"plot_free": (0, 0, 0.5, 0.5)}
-
-
-def test_get_current_layout_geometries_grid(
-    layout_manager, mock_grid_engine, mock_application_model
-):
-    """Test get_current_layout_geometries in GRID mode."""
-    layout_manager.set_layout_mode(LayoutMode.GRID)
-    plot_mock = MagicMock(spec=PlotNode, id="plot_grid")
-    mock_grid_engine.calculate_geometries.return_value = {plot_mock: (0, 0, 0.5, 0.5)}
-    geometries = layout_manager.get_current_layout_geometries([plot_mock])
-    mock_grid_engine.calculate_geometries.assert_called_once_with(
-        [plot_mock], mock_application_model.current_layout_config
-    )
-    assert geometries == {"plot_grid": (0, 0, 0.5, 0.5)}
+    @pytest.mark.parametrize("config_val, expected", [
+        ("0.1, 0.2", [0.1, 0.2]),
+        ("[0.3, 0.4]", [0.3, 0.4]),
+        (0.5, [0.5]),
+        ([0.6, 0.7], [0.6, 0.7]),
+        ("invalid", [0.01]),
+    ])
+    def test_parse_float_list_from_config(self, layout_manager, mock_config_service, config_val, expected):
+        """Tests robust parsing of float lists."""
+        mock_config_service.get.side_effect = None
+        mock_config_service.get.return_value = config_val
+        result = layout_manager._parse_float_list_from_config("key", [0.01])
+        assert result == expected

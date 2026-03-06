@@ -44,8 +44,8 @@ class LayoutManager:
         self.logger.info("LayoutManager initialized.")
 
         # Store last used configs for each mode to prevent loss of settings when switching
-        self._last_grid_config: Optional[GridConfig] = None  # Changed to None
-        self._last_free_form_config: Optional[FreeConfig] = None  # Changed to None
+        self._last_grid_config: Optional[GridConfig] = None
+        self._last_free_form_config: Optional[FreeConfig] = FreeConfig()
 
         # Initialize the UI selected mode and the application model's current_layout_config based on config service
         default_mode_str = self._config_service.get_required("ui.default_layout_mode")
@@ -578,13 +578,12 @@ class LayoutManager:
 
         # Handle granular gutters
         effective_gutters = base_grid_config.gutters
-        final_gutters = Gutters(
-            hspace=effective_gutters.hspace, wspace=effective_gutters.wspace
-        )
+        final_hspace = effective_gutters.hspace
+        final_wspace = effective_gutters.wspace
 
         if hspace_str is not None:
             try:
-                final_gutters.hspace = [
+                final_hspace = [
                     float(x.strip()) for x in hspace_str.split(",") if x.strip()
                 ]
             except ValueError:
@@ -593,13 +592,15 @@ class LayoutManager:
                 )
         if wspace_str is not None:
             try:
-                final_gutters.wspace = [
+                final_wspace = [
                     float(x.strip()) for x in wspace_str.split(",") if x.strip()
                 ]
             except ValueError:
                 self.logger.warning(
                     f"Invalid wspace_str format: '{wspace_str}'. Keeping old wspace."
                 )
+
+        final_gutters = Gutters(hspace=final_hspace, wspace=final_wspace)
 
         all_plots = list(
             self._application_model.scene_root.all_descendants(of_type=PlotNode)
