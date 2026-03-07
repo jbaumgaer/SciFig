@@ -17,7 +17,8 @@ from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator  # New import
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import LayoutMode
-from src.shared.events import Events  # New import
+from src.shared.events import Events
+from src.shared.geometry import Rect  # New import
 
 
 class LayoutController:
@@ -69,6 +70,27 @@ class LayoutController:
             Events.CHANGE_GRID_PARAMETER_REQUESTED,
             self._handle_change_grid_parameter_request,
         )
+        self._event_aggregator.subscribe(
+            Events.BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED,
+            self._on_batch_change_geometry_request,
+        )
+
+    def _on_batch_change_geometry_request(self, geometries: dict[str, Rect]):
+        """
+        Handles requests to change the geometries of multiple plots at once.
+        Encapsulates the changes in a single undoable command.
+        """
+        if not geometries:
+            return
+
+        command = BatchChangePlotGeometryCommand(
+            model=self.model,
+            event_aggregator=self._event_aggregator,
+            new_geometries=geometries,
+            description="Move Plots"
+        )
+        self.command_manager.execute_command(command)
+        self.logger.info(f"Executed BatchChangePlotGeometryCommand for {len(geometries)} plots.")
 
     def set_layout_mode(self, mode: LayoutMode):
         """
