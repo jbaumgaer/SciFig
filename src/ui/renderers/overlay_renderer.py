@@ -71,9 +71,18 @@ class OverlayRenderer:
         self._event_aggregator.subscribe(
             Events.CLEAR_INTERACTION_PREVIEW_REQUESTED, self.clear_previews
         )
+        # Refresh overlays on structural or geometry changes
         self._event_aggregator.subscribe(
-            Events.SCENE_GRAPH_CHANGED, self.clear_all
+            Events.SCENE_GRAPH_CHANGED, self._on_scene_graph_changed
         )
+
+    def _on_scene_graph_changed(self, *args, **kwargs):
+        """
+        Refreshes all overlays to ensure they align with updated model geometries.
+        """
+        # We use the existing selection handler to perform the redraw
+        selected_ids = [node.id for node in self._model.selection]
+        self._on_selection_changed(selected_ids)
 
     def _on_selection_changed(self, selected_node_ids: list[str]):
         """Reactive handler for drawing highlights and handles."""
