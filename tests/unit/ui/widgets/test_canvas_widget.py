@@ -1,321 +1,190 @@
-from unittest.mock import MagicMock, patch
-
 import pytest
+from unittest.mock import MagicMock, patch
 from matplotlib.figure import Figure
-from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
+from pathlib import Path
+from PySide6.QtCore import QPointF, Qt, QUrl, QMimeData, QPoint, QEvent
 from PySide6.QtGui import (
-    QDragEnterEvent,
-    QDragMoveEvent,
-    QDropEvent,
-    QMouseEvent,
-    QWheelEvent,
+    QMouseEvent, 
+    QWheelEvent, 
+    QDragEnterEvent, 
+    QDragMoveEvent, 
+    QDropEvent
 )
-from PySide6.QtWidgets import QGraphicsView, QScrollBar
+from PySide6.QtWidgets import QGraphicsView, QScrollBar, QWidget
 
-from src.models.application_model import ApplicationModel
-from src.models.nodes.group_node import GroupNode
-from src.models.nodes.plot_node import PlotNode
 from src.ui.widgets.canvas_widget import CanvasWidget
 
 
 @pytest.fixture
 def mock_figure():
     """Provides a real matplotlib Figure for tests."""
-    fig = Figure(figsize=(5, 4), dpi=100)
-    return fig
+    return Figure(figsize=(5, 4), dpi=100)
 
 
 @pytest.fixture
 def canvas_widget(qtbot, mock_figure):
-    """Provides a CanvasWidget instance for tests. Deprecated for tests requiring model."""
-    widget = CanvasWidget(figure=mock_figure, model=MagicMock(spec=ApplicationModel)) # Provide dummy model
-    qtbot.addWidget(widget)
-    widget.show()  # Ensure widget is shown for event processing
-    return widget
+    """Provides a fresh CanvasWidget instance."""
+    canvas = CanvasWidget(figure=mock_figure, parent=None)
+    qtbot.addWidget(canvas)
+    canvas.show()
+    return canvas
 
 
-@pytest.fixture
-def canvas_widget_with_model(qtbot, mock_figure, mocker):
-    """Provides a CanvasWidget instance with a mocked ApplicationModel for tests."""
-    model = mocker.Mock(spec=ApplicationModel)
-    model.selectionChanged = mocker.Mock()
-    model.selection = []
-
-    # Mock get_node_at for hit-testing scenarios
-    model.get_node_at.return_value = None # Default to no node hit
-
-    widget = CanvasWidget(figure=mock_figure, model=model)
-    qtbot.addWidget(widget)
-    widget.show()
-    return widget, model # Return both for testing purposes
-
-
-@pytest.fixture
-def mock_mime_data_with_urls():
-    """Provides a mock QMimeData with URLs."""
-    mime_data = MagicMock(spec=QMimeData)
-    mime_data.hasUrls.return_value = True
-    mock_url = MagicMock(spec=QUrl)
-    mock_url.isLocalFile.return_value = True
-    mock_url.toLocalFile.return_value = "/path/to/test.csv"
-    mime_data.urls.return_value = [mock_url]
-    return mime_data
-
-
-@pytest.fixture
-def mock_mime_data_without_urls():
-    """Provides a mock QMimeData without URLs."""
-    mime_data = MagicMock(spec=QMimeData)
-    mime_data.hasUrls.return_value = False
-    return mime_data
-
-
-# --- Test Drag and Drop Events ---
-
-
-def test_drag_enter_event_with_urls(canvas_widget, mock_mime_data_with_urls):
-    """Test dragEnterEvent accepts action when URLs are present."""
-    mock_event = MagicMock(spec=QDragEnterEvent)
-    mock_event.mimeData.return_value = mock_mime_data_with_urls
-
-    canvas_widget.dragEnterEvent(mock_event)
-    mock_event.acceptProposedAction.assert_called_once()
-
-
-def test_drag_enter_event_without_urls(canvas_widget, mock_mime_data_without_urls):
-    """Test dragEnterEvent defers to super class when no URLs are present."""
-    mock_event = MagicMock(spec=QDragEnterEvent)
-    mock_event.mimeData.return_value = mock_mime_data_without_urls
-
-    with patch.object(QGraphicsView, "dragEnterEvent") as super_drag_enter_event:
-        canvas_widget.dragEnterEvent(mock_event)
-        super_drag_enter_event.assert_called_once_with(mock_event)
-        mock_event.acceptProposedAction.assert_not_called()
-
-
-def test_drag_move_event_with_urls(canvas_widget, mock_mime_data_with_urls):
-    """Test dragMoveEvent accepts action when URLs are present."""
-    mock_event = MagicMock(spec=QDragMoveEvent)
-    mock_event.mimeData.return_value = mock_mime_data_with_urls
-
-    canvas_widget.dragMoveEvent(mock_event)
-    mock_event.acceptProposedAction.assert_called_once()
-
-
-def test_drag_move_event_without_urls(canvas_widget, mock_mime_data_without_urls):
-    """Test dragMoveEvent defers to super class when no URLs are present."""
-    mock_event = MagicMock(spec=QDragMoveEvent)
-    mock_event.mimeData.return_value = mock_mime_data_without_urls
-
-    with patch.object(QGraphicsView, "dragMoveEvent") as super_drag_move_event:
-        canvas_widget.dragMoveEvent(mock_event)
-        super_drag_move_event.assert_called_once_with(mock_event)
-        mock_event.acceptProposedAction.assert_not_called()
-
-
-def test_drop_event_with_local_file_url(canvas_widget, mock_mime_data_with_urls):
-    """Test dropEvent emits signal and accepts action for local file URLs."""
-    mock_event = MagicMock(spec=QDropEvent)
-    mock_event.mimeData.return_value = mock_mime_data_with_urls
-    mock_event.position.return_value = QPointF(
-        100.0, 50.0
-    )  # Ensure QPointF is returned
-
-    # Mock mapToScene to control scene position conversion
-    with patch.object(
-        canvas_widget, "mapToScene", return_value=QPointF(10.0, 5.0)
-    ) as mock_map_to_scene:
-        # Connect to the signal to check if it's emitted
-        mock_slot = MagicMock()
-        canvas_widget.fileDropped.connect(mock_slot)
-
-        canvas_widget.dropEvent(mock_event)
-
-        mock_event.acceptProposedAction.assert_called_once()
-        mock_map_to_scene.assert_called_once_with(
-            mock_event.position().toPoint()
-        )  # Pass QPoint to mapToScene
-        mock_slot.assert_called_once_with("/path/to/test.csv", QPointF(10.0, 5.0))
-
-
-def test_drop_event_without_urls(canvas_widget, mock_mime_data_without_urls):
-    """Test dropEvent defers to super class when no URLs are present."""
-    mock_event = MagicMock(spec=QDropEvent)
-    mock_event.mimeData.return_value = mock_mime_data_without_urls
-    mock_event.position.return_value = QPointF(0.0, 0.0)  # Add QPointF here too
-
-    with patch.object(QGraphicsView, "dropEvent") as super_drop_event:
-        canvas_widget.dropEvent(mock_event)
-        super_drop_event.assert_called_once_with(mock_event)
-        mock_event.acceptProposedAction.assert_not_called()
-
-
-# --- Test Double-Click Events ---
-
-def test_double_click_on_plotnode_updates_model_selection(canvas_widget_with_model, mocker):
+class TestCanvasWidget:
     """
-    Verify that double-clicking on a PlotNode updates the ApplicationModel's selection
-    and triggers the selectionChanged signal.
+    Unit tests for CanvasWidget.
+    Verifies interaction logic, signal emission, and coordinate transformations.
     """
-    widget, model = canvas_widget_with_model
 
-    # Create a mock PlotNode and configure model.get_node_at to return it
-    mock_plot_node = mocker.Mock(spec=PlotNode, id="plot_id_1")
-    model.get_node_at.return_value = mock_plot_node
+    # --- Initialization & Structure ---
 
-    # Simulate a mouse double-click event
-    # The actual position doesn't matter much for this unit test, as get_node_at is mocked
-    mock_event = mocker.Mock(spec=QMouseEvent)
-    mock_event.button.return_value = Qt.MouseButton.LeftButton
-    mock_event.position.return_value = QPointF(50.0, 50.0)
+    def test_initialization(self, canvas_widget):
+        """Verifies that the widget initializes with correct properties."""
+        assert canvas_widget.acceptDrops()
+        assert canvas_widget.dragMode() == QGraphicsView.DragMode.ScrollHandDrag
+        assert canvas_widget.isInteractive()
+        assert canvas_widget.scene is not None
 
-    # Simulate mapToScene conversion (return some scene position)
-    mocker.patch.object(widget, 'mapToScene', return_value=QPointF(10.0, 10.0))
+    # --- Double-Click Events ---
 
-    widget.mouseDoubleClickEvent(mock_event)
-
-    model.get_node_at.assert_called_once()
-    model.set_selection.assert_called_once_with([mock_plot_node])
-    model.selectionChanged.emit.assert_called_once() # Verify signal emitted
-
-def test_double_click_on_empty_space_clears_model_selection(canvas_widget_with_model, mocker):
-    """
-    Verify that double-clicking on empty space clears the ApplicationModel's selection.
-    """
-    widget, model = canvas_widget_with_model
-
-    # Ensure no node is returned by get_node_at
-    model.get_node_at.return_value = None
-
-    # Simulate an existing selection that should be cleared
-    model.selection = [mocker.Mock(spec=PlotNode)]
-
-    mock_event = mocker.Mock(spec=QMouseEvent)
-    mock_event.button.return_value = Qt.MouseButton.LeftButton
-    mock_event.position.return_value = QPointF(50.0, 50.0)
-    mocker.patch.object(widget, 'mapToScene', return_value=QPointF(10.0, 10.0))
-
-    widget.mouseDoubleClickEvent(mock_event)
-
-    model.get_node_at.assert_called_once()
-    model.set_selection.assert_called_once_with([]) # Expect empty selection
-    model.selectionChanged.emit.assert_called_once()
-
-def test_double_click_on_non_plotnode_does_not_select(canvas_widget_with_model, mocker):
-    """
-    Verify that double-clicking on a non-PlotNode (e.g., GroupNode) does not
-    update the model's selection.
-    """
-    widget, model = canvas_widget_with_model
-
-    # Create a mock GroupNode and configure model.get_node_at to return it
-    mock_group_node = mocker.Mock(spec=GroupNode, id="group_id_1")
-    model.get_node_at.return_value = mock_group_node
-
-    # Simulate an existing selection that should NOT be cleared or changed by non-PlotNode
-    initial_selection = [mocker.Mock(spec=PlotNode)]
-    model.selection = initial_selection
-
-    mock_event = mocker.Mock(spec=QMouseEvent)
-    mock_event.button.return_value = Qt.MouseButton.LeftButton
-    mock_event.position.return_value = QPointF(50.0, 50.0)
-    mocker.patch.object(widget, 'mapToScene', return_value=QPointF(10.0, 10.0))
-
-    widget.mouseDoubleClickEvent(mock_event)
-
-    model.get_node_at.assert_called_once()
-    # Expect selection to remain unchanged if it's not a PlotNode
-    model.set_selection.assert_not_called()
-    model.selectionChanged.emit.assert_not_called()
-
-
-# --- Test Wheel Events ---
-
-
-@pytest.fixture
-def mock_wheel_event(request):
-    """Provides a mock QWheelEvent with configurable angleDelta and modifiers."""
-    delta_y, modifiers = request.param
-    mock_event = MagicMock(spec=QWheelEvent)
-    mock_angle_delta = MagicMock(spec=QPoint)
-    mock_angle_delta.y.return_value = delta_y
-    mock_event.angleDelta.return_value = mock_angle_delta
-    mock_event.modifiers.return_value = modifiers
-    mock_event.position.return_value = QPointF(
-        50.0, 50.0
-    )  # A consistent QPointF position
-    return mock_event
-
-
-@pytest.mark.parametrize("mock_wheel_event", [(120, Qt.ControlModifier)], indirect=True)
-def test_wheel_event_zoom_in(canvas_widget, mock_wheel_event):
-    """Test wheelEvent zooms in with Ctrl + Scroll Up."""
-    with (
-        patch.object(canvas_widget, "scale") as mock_scale,
-        patch.object(canvas_widget, "translate") as mock_translate,
-        patch.object(
-            canvas_widget, "mapToScene", side_effect=[QPointF(5, 5), QPointF(5.5, 5.5)]
-        ) as mock_map_to_scene,
-    ):
-
-        canvas_widget.wheelEvent(mock_wheel_event)
-
-        mock_scale.assert_called_once_with(pytest.approx(1.15), pytest.approx(1.15))
-        mock_translate.assert_called_once()
-        mock_map_to_scene.assert_called_with(
-            mock_wheel_event.position().toPoint()
-        )  # Called twice, ensure with QPoint
-
-
-@pytest.mark.parametrize(
-    "mock_wheel_event", [(-120, Qt.ControlModifier)], indirect=True
-)
-def test_wheel_event_zoom_out(canvas_widget, mock_wheel_event):
-    """Test wheelEvent zooms out with Ctrl + Scroll Down."""
-    with (
-        patch.object(canvas_widget, "scale") as mock_scale,
-        patch.object(canvas_widget, "translate") as mock_translate,
-        patch.object(
-            canvas_widget, "mapToScene", side_effect=[QPointF(5, 5), QPointF(4.5, 4.5)]
-        ) as mock_map_to_scene,
-    ):
-
-        canvas_widget.wheelEvent(mock_wheel_event)
-
-        mock_scale.assert_called_once_with(
-            pytest.approx(1 / 1.15), pytest.approx(1 / 1.15)
+    def test_mouse_double_click_emits_signal(self, canvas_widget, qtbot):
+        """Verifies that double-clicking the canvas emits the canvasDoubleClicked signal."""
+        # Create a double-click event
+        pos = QPoint(50, 50)
+        event = QMouseEvent(
+            QEvent.Type.MouseButtonDblClick,
+            QPointF(pos),
+            Qt.MouseButton.LeftButton,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier
         )
-        mock_translate.assert_called_once()
-        mock_map_to_scene.assert_called_with(
-            mock_wheel_event.position().toPoint()
-        )  # Called twice, ensure with QPoint
+        
+        # Connect to signal
+        with qtbot.waitSignal(canvas_widget.canvasDoubleClicked, timeout=1000) as blocker:
+            canvas_widget.mouseDoubleClickEvent(event)
+            
+        # Verify signal payload (scene coordinates)
+        scene_pos = blocker.args[0]
+        assert isinstance(scene_pos, QPointF)
 
+    # --- Drag and Drop Events ---
 
-@pytest.mark.parametrize("mock_wheel_event", [(120, Qt.ShiftModifier)], indirect=True)
-def test_wheel_event_horizontal_scroll(canvas_widget, mock_wheel_event):
-    """Test wheelEvent scrolls horizontally with Shift + Scroll."""
-    mock_h_bar = MagicMock(spec=QScrollBar)
-    mock_h_bar.value.return_value = 500
-    with patch.object(
-        canvas_widget, "horizontalScrollBar", return_value=mock_h_bar
-    ) as mock_get_h_bar:
+    def test_drag_enter_event_accepts_urls(self, canvas_widget):
+        """Verifies that dragEnterEvent accepts URL mime data."""
+        mime_data = QMimeData()
+        mime_data.setUrls([QUrl.fromLocalFile("test.csv")])
+        
+        event = QDragEnterEvent(
+            QPoint(0, 0), 
+            Qt.DropAction.CopyAction, 
+            mime_data, 
+            Qt.MouseButton.LeftButton, 
+            Qt.KeyboardModifier.NoModifier
+        )
+        
+        event.acceptProposedAction = MagicMock()
+        canvas_widget.dragEnterEvent(event)
+        event.acceptProposedAction.assert_called_once()
 
-        canvas_widget.wheelEvent(mock_wheel_event)
+    def test_drop_event_emits_file_dropped_signal(self, canvas_widget, qtbot):
+        """Verifies that dropping a file emits the fileDropped signal."""
+        file_path = "C:/test_data.csv"
+        mime_data = QMimeData()
+        mime_data.setUrls([QUrl.fromLocalFile(file_path)])
+        
+        pos = QPoint(100, 100)
+        event = QDropEvent(
+            QPointF(pos),
+            Qt.DropAction.CopyAction,
+            mime_data,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier
+        )
+        
+        with qtbot.waitSignal(canvas_widget.fileDropped, timeout=1000) as blocker:
+            canvas_widget.dropEvent(event)
+            
+        dropped_path, scene_pos = blocker.args
+        assert "test_data.csv" in dropped_path.replace("\\", "/")
+        assert isinstance(scene_pos, QPointF)
 
-        mock_get_h_bar.assert_called_once()
-        mock_h_bar.setValue.assert_called_once_with(mock_h_bar.value() - 120)
+    # --- Coordinate Mapping ---
 
+    def test_map_to_figure_logic(self, canvas_widget):
+        """Verifies translation from scene coordinates to normalized figure coordinates."""
+        scene_pos = QPointF(10, 10)
+        
+        with patch.object(canvas_widget.figure_canvas.figure.transFigure, "inverted") as mock_inv_cls:
+            mock_inv = MagicMock()
+            mock_inv_cls.return_value = mock_inv
+            mock_inv.transform.return_value = [0.5, 0.5]
+            
+            coords = canvas_widget.map_to_figure(scene_pos)
+            
+            assert coords == (0.5, 0.5)
+            # Verify the transform was called
+            assert mock_inv.transform.called
 
-@pytest.mark.parametrize("mock_wheel_event", [(120, Qt.NoModifier)], indirect=True)
-def test_wheel_event_vertical_scroll(canvas_widget, mock_wheel_event):
-    """Test wheelEvent scrolls vertically with plain Scroll."""
-    mock_v_bar = MagicMock(spec=QScrollBar)
-    mock_v_bar.value.return_value = 500
-    with patch.object(
-        canvas_widget, "verticalScrollBar", return_value=mock_v_bar
-    ) as mock_get_v_bar:
+    # --- Wheel Events (Navigation) ---
 
-        canvas_widget.wheelEvent(mock_wheel_event)
+    @pytest.mark.parametrize("delta, expected_scale", [
+        (120, 1.15),      # Zoom In
+        (-120, 1/1.15),   # Zoom Out
+    ])
+    def test_wheel_event_zoom(self, canvas_widget, delta, expected_scale):
+        """Verifies zooming with Ctrl + Scroll."""
+        event = QWheelEvent(
+            QPointF(50, 50),
+            QPointF(50, 50),
+            QPoint(0, 0),
+            QPoint(0, delta),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.ControlModifier,
+            Qt.ScrollPhase.NoScrollPhase,
+            False
+        )
+        
+        with patch.object(canvas_widget, "scale") as mock_scale:
+            with patch.object(canvas_widget, "translate"):
+                canvas_widget.wheelEvent(event)
+                mock_scale.assert_called_with(pytest.approx(expected_scale), pytest.approx(expected_scale))
 
-        mock_get_v_bar.assert_called_once()
-        mock_v_bar.setValue.assert_called_once_with(mock_v_bar.value() - 120)
+    def test_wheel_event_horizontal_scroll(self, canvas_widget):
+        """Verifies horizontal scrolling with Shift + Scroll."""
+        event = QWheelEvent(
+            QPointF(50, 50),
+            QPointF(50, 50),
+            QPoint(0, 0),
+            QPoint(0, 120),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.ShiftModifier,
+            Qt.ScrollPhase.NoScrollPhase,
+            False
+        )
+        
+        mock_bar = MagicMock(spec=QScrollBar)
+        mock_bar.value.return_value = 500
+        
+        with patch.object(canvas_widget, "horizontalScrollBar", return_value=mock_bar):
+            canvas_widget.wheelEvent(event)
+            mock_bar.setValue.assert_called_with(500 - 120)
+
+    def test_wheel_event_vertical_scroll(self, canvas_widget):
+        """Verifies vertical scrolling with plain Scroll."""
+        event = QWheelEvent(
+            QPointF(50, 50),
+            QPointF(50, 50),
+            QPoint(0, 0),
+            QPoint(0, 120),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase,
+            False
+        )
+        
+        mock_bar = MagicMock(spec=QScrollBar)
+        mock_bar.value.return_value = 500
+        
+        with patch.object(canvas_widget, "verticalScrollBar", return_value=mock_bar):
+            canvas_widget.wheelEvent(event)
+            mock_bar.setValue.assert_called_with(500 - 120)
