@@ -107,6 +107,15 @@ class NodeController(QObject):
             geometry=geometry
         )
         self.command_manager.execute_command(cmd)
+        
+        # Immediately initialize theme so the plot becomes visible in the renderer
+        if cmd.node:
+            self.logger.info(f"NodeController: Initializing theme for new plot {cmd.node.id}")
+            self._event_aggregator.publish(
+                Events.INITIALIZE_PLOT_THEME_REQUESTED,
+                node_id=cmd.node.id,
+                plot_type=ArtistType.LINE  # Default to Line
+            )
 
     def _on_delete_nodes_request(self, node_ids: list[str]):
         """

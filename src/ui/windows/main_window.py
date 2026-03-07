@@ -16,6 +16,7 @@ from qframelesswindow import FramelessMainWindow, StandardTitleBar
 
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
+from src.shared.geometry import Rect
 from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.ribbon_bar_builder import RibbonActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
@@ -79,7 +80,6 @@ class MainWindow(FramelessMainWindow):
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self.tool_bar)
 
         # Fix layout overlap by pushing content down below the title bar
-        # Note: We use sizeHint().height() because height() might be 0 before the window is shown
         title_bar_height = self.titleBar.height() if self.titleBar.height() > 0 else self.titleBar.sizeHint().height()
         self.setContentsMargins(0, title_bar_height, 0, 0)
         self.titleBar.raise_()
@@ -106,6 +106,9 @@ class MainWindow(FramelessMainWindow):
         """Subscribes to all relevant application events."""
         # --- Subscribe to UI service requests ---
         self._event_aggregator.subscribe(
+            Events.SHOW_ADD_PLOT_DIALOG_REQUESTED, self._on_show_add_plot_dialog_request
+        )
+        self._event_aggregator.subscribe(
             Events.PROMPT_FOR_OPEN_PATH_REQUESTED, self._prompt_for_open_path
         )
         self._event_aggregator.subscribe(
@@ -127,7 +130,7 @@ class MainWindow(FramelessMainWindow):
         self.canvas_widget = canvas_widget
         self.main_layout.addWidget(self.canvas_widget)
 
-    # --- Event Handlers for UI Services (File Dialogs) ---
+    # --- Event Handlers for UI Services ---
 
     def _prompt_for_open_path(self):
         """Opens the system 'Open File' dialog and publishes the result."""
@@ -146,9 +149,8 @@ class MainWindow(FramelessMainWindow):
         self._event_aggregator.publish(Events.PATH_PROVIDED_FOR_SAVE_AS, path=path)
 
     def _prompt_for_template(self, templates: list[str]):
-        """Opens a dialog to select a layout template and publishes the result."""
+        """Opens a dialog to select a layout template."""
         if not templates:
-            # Handle case where no templates are found if necessary
             return
         template_name, ok = QInputDialog.getItem(
             self, "New from Template", "Select a template:", templates, 0, False
@@ -163,9 +165,7 @@ class MainWindow(FramelessMainWindow):
             )
 
     def _prompt_for_open_path_for_node_data(self, node_id: str):
-        """
-        Opens a file dialog for selecting data for a specific node and publishes the result.
-        """
+        """Opens a file dialog for selecting data for a specific node."""
         file_path_str, _ = QFileDialog.getOpenFileName(
             self, "Select Data File for Node", "", "Data Files (*.csv *.tsv *.txt)"
         )
@@ -174,15 +174,34 @@ class MainWindow(FramelessMainWindow):
             Events.PATH_PROVIDED_FOR_NODE_DATA_OPEN, node_id=node_id, path=path
         )
 
+    def _on_show_add_plot_dialog_request(self, center_pos: tuple[float, float]):
+        """Shows a dialog to get dimensions for a new plot and requests its creation."""
+        width, ok_w = QInputDialog.getDouble(
+            self, "Add Plot", "Width (0.0 to 1.0):", 0.4, 0.01, 1.0, 3
+        )
+        if not ok_w:
+            return
+
+        height, ok_h = QInputDialog.getDouble(
+            self, "Add Plot", "Height (0.0 to 1.0):", 0.4, 0.01, 1.0, 3
+        )
+        if not ok_h:
+            return
+
+        # Calculate Rect centered at center_pos
+        rect = Rect.from_center(center_pos[0], center_pos[1], width, height)
+        # Clamp to figure bounds
+        rect = rect.clamp_to_bounds(0, 0, 1, 1)
+
+        self._event_aggregator.publish(Events.ADD_PLOT_REQUESTED, geometry=rect)
+
     def _on_window_title_data_ready(self, title: str, is_dirty: bool):
-        """
-        Passively updates the window title and modified status from an event.
-        """
+        """Passively updates the window title."""
         self.setWindowModified(is_dirty)
         self.setWindowTitle(title)
 
     def _add_side_panel(self, side_panel: SidePanel):
-        """Makes the side panel dock widget visible and raises it to the top."""
+        """Integrates the side panel into a dock widget."""
         dock = QDockWidget(self)
         dock.setObjectName("SidePanel")
         dock.setWidget(side_panel)
