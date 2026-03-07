@@ -22,7 +22,7 @@ from src.ui.renderers.plotting_strategies import (
 )
 
 
-class Renderer:
+class FigureRenderer:
     """
     A version-gated, recursive synchronizer that renders the scene graph
     onto a Matplotlib figure. Owns the lifecycle of live Matplotlib artists.
@@ -263,8 +263,6 @@ class Renderer:
         # Render other node types (TextNode, RectangleNode, GroupNode)
         self._render_other_nodes(figure, root_node)
 
-        # 3. Render highlights for selection
-        self._render_highlights(figure, selection)
         self.logger.info("Scene graph rendering complete.")
 
     def handle_node_removal(self, parent_id: str, removed_node_id: str):
@@ -471,36 +469,3 @@ class Renderer:
         else:
             # Placeholder for TextNode and RectangleNode
             pass
-
-    def _render_highlights(self, figure: Figure, selection: list[SceneNode]):
-        """Highlights the selected node and focused sub-components."""
-        # Cleanup old highlights by removing artists tagged with 'gid=highlight'
-        for artist in list(figure.artists):
-            if artist.get_gid() == "selection_highlight":
-                artist.remove()
-
-        for node in selection:
-            if not isinstance(node, PlotNode):
-                continue
-
-            # Primary Node Highlight (Bounding Box)
-            geom = node.geometry
-            highlight = patches.Rectangle(
-                (geom.x, geom.y),
-                geom.width,
-                geom.height,
-                facecolor="none",
-                edgecolor="cornflowerblue",
-                linewidth=2,
-                transform=figure.transFigure,
-                clip_on=False,
-                gid="selection_highlight",  # Tag for removal
-                # High zorder to appear on top
-                zorder=1000,
-            )  # TODO: These values should also be loaded in from a config file
-            figure.add_artist(highlight)
-            self.logger.debug(
-                f"  Highlight rendered for PlotNode: {node.name} (ID: {node.id})."
-            )
-
-            # TODO: Add specific highlight for selected_path sub-components

@@ -22,7 +22,7 @@ from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
 from src.ui.renderers.overlay_renderer import OverlayRenderer
-from src.ui.renderers.renderer import Renderer
+from src.ui.renderers.figure_renderer import FigureRenderer
 from src.ui.windows.main_window import MainWindow
 
 if TYPE_CHECKING:
@@ -57,5 +57,5 @@ class ApplicationComponents:
     data_service: "DataService"
     layout_manager: "LayoutManager"
     layout_ui_factory: "LayoutUIFactory"
-    renderer: "Renderer"
+    figure_renderer: "FigureRenderer"
     overlay_renderer: "OverlayRenderer"

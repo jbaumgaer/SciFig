@@ -16,7 +16,7 @@ from src.services.commands.command_manager import CommandManager
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
 from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
-from src.ui.renderers.renderer import Renderer
+from src.ui.renderers.renderer import FigureRenderer
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ def mock_canvas_controller():
 @pytest.fixture
 def mock_renderer():
     """Provides a mock Renderer."""
-    renderer = MagicMock(spec=Renderer)
+    renderer = MagicMock(spec=FigureRenderer)
     renderer.render = MagicMock()
     return renderer
 
@@ -132,7 +132,7 @@ def real_tool_service_with_mock_tools():
     mock_command_manager_for_tool = MagicMock(
         spec=CommandManager
     )  # Mock command manager for tool
-    mock_renderer_for_tool = MagicMock(spec=Renderer)  # Mock renderer for tool
+    mock_renderer_for_tool = MagicMock(spec=FigureRenderer)  # Mock renderer for tool
 
     mock_selection_tool = MagicMock(spec=SelectionTool)
     mock_selection_tool.name = "selection"
@@ -208,7 +208,7 @@ def real_selection_tool(real_application_model):
     mock_canvas_widget.width.return_value = 1000
     mock_canvas_widget.height.return_value = 800
 
-    mock_renderer = MagicMock(spec=Renderer)
+    mock_renderer = MagicMock(spec=FigureRenderer)
     mock_renderer.hit_test.side_effect = (
         lambda x, y, exclude_nodes=None: None
     )  # Default: no hit

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, ANY, patch, create_autospec
 import matplotlib.figure
 import matplotlib.axes
 import matplotlib.axis
-from src.ui.renderers.renderer import Renderer
+from src.ui.renderers.figure_renderer import FigureRenderer
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.shared.events import Events
@@ -14,14 +14,14 @@ def renderer(mock_layout_manager, mock_application_model, mock_event_aggregator)
     """Provides a Renderer instance with mocked dependencies."""
     # Ensure scene_root is hit-testable and visible for recursion
     mock_application_model.scene_root.visible = True
-    return Renderer(
+    return FigureRenderer(
         layout_manager=mock_layout_manager,
         application_model=mock_application_model,
         event_aggregator=mock_event_aggregator
     )
 
 
-class TestRenderer:
+class TestFigureRenderer:
 
     # --- Core Orchestration ---
 

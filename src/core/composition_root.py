@@ -38,7 +38,7 @@ from src.ui.panels.layout_tab import LayoutTab
 from src.ui.panels.properties_tab import PropertiesTab
 from src.ui.panels.side_panel import SidePanel
 from src.ui.renderers.overlay_renderer import OverlayRenderer
-from src.ui.renderers.renderer import Renderer
+from src.ui.renderers.figure_renderer import FigureRenderer
 from src.ui.widgets.canvas_widget import CanvasWidget
 from src.ui.widgets.ribbon_bar import RibbonBar
 from src.ui.windows.main_window import MainWindow
@@ -80,7 +80,7 @@ class CompositionRoot:
         self._selection_tool: Optional[SelectionTool] = None
         self._add_plot_tool: Optional[AddPlotTool] = None
         self._figure: Optional[Figure] = None
-        self._renderer: Optional[Renderer] = None
+        self._figure_renderer: Optional[FigureRenderer] = None
         self._overlay_renderer: Optional[OverlayRenderer] = None
 
         self.logger.debug(
@@ -137,7 +137,7 @@ class CompositionRoot:
             property_service=self._property_service,
             event_aggregator=self._event_aggregator,
         )
-        self._renderer = Renderer(
+        self._figure_renderer = FigureRenderer(
             layout_manager=self._layout_manager,
             application_model=self._application_model,
             event_aggregator=self._event_aggregator,
@@ -383,7 +383,7 @@ class CompositionRoot:
 
         # --- Renderer Subscriptions (Lifecycle) ---
         self._event_aggregator.subscribe(
-            Events.NODE_REMOVED_FROM_SCENE, self._renderer.handle_node_removal
+            Events.NODE_REMOVED_FROM_SCENE, self._figure_renderer.handle_node_removal
         )
 
         # --- LayoutManager Subscriptions ---
@@ -444,7 +444,7 @@ class CompositionRoot:
             self._redraw_count = 0
         self._redraw_count += 1
         self.logger.debug(f"CompositionRoot._redraw_canvas_callback called (Count: {self._redraw_count})")
-        self._renderer.render(
+        self._figure_renderer.render(
             self._figure,
             self._application_model.scene_root,
             self._application_model.selection,
@@ -457,7 +457,7 @@ class CompositionRoot:
         # TODO: Use matplotlib callbacks instead of syncing on every redraw
         node_id = kwargs.get("node_id")
         if isinstance(node_id, str):
-            self._renderer.sync_back_limits(node_id)
+            self._figure_renderer.sync_back_limits(node_id)
 
     def assemble(self) -> ApplicationComponents:
         """Assembles and wires all components of the application."""
@@ -496,6 +496,6 @@ class CompositionRoot:
             layout_manager=self._layout_manager,
             layout_ui_factory=self._layout_ui_factory,
             event_aggregator=self._event_aggregator,
-            renderer=self._renderer,
+            figure_renderer=self._figure_renderer,
             overlay_renderer=self._overlay_renderer,
         )

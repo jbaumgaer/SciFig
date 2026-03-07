@@ -45,7 +45,7 @@ from src.services.tools.selection_tool import SelectionTool
 from src.shared.events import Events
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
 from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
-from src.ui.renderers.renderer import Renderer
+from src.ui.renderers.figure_renderer import FigureRenderer
 from src.ui.widgets.canvas_widget import CanvasWidget
 from src.ui.windows.main_window import MainWindow
 
@@ -175,7 +175,7 @@ def mock_node_controller():
 @pytest.fixture
 def mock_renderer():
     """Fixture for a mock Renderer."""
-    renderer = MagicMock(spec=Renderer)
+    renderer = MagicMock(spec=FigureRenderer)
     renderer.plotting_strategies = {"line": Mock()}
     renderer.render = MagicMock()
     return renderer

@@ -36,7 +36,7 @@ from src.ui.factories.plot_properties_ui_factory import (
     _build_line_plot_ui_widgets,
     _build_scatter_plot_ui_widgets,
 )
-from src.ui.renderers.renderer import Renderer
+from src.ui.renderers.renderer import FigureRenderer
 from src.ui.windows.main_window import MainWindow
 
 
@@ -52,7 +52,7 @@ def app_context(qtbot):
     model = ApplicationModel(figure=figure)
     command_manager = CommandManager(model=model)
 
-    renderer = Renderer()
+    renderer = FigureRenderer()
     plot_types = list(renderer.plotting_strategies.keys())
     # Instantiate MainController without a view
     main_controller = MainController(model=model)

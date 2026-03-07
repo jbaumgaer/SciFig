@@ -344,3 +344,5 @@ tests/unit/services/tools/__pycache__/test_add_plot_tool.cpython-313-pytest-9.0.
 tests/unit/services/tools/__pycache__/test_selection_tool.cpython-313-pytest-9.0.2.pyc
 src/ui/renderers/__pycache__/overlay_renderer.cpython-313.pyc
 tests/unit/ui/renderers/__pycache__/test_overlay_renderer.cpython-313-pytest-9.0.2.pyc
+tests/unit/ui/renderers/__pycache__/test_figure_renderer.cpython-313-pytest-9.0.2.pyc
+src/ui/renderers/__pycache__/figure_renderer.cpython-313.pyc
