@@ -294,6 +294,10 @@ class Renderer:
                 continue
 
             rect = geometries[node.id]
+            # Ensure Matplotlib receives a tuple, not a Rect object
+            if hasattr(rect, "to_tuple"):
+                rect = rect.to_tuple()
+                
             props = node.plot_properties
 
             # 1. Coordinate/Axes Retrieval or Creation
@@ -480,11 +484,11 @@ class Renderer:
                 continue
 
             # Primary Node Highlight (Bounding Box)
-            left, bottom, width, height = node.geometry
+            geom = node.geometry
             highlight = patches.Rectangle(
-                (left, bottom),
-                width,
-                height,
+                (geom.x, geom.y),
+                geom.width,
+                geom.height,
                 facecolor="none",
                 edgecolor="cornflowerblue",
                 linewidth=2,

@@ -173,6 +173,18 @@ class TestSceneNode:
         assert root_node.children.count(child) == 1
         assert len(root_node.children) == 1
 
+    def test_insert_child(self, root_node):
+        """Test inserting a child at a specific index."""
+        child1 = MockSceneNode(name="child1", parent=root_node)
+        child2 = MockSceneNode(name="child2", parent=root_node)
+        child3 = MockSceneNode(name="child3")
+        
+        # Insert child3 between child1 and child2
+        root_node.insert_child(1, child3)
+        
+        assert root_node.children == [child1, child3, child2]
+        assert child3.parent is root_node
+
     def test_remove_child(self, root_node):
         """Test removing a child from a node."""
         child = MockSceneNode(name="child", parent=root_node)

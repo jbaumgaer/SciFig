@@ -2484,3 +2484,52 @@ This epic decouples **Structural Logic** (path resolution) from **User Intent** 
 Scan for new values that should really be config values
 Fix and refactor the layout engine to use numpy for calculations, and check whether the calculations are actually correct and have dedicated methods
 Config_service is passed around a lot. I should rather inject the important sections during initialization
+
+
+Features
+- Add plot in Free Form
+- Delete plot in free form with delete or select/right_click/delete
+- Ability to move plot by dragging in free form
+## New Grid Layout Manager
+- Ability to display grid layout lines with spaces and gutters as grid lines and plot previews (rectangles for now) within the individual subplots
+- In the empty subplot spaces where we haven't added anything, have a + button which either adds a subplot (rectangle), or has the ability to subdivide the space again (with subplotspecgrid). Likewise, there should be delete and move actions for deleting subplots from the grid, moving hspace and gutters
+- I assume the rectangle dimensions will come from plotnode.geometry
+- Check for mpl examples for displaying grid lines
+- For grid lines that are only visible for a specific subplot, the lines should only be visible within that subplot
+
+## Errors/Bugs
+- Empty dropdown in the properties tab
+- Back syncing very inefficient, constant rerenders
+- Double and triple logging, e.g. during hydration of plots
+- Somehow the hit test is currently broken because when I drag and drop data into the plot, it doesn't actually plot the data or load it in
+- Infer grid moves plots, but not selection. Although infer grid should move plots if they are not well aligned, it shouldn't do so if the plots are indeed aligned
+    - Upon request, we switch grid layout mode and we try to get the last grid but there is none, but this doesn't make sense. Rather, the grid should be inferred, and then the layout mode should be changed, with the new grid fully initialized
+    - Likewise, to populate the grid we retrieve the default values from the config but this is wrong: Grid parameters for infer grid should really be inferred from the actual plot positions, especially with no knowledge of the rows and column numbers, but maybe the gutters on the side
+    - The side gutters should be read in from the mplstyle sheet, not from the config file
+    - Is it necessary to move the infer grid logic out of the grid layout engine because the grid layout engine always requires a minimal config grid? Maybe we can also do it so that we have multiple initializers for the grid layout engine, depending on what we use as the entry point
+    - Also, the layouttab updates again after the layout mode got changed to grid with the minimal config, even though at this point, we don't even know about the grid dimensions yet because we haven't even calculated yet. This also triggers a redraw of the canvas with the incorrect default grid layout. This is likely causing the shift
+    - I think internally the grid values may not be updated to the correct values, but stay with the default values because when I save the project and open it again, the layout is shifted and the logging shows that the old values are still present
+    - Moreover, there is an error after the initialization with the default grid: 
+2026-03-07 08:08:38 - EventAggregator - ERROR - Error in handler _handle_layout_config_changed for event LAYOUT_CONFIG_CHANGED
+Traceback (most recent call last):
+  File "d:\Dokumente\Python\Data_Analysis_GUI\src\services\event_aggregator.py", line 70, in publish
+    handler(*args, **kwargs)
+    ~~~~~~~^^^^^^^^^^^^^^^^^
+TypeError: LayoutTab._handle_layout_config_changed() got an unexpected keyword argument 'config'
+    - After the layout manager has successfully inferred the new grid values, this doesn't trigger a redraw of the canvas anymore, so the order of event publishing is also a bit messed up here, likely because the renderer doesn't listen to GRID_CONFIG_PARAMETERS_CHANGED
+- When a project is saved and reopened, and a plot is selected, the plot properties panel doesn't open up and we get the following error: 
+
+2026-03-07 08:30:00 - EventAggregator - ERROR - Error in handler _update_content for event SELECTION_CHANGED
+Traceback (most recent call last):
+  File "d:\Dokumente\Python\Data_Analysis_GUI\src\services\event_aggregator.py", line 70, in publish
+    handler(*args, **kwargs)
+    ~~~~~~~^^^^^^^^^^^^^^^^^
+  File "d:\Dokumente\Python\Data_Analysis_GUI\src\ui\panels\properties_tab.py", line 186, in _update_content
+    self._update_plot_type_selector_ui(selected_nodes)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "d:\Dokumente\Python\Data_Analysis_GUI\src\ui\panels\properties_tab.py", line 276, in _update_plot_type_selector_ui
+    self._plot_type_selector_combo.setCurrentText(current_plot_type.value)
+                                                  ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'value'
+    - Could it be that the style service is not correctly invoked when we load a project with open project.
+    - Also when 

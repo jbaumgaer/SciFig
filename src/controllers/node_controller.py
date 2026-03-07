@@ -10,11 +10,15 @@ from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_types import ArtistType
 from src.services.commands.apply_data_to_node_command import ApplyDataToNodeCommand
+from src.services.commands.add_plot_command import AddPlotCommand
 from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
 from src.services.commands.command_manager import CommandManager
+from src.services.commands.delete_node_command import DeleteNodeCommand
+from src.services.commands.macro_command import MacroCommand
 from src.services.event_aggregator import EventAggregator
 from src.services.property_service import PropertyService
 from src.shared.events import Events
+from src.shared.geometry import Rect
 
 
 class NodeController(QObject):
@@ -43,9 +47,7 @@ class NodeController(QObject):
         self.logger.info("NodeController initialized.")
 
     def _subscribe_to_events(self):
-        """Subscribes to all relevant application events. 
-        TODO: Unsure if subscribing should be handled by the controller itself or if there should be a separate layer 
-        (currently the composition root) responsible for wiring up event subscriptions."""
+        """Subscribes to all relevant application events."""
         self._event_aggregator.subscribe(
             Events.SUBPLOT_SELECTION_IN_UI_CHANGED, self._on_subplot_selection_request
         )
@@ -86,9 +88,53 @@ class NodeController(QObject):
             Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
             self.reconcile_node_property,
         )
+        self._event_aggregator.subscribe(
+            Events.DELETE_NODES_REQUESTED, self._on_delete_nodes_request
+        )
+        self._event_aggregator.subscribe(
+            Events.ADD_PLOT_REQUESTED, self._on_add_plot_request
+        )
 
         # TODO: Add subscriptions for group, ungroup, reorder requests when commands are implemented
 
+    def _on_add_plot_request(self, geometry: Rect):
+        """
+        Handles requests to add a new plot to the scene.
+        """
+        cmd = AddPlotCommand(
+            model=self.model,
+            event_aggregator=self._event_aggregator,
+            geometry=geometry
+        )
+        self.command_manager.execute_command(cmd)
+
+    def _on_delete_nodes_request(self, node_ids: list[str]):
+        """
+        Handles requests to delete multiple nodes.
+        Wraps individual DeleteNodeCommands into a single atomic MacroCommand.
+        """
+        if not node_ids:
+            return
+
+        commands = []
+        for node_id in node_ids:
+            commands.append(
+                DeleteNodeCommand(
+                    model=self.model,
+                    event_aggregator=self._event_aggregator,
+                    node_id=node_id,
+                )
+            )
+
+        if len(commands) == 1:
+            self.command_manager.execute_command(commands[0])
+        else:
+            macro_cmd = MacroCommand(
+                description=f"Delete {len(node_ids)} nodes",
+                commands=commands,
+                event_aggregator=self._event_aggregator,
+            )
+            self.command_manager.execute_command(macro_cmd)
 
     def reconcile_node_property(self, node_id: str, path: str, value: Any):
         """
@@ -142,9 +188,7 @@ class NodeController(QObject):
                 )
 
     def _get_node_by_id(self, node_id: str) -> Optional[SceneNode]:
-        node = self.model.scene_root.find_node_by_id(
-            node_id
-        )  # TODO: In the fugure, I might want to change this by asking the model for the node directly, instead of reaching deep into the model's scene graph
+        node = self.model.scene_root.find_node_by_id(node_id)
         if not node:
             self.logger.warning(f"Node with ID '{node_id}' not found.")
         return node
@@ -169,13 +213,7 @@ class NodeController(QObject):
         """
         node = self._get_plot_node_by_id(node_id)
         if not node:
-            self.logger.warning(
-                f"NodeController: Cannot request data file for non-existent node with ID: {node_id}"
-            )
             return
-        self.logger.debug(
-            f"NodeController: Requesting data file selection for node {node_id}"
-        )
         self._event_aggregator.publish(
             Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED, node_id=node_id
         )
@@ -207,24 +245,19 @@ class NodeController(QObject):
     def _on_data_loaded(self, node_id: str, data: pd.DataFrame, file_path: Path):
         """
         Triggered when DataService successfully loads a file.
-        Orchestrates theming, default mapping, and model update via commands.
         """
         node = self._get_plot_node_by_id(node_id)
         if not node:
             return
 
         if not node.plot_properties:
-            # Default to LINE plot for new data. This could be made configurable.
             self._event_aggregator.publish(
                 Events.INITIALIZE_PLOT_THEME_REQUESTED,
                 node_id=node.id,
                 plot_type=ArtistType.LINE,
             )
-            self.logger.info(f"Initialized themed properties for node {node_id}")
 
         commands = []
-
-        # 2. Heuristic: Default Column Mapping (First two columns)
         if data.shape[1] >= 2 and node.plot_properties and node.plot_properties.artists:
             cols = data.columns
             commands.append(
@@ -246,7 +279,6 @@ class NodeController(QObject):
                 )
             )
 
-        # 3. Update Data
         commands.append(
             ChangePlotPropertyCommand(
                 node=node,
@@ -256,8 +288,6 @@ class NodeController(QObject):
                 property_service=self._property_service,
             )
         )
-
-        # 4. Update data_file_path (for persistence)
         commands.append(
             ChangePlotPropertyCommand(
                 node=node,
@@ -267,12 +297,9 @@ class NodeController(QObject):
                 property_service=self._property_service,
             )
         )
-        # Resolve path based on coordinate system
-        if node.plot_properties: #TODO: Should I make this a guard clause instead?
-            is_polar = (
-                node.plot_properties.coords.coord_type == ArtistType.POLAR_LINE
-            )  # CoordinateSystem.POLAR is used for POLAR_LINE artist
-            # TODO: Refactor ArtistType/CoordinateSystem alignment
+        
+        if node.plot_properties:
+            is_polar = node.plot_properties.coords.coord_type == ArtistType.POLAR_LINE
             x_path = "coords.theta_axis.limits" if is_polar else "coords.xaxis.limits"
             y_path = "coords.r_axis.limits" if is_polar else "coords.yaxis.limits"
 
@@ -309,21 +336,11 @@ class NodeController(QObject):
             return
 
         new_type = ArtistType(new_plot_type_str)
-
-        # Check if unchanged
-        if (
-            node.plot_properties
-            and hasattr(node.plot_properties, "plot_type")
-            and node.plot_properties.plot_type == new_type
-        ):
-            return
-
         self._event_aggregator.publish(
             Events.INITIALIZE_PLOT_THEME_REQUESTED, node_id=node.id, plot_type=new_type
         )
 
     def _on_generic_property_change_request(self, node_id: str, path: str, value: Any):
-        """Routes all granular property changes to the path-based command system."""
         node = self._get_node_by_id(node_id)
         if not node:
             return
@@ -338,10 +355,6 @@ class NodeController(QObject):
         )
 
     def _on_node_visibility_request(self, node_id: str, visible: bool):
-        """
-        Handles requests to set the visibility of a SceneNode.
-        TODO: This should later go into a general node handler or maybe the layers controller
-        """
         node = self._get_node_by_id(node_id)
         if node and node.visible != visible:
             cmd = ChangePlotPropertyCommand(
@@ -354,10 +367,6 @@ class NodeController(QObject):
             self.command_manager.execute_command(cmd)
 
     def _on_node_locked_request(self, node_id: str, locked: bool):
-        """
-        Handles requests to set the locked state of a SceneNode.
-        TODO: This should later go into a general node handler or maybe the layers controller
-        """
         node = self._get_node_by_id(node_id)
         if node and node.locked != locked:
             cmd = ChangePlotPropertyCommand(
@@ -370,10 +379,6 @@ class NodeController(QObject):
             self.command_manager.execute_command(cmd)
 
     def _on_rename_node_request(self, node_id: str, new_name: str):
-        """
-        Handles requests to rename a SceneNode.
-        TODO: This should later go into a general node handler or maybe the layers controller
-        """
         node = self._get_node_by_id(node_id)
         if node and node.name != new_name:
             cmd = ChangePlotPropertyCommand(
@@ -386,55 +391,20 @@ class NodeController(QObject):
             self.command_manager.execute_command(cmd)
 
     def _on_template_loaded(self, root_node: SceneNode):
-        """
-        Traverses the template root, identifies PlotNodes with sparse data,
-        and triggers reactive theme hydration.
-        """
-        self.logger.info(
-            "NodeController: Template loaded. Scanning for nodes to hydrate."
-        )
-        # Recursively find all PlotNodes in the newly loaded template tree
         for node in root_node.all_descendants(of_type=PlotNode):
-            # Check if property hydration is needed (stored as sparse dict from template JSON)
             if isinstance(node.plot_properties, dict):
                 overrides = node.plot_properties
-                self.logger.debug(f"  Requesting hydration for PlotNode '{node.id}'.")
                 self._event_aggregator.publish(
                     Events.HYDRATE_PLOT_PROPERTIES_REQUESTED,
                     node_id=node.id,
                     overrides=overrides,
                 )
 
-    # These methods are currently just warnings, actual commands need to be implemented
     def reorder_nodes(self, parent_id: str, node_id: str, new_index: int):
-        """
-        Reorders a child node within its parent's children list.
-        """
-        # Placeholder for now, full implementation once command is created.
-        # cmd = ChangeChildrenOrderCommand(...)
-        # self.command_manager.execute_command(cmd)
-        self.logger.warning(
-            "NodeController: reorder_nodes not fully implemented yet, requires ChangeChildrenOrderCommand."
-        )
+        self.logger.warning("NodeController: reorder_nodes not fully implemented yet.")
 
     def group_nodes(self, node_ids: list[str]):
-        """
-        Groups selected nodes under a new GroupNode.
-        """
-        self.logger.warning(
-            "NodeController: group_nodes not fully implemented yet, requires GroupNodesCommand."
-        )
-        # Placeholder for now, full implementation once command is created.
-        # cmd = GroupNodesCommand(...)
-        # self.command_manager.execute_command(cmd)
+        self.logger.warning("NodeController: group_nodes not fully implemented yet.")
 
     def ungroup_node(self, group_id: str):
-        """
-        Ungroups a GroupNode, moving its children to its parent.
-        """
-        self.logger.warning(
-            "NodeController: ungroup_node not fully implemented yet, requires UngroupNodesCommand."
-        )
-        # Placeholder for now, full implementation once command is created.
-        # cmd = UngroupNodesCommand(...)
-        # self.command_manager.execute_command(cmd)
+        self.logger.warning("NodeController: ungroup_node not fully implemented yet.")

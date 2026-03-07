@@ -10,7 +10,10 @@ from src.models.nodes.group_node import GroupNode
 from src.models.plots.plot_properties import PlotProperties
 from src.models.plots.plot_types import ArtistType
 from src.services.commands.apply_data_to_node_command import ApplyDataToNodeCommand
+from src.services.commands.add_plot_command import AddPlotCommand
 from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
+from src.services.commands.delete_node_command import DeleteNodeCommand
+from src.services.commands.macro_command import MacroCommand
 from src.shared.events import Events
 
 
@@ -19,6 +22,7 @@ def node_controller(
     mock_application_model, mock_command_manager, mock_event_aggregator, mock_property_service
 ):
     """Provides a NodeController instance with all dependencies mocked."""
+    mock_application_model.scene_root.id = "root_id"
     return NodeController(
         model=mock_application_model,
         command_manager=mock_command_manager,
@@ -49,7 +53,9 @@ class TestNodeController:
             Events.CHANGE_NODE_LOCKED_REQUESTED,
             Events.TEMPLATE_LOADED,
             Events.SELECTION_CHANGED,
-            Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED
+            Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
+            Events.DELETE_NODES_REQUESTED,
+            Events.ADD_PLOT_REQUESTED
         ]
         
         for event in expected_events:
@@ -271,3 +277,33 @@ class TestNodeController:
         
         # Verify no tab switch request
         mock_event_aggregator.publish.assert_not_called()
+
+    def test_on_delete_nodes_request_dispatches_macro(self, node_controller, mock_command_manager):
+        """Verifies that multiple deletion requests are wrapped in a MacroCommand."""
+        node_controller._on_delete_nodes_request(["p1", "p2"])
+        
+        mock_command_manager.execute_command.assert_called_once()
+        command = mock_command_manager.execute_command.call_args[0][0]
+        assert isinstance(command, MacroCommand)
+        assert len(command.commands) == 2
+        assert all(isinstance(c, DeleteNodeCommand) for c in command.commands)
+
+    def test_on_delete_single_node_request_dispatches_direct_command(self, node_controller, mock_command_manager):
+        """Verifies that a single deletion request is dispatched as a direct DeleteNodeCommand."""
+        node_controller._on_delete_nodes_request(["p1"])
+        
+        mock_command_manager.execute_command.assert_called_once()
+        command = mock_command_manager.execute_command.call_args[0][0]
+        assert isinstance(command, DeleteNodeCommand)
+        assert command.node_id == "p1"
+
+    def test_on_add_plot_request_dispatches_command(self, node_controller, mock_command_manager):
+        """Verifies that an add plot request dispatches an AddPlotCommand."""
+        from src.shared.geometry import Rect
+        geom = Rect(0.1, 0.1, 0.2, 0.2)
+        node_controller._on_add_plot_request(geom)
+        
+        mock_command_manager.execute_command.assert_called_once()
+        command = mock_command_manager.execute_command.call_args[0][0]
+        assert isinstance(command, AddPlotCommand)
+        assert command.geometry == geom

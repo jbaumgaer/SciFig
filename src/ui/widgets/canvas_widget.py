@@ -1,9 +1,18 @@
 import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide6.QtCore import QPointF, Qt, Signal
-from PySide6.QtGui import QMouseEvent, QPainter
-from PySide6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
+from PySide6.QtCore import QPointF, Qt, Signal, QRectF
+from PySide6.QtGui import QMouseEvent, QPainter, QPen, QBrush, QColor
+from PySide6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsLineItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsView,
+    QWidget,
+)
+
+from src.shared.geometry import Rect
 
 # Ensure the backend is set for PySide6
 matplotlib.use("QtAgg")
@@ -12,27 +21,31 @@ matplotlib.use("QtAgg")
 class CanvasWidget(QGraphicsView):
     """
     The main canvas widget that hosts the Matplotlib figure.
-    It uses a QGraphicsView to allow for Illustrator-like panning and zooming,
-    and it handles drag-and-drop events for data files.
-    TODO: Remove the signals and move to events
+    It uses a QGraphicsView to allow for Illustrator-like panning and zooming.
     """
 
-    # Signal emitted when a file is dropped onto the canvas
-    # Emits file path (str) and drop position (QPointF) in scene coordinates.
     fileDropped = Signal(str, QPointF)
-    canvasDoubleClicked = Signal(QPointF)  # New Signal
+    canvasDoubleClicked = Signal(QPointF)
 
     def __init__(self, figure: Figure, parent: QWidget) -> None:
-        # TODO: Check if I actually initiate this with a parent
         super().__init__(parent)
 
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
         self.setAcceptDrops(True)
 
-        # Use the figure passed from the model
+        # 1. Initialize FigureCanvas
         self.figure_canvas = FigureCanvasQTAgg(figure)
-        self.scene.addWidget(self.figure_canvas)
+        # Ensure no internal Qt margins interfere with Matplotlib's geometry
+        self.figure_canvas.setContentsMargins(0, 0, 0, 0)
+        
+        # 2. Add to scene and align origin
+        proxy = self.scene.addWidget(self.figure_canvas)
+        proxy.setPos(0, 0)
+        
+        # 3. Size the scene to match the figure exactly
+        # This ensures (0,0) in the scene is (0,0) in the Canvas widget
+        self.scene.setSceneRect(0, 0, self.figure_canvas.width(), self.figure_canvas.height())
 
         # Configure the Graphics View for better interaction
         self.setRenderHint(QPainter.Antialiasing)
@@ -41,69 +54,128 @@ class CanvasWidget(QGraphicsView):
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setInteractive(True)
 
+        # Track preview items for easy cleanup
+        self._preview_items: list[QGraphicsItem] = []
+
     def map_to_figure(self, scene_pos: QPointF) -> tuple[float, float]:
         """
         Translates a Qt scene position into normalized 0-1 figure coordinates.
-        This handles the transformation from the QGraphicsView/Scene space
-        to the Matplotlib Figure space.
+        Uses manual linear interpolation for guaranteed parity with OverlayRenderer.
         """
-        # 1. Map from Scene to the FigureCanvas widget coordinates (pixels)
+        # 1. Map from Scene to the FigureCanvas widget coordinates
         view_pos = self.mapFromScene(scene_pos)
 
-        # 2. Get the figure and its transform
+        # 2. Get actual logical pixels from the canvas widget
+        width, height = self.figure_canvas.get_width_height()
+        
+        if width == 0 or height == 0:
+            return (0.0, 0.0)
+
+        # 3. Calculate fractions
+        # Qt (0,0) is top-left
+        # Matplotlib (0,0) is bottom-left
+        fig_x = view_pos.x() / width
+        fig_y = 1.0 - (view_pos.y() / height)
+
+        return (float(fig_x), float(fig_y))
+
+    def map_from_figure(self, fig_pos: tuple[float, float]) -> QPointF:
+        """
+        Translates normalized 0-1 figure coordinates back to Qt scene coordinates.
+        """
         fig = self.figure_canvas.figure
-        inv = fig.transFigure.inverted()
-
-        # 3. Use Matplotlib's inverse transform to get figure coordinates (0-1)
-        # Note: We must invert the Y axis because Qt and Matplotlib have opposite Y origins
+        trans = fig.transFigure
+        
+        pixels = trans.transform(fig_pos)
+        
+        # Re-invert Y using the widget's actual height
         height = self.figure_canvas.height()
-        fig_coords = inv.transform((view_pos.x(), height - view_pos.y()))
+        view_x = pixels[0]
+        view_y = height - pixels[1]
+        
+        return self.mapToScene(view_x, view_y)
 
-        return tuple(fig_coords)
+    def map_rect_from_figure(self, fig_rect: Rect) -> QRectF:
+        """
+        Converts a normalized figure Rect into a Qt Scene QRectF.
+        """
+        # Map bottom-left and top-right
+        p1 = self.map_from_figure((fig_rect.x, fig_rect.y))
+        p2 = self.map_from_figure((fig_rect.x + fig_rect.width, fig_rect.y + fig_rect.height))
+        
+        return QRectF(p1, p2).normalized()
+
+    def draw_preview_rect(self, rect: QRectF, style: str = "ghost") -> QGraphicsRectItem:
+        item = QGraphicsRectItem(rect)
+        item.setZValue(1000)
+        item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        
+        if style == "ghost":
+            item.setPen(QPen(QColor(0, 120, 215), 1))
+            item.setBrush(QBrush(QColor(0, 120, 215, 60)))
+        elif style == "rubber_band":
+            pen = QPen(QColor(100, 100, 100), 1, Qt.DashLine)
+            item.setPen(pen)
+            item.setBrush(QBrush(Qt.NoBrush))
+            
+        self.scene.addItem(item)
+        self._preview_items.append(item)
+        return item
+
+    def draw_handle(self, pos: QPointF) -> QGraphicsRectItem:
+        size = 6
+        rect = QRectF(pos.x() - size / 2, pos.y() - size / 2, size, size)
+        item = QGraphicsRectItem(rect)
+        item.setZValue(1100)
+        item.setBrush(QBrush(Qt.white))
+        item.setPen(QPen(QColor(0, 120, 215), 1))
+        item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+
+        self.scene.addItem(item)
+        self._preview_items.append(item)
+        return item
+
+    def draw_guide_line(self, p1: QPointF, p2: QPointF) -> QGraphicsLineItem:
+        item = QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y())
+        item.setZValue(1050)
+        item.setPen(QPen(QColor(255, 0, 255), 1, Qt.DashLine))
+        item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+
+        self.scene.addItem(item)
+        self._preview_items.append(item)
+        return item
+
+    def clear_previews(self) -> None:
+        for item in self._preview_items:
+            if item.scene():
+                self.scene.removeItem(item)
+        self._preview_items.clear()
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
-        """
-        Overrides the mouse double-click event to perform hit-testing on PlotNodes
-        and update the application model's selection.
-        """
         if event.button() == Qt.MouseButton.LeftButton:
-            # Convert mouse position from widget coordinates to scene coordinates
             scene_pos = self.mapToScene(event.position().toPoint())
-
-            # The CanvasController or a Tool (e.g., SelectionTool) is responsible for model interaction.
-            # We'll emit a signal that the CanvasController can connect to.
-            # For now, let's assume the CanvasController (or tool) will query the model.
-            # This widget's role is primarily to emit the event with necessary info.
-
-            # This signal will be connected to CanvasController.handle_canvas_double_click
             self.canvasDoubleClicked.emit(scene_pos)
-
-            # We also need to call the parent's event to allow default behavior (e.g., zooming if interactive)
             super().mouseDoubleClickEvent(event)
         else:
             super().mouseDoubleClickEvent(event)
 
     def dragEnterEvent(self, event):
-        """Handles the event when a drag enters the widget."""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
         else:
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
-        """Handles the event when a drag is moved over the widget."""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
         else:
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        """Handles the event when a drop occurs."""
         if event.mimeData().hasUrls():
             url = event.mimeData().urls()[0]
             if url.isLocalFile():
                 file_path = url.toLocalFile()
-                # Convert drop position from widget coordinates to scene coordinates
                 scene_pos = self.mapToScene(event.position().toPoint())
                 self.fileDropped.emit(file_path, scene_pos)
             event.acceptProposedAction()
@@ -111,36 +183,21 @@ class CanvasWidget(QGraphicsView):
             super().dropEvent(event)
 
     def wheelEvent(self, event):
-        """
-        Overrides the default wheel event to provide more intuitive navigation.
-        - Ctrl + Scroll: Zooms the view.
-        - Shift + Scroll: Scrolls horizontally.
-        - Scroll: Scrolls vertically.
-        """
         modifiers = event.modifiers()
-
         if modifiers == Qt.KeyboardModifier.ControlModifier:
-            # --- Zooming ---
             zoom_in_factor = 1.15
             zoom_out_factor = 1 / zoom_in_factor
-
             old_pos = self.mapToScene(event.position().toPoint())
-
             if event.angleDelta().y() > 0:
                 self.scale(zoom_in_factor, zoom_in_factor)
             else:
                 self.scale(zoom_out_factor, zoom_out_factor)
-
             new_pos = self.mapToScene(event.position().toPoint())
             delta = new_pos - old_pos
             self.translate(delta.x(), delta.y())
-
         elif modifiers == Qt.KeyboardModifier.ShiftModifier:
-            # --- Horizontal Scrolling ---
             h_bar = self.horizontalScrollBar()
             h_bar.setValue(h_bar.value() - event.angleDelta().y())
-
         else:
-            # --- Vertical Scrolling ---
             v_bar = self.verticalScrollBar()
             v_bar.setValue(v_bar.value() - event.angleDelta().y())

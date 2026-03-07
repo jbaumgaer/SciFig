@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from matplotlib.figure import Figure
 from pathlib import Path
-from PySide6.QtCore import QPointF, Qt, QUrl, QMimeData, QPoint, QEvent
+from PySide6.QtCore import QPointF, Qt, QUrl, QMimeData, QPoint, QEvent, QRectF
 from PySide6.QtGui import (
     QMouseEvent, 
     QWheelEvent, 
@@ -10,9 +10,10 @@ from PySide6.QtGui import (
     QDragMoveEvent, 
     QDropEvent
 )
-from PySide6.QtWidgets import QGraphicsView, QScrollBar, QWidget
+from PySide6.QtWidgets import QGraphicsView, QScrollBar, QWidget, QGraphicsRectItem
 
 from src.ui.widgets.canvas_widget import CanvasWidget
+from src.shared.geometry import Rect
 
 
 @pytest.fixture
@@ -124,6 +125,75 @@ class TestCanvasWidget:
             assert coords == (0.5, 0.5)
             # Verify the transform was called
             assert mock_inv.transform.called
+
+    def test_map_from_figure_logic(self, canvas_widget):
+        """Verifies translation from figure coordinates back to scene coordinates."""
+        fig_pos = (0.5, 0.5)
+        
+        with patch.object(canvas_widget.figure_canvas.figure.transFigure, "transform") as mock_transform:
+            mock_transform.return_value = [200, 200] # dummy pixels
+            
+            scene_pos = canvas_widget.map_from_figure(fig_pos)
+            
+            assert isinstance(scene_pos, QPointF)
+            assert mock_transform.called
+
+    def test_map_rect_from_figure(self, canvas_widget):
+        """Verifies Rect to QRectF translation."""
+        fig_rect = Rect(0.1, 0.1, 0.2, 0.2)
+        
+        # We don't need detailed math here, just that it returns a QRectF
+        with patch.object(canvas_widget, "map_from_figure") as mock_map:
+            mock_map.side_effect = [QPointF(10, 10), QPointF(30, 30)]
+            
+            mapped_rect = canvas_widget.map_rect_from_figure(fig_rect)
+            
+            assert isinstance(mapped_rect, QRectF)
+            assert mapped_rect.width() == pytest.approx(20)
+            assert mapped_rect.height() == pytest.approx(20)
+
+    # --- Preview Overlays ---
+
+    def test_draw_preview_rect(self, canvas_widget):
+        """Verifies adding preview items to the scene."""
+        rect = QRectF(0, 0, 100, 100)
+        
+        item = canvas_widget.draw_preview_rect(rect, style="ghost")
+        
+        assert isinstance(item, QGraphicsRectItem)
+        assert item in canvas_widget.scene.items()
+        assert item in canvas_widget._preview_items
+        assert item.zValue() == 1000
+
+    def test_draw_handle(self, canvas_widget):
+        """Verifies adding a resize handle to the scene."""
+        pos = QPointF(50, 50)
+        item = canvas_widget.draw_handle(pos)
+        
+        assert isinstance(item, QGraphicsRectItem)
+        assert item.zValue() == 1100
+        assert item.rect().center() == pos
+
+    def test_draw_guide_line(self, canvas_widget):
+        """Verifies adding a guide line to the scene."""
+        p1, p2 = QPointF(0, 0), QPointF(100, 100)
+        item = canvas_widget.draw_guide_line(p1, p2)
+        
+        from PySide6.QtWidgets import QGraphicsLineItem
+        assert isinstance(item, QGraphicsLineItem)
+        assert item.zValue() == 1050
+
+    def test_clear_previews(self, canvas_widget):
+        """Verifies cleanup of preview items."""
+        canvas_widget.draw_preview_rect(QRectF(0, 0, 10, 10))
+        canvas_widget.draw_handle(QPointF(20, 20))
+        canvas_widget.draw_guide_line(QPointF(0, 0), QPointF(10, 10))
+        
+        assert len(canvas_widget._preview_items) == 3
+        
+        canvas_widget.clear_previews()
+        
+        assert len(canvas_widget._preview_items) == 0
 
     # --- Wheel Events (Navigation) ---
 

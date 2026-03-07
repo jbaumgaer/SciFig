@@ -64,6 +64,15 @@ class SceneNode(QObject):
                 f"Added child {node.name} (ID: {node.id}) to {self.name} (ID: {self.id})."
             )
 
+    def insert_child(self, index: int, node: SceneNode):
+        """Inserts a child node at a specific index."""
+        if node not in self._children:
+            self._children.insert(index, node)
+            node._parent = self
+            self.logger.debug(
+                f"Inserted child {node.name} (ID: {node.id}) at index {index} into {self.name} (ID: {self.id})."
+            )
+
     def remove_child(self, node: SceneNode):
         """Removes a child node."""
         if node in self._children:

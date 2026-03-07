@@ -9,6 +9,7 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QKeyEvent, QPainter
 
 from src.models.application_model import ApplicationModel
+from src.services.event_aggregator import EventAggregator
 from src.ui.widgets.canvas_widget import CanvasWidget
 
 
@@ -30,6 +31,7 @@ class BaseTool(QObject, ABC, metaclass=ToolMeta):
         self,
         model: ApplicationModel,
         canvas_widget: CanvasWidget,
+        event_aggregator: EventAggregator,
     ):
         """
         Initializes the tool.
@@ -37,10 +39,12 @@ class BaseTool(QObject, ABC, metaclass=ToolMeta):
         Args:
             model: The application model.
             canvas_widget: The canvas widget the tool will interact with.
+            event_aggregator: The centralized event bus.
         """
         super().__init__()
         self._model = model
         self._canvas_widget = canvas_widget
+        self._event_aggregator = event_aggregator
 
     @property
     @abstractmethod

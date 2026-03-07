@@ -102,9 +102,9 @@ class ToolBarBuilder(QObject):
 
         return tool_bar, toolbar_actions
 
-    def _update_tool_bar_state(self, active_tool_name: str) -> None:
+    def _update_tool_bar_state(self, tool_name: str) -> None:
         """
         Updates the checked state of the toolbar actions based on the active tool.
         """
-        for tool_name, action in self._actions.items():
-            action.setChecked(tool_name == active_tool_name)
+        for t_name, action in self._actions.items():
+            action.setChecked(t_name == tool_name)

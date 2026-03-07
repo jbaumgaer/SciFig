@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtWidgets import QApplication
 
@@ -16,10 +16,13 @@ from src.services.layout_manager import LayoutManager
 from src.services.property_service import PropertyService
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
+from src.services.tools.add_plot_tool import AddPlotTool
 from src.services.tools.selection_tool import SelectionTool
 from src.ui.builders.menu_bar_builder import MainMenuActions
 from src.ui.builders.tool_bar_builder import ToolBarActions
 from src.ui.factories.layout_ui_factory import LayoutUIFactory
+from src.ui.renderers.overlay_renderer import OverlayRenderer
+from src.ui.renderers.renderer import Renderer
 from src.ui.windows.main_window import MainWindow
 
 if TYPE_CHECKING:
@@ -45,6 +48,7 @@ class ApplicationComponents:
     canvas_controller: "CanvasController"
     view: "MainWindow"
     selection_tool: "SelectionTool"
+    add_plot_tool: "AddPlotTool"
     tool_manager: "ToolService"
     main_menu_actions: "MainMenuActions"
     tool_bar_actions: "ToolBarActions"
@@ -53,3 +57,5 @@ class ApplicationComponents:
     data_service: "DataService"
     layout_manager: "LayoutManager"
     layout_ui_factory: "LayoutUIFactory"
+    renderer: "Renderer"
+    overlay_renderer: "OverlayRenderer"

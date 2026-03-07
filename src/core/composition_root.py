@@ -22,6 +22,7 @@ from src.services.property_service import PropertyService
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
 from src.services.tools import MockTool
+from src.services.tools.add_plot_tool import AddPlotTool
 from src.services.tools.selection_tool import SelectionTool
 from src.shared.constants import IconPath, ToolName
 from src.shared.events import Events
@@ -36,6 +37,7 @@ from src.ui.panels.layers_tab import LayersTab
 from src.ui.panels.layout_tab import LayoutTab
 from src.ui.panels.properties_tab import PropertiesTab
 from src.ui.panels.side_panel import SidePanel
+from src.ui.renderers.overlay_renderer import OverlayRenderer
 from src.ui.renderers.renderer import Renderer
 from src.ui.widgets.canvas_widget import CanvasWidget
 from src.ui.widgets.ribbon_bar import RibbonBar
@@ -76,7 +78,10 @@ class CompositionRoot:
         self._plot_properties_ui_factory: Optional[PlotPropertiesUIFactory] = None
         self._tool_manager: Optional[ToolService] = None
         self._selection_tool: Optional[SelectionTool] = None
+        self._add_plot_tool: Optional[AddPlotTool] = None
         self._figure: Optional[Figure] = None
+        self._renderer: Optional[Renderer] = None
+        self._overlay_renderer: Optional[OverlayRenderer] = None
 
         self.logger.debug(
             f"ConfigService provided with path: {self._config_service.get('config_path', 'Not Provided')}"
@@ -168,10 +173,23 @@ class CompositionRoot:
         """Assemble the tool manager, individual tools, and the toolbar."""
         self.logger.info("Assembling tooling.")
         self._tool_manager = ToolService(event_aggregator=self._event_aggregator)
+        
+        # 1. Selection Tool
         self._selection_tool = SelectionTool(
-            model=self._application_model, canvas_widget=None
+            model=self._application_model, 
+            canvas_widget=None,
+            event_aggregator=self._event_aggregator
         )
         self._tool_manager.add_tool(self._selection_tool)
+        
+        # 2. Add Plot Tool
+        self._add_plot_tool = AddPlotTool(
+            model=self._application_model,
+            canvas_widget=None,
+            event_aggregator=self._event_aggregator
+        )
+        self._tool_manager.add_tool(self._add_plot_tool)
+
         default_active_tool_name = self._config_service.get(
             "tool.default_active_tool", ToolName.SELECTION.value
         )
@@ -183,6 +201,7 @@ class CompositionRoot:
                 IconPath.get_path("tool_icons.direct_select"),
                 self._application_model,
                 None,
+                self._event_aggregator,
             )
         )
         self._tool_manager.add_tool(
@@ -193,14 +212,7 @@ class CompositionRoot:
                 IconPath.get_path("tool_icons.eyedropper"),
                 self._application_model,
                 None,
-            )
-        )
-        self._tool_manager.add_tool(
-            MockTool(
-                self._config_service.get("tool.plot.name", ToolName.PLOT.value),
-                IconPath.get_path("tool_icons.plot"),
-                self._application_model,
-                None,
+                self._event_aggregator,
             )
         )
         self._tool_manager.add_tool(
@@ -209,6 +221,7 @@ class CompositionRoot:
                 IconPath.get_path("tool_icons.text"),
                 self._application_model,
                 None,
+                self._event_aggregator,
             )
         )
         self._tool_manager.add_tool(
@@ -217,6 +230,7 @@ class CompositionRoot:
                 IconPath.get_path("tool_icons.zoom"),
                 self._application_model,
                 None,
+                self._event_aggregator,
             )
         )
         tool_bar_builder = ToolBarBuilder(
@@ -284,11 +298,20 @@ class CompositionRoot:
 
     def _assemble_canvas_controller(self):
         """Assemble the canvas controller."""
-        self._canvas_controller = CanvasController(
+        # 1. Overlay Renderer (Reactive)
+        self._overlay_renderer = OverlayRenderer(
+            scene=self._canvas_widget.scene,
+            figure=self._figure,
             model=self._application_model,
+            event_aggregator=self._event_aggregator
+        )
+        
+        # 2. Canvas Controller
+        self._canvas_controller = CanvasController(
+            view=self._canvas_widget,
+            model=self._application_model,
+            tool_service=self._tool_manager,
             event_aggregator=self._event_aggregator,
-            canvas_widget=self._canvas_widget,
-            tool_manager=self._tool_manager,
         )
 
     def _connect_signals(self):
@@ -463,6 +486,7 @@ class CompositionRoot:
             canvas_controller=self._canvas_controller,
             view=self._view,
             selection_tool=self._selection_tool,
+            add_plot_tool=self._add_plot_tool,
             tool_manager=self._tool_manager,
             main_menu_actions=self._main_menu_actions,
             tool_bar_actions=self._tool_bar_actions,
@@ -472,4 +496,6 @@ class CompositionRoot:
             layout_manager=self._layout_manager,
             layout_ui_factory=self._layout_ui_factory,
             event_aggregator=self._event_aggregator,
+            renderer=self._renderer,
+            overlay_renderer=self._overlay_renderer,
         )

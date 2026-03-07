@@ -92,8 +92,13 @@ class Events(Enum):
     APPLY_DATA_TO_NODE_REQUESTED = auto()  # Payload: node_id: str, file_path: Path
     GROUP_NODES_REQUESTED = auto()  # Payload: node_ids: list[str]
     UNGROUP_NODE_REQUESTED = auto()  # Payload: node_id: str
+    DELETE_NODES_REQUESTED = auto()  # Payload: node_ids: list[str]
     DATA_FILE_SELECT_REQUESTED = auto()  # Payload: node_id: str
     APPLY_DATA_FILE_REQUESTED = auto()  # Payload: node_id: str, file_path: Path
+    ADD_PLOT_REQUESTED = auto()  # Payload: geometry: Rect
+    BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED = auto()  # Payload: geometries: dict[str, Rect]
+    UPDATE_INTERACTION_PREVIEW_REQUESTED = auto()  # Payload: geometries: list[Rect], style: str
+    CLEAR_INTERACTION_PREVIEW_REQUESTED = auto()
 
     # --- Layout Requests ---
     TOGGLE_LAYOUT_MODE_REQUESTED = auto()  # Payload: is_grid_mode: bool
@@ -109,6 +114,7 @@ class Events(Enum):
     # --- UI Interaction Requests ---
     REQUEST_RECENT_PROJECTS_LIST = auto()
     SUBPLOT_SELECTION_IN_UI_CHANGED = auto()  # Payload: node_id: str
+    SHOW_ADD_PLOT_DIALOG_REQUESTED = auto()  # Payload: center_pos: tuple[float, float]
     PROMPT_FOR_OPEN_PATH_REQUESTED = auto()
     PROMPT_FOR_SAVE_AS_PATH_REQUESTED = auto()
     PROMPT_FOR_TEMPLATE_SELECTION_REQUESTED = auto()

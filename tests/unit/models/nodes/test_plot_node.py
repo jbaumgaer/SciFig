@@ -8,6 +8,7 @@ from src.models.plots.plot_properties import (
     PlotProperties,
     LineArtistProperties,
 )
+from src.shared.geometry import Rect
 
 
 class TestPlotNode:
@@ -18,7 +19,7 @@ class TestPlotNode:
         """Verifies default state of PlotNode."""
         node = PlotNode()
         assert node.name == "Plot"
-        assert node.geometry == (0.1, 0.1, 0.8, 0.8)
+        assert node.geometry == Rect(0.1, 0.1, 0.8, 0.8)
         assert node.plot_properties is None
         assert node.data is None
         assert node.data_file_path is None
@@ -37,7 +38,7 @@ class TestPlotNode:
     def test_hit_test_coordinates(self):
         """Tests hit testing in normalized figure coordinates."""
         node = PlotNode()
-        node.geometry = (0.2, 0.2, 0.4, 0.4)
+        node.geometry = Rect(0.2, 0.2, 0.4, 0.4)
         assert node.hit_test((0.3, 0.3)) is node
         assert node.hit_test((0.1, 0.1)) is None
 
@@ -46,7 +47,7 @@ class TestPlotNode:
     def test_to_dict_full_state(self, sample_plot_properties):
         """Tests serialization with all components populated."""
         node = PlotNode(name="FullPlot", id="test_id")
-        node.geometry = (0, 0, 1, 1)
+        node.geometry = Rect(0, 0, 1, 1)
         node.plot_properties = sample_plot_properties
         node.data_file_path = Path("/abs/path/data.csv")
         node.locked = True
@@ -87,7 +88,7 @@ class TestPlotNode:
     def test_from_dict_geometry_reconstruction(self, minimal_plot_dict):
         """Tests that geometry is correctly mapped from x/y/width/height dict."""
         node = PlotNode.from_dict(minimal_plot_dict)
-        assert node.geometry == (0.1, 0.1, 0.8, 0.8)
+        assert node.geometry == Rect(0.1, 0.1, 0.8, 0.8)
 
     def test_from_dict_hierarchy_and_inherited_state(self, minimal_plot_dict):
         """Tests that from_dict correctly handles parent and SceneNode attributes."""
@@ -173,12 +174,10 @@ class TestPlotNode:
 
     # --- Edge Cases ---
 
-    def test_from_dict_missing_geometry_raises_keyerror(self, minimal_plot_dict):
-        """
-        Documents the current brittle behavior: missing geometry key raises KeyError.
-        This serves as a marker for future robustness improvements.
-        """
+    def test_from_dict_missing_geometry_uses_defaults(self, minimal_plot_dict):
+        """Verifies that missing geometry key uses default Rect."""
         data = minimal_plot_dict.copy()
-        del data["geometry"]
-        with pytest.raises(KeyError):
-            PlotNode.from_dict(data)
+        if "geometry" in data:
+            del data["geometry"]
+        node = PlotNode.from_dict(data)
+        assert node.geometry == Rect(0.1, 0.1, 0.8, 0.8)

@@ -1,7 +1,8 @@
 import logging
 from pathlib import Path
+from typing import Optional
 
-from PySide6.QtCore import QObject, QPointF
+from PySide6.QtCore import QObject, QPointF, Qt
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
@@ -13,105 +14,134 @@ from src.ui.widgets.canvas_widget import CanvasWidget
 
 class CanvasController(QObject):
     """
-    Acts as a Sanitizer between the coupled View/Backend and the headless Tools.
-    Translates Matplotlib/Qt events into backend-neutral SciFig messages.
+    Orchestrates interactions between the CanvasWidget (View) and the model/tools.
+    Translates raw UI events into meaningful application intents.
     """
 
     def __init__(
         self,
+        view: CanvasWidget,
         model: ApplicationModel,
+        tool_service: ToolService,
         event_aggregator: EventAggregator,
-        canvas_widget: CanvasWidget,
-        tool_manager: ToolService,
     ):
         super().__init__()
-        self.model = model
+        self._view = view
+        self._model = model
+        self._tool_service = tool_service
         self._event_aggregator = event_aggregator
-        self.view = canvas_widget
-        self.tool_manager = tool_manager
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self._connect_events()
+        self._connect_view_signals()
+        self._connect_backend_events()
+        self._subscribe_to_events()
         self.logger.info("CanvasController initialized.")
 
-    def _connect_events(self):
-        """
-        Connects backend signals to sanitizer handlers.
-        """
-        self.logger.debug("Connecting canvas events.")
-        canvas = (
-            self.view.figure_canvas
-        )  # TODO: I don't think the canvas controller should have such knowledge of the view's internal representation of a figure
+    def _connect_view_signals(self):
+        """Connects signals from the CanvasWidget to controller handlers."""
+        self._view.canvasDoubleClicked.connect(self._on_canvas_double_clicked)
+        self._view.fileDropped.connect(self._on_file_dropped)
 
-        # 1. Matplotlib Event Translation
+    def _connect_backend_events(self):
+        """Connects Matplotlib backend events to controller handlers."""
+        canvas = self._view.figure_canvas
         canvas.mpl_connect("button_press_event", self._on_mouse_press)
         canvas.mpl_connect("motion_notify_event", self._on_mouse_move)
         canvas.mpl_connect("button_release_event", self._on_mouse_release)
-        canvas.mpl_connect("pick_event", self._on_pick)
 
-        # 2. Qt View Signal Translation
-        self.view.fileDropped.connect(self.on_file_dropped)
-
-    def _on_mouse_press(self, event):
-        """Translates Matplotlib button press into a headless tool call."""
-        if event.inaxes is None and event.xdata is None:
-            # Click outside figure - clear selection
-            self._event_aggregator.publish(
-                Events.SELECTION_CHANGED, selected_node_ids=[]
-            )
-            return
-
-        fig_coords = self._get_fig_coords(event)
-        node = self.model.get_node_at(fig_coords)
-        node_id = node.id if node else None
-
-        # Pass backend-neutral data to the tool manager
-        self.tool_manager.dispatch_mouse_press_event(node_id, fig_coords, event.button)
-
-    def _on_mouse_move(self, event):
-        """Translates Matplotlib motion into a headless tool call."""
-        fig_coords = self._get_fig_coords(event)
-        self.tool_manager.dispatch_mouse_move_event(fig_coords)
-
-    def _on_mouse_release(self, event):
-        """Translates Matplotlib release into a headless tool call."""
-        fig_coords = self._get_fig_coords(event)
-        self.tool_manager.dispatch_mouse_release_event(fig_coords)
-
-    def _on_pick(self, event):
-        """Translates Matplotlib picking into a sub-selection event."""
-        artist = event.artist
-        path = artist.get_gid()
-        if not path:
-            return
-
-        # Identify which node this artist belongs to
-        fig_coords = self._get_fig_coords(event.mouseevent)
-        node = self.model.get_node_at(fig_coords)
-
-        if node:
-            self.logger.info(f"Sub-component picked: {path} on node {node.id}")
-            self._event_aggregator.publish(
-                Events.SUB_COMPONENT_SELECTED, node_id=node.id, path=path
-            )
+    def _subscribe_to_events(self):
+        """Subscribes to relevant events from the aggregator."""
+        self._event_aggregator.subscribe(
+            Events.APPLY_DATA_FILE_REQUESTED, self._on_apply_data_file_request
+        )
 
     def _get_fig_coords(self, event) -> tuple[float, float]:
-        """Safely extracts 0-1 figure coordinates from a Matplotlib event."""
-        fig = self.view.figure_canvas.figure
+        """
+        Calculates normalized figure coordinates (0-1) from a Matplotlib event.
+        """
+        if event.x is None or event.y is None:
+            return (0.0, 0.0)
+            
+        fig = self._view.figure_canvas.figure
         inv = fig.transFigure.inverted()
-        # Matplotlib's event.x and event.y are in display (pixel) coordinates
-        return tuple(inv.transform((event.x, event.y)))
+        fig_coords = inv.transform((event.x, event.y))
+        return (float(fig_coords[0]), float(fig_coords[1]))
 
-    def on_file_dropped(self, file_path: str, scene_pos: QPointF):
-        """Handles file drop by resolving the target node and requesting data load."""
-        fig_coords = self.view.map_to_figure(scene_pos)
-        node = self.model.get_node_at(fig_coords)
+    def _map_mpl_button_to_qt(self, mpl_button: int) -> Qt.MouseButton:
+        """
+        Maps Matplotlib button integers to Qt MouseButton enums.
+        """
+        if mpl_button == 1:
+            return Qt.MouseButton.LeftButton
+        elif mpl_button == 2:
+            return Qt.MouseButton.MiddleButton
+        elif mpl_button == 3:
+            return Qt.MouseButton.RightButton
+        return Qt.MouseButton.NoButton
+
+    def _on_mouse_press(self, event):
+        """Translates Matplotlib press event into tool service dispatch."""
+        fig_coords = self._get_fig_coords(event)
+        
+        # Perform hit test
+        hit_node = self._model.scene_root.hit_test(fig_coords)
+        node_id = hit_node.id if hit_node else None
+        
+        qt_button = self._map_mpl_button_to_qt(event.button)
+        
+        self.logger.debug(f"Mouse press at {fig_coords}, hit: {node_id}, button: {qt_button}")
+        self._tool_service.dispatch_mouse_press_event(node_id, fig_coords, qt_button)
+
+    def _on_mouse_move(self, event):
+        """Translates Matplotlib move event."""
+        fig_coords = self._get_fig_coords(event)
+        self._tool_service.dispatch_mouse_move_event(fig_coords)
+
+    def _on_mouse_release(self, event):
+        """Translates Matplotlib release event."""
+        fig_coords = self._get_fig_coords(event)
+        self._tool_service.dispatch_mouse_release_event(fig_coords)
+
+    def _on_canvas_double_clicked(self, scene_pos: QPointF):
+
+        """
+        Handles double-click on the canvas by performing a hit test
+        and triggering selection/properties update.
+        """
+        fig_coords = self._view.map_to_figure(scene_pos)
+        self.logger.debug(f"Canvas double-clicked at figure coords: {fig_coords}")
+
+        hit_node = self._model.scene_root.hit_test(fig_coords)
+        if hit_node:
+            self.logger.info(f"Hit node: {hit_node.name} (ID: {hit_node.id})")
+            self._model.set_selection([hit_node])
+        else:
+            self._model.set_selection([])
+
+    def _on_file_dropped(self, file_path: str, scene_pos: QPointF):
+        """
+        Handles data file drops by identifying the target node
+        and initiating the data loading workflow.
+        """
+        fig_coords = self._view.map_to_figure(scene_pos)
+        node = self._model.scene_root.hit_test(fig_coords)
 
         if node and isinstance(node, PlotNode):
-            self.logger.info(f"File dropped onto PlotNode '{node.name}'.")
-            # Request data load via event-driven command workflow
+            self.logger.info(f"File {file_path} dropped onto node {node.id}")
+            # Trigger data load via event-driven command workflow
             self._event_aggregator.publish(
                 Events.APPLY_DATA_FILE_REQUESTED,
                 node_id=node.id,
                 file_path=Path(file_path),
             )
+
+    def _on_apply_data_file_request(self, node_id: str, file_path: Path):
+        """Forwards the data file request to the NodeController."""
+        self._event_aggregator.publish(
+            Events.APPLY_DATA_TO_NODE_REQUESTED, node_id=node_id, file_path=file_path
+        )
+        self.logger.debug(f"Forwarded data apply request for node {node_id}")
+        
+    @property
+    def view(self):
+        return self._view

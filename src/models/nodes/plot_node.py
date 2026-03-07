@@ -6,6 +6,7 @@ import pandas as pd
 
 from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_properties import PlotProperties
+from src.shared.geometry import Rect
 
 
 class PlotNode(SceneNode):
@@ -24,14 +25,9 @@ class PlotNode(SceneNode):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.debug(f"PlotNode initialized: {self.name} (ID: {self.id})")
 
-        # Geometry: (left, bottom, width, height) in 0-1 figure coordinates.
-        self.geometry: tuple[float, float, float, float] = (
-            0.1,
-            0.1,
-            0.8,
-            0.8,
-        )  # TODO: This should be set by the layout manager, not hardcoded
-        # TODO: Change this from a tuple to a x, y, width, height dataclass for better readability and maintainability
+        # Geometry in 0-1 figure coordinates. Default to a central box.
+        self.geometry: Rect = Rect(0.1, 0.1, 0.8, 0.8)
+        
         self.plot_properties: Optional[PlotProperties] = None
         self.data: Optional[pd.DataFrame] = None
         self.data_file_path: Optional[Path] = None
@@ -41,12 +37,9 @@ class PlotNode(SceneNode):
         Checks if the given position (in figure coordinates, 0-1) is within
         the bounds of this plot's geometry.
         """
-        x, y = position
-        l, b, w, h = self.geometry
-
-        if l <= x <= l + w and b <= y <= b + h:
+        if self.geometry.contains(*position):
             self.logger.debug(
-                f"Hit test for {self.name} (ID: {self.id}): Hit at ({x}, {y})."
+                f"Hit test for {self.name} (ID: {self.id}): Hit at {position}."
             )
             return self
         return None
@@ -57,10 +50,10 @@ class PlotNode(SceneNode):
 
         if not exclude_geometry:
             node_dict["geometry"] = {
-                "x": self.geometry[0],
-                "y": self.geometry[1],
-                "width": self.geometry[2],
-                "height": self.geometry[3],
+                "x": self.geometry.x,
+                "y": self.geometry.y,
+                "width": self.geometry.width,
+                "height": self.geometry.height,
             }
 
         # Handle both object and dict (sparse) properties
@@ -92,13 +85,13 @@ class PlotNode(SceneNode):
         node = super().from_dict(data, parent)
 
         # 1. Geometry reconstruction
-        geom = data["geometry"]
-        node.geometry = (
-            geom.get("x", 0.1),
-            geom.get("y", 0.1),
-            geom.get("width", 0.8),
-            geom.get("height", 0.8),
-        )  # TODO: There shouldn't be hardcoded defaults here
+        geom_data = data.get("geometry", {})
+        node.geometry = Rect(
+            x=geom_data.get("x", 0.1),
+            y=geom_data.get("y", 0.1),
+            width=geom_data.get("width", 0.8),
+            height=geom_data.get("height", 0.8),
+        )
 
         # 2. Hierarchical PlotProperties reconstruction
         props_data = data.get("plot_properties")
