@@ -30,13 +30,13 @@ The application employs the **Model-View-Presenter (MVP)** pattern, specifically
 
 ## 3.2. Decoupling with Event-Based Communication and Interfaces
 
-Decoupling is central to this architecture, achieved through a strategic combination of event-based communication and explicitinterfaces.
+Decoupling is central to this architecture, achieved through a strategic combination of event-based communication and explicit interfaces.
 
-*   **Event-Based Communication for Orchestration**: The `EventAggregator` is the primary mechanism for cross-component interaction and workflow orchestration. Components communicate bypublishing and subscribing to specific Events rather than direct calls. This completely decouples publishers from subscribers, enhancingscalability, testability, and clarity of application flow. It is primarily used for requests and state changes that are expected to have multiple listeners,allowing components to react to relevant events without direct knowledge of their origin. The communication contract is defined by the event type and its payload.
+*   **Event-Based Communication for Orchestration**: The `EventAggregator` is the primary mechanism for cross-component interaction and workflow orchestration. Components communicate by publishing and subscribing to specific Events rather than direct calls. This completely decouples publishers from subscribers, enhancing scalability, testability, and clarity of application flow. It is primarily used for requests and state changes that are expected to have multiple listeners, allowing components to react to relevant events without direct knowledge of their origin. The communication contract is defined by the event type and its payload.
 
-*   **Interfaces for Explicit Dependencies**: Abstract interfaces are utilized when a clear, direct, and singular dependency exists between two specific parts of the system. Theyestablish precise contracts for what functionality a component expects from its dependency. This ensures that a component does not rely on a concreteimplementation, promoting loose coupling for dependencies where a one-to-one relationship is fundamental, rather than a many-to-many eventbroadcast. The `CompositionRoot` remains responsible for injecting concrete implementations adhering to these interface contracts.
+*   **Interfaces for Explicit Dependencies**: Abstract interfaces are utilized when a clear, direct, and singular dependency exists between two specific parts of the system. They establish precise contracts for what functionality a component expects from its dependency. This ensures that a component does not rely on a concrete implementation, promoting loose coupling for dependencies where a one-to-one relationship is fundamental, rather than a many-to-many event broadcast. The `CompositionRoot` remains responsible for injecting concrete implementations adhering to these interface contracts.
 
-## 3.2. State Management Pattern: The Scene Graph Model
+## 3.3. State Management Pattern: The Scene Graph Model
 
 The application's core data model is not an arbitrary structure; it is specifically a **Scene Graph**—a hierarchical tree of nodes. This is a foundational decision that dictates how all visual elements are managed.
 
@@ -44,7 +44,7 @@ The application's core data model is not an arbitrary structure; it is specifica
 *   **Rendering Order**: The graph defines the z-order and layering of all visual elements.
 *   **Targeted Updates**: It allows for efficient updates and hit-testing (i.e., determining which object is under the cursor).
 
-## 3.3. History and Action Pattern: The Command Pattern
+## 3.4. History and Action Pattern: The Command Pattern
 
 All actions reflecting user intent that modify the state of the `ApplicationModel` must be encapsulated in **Command** objects. This is a strict requirement for maintaining a predictable undo history.
 
@@ -53,12 +53,20 @@ All actions reflecting user intent that modify the state of the `ApplicationMode
 *   **Decoupling**: This pattern decouples the UI components that initiate actions (e.g., menu items, buttons) from the objects that perform the work.
 *   **Reconciliation Bypass**: Routine background updates (e.g., syncing back Matplotlib autoscale results) bypass the `CommandManager`. This ensures that the undo history reflects only deliberate user choices and prevents recursive redraw loops by publishing _RECONCILED events.
 
-## 3.4. Assembly and Dependency Pattern: The Composition Root
+## 3.5. Assembly and Dependency Pattern: The Composition Root
 
 The entire application is constructed and wired together in a single, dedicated location: the **`CompositionRoot`**.
 
 *   **Centralized Construction**: The `CompositionRoot` is the only place in the application that has knowledge of concrete component classes. It is responsible for instantiating all Models, Views, Presenters, and Services.
 *   **Dependency Injection (DI)**: By centralizing construction, the `CompositionRoot` enables DI throughout the application. It injects dependencies (typically as abstract interfaces) into each component's constructor, meaning no component is responsible for finding or creating its own dependencies. This is critical for achieving loose coupling and high testability.
+
+## 3.6. High-Performance Interaction: The Dual-Layer Canvas
+
+To maintain a fluid, 60 FPS user experience while handling complex scientific plots, the architecture employs a **Dual-Layer Canvas** paradigm. This solves the performance bottleneck inherent in high-fidelity scientific rendering backends like Matplotlib.
+
+*   **Aesthetic Data Layer (Matplotlib)**: The "Source of Truth" for the final figure. This layer is computationally expensive to update and is only synchronized with the Model at the **conclusion** of an interaction (e.g., when a mouse button is released).
+*   **Interaction Preview Layer (Qt Overlay)**: A lightweight, transient layer consisting of native Qt Graphics Items. This layer provides instantaneous visual feedback for actions like dragging (ghosting), resizing (handles), and creation (rubber-banding).
+*   **Atomic Synchronization**: The system enforces an atomic sync protocol. While a tool interaction is in progress, only the Preview Layer updates. The Model and Matplotlib Layer are updated via a single Command execution only once the user's intent is finalized.
 
 # 4. Key Components and Services
 
@@ -76,7 +84,7 @@ This section details the key components that make up the application's core doma
 
 *   **4.1.3. Plotting System (`src/ui/renderers/plotting_strategies.py`, `src/models/plots/`)**: The system for drawing data within a `PlotNode`. This is another application of the Strategy Pattern.
     *   **`PlottingStrategy`**: An interface for different plot types (e.g., line plot, scatter plot).
-    *   **`PlotProperties`**: Data objects that hold the specific properties for each plot type (e.g., line color, marker style). The main `Renderer` uses the appropriate strategy to draw the plot based on its properties.
+    *   **`PlotProperties`**: Data objects that hold the specific properties for each plot type (e.g., line color, marker style). The main `FigureRenderer` uses the appropriate strategy to draw the plot based on its properties.
 
 ### 4.2. Core Application Services (`src/services/`)
 
@@ -104,6 +112,7 @@ This group of components separates the complex task of UI creation from applicat
 
 ### 4.5. Rendering Pipeline (`src/ui/renderers/`)
 
-This defines the component responsible for the final visual output.
+The rendering pipeline is split into two specialized components to balance scientific precision with interactive responsiveness.
 
-*   **`Renderer`**: The class responsible for traversing the scene graph (from the `ApplicationModel`) and using the appropriate `PlottingStrategy` to render the model state to the Matplotlib canvas. It is the final bridge between application state and visual representation.
+*   **`FigureRenderer`**: Responsible for the high-fidelity translation of the `ApplicationModel` onto the Matplotlib `Figure`. It manages the lifecycle of Axes and scientific artists (Lines, Scatters, Meshes), ensuring that every property in the Model is accurately reflected in the final output.
+*   **`OverlayRenderer`**: A reactive interaction engine. It independently subscribes to the `EventAggregator` to draw transient UI affordances (selection highlights, resize handles, alignment guides, and movement ghosts). By operating exclusively in the Qt Graphics Scene space, it provides smooth, real-time feedback without burdening the scientific plotting backend.
