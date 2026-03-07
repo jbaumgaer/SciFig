@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import QObject, QPointF, Qt
+from PySide6.QtGui import QKeyEvent
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
@@ -41,6 +42,7 @@ class CanvasController(QObject):
         """Connects signals from the CanvasWidget to controller handlers."""
         self._view.canvasDoubleClicked.connect(self._on_canvas_double_clicked)
         self._view.fileDropped.connect(self._on_file_dropped)
+        self._view.keyPressed.connect(self._on_key_pressed)
 
     def _connect_backend_events(self):
         """Connects Matplotlib backend events to controller handlers."""
@@ -101,6 +103,10 @@ class CanvasController(QObject):
         """Translates Matplotlib release event."""
         fig_coords = self._get_fig_coords(event)
         self._tool_service.dispatch_mouse_release_event(fig_coords)
+
+    def _on_key_pressed(self, event: QKeyEvent):
+        """Dispatches keyboard events to the tool service."""
+        self._tool_service.dispatch_key_press_event(event)
 
     def _on_canvas_double_clicked(self, scene_pos: QPointF):
 

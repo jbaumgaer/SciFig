@@ -2,7 +2,7 @@ import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide6.QtCore import QPointF, Qt, Signal, QRectF
-from PySide6.QtGui import QMouseEvent, QPainter, QPen, QBrush, QColor
+from PySide6.QtGui import QMouseEvent, QPainter, QPen, QBrush, QColor, QKeyEvent
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsLineItem,
@@ -26,6 +26,7 @@ class CanvasWidget(QGraphicsView):
 
     fileDropped = Signal(str, QPointF)
     canvasDoubleClicked = Signal(QPointF)
+    keyPressed = Signal(QKeyEvent)
 
     def __init__(self, figure: Figure, parent: QWidget) -> None:
         super().__init__(parent)
@@ -33,6 +34,9 @@ class CanvasWidget(QGraphicsView):
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
         self.setAcceptDrops(True)
+        
+        # Ensure the widget can receive focus for keyboard events
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         # 1. Initialize FigureCanvas
         self.figure_canvas = FigureCanvasQTAgg(figure)
@@ -44,7 +48,6 @@ class CanvasWidget(QGraphicsView):
         proxy.setPos(0, 0)
         
         # 3. Size the scene to match the figure exactly
-        # This ensures (0,0) in the scene is (0,0) in the Canvas widget
         self.scene.setSceneRect(0, 0, self.figure_canvas.width(), self.figure_canvas.height())
 
         # Configure the Graphics View for better interaction
@@ -62,21 +65,14 @@ class CanvasWidget(QGraphicsView):
         Translates a Qt scene position into normalized 0-1 figure coordinates.
         Uses manual linear interpolation for guaranteed parity with OverlayRenderer.
         """
-        # 1. Map from Scene to the FigureCanvas widget coordinates
         view_pos = self.mapFromScene(scene_pos)
-
-        # 2. Get actual logical pixels from the canvas widget
         width, height = self.figure_canvas.get_width_height()
         
         if width == 0 or height == 0:
             return (0.0, 0.0)
 
-        # 3. Calculate fractions
-        # Qt (0,0) is top-left
-        # Matplotlib (0,0) is bottom-left
         fig_x = view_pos.x() / width
         fig_y = 1.0 - (view_pos.y() / height)
-
         return (float(fig_x), float(fig_y))
 
     def map_from_figure(self, fig_pos: tuple[float, float]) -> QPointF:
@@ -85,24 +81,19 @@ class CanvasWidget(QGraphicsView):
         """
         fig = self.figure_canvas.figure
         trans = fig.transFigure
-        
         pixels = trans.transform(fig_pos)
         
-        # Re-invert Y using the widget's actual height
         height = self.figure_canvas.height()
         view_x = pixels[0]
         view_y = height - pixels[1]
-        
         return self.mapToScene(view_x, view_y)
 
     def map_rect_from_figure(self, fig_rect: Rect) -> QRectF:
         """
         Converts a normalized figure Rect into a Qt Scene QRectF.
         """
-        # Map bottom-left and top-right
         p1 = self.map_from_figure((fig_rect.x, fig_rect.y))
         p2 = self.map_from_figure((fig_rect.x + fig_rect.width, fig_rect.y + fig_rect.height))
-        
         return QRectF(p1, p2).normalized()
 
     def draw_preview_rect(self, rect: QRectF, style: str = "ghost") -> QGraphicsRectItem:
@@ -123,7 +114,8 @@ class CanvasWidget(QGraphicsView):
         return item
 
     def draw_handle(self, pos: QPointF) -> QGraphicsRectItem:
-        size = 6
+        """Draws a resize handle. Size remains 12px as requested."""
+        size = 12
         rect = QRectF(pos.x() - size / 2, pos.y() - size / 2, size, size)
         item = QGraphicsRectItem(rect)
         item.setZValue(1100)
@@ -150,6 +142,11 @@ class CanvasWidget(QGraphicsView):
             if item.scene():
                 self.scene.removeItem(item)
         self._preview_items.clear()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """Captures and emits keyboard events."""
+        self.keyPressed.emit(event)
+        super().keyPressEvent(event)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
