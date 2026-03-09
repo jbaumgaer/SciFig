@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread
+from PySide6.QtCore import QObject, QThread, Signal
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
@@ -17,6 +17,10 @@ class DataService(QObject):
     Has NO direct dependency on theming or commands.
     """
 
+    # Internal signal to bridge data from background thread to main thread
+    # Parameters: dataframe, node, file_path, thread
+    data_ready_internal = Signal(object, object, object, object)
+
     def __init__(
         self,
         model: ApplicationModel,
@@ -29,6 +33,11 @@ class DataService(QObject):
 
         # Current active loading tasks: node_id -> (thread, worker)
         self._active_tasks: dict[str, tuple[QThread, DataLoader]] = {}
+
+        # Connect internal signal to the handler.
+        # Since DataService lives in the main thread, any signal emitted from 
+        # a background thread will be automatically queued.
+        self.data_ready_internal.connect(self._on_data_ready)
 
     def handle_load_request(self, node_id: str, file_path: Path):
         """
@@ -63,11 +72,15 @@ class DataService(QObject):
 
         # Setup worker execution
         thread.started.connect(lambda: worker.process_data(file_path, node))
-        worker.dataReady.connect(lambda df, n: self._on_data_ready(df, n, file_path, thread))
+        
+        # When data is ready in the background thread, emit the internal signal.
+        # This emission is thread-safe and will trigger _on_data_ready in the main thread.
+        worker.dataReady.connect(
+            lambda df, n: self.data_ready_internal.emit(df, n, file_path, thread)
+        )
         worker.errorOccurred.connect(self._on_load_error)
 
         # Cleanup logic
-        # worker.dataReady.connect(thread.quit)
         worker.errorOccurred.connect(thread.quit)
         thread.finished.connect(lambda: self._cleanup_task(node_id))
 
