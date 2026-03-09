@@ -50,21 +50,29 @@ class ToolService:
         self._event_aggregator.publish(Events.ACTIVE_TOOL_CHANGED, tool_name=tool_name)
 
     def dispatch_mouse_press_event(
-        self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
+        self,
+        node_id: Optional[str],
+        fig_coords: tuple[float, float],
+        button: int,
+        modifiers: Optional[str] = None,
     ) -> None:
         """Dispatches a backend-neutral mouse press event to the active tool."""
         if self.active_tool:
-            self.active_tool.mouse_press_event(node_id, fig_coords, button)
+            self.active_tool.mouse_press_event(node_id, fig_coords, button, modifiers)
 
-    def dispatch_mouse_move_event(self, fig_coords: tuple[float, float]) -> None:
+    def dispatch_mouse_move_event(
+        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+    ) -> None:
         """Dispatches a backend-neutral mouse move event to the active tool."""
         if self.active_tool:
-            self.active_tool.mouse_move_event(fig_coords)
+            self.active_tool.mouse_move_event(fig_coords, modifiers)
 
-    def dispatch_mouse_release_event(self, fig_coords: tuple[float, float]) -> None:
+    def dispatch_mouse_release_event(
+        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+    ) -> None:
         """Dispatches a backend-neutral mouse release event to the active tool."""
         if self.active_tool:
-            self.active_tool.mouse_release_event(fig_coords)
+            self.active_tool.mouse_release_event(fig_coords, modifiers)
 
     def dispatch_key_press_event(self, fig_coords: tuple[float, float]) -> None:
         """Dispatches the key press event to the active tool."""

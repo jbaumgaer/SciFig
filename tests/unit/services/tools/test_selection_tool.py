@@ -67,6 +67,7 @@ class TestSelectionTool:
     def test_mouse_drag_publishes_preview(self, tool, mock_application_model, mock_event_aggregator):
         """Verifies that dragging a selected node publishes preview events."""
         from src.shared.geometry import Rect
+        from src.services.tools.selection_tool import InteractionMode
         node = MagicMock()
         node.id = "p1"
         node.geometry = Rect(0.1, 0.1, 0.2, 0.2)
@@ -75,7 +76,7 @@ class TestSelectionTool:
         
         # 1. Press on node
         tool.mouse_press_event("p1", (0.15, 0.15), Qt.MouseButton.LeftButton)
-        assert tool._is_dragging
+        assert tool._mode == InteractionMode.MOVING
         
         # 2. Drag
         tool.mouse_move_event((0.25, 0.25))
@@ -108,3 +109,27 @@ class TestSelectionTool:
             Events.BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED,
             geometries=expected_geoms
         )
+
+    def test_shift_click_multi_select(self, tool, mock_application_model):
+        """Verifies that Shift-clicking appends or removes nodes from selection."""
+        node1 = MagicMock()
+        node1.id = "n1"
+        node2 = MagicMock()
+        node2.id = "n2"
+        
+        # 1. First click (no shift) selects node 1
+        mock_application_model.scene_root.find_node_by_id.side_effect = lambda id: node1 if id == "n1" else node2
+        mock_application_model.selection = []
+        
+        tool.mouse_press_event("n1", (0.5, 0.5), Qt.MouseButton.LeftButton)
+        mock_application_model.set_selection.assert_called_with([node1])
+        
+        # 2. Shift-click node 2 appends it
+        mock_application_model.selection = [node1]
+        tool.mouse_press_event("n2", (0.5, 0.5), Qt.MouseButton.LeftButton, modifiers="shift")
+        mock_application_model.set_selection.assert_called_with([node1, node2])
+        
+        # 3. Shift-click node 1 removes it
+        mock_application_model.selection = [node1, node2]
+        tool.mouse_press_event("n1", (0.5, 0.5), Qt.MouseButton.LeftButton, modifiers="shift")
+        mock_application_model.set_selection.assert_called_with([node2])

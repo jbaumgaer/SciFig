@@ -84,18 +84,20 @@ class CanvasController(QObject):
         
         qt_button = self._map_mpl_button_to_qt(event.button)
         
-        self.logger.debug(f"Mouse press at {fig_coords}, hit: {node_id}, button: {qt_button}")
-        self._tool_service.dispatch_mouse_press_event(node_id, fig_coords, qt_button)
+        self.logger.debug(f"Mouse press at {fig_coords}, hit: {node_id}, button: {qt_button}, key: {event.key}")
+        self._tool_service.dispatch_mouse_press_event(
+            node_id, fig_coords, qt_button, modifiers=event.key
+        )
 
     def _on_mouse_move(self, event):
         """Translates Matplotlib move event."""
         fig_coords = self._get_fig_coords(event)
-        self._tool_service.dispatch_mouse_move_event(fig_coords)
+        self._tool_service.dispatch_mouse_move_event(fig_coords, modifiers=event.key)
 
     def _on_mouse_release(self, event):
         """Translates Matplotlib release event."""
         fig_coords = self._get_fig_coords(event)
-        self._tool_service.dispatch_mouse_release_event(fig_coords)
+        self._tool_service.dispatch_mouse_release_event(fig_coords, modifiers=event.key)
 
     def _on_key_pressed(self, event: QKeyEvent):
         """Dispatches keyboard events to the tool service."""

@@ -65,14 +65,22 @@ class BaseTool(QObject, ABC, metaclass=ToolMeta):
         """Called by the ToolManager when the tool is deactivated."""
 
     def mouse_press_event(
-        self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
+        self,
+        node_id: Optional[str],
+        fig_coords: tuple[float, float],
+        button: int,
+        modifiers: Optional[str] = None,
     ) -> None:
         """Handles the mouse press event on the canvas."""
 
-    def mouse_move_event(self, fig_coords: tuple[float, float]) -> None:
+    def mouse_move_event(
+        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+    ) -> None:
         """Handles the mouse move event on the canvas."""
 
-    def mouse_release_event(self, fig_coords: tuple[float, float]) -> None:
+    def mouse_release_event(
+        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+    ) -> None:
         """Handles the mouse release event on the canvas."""
 
     def key_press_event(self, event: QKeyEvent) -> None:

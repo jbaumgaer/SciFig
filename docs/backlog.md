@@ -2493,28 +2493,6 @@ Remaining Features
 - Integrate aligning and distribution
 - Make the add plot dialog similar to the shape dialog of adobe illustrator
 - Complete the test coverage
-- When I drag and drop a file into a subplot now, I get crazy long log and the application freezes. This was not the case before we started working on the TDD
-2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
-2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
-2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
-2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
-2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
-2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
-2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
-2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
-2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
-2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
-2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
-2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
-2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
-2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
-2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
-2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
-2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
-2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
-2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
-2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
-2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
 ## Unit conversion
 - Have internal representation in fractional figure coordinates (mpl), canvas coordinates (Qt?), pixels, centimeters and inches (which other coordinate systems are currently used?)
 ## New Grid Layout Manager

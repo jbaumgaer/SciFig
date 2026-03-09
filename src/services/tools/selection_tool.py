@@ -54,7 +54,11 @@ class SelectionTool(BaseTool):
         return IconPath.get_path("tool_icons.select")
 
     def mouse_press_event(
-        self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
+        self,
+        node_id: Optional[str],
+        fig_coords: tuple[float, float],
+        button: int,
+        modifiers: Optional[str] = None,
     ) -> None:
         """Handles selection, move, or resize initialization."""
         if button != Qt.MouseButton.LeftButton:
@@ -77,22 +81,35 @@ class SelectionTool(BaseTool):
         if node_id:
             node = self._model.scene_root.find_node_by_id(node_id)
             if node:
-                # If clicking a node not in selection, select only it
-                if node not in self._model.selection:
-                    self._model.set_selection([node])
+                # Handle Multi-Selection logic (Shift-Click)
+                if modifiers == "shift":
+                    current_selection = list(self._model.selection)
+                    if node in current_selection:
+                        current_selection.remove(node)
+                    else:
+                        current_selection.append(node)
+                    self._model.set_selection(current_selection)
+                else:
+                    # If clicking a node not in current selection, replace selection
+                    if node not in self._model.selection:
+                        self._model.set_selection([node])
                 
-                self._mode = InteractionMode.MOVING
-                self._drag_start_fig = fig_coords
-                self._initial_geometries = {
-                    n.id: n.geometry for n in self._model.selection if hasattr(n, "geometry")
-                }
+                # Only initiate MOVING if selection is not empty after click
+                if self._model.selection:
+                    self._mode = InteractionMode.MOVING
+                    self._drag_start_fig = fig_coords
+                    self._initial_geometries = {
+                        n.id: n.geometry for n in self._model.selection if hasattr(n, "geometry")
+                    }
                 return
 
         # Clicked empty space
         self._model.set_selection([])
         self._mode = InteractionMode.NONE
 
-    def mouse_move_event(self, fig_coords: tuple[float, float]) -> None:
+    def mouse_move_event(
+        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+    ) -> None:
         """Publishes preview updates based on current interaction mode."""
         if self._mode == InteractionMode.NONE or not self._drag_start_fig:
             return
@@ -118,7 +135,9 @@ class SelectionTool(BaseTool):
             style="ghost"
         )
 
-    def mouse_release_event(self, fig_coords: tuple[float, float]) -> None:
+    def mouse_release_event(
+        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+    ) -> None:
         """Finalizes the interaction and applies changes."""
         if self._mode == InteractionMode.NONE or not self._drag_start_fig:
             return

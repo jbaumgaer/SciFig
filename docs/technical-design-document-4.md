@@ -49,6 +49,15 @@ A stateless management system for temporary UI elements (ghosts, handles, guides
 *   **`clear_previews()`**: Flushes all interactive items from the scene.
 *   **Z-Value Policy**: Previews must use a `zValue` range (e.g., 1000+) to ensure they never fall behind the Matplotlib canvas.
 
+### 3.4. Multi-Selection Logic (Shift-Click)
+To support complex compositions, the selection state must be accumulative.
+*   **Single Click (No Modifier)**: `model.set_selection([node])`. Replaces any existing selection.
+*   **Shift + Click (Toggle Mode)**:
+    *   If the node is **not** in the current selection: Append it to `model.selection`.
+    *   If the node **is** already in the selection: Remove it (Deselect).
+*   **Click Empty Space**: `model.set_selection([])`. Clears all.
+*   **Visual Feedback**: All selected nodes must display the active selection highlight (e.g., blue border) via the `FigureRenderer`.
+
 ---
 
 ## 4. Feature Implementation Details
@@ -76,10 +85,11 @@ A stateless management system for temporary UI elements (ghosts, handles, guides
 ### 4.3. Move Plots (Tool: `SelectionTool`)
 *   **State**: `_is_dragging`, `_drag_start_fig`, `_initial_geoms: dict[PlotID, Rect]`, `_ghosts: dict[PlotID, QGraphicsRectItem]`.
 *   **Workflow Logic**: 
-    1.  On `mousePress`, create a semi-transparent ghost for every selected node and add to the `_ghosts` map.
+    1.  On `mousePress`, create a semi-transparent ghost for **every** node in the current selection and add to the `_ghosts` map.
     2.  As the user drags, the tool calculates the delta from the **original** press point. **Critical**: Do not use frame-by-frame deltas to avoid rounding error accumulation.
     3.  **Persistence Detail**: The `CanvasController` must maintain references to these ghost items. During `mouseMove`, it updates the existing items using `item.setRect()` rather than clearing and recreating the scene. This prevents flickering and ensures high performance.
-    4.  *Performance Optimization*: If more than 10 plots are selected, moving individual ghosts may lag. In this case, the tool will fall back to a single "Group Bounding Box" ghost to maintain 60 FPS.
+    4.  *Multi-Node Movement*: The same `(dx, dy)` vector is applied to every node in the selection set, preserving their relative positions.
+    5.  *Performance Optimization*: If more than 10 plots are selected, moving individual ghosts may lag. In this case, the tool will fall back to a single "Group Bounding Box" ghost to maintain 60 FPS.
 *   **Command**: `BatchChangePlotGeometryCommand` applies final positions on `mouse_release`.
 
 ### 4.4. Resize Plots (Tool: `SelectionTool`)

@@ -45,7 +45,11 @@ class AddPlotTool(BaseTool):
         return IconPath.get_path("tool_icons.plot")
 
     def mouse_press_event(
-        self, node_id: Optional[str], fig_coords: tuple[float, float], button: int
+        self,
+        node_id: Optional[str],
+        fig_coords: tuple[float, float],
+        button: int,
+        modifiers: Optional[str] = None,
     ) -> None:
         """Starts the plot creation interaction."""
         if button == Qt.MouseButton.LeftButton:
@@ -54,7 +58,9 @@ class AddPlotTool(BaseTool):
             self._last_pos_fig = fig_coords
             self.logger.debug(f"AddPlotTool: Press at {fig_coords}")
 
-    def mouse_move_event(self, fig_coords: tuple[float, float]) -> None:
+    def mouse_move_event(
+        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+    ) -> None:
         """Updates the rubber-band preview."""
         if not self._is_pressed or not self._start_pos_fig:
             return
@@ -71,7 +77,9 @@ class AddPlotTool(BaseTool):
             style="rubber_band"
         )
 
-    def mouse_release_event(self, fig_coords: tuple[float, float]) -> None:
+    def mouse_release_event(
+        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+    ) -> None:
         """Finalizes the creation or requests a dialog."""
         if not self._is_pressed or not self._start_pos_fig:
             return
