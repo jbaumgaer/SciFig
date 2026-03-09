@@ -35,7 +35,6 @@ class CanvasController(QObject):
 
         self._connect_view_signals()
         self._connect_backend_events()
-        self._subscribe_to_events()
         self.logger.info("CanvasController initialized.")
 
     def _connect_view_signals(self):
@@ -50,12 +49,6 @@ class CanvasController(QObject):
         canvas.mpl_connect("button_press_event", self._on_mouse_press)
         canvas.mpl_connect("motion_notify_event", self._on_mouse_move)
         canvas.mpl_connect("button_release_event", self._on_mouse_release)
-
-    def _subscribe_to_events(self):
-        """Subscribes to relevant events from the aggregator."""
-        self._event_aggregator.subscribe(
-            Events.APPLY_DATA_FILE_REQUESTED, self._on_apply_data_file_request
-        )
 
     def _get_fig_coords(self, event) -> tuple[float, float]:
         """
@@ -126,28 +119,21 @@ class CanvasController(QObject):
 
     def _on_file_dropped(self, file_path: str, scene_pos: QPointF):
         """
-        Handles data file drops by identifying the target node
-        and initiating the data loading workflow.
+        Handles data file drops by identifying the target node and
+        requesting an application-level data apply operation.
         """
         fig_coords = self._view.map_to_figure(scene_pos)
         node = self._model.scene_root.hit_test(fig_coords)
 
         if node and isinstance(node, PlotNode):
             self.logger.info(f"File {file_path} dropped onto node {node.id}")
-            # Trigger data load via event-driven command workflow
+            # Request high-level data application (handled by NodeController)
             self._event_aggregator.publish(
-                Events.APPLY_DATA_FILE_REQUESTED,
+                Events.APPLY_DATA_TO_NODE_REQUESTED,
                 node_id=node.id,
                 file_path=Path(file_path),
             )
 
-    def _on_apply_data_file_request(self, node_id: str, file_path: Path):
-        """Forwards the data file request to the NodeController."""
-        self._event_aggregator.publish(
-            Events.APPLY_DATA_TO_NODE_REQUESTED, node_id=node_id, file_path=file_path
-        )
-        self.logger.debug(f"Forwarded data apply request for node {node_id}")
-        
     @property
     def view(self):
         return self._view
