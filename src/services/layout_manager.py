@@ -162,6 +162,7 @@ class LayoutManager:
         poorly aligned free-form plot arrangements by employing more advanced clustering
         or spatial analysis techniques to infer rows, columns, and optimal spacing.
         The current implementation assumes a generally "grid-like" starting point.
+        # TODO: This sets a lot of default values and needs thorough unit testing
         """
         self.logger.info(
             f"Inferring grid config from {len(plots)} plots based on current free-form positions."
@@ -446,6 +447,7 @@ class LayoutManager:
         Infers sensible grid parameters (rows, cols, margins, gutters) from the current
         free-form plot positions and updates the model.
         This does NOT apply the layout to the canvas immediately but updates the UI fields.
+        # TODO: The method name is kind of confusing when we already have infer_grid_config_from_plots
         """
         self.logger.info("LayoutManager received request to infer grid parameters.")
 
@@ -700,6 +702,8 @@ class LayoutManager:
         """
         Infers sensible grid rows and columns based on the number of plots.
         Aims for a square-ish layout.
+        # TODO: How is this different from the calculations in grid_layout_engine?
+        # TODO: This needs unit testing
         """
         if num_plots <= 0:
             return 1, 1
@@ -720,6 +724,7 @@ class LayoutManager:
         This serves as the initial/fallback grid configuration when no specific
         grid layout has been loaded or inferred.
         Values are sourced from ConfigService or reasonable hardcoded defaults.
+        # TODO: Remove these hard coded default values
         """
         rows = self._config_service.get(
             "layout.default_grid_rows", 1

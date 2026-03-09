@@ -76,6 +76,7 @@ class LayoutConfig(ABC):
     @staticmethod
     def from_dict(data: dict[str, any]) -> T:  # Modified to use TypeVar
         """Deserializes a dictionary into a concrete LayoutConfig instance."""
+        # TODO: I don't understand why we need this implementation when we override anyways?
         mode_str = data.get("mode")
         if not mode_str:
             raise ValueError("LayoutConfig data is missing 'mode' field.")

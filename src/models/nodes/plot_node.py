@@ -26,6 +26,7 @@ class PlotNode(SceneNode):
         self.logger.debug(f"PlotNode initialized: {self.name} (ID: {self.id})")
 
         # Geometry in 0-1 figure coordinates. Default to a central box.
+        # TODO: This should never have default values
         self.geometry: Rect = Rect(0.1, 0.1, 0.8, 0.8)
         
         self.plot_properties: Optional[PlotProperties] = None
@@ -92,6 +93,7 @@ class PlotNode(SceneNode):
             width=geom_data.get("width", 0.8),
             height=geom_data.get("height", 0.8),
         )
+        # TODO: This should never have default values, but throw an error if it cannot get recovered
 
         # 2. Hierarchical PlotProperties reconstruction
         props_data = data.get("plot_properties")
@@ -125,6 +127,7 @@ class PlotNode(SceneNode):
                 )
             elif load_path.exists() and load_path.suffix == ".csv":
                 node.data = pd.read_csv(load_path, sep=";")  # Default project separator
+                # TODO: This should be handled by the data service, not the plot node
 
                 node.logger.debug(
                     f"PlotNode '{node.name}' loaded data from {load_path}.csv"

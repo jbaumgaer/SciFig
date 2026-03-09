@@ -2484,21 +2484,99 @@ This epic decouples **Structural Logic** (path resolution) from **User Intent** 
 Scan for new values that should really be config values
 Fix and refactor the layout engine to use numpy for calculations, and check whether the calculations are actually correct and have dedicated methods
 Config_service is passed around a lot. I should rather inject the important sections during initialization
+Make the event aggregator a singleton because I need it literally everywhere, so I can just assume its dependence, and I'm not hiding anything with that
 
 
-Features
-- Add plot in Free Form
-- Delete plot in free form with delete or select/right_click/delete
-- Ability to move plot by dragging in free form
+Remaining Features
+- Delete plot in free form with select/right_click/delete
+- Allow multiple selelect with shift click
+- Integrate aligning and distribution
+- Make the add plot dialog similar to the shape dialog of adobe illustrator
+- Complete the test coverage
+- When I drag and drop a file into a subplot now, I get crazy long log and the application freezes. This was not the case before we started working on the TDD
+2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
+2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
+2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
+2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
+2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
+2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
+2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
+2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
+2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
+2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
+2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
+2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
+2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
+2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
+2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
+2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
+2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
+2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
+2026-03-08 08:36:37 - DataService - WARNING - Load already in progress for node 93ef3fe62c0546c48596531dae7ba7fa.
+2026-03-08 08:36:37 - CanvasController - DEBUG - Forwarded data apply request for node 93ef3fe62c0546c48596531dae7ba7fa
+2026-03-08 08:36:37 - DataService - DEBUG - Received load request for node 93ef3fe62c0546c48596531dae7ba7fa from D:\Dokumente\Python\Data_Analysis_GUI\data\three_column_data.csv
+## Unit conversion
+- Have internal representation in fractional figure coordinates (mpl), canvas coordinates (Qt?), pixels, centimeters and inches (which other coordinate systems are currently used?)
 ## New Grid Layout Manager
-- Ability to display grid layout lines with spaces and gutters as grid lines and plot previews (rectangles for now) within the individual subplots
-- In the empty subplot spaces where we haven't added anything, have a + button which either adds a subplot (rectangle), or has the ability to subdivide the space again (with subplotspecgrid). Likewise, there should be delete and move actions for deleting subplots from the grid, moving hspace and gutters
-- I assume the rectangle dimensions will come from plotnode.geometry
+- Note: Before implementing this, we might have to refactor the layout controller, layout manager, free layout engine, grid layout engine and grid config to make space for these capabilities
+- Ability to display grid layout lines with hspace, wspace, and gutters as grid lines and on top of the existing matplotlib figure
+    - To support this feature and not collide with the rest of the application, these lines shouldn't always be visible, but only, when we are in grid layout mode, and not in free form layout mode
+    - Support for a nested subplot layout with many subplotgridspec objects inside, so not just a flat top-level representation
+    - For grid lines that are only valid for a specific subplotgridspec, the lines should only be visible within that subplotgridspec
+    - I will use the overlay renderer for displaying these lines and make them movable
+    - The hspaces and wspaces should be slightly greyed out to clearly indicate that no plot can be put here
+        - Unlike "native" matplotlib, where we only display the entire hspaces and wspaces, I want to have the "main" divider lines at hspace/2 and wspace/2, and then around them finer lines that indicate the hspace and wspace borders
+- I need to think about a suitable internal representation and data structure for this with the recursive splitting into subplots
+    - The internal data and the renderer need to be synced at all times
+    - The representation needs to be serializable for saving and loading
+    - Is there any inspiration that I can take from PlotProperties?
+    - Maybe I can have an internal representation with a Figure, gutters, and a gridspec
+    - The gridspec then fills up recursively with subplotgridspecs, and for each level, we can also hold information for hspace and wspace
+    - The data structure potentially needs to support arbitrary level of nesting, but we should for safety put a limit at a depth of 10 layers
+    - Eventually, there needs to be an option to "flatten" the highly nested subplot grid where appropriate, if the real subplot gridspec can actually be represented in a simpler way by a flatter subplotgridspec
+- In essence, this looks to me like how you would have to represent a table in word or so internally and visually, which can also be nested and where cells can be merged and subdivided again
+    - The hspace and wspace are similar to the cells whitespace boarders, only that in matplotlib, the represent the space between subplots in fractional coordinates relative to the subplot size, wheras for a table, we would have hspace or wspace/2 as the "padding" within each cell
+- Supported actions
+    - In the empty subplot spaces, clicking while the plot tool is selected will add a subplot. Unlike with the free layout, where a dialog opens up asking for the dimensions, the dimensions will automatically be calculated based on the gridspec
+    - Likewise, there should the ability to subdivide the space again (with subplotspecgrid). Maybe for now this action can be handled by the selection tool when clicking on any cell
+        - Upon clicking, the cell, a dialog should open to ask for how many rows and columns we want, and what their height and width ratios should be
+        - If the cell is empty, the action is easy. If the cell contains a subplot, the existing subplot should automatically be moved into the upper left quadrant of the new grid
+    - There should be delete and move actions for deleting subplots from the grid, moving hspace and gutters
+    - there needs to be some sort of smart grid allocation because moving subplots will have to find the nearest subplot to land in
+    - When hovering at the sides over one of the divider grid lines, a plus symbol should pop up and the divider line should be highlighted by a thicker linewidth, to add a new row or column at this point. I should check in word about the possible redistribution options like intelligent redistribute etc.
+        - One option would be to take the middle value of the relative subplot fractions of the two adjacent lines. By using the relative fractions, we make sure that when the new row/column is added, and the adjacent ones are shrunk down, that the newly added column isn't actually bigger than the adjacent ones (e.g. if we have a 10cm figure with two columns, 5 cm each: In absolute terms, the new column would have to be also 5 cm but because the total width of the figure is 10 cm, the existing columns would now have to be 2.5 cm. By using relative fractions (1:1 -> 1:1:1, everything gets scaled correctly))
+- There should be the option in the layout ribbon bar to create a new grid, where a dropdown pops up with with a 7 cols x 6 rows square plot preview where the user can over over to select the table to create the size that they want
+    - For now, the easier option will be to just have a dialog where the user is being asked for the number of rows and number of columns to quickly create a grid layout
+    - Implement the table layout ribbon bar from word where there is the option to
+        - toggle visibility of the grid lines
+        - Ability to delete
+            - Dub items to delete an individual cell (think about how to fill the gap)
+            - Delete row/column, which will do the opposite of adding
+        - Ability to add
+            - Row above
+            - Row below
+            - Column left
+            - Column right
+        - Merge / split
+            - Split is what I discussed before
+            - Merge will require selection of multiple cells in the grid (I need to support that option)
+        - Cell dimensions
+            - See above. I will have to think about whether this is the plotnode.geometry rect or if this is the subplotgrid size or whether the two are the same
+            - Auto redistribute height and width of columns to the same value
+                - This should be applied to the topmost gridspec, not to the nested gridspecs
+            - Cell borders
+                - This will be the hspace/2 and wspace/2
+                - We will need support for setting these in cm despite matplotlib keeping track of them in fractions relative to the subplot size
+                - For a balanced look, I will probably want this value to be set globally (for the most part), but as an absolute value. This will require some sort of conversion on my side because matplotlib sets it to the fictional "size 1" subplot within the respective gridspec, so if we added a nested gridspec, where the absolute size of "size 1" is different, the hspace (say size 0.2) will be different in absolute coordinates. This is not desired. Instead, they should match in terms x cm across all nestings
+- The grid layout manager will have to communicate with the style service because it holds the information on default margins and spaces
+- I assume the rectangle dimensions will come from plotnode.geometry (not sure, because we need to have space for the labels. I should check how matplotlib handles this internally)
+- Eventually, there should be the option, like in word, to have predefined layout margins like narrow, wide etc.
+
 - Check for mpl examples for displaying grid lines
-- For grid lines that are only visible for a specific subplot, the lines should only be visible within that subplot
 
 ## Errors/Bugs
 - Empty dropdown in the properties tab
+- Do a TODO: search in the code base to find open tickets
 - Back syncing very inefficient, constant rerenders
 - Double and triple logging, e.g. during hydration of plots
 - Somehow the hit test is currently broken because when I drag and drop data into the plot, it doesn't actually plot the data or load it in

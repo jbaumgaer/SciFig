@@ -346,3 +346,9 @@ src/ui/renderers/__pycache__/overlay_renderer.cpython-313.pyc
 tests/unit/ui/renderers/__pycache__/test_overlay_renderer.cpython-313-pytest-9.0.2.pyc
 tests/unit/ui/renderers/__pycache__/test_figure_renderer.cpython-313-pytest-9.0.2.pyc
 src/ui/renderers/__pycache__/figure_renderer.cpython-313.pyc
+examples/UI/Cell_Dimensions.png
+examples/UI/Delete_Grid.png
+examples/UI/Menu_Bar_Table.png
+examples/UI/Merge_Split.png
+examples/UI/Rows_and_Columns.png
+examples/UI/Show_Gridlines.png

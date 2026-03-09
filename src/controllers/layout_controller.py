@@ -14,11 +14,11 @@ from src.services.commands.change_grid_parameters_command import (
     ChangeGridParametersCommand,
 )
 from src.services.commands.command_manager import CommandManager
-from src.services.event_aggregator import EventAggregator  # New import
+from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
-from src.shared.geometry import Rect  # New import
+from src.shared.geometry import Rect
 
 
 class LayoutController:
@@ -40,16 +40,16 @@ class LayoutController:
         model: ApplicationModel,
         command_manager: CommandManager,
         layout_manager: LayoutManager,
-        event_aggregator: EventAggregator,  # New dependency
+        event_aggregator: EventAggregator,
     ):
         self.model = model
         self.command_manager = command_manager
         self._layout_manager = layout_manager
-        self._event_aggregator = event_aggregator  # Store EventAggregator
+        self._event_aggregator = event_aggregator
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutController initialized.")
 
-        self._subscribe_to_events()  # New: Subscribe to events
+        self._subscribe_to_events()
 
     def _subscribe_to_events(self):
         """Subscribes to layout-related request events."""
@@ -121,7 +121,7 @@ class LayoutController:
         """
         return self._layout_manager.ui_selected_layout_mode
 
-    def _handle_align_plots_request(self, edge: str):  # Renamed
+    def _handle_align_plots_request(self, edge: str):
         """
         Aligns the currently selected plots based on an event request.
         """
@@ -149,7 +149,7 @@ class LayoutController:
         else:
             self.logger.info("No geometry changes after alignment calculation.")
 
-    def _handle_distribute_plots_request(self, axis: str):  # Renamed
+    def _handle_distribute_plots_request(self, axis: str):
         """
         Distributes the currently selected plots based on an event request.
         """
@@ -193,7 +193,7 @@ class LayoutController:
 
     def _handle_change_grid_parameter_request(
         self, param_name: str, value: Any
-    ):  # Renamed
+    ):
         """
         Handles changes from granular UI controls for grid layout parameters.
         Collects changes and dispatches a ChangeGridParametersCommand.
@@ -295,8 +295,8 @@ class LayoutController:
         new_grid_config = GridConfig(
             rows=new_rows,
             cols=new_cols,
-            row_ratios=current_grid_config.row_ratios,  # Preserve for now
-            col_ratios=current_grid_config.col_ratios,  # Preserve for now
+            row_ratios=current_grid_config.row_ratios,
+            col_ratios=current_grid_config.col_ratios,
             margins=new_margins,
             gutters=new_gutters,
         )
@@ -318,7 +318,7 @@ class LayoutController:
             f"Executed ChangeGridParametersCommand for {param_name} change."
         )
 
-    def _handle_infer_grid_parameters_request(self):  # Renamed
+    def _handle_infer_grid_parameters_request(self):
         """
         Triggers the LayoutManager to infer grid parameters from the current free-form plot positions.
         This action is typically called by a UI button.
@@ -326,7 +326,7 @@ class LayoutController:
         self.logger.info("LayoutController received request to infer grid parameters.")
         self._layout_manager.infer_grid_parameters()
 
-    def _handle_optimize_layout_request(self):  # Renamed
+    def _handle_optimize_layout_request(self):
         """
         Triggers the LayoutManager to optimize the current grid layout.
         This action is encapsulated in a command for undo/redo support.

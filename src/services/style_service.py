@@ -54,6 +54,7 @@ class StyleService:
     Inheritance Rule (Path B): If a non-standard key (like 'ztick') is missing, 
     the service inherits the value from a related standard key (like 'xtick') 
     within the same theme.
+    #TODO: THis file still contains hard coded default values
     """
 
     # Exhaustive list of standard Matplotlib keys required for every theme.

@@ -267,6 +267,7 @@ class NodeController(QObject):
             )
 
         commands = []
+        # TODO: This should be extracted into its own set plot axes method
         if data.shape[1] >= 2 and node.plot_properties and node.plot_properties.artists:
             cols = data.columns
             commands.append(
@@ -307,6 +308,7 @@ class NodeController(QObject):
             )
         )
         
+        # TODO: This should also be extracted into its own method
         if node.plot_properties:
             is_polar = node.plot_properties.coords.coord_type == ArtistType.POLAR_LINE
             x_path = "coords.theta_axis.limits" if is_polar else "coords.xaxis.limits"

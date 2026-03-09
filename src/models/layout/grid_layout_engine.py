@@ -44,7 +44,7 @@ class GridLayoutEngine(LayoutEngine):
         if not plots:
             return {}, calculated_margins, calculated_gutters
 
-        temp_fig = plt.figure(figsize=(8, 6))  # Create a temporary figure
+        temp_fig = plt.figure(figsize=(8, 6))  # TODO: This temporary figure needs to be synced with the real figure at all times
         final_plot_geometries: dict[PlotID, Rect] = {}
 
         try:
@@ -98,6 +98,8 @@ class GridLayoutEngine(LayoutEngine):
                 - A dictionary mapping PlotID to its final calculated geometry (Rect in figure fractions).
                 - A Margins object (top, bottom, left, right in figure fraction).
                 - A Gutters object (hspace, wspace in figure fraction).
+        #TODO: This function does way too much right now and not just what the method name says
+        # TODO: This should definitely be unit tested robustly
         """
         self.logger.debug(
             f"Applying Matplotlib grid layout to figure with {len(plot_nodes)} plots."
@@ -114,7 +116,7 @@ class GridLayoutEngine(LayoutEngine):
             grid_config.rows
             if grid_config.rows > 0
             else (math.ceil(num_plots**0.5) if num_plots > 0 else 1)
-        )
+        )# TODO: Why is this row and column calculation logic in here? This shouldn't happen
         cols = (
             grid_config.cols
             if grid_config.cols > 0
@@ -374,7 +376,7 @@ class GridLayoutEngine(LayoutEngine):
             grid_config.cols
             if grid_config.cols > 0
             else (math.ceil(num_plots / rows) if num_plots > 0 else 1)
-        )
+        ) #TODO: Same logic as above. Can't this be abstracted away?
 
         if num_plots == 0:
             return (

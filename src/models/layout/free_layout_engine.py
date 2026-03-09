@@ -49,8 +49,9 @@ class FreeLayoutEngine(LayoutEngine, FreeFormLayoutCapabilities):  # Inherit fro
 
         Returns:
             A dictionary mapping each PlotNode to its new calculated geometry.
+            TODO: This needs thorough unit testing
         """
-        if not plots:
+        if not plots: #TODO: Shouldn't this be minimum 2 plots
             return {}
 
         geometries: dict[PlotID, list[float]] = {
@@ -106,8 +107,9 @@ class FreeLayoutEngine(LayoutEngine, FreeFormLayoutCapabilities):  # Inherit fro
 
         Returns:
             A dictionary mapping each PlotNode to its new calculated geometry.
+            TODO: This needs thorough unit testing
         """
-        if len(plots) < 2:
+        if len(plots) < 2: # TODO: Shouldn't this be minimum 3 plots?
             return {}
 
         geometries: dict[PlotID, list[float]] = {
