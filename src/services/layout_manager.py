@@ -13,7 +13,8 @@ from src.services.config_service import ConfigService
 from src.services.event_aggregator import EventAggregator
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
-from src.shared.types import PlotID, Rect
+from src.shared.geometry import Rect
+from src.shared.types import PlotID
 
 
 class LayoutManager:

@@ -9,7 +9,8 @@ from matplotlib.transforms import Bbox
 from src.models.layout.layout_config import GridConfig, Gutters, Margins
 from src.models.layout.layout_engine import LayoutEngine
 from src.models.nodes import PlotNode
-from src.shared.types import PlotID, Rect
+from src.shared.geometry import Rect
+from src.shared.types import PlotID
 
 
 class GridLayoutEngine(LayoutEngine):

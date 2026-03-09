@@ -6,7 +6,8 @@ from src.models.layout.layout_protocols import (
     FreeFormLayoutCapabilities,  # Import the new protocol
 )
 from src.models.nodes import PlotNode
-from src.shared.types import PlotID, Rect
+from src.shared.geometry import Rect
+from src.shared.types import PlotID
 
 
 class FreeLayoutEngine(LayoutEngine, FreeFormLayoutCapabilities):  # Inherit from both
@@ -49,51 +50,52 @@ class FreeLayoutEngine(LayoutEngine, FreeFormLayoutCapabilities):  # Inherit fro
 
         Returns:
             A dictionary mapping each PlotNode to its new calculated geometry.
-            TODO: This needs thorough unit testing
         """
-        if not plots: #TODO: Shouldn't this be minimum 2 plots
+        if not plots:
             return {}
 
-        geometries: dict[PlotID, list[float]] = {
-            plot.id: list(plot.geometry) for plot in plots
-        }
+        # Source of truth is the current Rect geometries
+        geometries: dict[PlotID, Rect] = {plot.id: plot.geometry for plot in plots}
 
         if edge == "left":
-            target_x = min(g[0] for g in geometries.values())
-            for plot_id, geom in geometries.items():
-                geom[0] = target_x
+            target_x = min(r.x for r in geometries.values())
+            return {pid: Rect(target_x, r.y, r.width, r.height) for pid, r in geometries.items()}
+
         elif edge == "right":
-            target_x_plus_w = max(g[0] + g[2] for g in geometries.values())
-            for plot_id, geom in geometries.items():
-                geom[0] = target_x_plus_w - geom[2]
+            target_right = max(r.x + r.width for r in geometries.values())
+            return {
+                pid: Rect(target_right - r.width, r.y, r.width, r.height)
+                for pid, r in geometries.items()
+            }
+
         elif edge == "top":
-            target_y = min(g[1] for g in geometries.values())
-            for plot_id, geom in geometries.items():
-                geom[1] = target_y
+            target_top = max(r.y + r.height for r in geometries.values())
+            return {
+                pid: Rect(r.x, target_top - r.height, r.width, r.height)
+                for pid, r in geometries.items()
+            }
+
         elif edge == "bottom":
-            target_y_plus_h = max(g[1] + g[3] for g in geometries.values())
-            for plot_id, geom in geometries.items():
-                geom[1] = target_y_plus_h - geom[3]
+            target_y = min(r.y for r in geometries.values())
+            return {pid: Rect(r.x, target_y, r.width, r.height) for pid, r in geometries.items()}
+
         elif edge == "h_center":
-            # Calculate the average center_x of all plots
-            center_x = sum(geom[0] + geom[2] / 2 for geom in geometries.values()) / len(
-                geometries
-            )
-            for plot_id, geom in geometries.items():
-                geom[0] = center_x - geom[2] / 2
+            center_x = sum(r.x + r.width / 2 for r in geometries.values()) / len(geometries)
+            return {
+                pid: Rect(center_x - r.width / 2, r.y, r.width, r.height)
+                for pid, r in geometries.items()
+            }
+
         elif edge == "v_center":
-            # Calculate the average center_y of all plots
-            center_y = sum(geom[1] + geom[3] / 2 for geom in geometries.values()) / len(
-                geometries
-            )
-            for plot_id, geom in geometries.items():
-                geom[1] = center_y - geom[3] / 2
+            center_y = sum(r.y + r.height / 2 for r in geometries.values()) / len(geometries)
+            return {
+                pid: Rect(r.x, center_y - r.height / 2, r.width, r.height)
+                for pid, r in geometries.items()
+            }
+
         else:
             self.logger.warning(f"Unknown alignment edge: {edge}")
             return {}
-
-        self.logger.info(f"Performed '{edge}' alignment for {len(plots)} plots.")
-        return {plot_id: tuple(geom) for plot_id, geom in geometries.items()}
 
     def perform_distribute(
         self, plots: list[PlotNode], axis: str
@@ -107,73 +109,47 @@ class FreeLayoutEngine(LayoutEngine, FreeFormLayoutCapabilities):  # Inherit fro
 
         Returns:
             A dictionary mapping each PlotNode to its new calculated geometry.
-            TODO: This needs thorough unit testing
         """
-        if len(plots) < 2: # TODO: Shouldn't this be minimum 3 plots?
+        if len(plots) < 2:
             return {}
 
-        geometries: dict[PlotID, list[float]] = {
-            plot.id: list(plot.geometry) for plot in plots
-        }
-
-        plot_id_to_obj: dict[PlotID, PlotNode] = {plot.id: plot for plot in plots}
+        # Work with a list of (id, Rect) for sorting
+        items = [(plot.id, plot.geometry) for plot in plots]
 
         if axis == "horizontal":
-            sorted_plot_ids = sorted(
-                geometries.keys(), key=lambda plot_id: geometries[plot_id][0]
-            )
-            min_coord = geometries[sorted_plot_ids[0]][0]
-            max_coord = (
-                geometries[sorted_plot_ids[-1]][0] + geometries[sorted_plot_ids[-1]][2]
-            )
-            total_width = sum(geometries[plot_id][2] for plot_id in sorted_plot_ids)
-
-            if len(sorted_plot_ids) > 1:
-                available_space = max_coord - min_coord - total_width
-                if available_space < 0:
-                    self.logger.warning(
-                        "Plots are overlapping, distribution might not be visually ideal."
-                    )
-                    individual_width = (max_coord - min_coord) / len(sorted_plot_ids)
-                    for i, plot_id in enumerate(sorted_plot_ids):
-                        geometries[plot_id][0] = min_coord + i * individual_width
-                        geometries[plot_id][2] = individual_width
-                else:
-                    spacing = available_space / (len(sorted_plot_ids) - 1)
-                    current_x = min_coord
-                    for plot_id in sorted_plot_ids:
-                        geometries[plot_id][0] = current_x
-                        current_x += geometries[plot_id][2] + spacing
+            # Sort by x coordinate
+            items.sort(key=lambda x: x[1].x)
+            
+            min_x = items[0][1].x
+            max_right = max(r.x + r.width for pid, r in items)
+            total_plot_width = sum(r.width for pid, r in items)
+            
+            spacing = (max_right - min_x - total_plot_width) / (len(items) - 1)
+            
+            new_geoms = {}
+            current_x = min_x
+            for pid, rect in items:
+                new_geoms[pid] = Rect(current_x, rect.y, rect.width, rect.height)
+                current_x += rect.width + spacing
+            return new_geoms
 
         elif axis == "vertical":
-            sorted_plot_ids = sorted(
-                geometries.keys(), key=lambda plot_id: geometries[plot_id][1]
-            )
-            min_coord = geometries[sorted_plot_ids[0]][1]
-            max_coord = (
-                geometries[sorted_plot_ids[-1]][1] + geometries[sorted_plot_ids[-1]][3]
-            )
-            total_height = sum(geometries[plot_id][3] for plot_id in sorted_plot_ids)
+            # Sort by y coordinate
+            items.sort(key=lambda x: x[1].y)
+            
+            min_y = items[0][1].y
+            max_top = max(r.y + r.height for pid, r in items)
+            total_plot_height = sum(r.height for pid, r in items)
+            
+            spacing = (max_top - min_y - total_plot_height) / (len(items) - 1)
+            
+            new_geoms = {}
+            current_y = min_y
+            for pid, rect in items:
+                new_geoms[pid] = Rect(rect.x, current_y, rect.width, rect.height)
+                current_y += rect.height + spacing
+            return new_geoms
 
-            if len(sorted_plot_ids) > 1:
-                available_space = max_coord - min_coord - total_height
-                if available_space < 0:
-                    self.logger.warning(
-                        "Plots are overlapping, distribution might not be visually ideal."
-                    )
-                    individual_height = (max_coord - min_coord) / len(sorted_plot_ids)
-                    for i, plot_id in enumerate(sorted_plot_ids):
-                        geometries[plot_id][1] = min_coord + i * individual_height
-                        geometries[plot_id][3] = individual_height
-                else:
-                    spacing = available_space / (len(sorted_plot_ids) - 1)
-                    current_y = min_coord
-                    for plot_id in sorted_plot_ids:
-                        geometries[plot_id][1] = current_y
-                        current_y += geometries[plot_id][3] + spacing
         else:
             self.logger.warning(f"Unknown distribution axis: {axis}")
             return {}
-
-        self.logger.info(f"Performed '{axis}' distribution for {len(plots)} plots.")
-        return {plot_id: tuple(geom) for plot_id, geom in geometries.items()}

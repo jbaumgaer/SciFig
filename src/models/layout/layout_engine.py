@@ -5,7 +5,8 @@ from typing import Optional  # Added Protocol
 from src.models.layout.layout_config import Gutters, LayoutConfig, Margins
 from src.models.layout.layout_protocols import LayoutEngineProtocol  # Added this import
 from src.models.nodes import PlotNode
-from src.shared.types import PlotID, Rect
+from src.shared.geometry import Rect
+from src.shared.types import PlotID
 
 
 class LayoutEngine(ABC, LayoutEngineProtocol):  # Inherit from the protocol
