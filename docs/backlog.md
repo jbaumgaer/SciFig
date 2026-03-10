@@ -2491,6 +2491,7 @@ Remaining Features
 - Delete plot in free form with select/right_click/delete
 - Make the add plot dialog similar to the shape dialog of adobe illustrator
 - Complete the test coverage
+- I have a weird logic with the GridMode: Some things like the infer grid button shouldn't require a Grid Mode, so this is ambiguous
 ## Unit conversion
 - Have internal representation in fractional figure coordinates (mpl), canvas coordinates (Qt?), pixels, centimeters and inches (which other coordinate systems are currently used?)
 ## New Grid Layout Manager

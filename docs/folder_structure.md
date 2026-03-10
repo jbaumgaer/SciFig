@@ -91,6 +91,7 @@ Infrastructure and specialized domain services.
 *   **`__init__.py`**: Marks the directory as a Python package.
 *   **`event_aggregator.py`**: The central event bus. Implements the Publish-Subscribe pattern to facilitate decoupled communication across all system layers.
 *   **`config_service.py`**: Manages the loading and retrieval of application-wide settings from YAML files. Supports dot-notated key access.
+*   **`coordinate_service.py`**: The centralized mathematical authority. Provides a unified API for transforming coordinates between Physical (CM), Fractional, and Display (Pixel) spaces.
 *   **`data_service.py`**: Orchestrates asynchronous data loading tasks by managing background threads and workers (`DataLoader`).
 *   **`layout_manager.py`**: A domain-specific service that orchestrates layout calculations by delegating to specialized engines (`FreeLayoutEngine`, `GridLayoutEngine`).
 *   **`property_service.py`**: A stateless utility for navigating and modifying nested Model attributes via string paths. Supports wildcards and type-safe coercion.
@@ -106,6 +107,7 @@ Implementation of the Command Pattern for reversible state changes.
 *   **`macro_command.py`**: A composite command that groups multiple sub-commands into a single atomic undoable unit.
 *   **`add_plot_command.py`**: Handles the addition of new plot nodes to the scene graph.
 *   **`delete_node_command.py`**: Handles the removal of a single node, storing its state for full restoration on undo.
+*   **`apply_grid_command.py`**: An undoable command that applies a new GridConfig and calculates target physical geometries.
 *   **`batch_change_plot_geometry_command.py`**: Atomically updates the `Rect` geometry of one or many plot nodes.
 *   **`change_plot_property_command.py`**: A generic command for changing any nested property via `PropertyService`.
 *   **`apply_data_to_node_command.py`**: A macro command that updates a node's dataframe and automatically resets its axis mappings and limits.
