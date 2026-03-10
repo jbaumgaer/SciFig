@@ -12,7 +12,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.services.coordinate_service import CoordinateService
 from src.shared.geometry import Rect
+from src.shared.types import CoordinateSpace
 
 # Ensure the backend is set for PySide6
 matplotlib.use("QtAgg")
@@ -63,7 +65,7 @@ class CanvasWidget(QGraphicsView):
     def map_to_figure(self, scene_pos: QPointF) -> tuple[float, float]:
         """
         Translates a Qt scene position into normalized 0-1 figure coordinates.
-        Uses manual linear interpolation for guaranteed parity with OverlayRenderer.
+        Delegates math to CoordinateService.
         """
         view_pos = self.mapFromScene(scene_pos)
         width, height = self.figure_canvas.get_width_height()
@@ -71,22 +73,45 @@ class CanvasWidget(QGraphicsView):
         if width == 0 or height == 0:
             return (0.0, 0.0)
 
-        fig_x = view_pos.x() / width
-        fig_y = 1.0 - (view_pos.y() / height)
+        fig_x = CoordinateService.transform_value(
+            view_pos.x(),
+            from_space=CoordinateSpace.DISPLAY_PX,
+            to_space=CoordinateSpace.FRACTIONAL_FIG,
+            canvas_size_px=float(width)
+        )
+        # Convert top-down Qt Y to bottom-up Normalized Y
+        px_y_bottom_up = height - view_pos.y()
+        fig_y = CoordinateService.transform_value(
+            px_y_bottom_up,
+            from_space=CoordinateSpace.DISPLAY_PX,
+            to_space=CoordinateSpace.FRACTIONAL_FIG,
+            canvas_size_px=float(height)
+        )
         return (float(fig_x), float(fig_y))
 
     def map_from_figure(self, fig_pos: tuple[float, float]) -> QPointF:
         """
         Translates normalized 0-1 figure coordinates back to Qt scene coordinates.
+        Delegates math to CoordinateService.
         """
-        fig = self.figure_canvas.figure
-        trans = fig.transFigure
-        pixels = trans.transform(fig_pos)
+        width, height = self.figure_canvas.get_width_height()
         
-        height = self.figure_canvas.height()
-        view_x = pixels[0]
-        view_y = height - pixels[1]
-        return self.mapToScene(view_x, view_y)
+        px_x = CoordinateService.transform_value(
+            fig_pos[0],
+            from_space=CoordinateSpace.FRACTIONAL_FIG,
+            to_space=CoordinateSpace.DISPLAY_PX,
+            canvas_size_px=float(width)
+        )
+        px_y_bottom_up = CoordinateService.transform_value(
+            fig_pos[1],
+            from_space=CoordinateSpace.FRACTIONAL_FIG,
+            to_space=CoordinateSpace.DISPLAY_PX,
+            canvas_size_px=float(height)
+        )
+        # Convert bottom-up Normalized Y to top-down Qt Y
+        view_y = height - px_y_bottom_up
+        
+        return self.mapToScene(px_x, view_y)
 
     def map_rect_from_figure(self, fig_rect: Rect) -> QRectF:
         """

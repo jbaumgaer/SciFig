@@ -108,7 +108,8 @@ class CompositionRoot:
         )
 
         self._application_model = ApplicationModel(
-            event_aggregator=self._event_aggregator
+            event_aggregator=self._event_aggregator,
+            figure_size=(figure_width * 2.54, figure_height * 2.54),
         )
         self._command_manager = CommandManager(
             model=self._application_model, event_aggregator=self._event_aggregator

@@ -25,9 +25,9 @@ class PlotNode(SceneNode):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.debug(f"PlotNode initialized: {self.name} (ID: {self.id})")
 
-        # Geometry in 0-1 figure coordinates. Default to a central box.
+        # Geometry in physical centimeters (cm).
         # TODO: This should never have default values
-        self.geometry: Rect = Rect(0.1, 0.1, 0.8, 0.8)
+        self.geometry: Rect = Rect(2.0, 2.0, 8.0, 8.0)
         
         self.plot_properties: Optional[PlotProperties] = None
         self.data: Optional[pd.DataFrame] = None
@@ -35,12 +35,12 @@ class PlotNode(SceneNode):
 
     def hit_test(self, position: tuple[float, float]) -> Optional[SceneNode]:
         """
-        Checks if the given position (in figure coordinates, 0-1) is within
+        Checks if the given physical position (cm) is within
         the bounds of this plot's geometry.
         """
         if self.geometry.contains(*position):
             self.logger.debug(
-                f"Hit test for {self.name} (ID: {self.id}): Hit at {position}."
+                f"Hit test for {self.name} (ID: {self.id}): Hit at {position} cm."
             )
             return self
         return None
@@ -85,13 +85,13 @@ class PlotNode(SceneNode):
         """Creates a PlotNode from a dictionary using recursive property reconstruction."""
         node = super().from_dict(data, parent)
 
-        # 1. Geometry reconstruction
+        # 1. Geometry reconstruction (Physical CM)
         geom_data = data.get("geometry", {})
         node.geometry = Rect(
-            x=geom_data.get("x", 0.1),
-            y=geom_data.get("y", 0.1),
-            width=geom_data.get("width", 0.8),
-            height=geom_data.get("height", 0.8),
+            x=geom_data.get("x", 0.0),
+            y=geom_data.get("y", 0.0),
+            width=geom_data.get("width", 5.0),
+            height=geom_data.get("height", 5.0),
         )
         # TODO: This should never have default values, but throw an error if it cannot get recovered
 

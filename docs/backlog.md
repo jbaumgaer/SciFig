@@ -2489,8 +2489,6 @@ Make the event aggregator a singleton because I need it literally everywhere, so
 
 Remaining Features
 - Delete plot in free form with select/right_click/delete
-- Allow multiple selelect with shift click
-- Integrate aligning and distribution
 - Make the add plot dialog similar to the shape dialog of adobe illustrator
 - Complete the test coverage
 ## Unit conversion

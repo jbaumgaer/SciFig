@@ -5,8 +5,8 @@ from typing import Any
 @dataclass(frozen=True)
 class Rect:
     """
-    A robust geometric primitive representing a rectangle in normalized 
-    figure coordinates (0.0 to 1.0).
+    A robust geometric primitive representing a rectangle in physical 
+    centimeters (cm).
     
     This class is immutable (frozen) to ensure coordinate integrity during 
     complex layout calculations.
@@ -45,9 +45,9 @@ class Rect:
             new_h += dy
 
         # Ensure we don't flip the rectangle inside out
-        # (Min size threshold of 0.01 as per TDD-4)
-        new_w = max(0.01, new_w)
-        new_h = max(0.01, new_h)
+        # (Min size threshold of 0.1 cm as per TDD-5)
+        new_w = max(0.1, new_w)
+        new_h = max(0.1, new_h)
 
         return Rect(new_x, new_y, new_w, new_h)
 

@@ -29,11 +29,11 @@ class AddPlotTool(BaseTool):
         
         # Interaction state
         self._is_pressed = False
-        self._start_pos_fig: Optional[tuple[float, float]] = None
-        self._last_pos_fig: Optional[tuple[float, float]] = None
+        self._start_pos_phys: Optional[tuple[float, float]] = None
+        self._last_pos_phys: Optional[tuple[float, float]] = None
         
-        # Noise threshold for distinguishing click from drag (in figure units)
-        self._click_threshold = 0.005 
+        # Noise threshold for click vs drag (0.1 cm)
+        self._click_threshold_cm = 0.1 
 
     @property
     def name(self) -> str:
@@ -47,28 +47,28 @@ class AddPlotTool(BaseTool):
     def mouse_press_event(
         self,
         node_id: Optional[str],
-        fig_coords: tuple[float, float],
+        phys_coords: tuple[float, float],
         button: int,
         modifiers: Optional[str] = None,
     ) -> None:
         """Starts the plot creation interaction."""
         if button == Qt.MouseButton.LeftButton:
             self._is_pressed = True
-            self._start_pos_fig = fig_coords
-            self._last_pos_fig = fig_coords
-            self.logger.debug(f"AddPlotTool: Press at {fig_coords}")
+            self._start_pos_phys = phys_coords
+            self._last_pos_phys = phys_coords
+            self.logger.debug(f"AddPlotTool: Press at {phys_coords} cm")
 
     def mouse_move_event(
-        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+        self, phys_coords: tuple[float, float], modifiers: Optional[str] = None
     ) -> None:
         """Updates the rubber-band preview."""
-        if not self._is_pressed or not self._start_pos_fig:
+        if not self._is_pressed or not self._start_pos_phys:
             return
 
-        self._last_pos_fig = fig_coords
+        self._last_pos_phys = phys_coords
         
         # Calculate rubber-band geometry
-        rect = self._calculate_rect(self._start_pos_fig, fig_coords)
+        rect = self._calculate_rect(self._start_pos_phys, phys_coords)
         
         # Request preview update
         self._event_aggregator.publish(
@@ -78,24 +78,24 @@ class AddPlotTool(BaseTool):
         )
 
     def mouse_release_event(
-        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+        self, phys_coords: tuple[float, float], modifiers: Optional[str] = None
     ) -> None:
         """Finalizes the creation or requests a dialog."""
-        if not self._is_pressed or not self._start_pos_fig:
+        if not self._is_pressed or not self._start_pos_phys:
             return
 
         # 1. Clear preview
         self._event_aggregator.publish(Events.CLEAR_INTERACTION_PREVIEW_REQUESTED)
 
         # 2. Determine interaction type
-        final_rect = self._calculate_rect(self._start_pos_fig, fig_coords)
+        final_rect = self._calculate_rect(self._start_pos_phys, phys_coords)
         
-        if final_rect.width < self._click_threshold and final_rect.height < self._click_threshold:
+        if final_rect.width < self._click_threshold_cm and final_rect.height < self._click_threshold_cm:
             # Interpret as a Click -> Show Dialog
             self.logger.info("AddPlotTool: Click detected. Requesting Add Plot dialog.")
             self._event_aggregator.publish(
                 Events.SHOW_ADD_PLOT_DIALOG_REQUESTED,
-                center_pos=self._start_pos_fig
+                center_pos=self._start_pos_phys
             )
         else:
             # Interpret as a Drag -> Direct Creation
@@ -107,19 +107,18 @@ class AddPlotTool(BaseTool):
 
         # Reset state
         self._is_pressed = False
-        self._start_pos_fig = None
-        self._last_pos_fig = None
+        self._start_pos_phys = None
+        self._last_pos_phys = None
 
     def key_press_event(self, event: QKeyEvent) -> None:
         """Escape cancels the current interaction."""
         if event.key() == Qt.Key.Key_Escape and self._is_pressed:
             self._is_pressed = False
-            self._start_pos_fig = None
+            self._start_pos_phys = None
             self._event_aggregator.publish(Events.CLEAR_INTERACTION_PREVIEW_REQUESTED)
             self.logger.info("AddPlotTool: Interaction cancelled by Escape.")
 
     def paint_event(self, painter: QPainter) -> None:
-        """No direct painting needed; we use the Overlay Layer via events."""
         pass
 
     def _calculate_rect(self, p1: tuple[float, float], p2: tuple[float, float]) -> Rect:

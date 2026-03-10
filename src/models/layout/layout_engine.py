@@ -21,8 +21,12 @@ class LayoutEngine(ABC, LayoutEngineProtocol):  # Inherit from the protocol
 
     @abstractmethod
     def calculate_geometries(
-        self, plots: list[PlotNode], layout_config: LayoutConfig
+        self, 
+        plots: list[PlotNode], 
+        layout_config: any,
+        figure_size_cm: tuple[float, float]
     ) -> tuple[dict[PlotID, Rect], Optional[Margins], Optional[Gutters]]:
+
         """
         Calculates and returns the target (left, bottom, width, height) geometry for each PlotNode.
         This method is stateless; all necessary parameters are passed via layout_config.

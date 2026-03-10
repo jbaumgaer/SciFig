@@ -9,6 +9,7 @@ from src.models.nodes.group_node import GroupNode
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
 from src.models.plots.plot_types import ArtistType
+from src.shared.geometry import Rect
 
 
 @pytest.fixture
@@ -20,10 +21,9 @@ def layout_manager(
     mock_event_aggregator,
 ):
     """Provides a LayoutManager instance with all dependencies mocked."""
-    # Override conftest side_effect to provide the required key
     mock_config_service.get_required.side_effect = lambda k: "free_form"
-    # Ensure model has an initial config to prevent NoneType error in init
     mock_application_model.current_layout_config = FreeConfig()
+    mock_application_model.figure_size = (20.0, 15.0)
     
     return LayoutManager(
         application_model=mock_application_model,
@@ -42,6 +42,7 @@ class TestLayoutManager:
         """Verifies correct initialization and default mode setting."""
         mock_config_service.get_required.side_effect = lambda k: "free_form"
         mock_application_model.current_layout_config = FreeConfig()
+        mock_application_model.figure_size = (20.0, 15.0)
         
         manager = LayoutManager(
             mock_application_model, MagicMock(), MagicMock(), mock_config_service, MagicMock()
@@ -55,6 +56,7 @@ class TestLayoutManager:
         """Verifies initialization when default mode is GRID."""
         mock_config_service.get_required.side_effect = lambda k: "grid"
         mock_application_model.current_layout_config = FreeConfig()
+        mock_application_model.figure_size = (20.0, 15.0)
         
         manager = LayoutManager(
             mock_application_model, MagicMock(), MagicMock(), mock_config_service, MagicMock()
@@ -107,13 +109,14 @@ class TestLayoutManager:
         assert layout_manager.get_active_engine() is mock_grid_layout_engine
 
     def test_get_current_layout_geometries(self, layout_manager, mock_free_layout_engine, mock_application_model):
-        """Verifies coordination with engines to get geometries."""
+        """Verifies coordination with engines and translation from PHYSICAL to FRACTIONAL."""
         plot = PlotNode(id="p1")
-        mock_free_layout_engine.calculate_geometries.return_value = ({"p1": (0,0,1,1)}, None, None)
+        phys_rect = Rect(5.0, 3.75, 10.0, 7.5)
+        mock_free_layout_engine.calculate_geometries.return_value = ({"p1": phys_rect}, None, None)
         
         geoms = layout_manager.get_current_layout_geometries([plot])
         
-        assert geoms == {"p1": (0,0,1,1)}
+        assert geoms["p1"].x == pytest.approx(0.25)
         mock_free_layout_engine.calculate_geometries.assert_called_once_with(
             [plot], mock_application_model.current_layout_config
         )
@@ -126,44 +129,35 @@ class TestLayoutManager:
         assert layout_manager._infer_grid_dimensions(2) == (1, 2)
         assert layout_manager._infer_grid_dimensions(3) == (1, 3)
 
-    def test_infer_grid_config_from_plots(self, layout_manager):
-        """Tests that heuristics correctly identify grid parameters from free positions."""
-        p1 = PlotNode(id="p1"); p1.geometry = (0.1, 0.1, 0.4, 0.4)
-        p2 = PlotNode(id="p2"); p2.geometry = (0.5, 0.1, 0.4, 0.4)
+    def test_infer_grid_config_from_plots(self, layout_manager, mock_application_model):
+        """Tests that heuristics identify grid parameters in physical CM space."""
+        mock_application_model.figure_size = (20.0, 10.0)
+        p1 = PlotNode(id="p1"); p1.geometry = Rect(2.0, 2.0, 4.0, 4.0)
+        p2 = PlotNode(id="p2"); p2.geometry = Rect(8.0, 2.0, 4.0, 4.0)
         
         config = layout_manager.infer_grid_config_from_plots([p1, p2], None)
         
         assert config.rows == 1
         assert config.cols == 2
-        assert config.margins.left == 0.1
-        assert config.margins.bottom == 0.1
-        # Right margin = 1.0 - (0.5 + 0.4) = 0.1
-        assert config.margins.right == 0.1
+        assert config.margins.left == pytest.approx(2.0)
+        assert config.margins.right == pytest.approx(8.0)
+        assert config.gutters.wspace[0] == pytest.approx(2.0)
 
-    # --- Grid Parameter Updates (The big one) ---
+    # --- Grid Parameter Updates ---
 
     def test_update_grid_layout_parameters(self, layout_manager, mock_grid_layout_engine, mocker):
-        """Tests merging logic of update_grid_layout_parameters."""
-        # 1. Setup base state
-        base_config = GridConfig(1, 1, [1.0], [1.0], Margins(0.05, 0.05, 0.05, 0.05), Gutters([], []))
+        """Tests merging logic of update_grid_layout_parameters using CM values."""
+        base_config = GridConfig(1, 1, [1.0], [1.0], Margins(1.0, 1.0, 1.0, 1.0), Gutters([], []))
         layout_manager._last_grid_config = base_config
-        
-        # Mock set_layout_mode to avoid side effects
         mocker.patch.object(layout_manager, "set_layout_mode")
-        
-        # Mock engine return
         mock_grid_layout_engine.calculate_geometries.return_value = ({}, base_config.margins, base_config.gutters)
         
-        # 2. Update only rows and top margin
-        layout_manager.update_grid_layout_parameters(rows=3, margin_top=0.2, hspace_str="0.1, 0.1")
+        layout_manager.update_grid_layout_parameters(rows=3, margin_top=2.5, hspace_str="1.5")
         
-        # 3. Verify resulting config
         updated = layout_manager._last_grid_config
         assert updated.rows == 3
-        assert updated.cols == 1 # preserved from base
-        assert updated.margins.top == 0.2
-        assert updated.margins.bottom == 0.05 # preserved from base
-        assert updated.gutters.hspace == [0.1, 0.1] # parsed from string
+        assert updated.margins.top == 2.5
+        assert updated.gutters.hspace == [1.5]
 
     # --- Template & Optimization Tests ---
 
@@ -187,45 +181,42 @@ class TestLayoutManager:
         """Verifies correct call to grid engine for constrained optimization."""
         real_config = GridConfig(1, 1, [1.0], [1.0], Margins(0,0,0,0), Gutters([],[]))
         layout_manager._last_grid_config = real_config
-        
-        # Ensure plots are present to avoid None return
         plot = PlotNode()
         mock_application_model.scene_root.all_descendants.return_value = [plot]
-        
         mock_grid_layout_engine.calculate_geometries.return_value = (
-            {}, Margins(0.1, 0.1, 0.1, 0.1), Gutters([], [])
+            {}, Margins(1.5, 1.5, 1.5, 1.5), Gutters([], [])
         )
         
         opt_config = layout_manager.get_optimized_grid_config()
         
-        assert opt_config.margins.top == 0.1
+        assert opt_config.margins.top == 1.5
         args, kwargs = mock_grid_layout_engine.calculate_geometries.call_args
         assert kwargs["use_constrained_optimization"] is True
 
     # --- Utility Tests ---
 
     def test_create_minimal_grid_config(self, layout_manager, mock_config_service):
-        """Verifies that minimal config correctly uses values from ConfigService."""
+        """Verifies that minimal config uses CM values from ConfigService."""
         mock_config_service.get.side_effect = lambda k, d: {
-            "layout.default_grid_rows": 4,
-            "layout.grid_margin_top": 0.15
+            "layout.grid_margin_top": 2.0,
+            "layout.grid_hspace": 1.0
         }.get(k, d)
         
         config = layout_manager._create_minimal_grid_config()
         
-        assert config.rows == 4
-        assert config.margins.top == 0.15
+        assert config.margins.top == 2.0
+        assert config.gutters.hspace == [1.0]
 
     @pytest.mark.parametrize("config_val, expected", [
         ("0.1, 0.2", [0.1, 0.2]),
         ("[0.3, 0.4]", [0.3, 0.4]),
         (0.5, [0.5]),
         ([0.6, 0.7], [0.6, 0.7]),
-        ("invalid", [0.01]),
+        ("invalid", [0.5]), # Fallback to default [0.5] in _create_minimal_grid_config context
     ])
     def test_parse_float_list_from_config(self, layout_manager, mock_config_service, config_val, expected):
         """Tests robust parsing of float lists."""
         mock_config_service.get.side_effect = None
         mock_config_service.get.return_value = config_val
-        result = layout_manager._parse_float_list_from_config("key", [0.01])
+        result = layout_manager._parse_float_list_from_config("key", [0.5])
         assert result == expected

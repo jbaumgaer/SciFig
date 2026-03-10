@@ -352,3 +352,5 @@ examples/UI/Menu_Bar_Table.png
 examples/UI/Merge_Split.png
 examples/UI/Rows_and_Columns.png
 examples/UI/Show_Gridlines.png
+tests/unit/services/__pycache__/test_coordinate_service.cpython-313-pytest-9.0.2.pyc
+src/services/__pycache__/coordinate_service.cpython-313.pyc

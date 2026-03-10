@@ -21,7 +21,10 @@ class FreeLayoutEngine(LayoutEngine, FreeFormLayoutCapabilities):  # Inherit fro
         self.logger.info("FreeLayoutEngine initialized.")
 
     def calculate_geometries(
-        self, plots: list[PlotNode], layout_config: LayoutConfig
+        self,
+        plots: list[PlotNode],
+        layout_config: LayoutConfig,
+        figure_size_cm: tuple[float, float],
     ) -> tuple[dict[PlotID, Rect], Optional[Margins], Optional[Gutters]]:
         """
         In free-form mode, plots retain their current geometries unless explicitly moved/resized.

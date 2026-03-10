@@ -132,6 +132,7 @@ def mock_application_model(mock_event_aggregator):
     mock_scene_root_instance.children = []
     model.scene_root = mock_scene_root_instance
     model.selection = []
+    model.figure_size = (20.0, 15.0)
     model._event_aggregator = mock_event_aggregator
 
     # Use a QObject with real signals
@@ -321,19 +322,19 @@ def mock_group_node():
 
 @pytest.fixture
 def mock_plot_node():
-    """Provides a mock PlotNode with basic properties."""
+    """Provides a mock PlotNode with basic properties in physical CM."""
     plot_node = MagicMock(spec=PlotNode)
     plot_node.id = "test_plot_id"
     plot_node.data = MagicMock(spec=pd.DataFrame)
     plot_node.plot_properties = MagicMock()
     plot_node.plot_properties.to_dict.return_value = {"plot_type": "line"}
-    plot_node.geometry = (0.1, 0.1, 0.8, 0.8)
+    plot_node.geometry = Rect(2.0, 2.0, 8.0, 8.0)
     return plot_node
 
 
 @pytest.fixture
 def minimal_plot_dict():
-    """Provides a minimal serialized PlotNode dictionary."""
+    """Provides a minimal serialized PlotNode dictionary in physical CM."""
     return {
         "id": "p1",
         "type": "PlotNode",
@@ -341,7 +342,7 @@ def minimal_plot_dict():
         "visible": True,
         "locked": False,
         "children": [],
-        "geometry": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8}
+        "geometry": {"x": 2.0, "y": 2.0, "width": 8.0, "height": 8.0}
     }
 
 

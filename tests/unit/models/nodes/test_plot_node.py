@@ -19,7 +19,7 @@ class TestPlotNode:
         """Verifies default state of PlotNode."""
         node = PlotNode()
         assert node.name == "Plot"
-        assert node.geometry == Rect(0.1, 0.1, 0.8, 0.8)
+        assert node.geometry == Rect(2.0, 2.0, 8.0, 8.0)
         assert node.plot_properties is None
         assert node.data is None
         assert node.data_file_path is None
@@ -36,18 +36,18 @@ class TestPlotNode:
     # --- Hit Testing ---
 
     def test_hit_test_coordinates(self):
-        """Tests hit testing in normalized figure coordinates."""
+        """Tests hit testing in physical CM coordinates."""
         node = PlotNode()
-        node.geometry = Rect(0.2, 0.2, 0.4, 0.4)
-        assert node.hit_test((0.3, 0.3)) is node
-        assert node.hit_test((0.1, 0.1)) is None
+        node.geometry = Rect(5.0, 5.0, 10.0, 10.0)
+        assert node.hit_test((10.0, 10.0)) is node
+        assert node.hit_test((1.0, 1.0)) is None
 
     # --- Serialization (to_dict) ---
 
     def test_to_dict_full_state(self, sample_plot_properties):
         """Tests serialization with all components populated."""
         node = PlotNode(name="FullPlot", id="test_id")
-        node.geometry = Rect(0, 0, 1, 1)
+        node.geometry = Rect(2.0, 3.0, 10.0, 8.0)
         node.plot_properties = sample_plot_properties
         node.data_file_path = Path("/abs/path/data.csv")
         node.locked = True
@@ -56,7 +56,7 @@ class TestPlotNode:
 
         assert d["id"] == "test_id"
         assert d["type"] == "PlotNode"
-        assert d["geometry"] == {"x": 0, "y": 0, "width": 1, "height": 1}
+        assert d["geometry"] == {"x": 2.0, "y": 3.0, "width": 10.0, "height": 8.0}
         assert d["plot_properties"]["_version"] == 1
         assert d["data_file_path"] == str(Path("/abs/path/data.csv"))
         assert d["locked"] is True
@@ -88,7 +88,7 @@ class TestPlotNode:
     def test_from_dict_geometry_reconstruction(self, minimal_plot_dict):
         """Tests that geometry is correctly mapped from x/y/width/height dict."""
         node = PlotNode.from_dict(minimal_plot_dict)
-        assert node.geometry == Rect(0.1, 0.1, 0.8, 0.8)
+        assert node.geometry == Rect(2.0, 2.0, 8.0, 8.0)
 
     def test_from_dict_hierarchy_and_inherited_state(self, minimal_plot_dict):
         """Tests that from_dict correctly handles parent and SceneNode attributes."""
@@ -180,4 +180,4 @@ class TestPlotNode:
         if "geometry" in data:
             del data["geometry"]
         node = PlotNode.from_dict(data)
-        assert node.geometry == Rect(0.1, 0.1, 0.8, 0.8)
+        assert node.geometry == Rect(0.0, 0.0, 5.0, 5.0)

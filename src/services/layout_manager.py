@@ -10,11 +10,12 @@ from src.models.layout.layout_protocols import FreeFormLayoutCapabilities
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_types import ArtistType
 from src.services.config_service import ConfigService
+from src.services.coordinate_service import CoordinateService
 from src.services.event_aggregator import EventAggregator
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
 from src.shared.geometry import Rect
-from src.shared.types import PlotID
+from src.shared.types import CoordinateSpace, PlotID
 
 
 class LayoutManager:
@@ -23,7 +24,8 @@ class LayoutManager:
     and provides the interface for main application components to
     trigger layout operations. It is responsible for changing the
     LayoutConfig in the ApplicationModel and coordinating with the
-    appropriate LayoutEngine.
+    appropriate LayoutEngine. Translates between the model's PHYSICAL (CM) 
+    space and the renderer's FRACTIONAL space.
     """
 
     _ui_selected_layout_mode: LayoutMode = LayoutMode.FREE_FORM
@@ -80,7 +82,7 @@ class LayoutManager:
             self._ui_selected_layout_mode = mode
             self._event_aggregator.publish(
                 Events.UI_LAYOUT_MODE_CHANGED, ui_layout_mode=mode
-            )  # Who is subscribed to this signal?
+            )
 
     def on_model_reset(self) -> None:
         """
@@ -105,7 +107,6 @@ class LayoutManager:
         self.logger.info("LayoutManager: Resetting cached layout configurations.")
         self._last_grid_config = None
         self._last_free_form_config = None
-        # self._last_free_form_config = FreeConfig() # No need to reset, FreeConfig is stateless for now
 
     def apply_layout_template(self, template_root) -> None:
         """
@@ -131,7 +132,6 @@ class LayoutManager:
                         old_state["plot_properties_dict"]
                     )
                 else:
-                    # Point 3: Request themed properties via event
                     old_type_str = old_state["plot_properties_dict"].get(
                         "plot_type", "line"
                     )
@@ -145,9 +145,6 @@ class LayoutManager:
                         node_id=new_slot_node.id,
                         plot_type=old_type,
                     )
-                    # Note: The data mapping will be handled by the update_from_dict
-                    # after the theme is initialized and applied by the NodeController.
-
                 old_plot_index += 1
 
     def infer_grid_config_from_plots(
@@ -175,128 +172,81 @@ class LayoutManager:
                 else self._create_minimal_grid_config()
             )
 
-        # 1. Infer rows and cols (using the helper method)
+        # 1. Infer dimensions
         num_plots = len(plots)
-        inferred_rows, inferred_cols = self._infer_grid_dimensions(
-            num_plots
-        )  # Now calls its own method
+        rows, cols = self._infer_grid_dimensions(num_plots)
 
-        # 2. Calculate Bounding Box of all plots
-        min_x = min(p.geometry[0] for p in plots)
-        min_y = min(p.geometry[1] for p in plots)
-        max_x_end = max(p.geometry[0] + p.geometry[2] for p in plots)
-        max_y_end = max(p.geometry[1] + p.geometry[3] for p in plots)
+        # 2. Calculate Bounding Box
+        min_x = min(p.geometry.x for p in plots)
+        min_y = min(p.geometry.y for p in plots)
+        max_x_end = max(p.geometry.x + p.geometry.width for p in plots)
+        max_y_end = max(p.geometry.y + p.geometry.height for p in plots)
+        
+        fig_w, fig_h = self._application_model.figure_size
 
         # 3. Infer Margins
-        inferred_margin_left = max(0.0, min_x)
-        inferred_margin_bottom = max(0.0, min_y)
-        inferred_margin_right = max(0.0, 1.0 - max_x_end)
-        inferred_margin_top = max(0.0, 1.0 - max_y_end)
-
         # Round margins for cleaner display
-        inferred_margin_left = round(inferred_margin_left, 3)
-        inferred_margin_bottom = round(inferred_margin_bottom, 3)
-        inferred_margin_right = round(inferred_margin_right, 3)
-        inferred_margin_top = round(inferred_margin_top, 3)
-
         inferred_margins = Margins(
-            top=inferred_margin_top,
-            bottom=inferred_margin_bottom,
-            left=inferred_margin_left,
-            right=inferred_margin_right,
+            top=round(max(0.0, fig_h - max_y_end), 2),
+            bottom=round(max(0.0, min_y), 2),
+            left=round(max(0.0, min_x), 2),
+            right=round(max(0.0, fig_w - max_x_end), 2),
         )
 
-        # 4. Infer Gutters (hspace, wspace)
-        # Group plots by their inferred row/column for gap measurement
-        plots_by_row = [[] for _ in range(inferred_rows)]
-        plots_by_col = [[] for _ in range(inferred_cols)]
+        # 4. Infer Gutters (hspace, wspace)) using Sequential Assignment
+        plots_by_row = [[] for _ in range(rows)]
+        plots_by_col = [[] for _ in range(cols)]
 
-        # Sort plots for consistent assignment (e.g., top-left to bottom-right)
-        sorted_plots = sorted(plots, key=lambda p: (p.geometry[1], p.geometry[0]))
+        # Sort: top-to-bottom (Matplotlib Y is inverted vs standard screen, 
+        # but our Rect.y is bottom-up. So top is high Y)
+        sorted_plots = sorted(plots, key=lambda p: (-p.geometry.y, p.geometry.x))
 
-        # Simple assignment heuristic: distribute plots sequentially into the grid
-        current_row_assign = 0
-        current_col_assign = 0
-        for plot in sorted_plots:
-            if (
-                current_row_assign < inferred_rows
-                and current_col_assign < inferred_cols
-            ):
-                plots_by_row[current_row_assign].append((plot, current_col_assign))
-                plots_by_col[current_col_assign].append((plot, current_row_assign))
-                current_col_assign += 1
-                if current_col_assign >= inferred_cols:
-                    current_col_assign = 0
-                    current_row_assign += 1
+        idx = 0
+        for r in range(rows):
+            for c in range(cols):
+                if idx >= num_plots: break
+                plot = sorted_plots[idx]
+                plots_by_row[r].append(plot)
+                plots_by_col[c].append(plot)
+                idx += 1
 
-        horizontal_gaps = []
-        for row_plots_with_idx in plots_by_row:
-            row_plots_with_idx.sort(
-                key=lambda x: x[1]
-            )  # Sort by col_idx to ensure correct order
-            for i in range(len(row_plots_with_idx) - 1):
-                p1, _ = row_plots_with_idx[i]
-                p2, _ = row_plots_with_idx[i + 1]
-                gap = p2.geometry[0] - (p1.geometry[0] + p1.geometry[2])
-                if gap > 0:  # Only positive gaps contribute
-                    horizontal_gaps.append(gap)
+        def get_avg_gap(groups, is_horizontal=True):
+            gaps = []
+            for group in groups:
+                # Sort along the axis we are measuring
+                if is_horizontal:
+                    group.sort(key=lambda p: p.geometry.x)
+                else:
+                    group.sort(key=lambda p: p.geometry.y)
+                
+                for i in range(len(group) - 1):
+                    p1 = group[i]
+                    p2 = group[i+1]
+                    if is_horizontal:
+                        gap = p2.geometry.x - (p1.geometry.x + p1.geometry.width)
+                    else:
+                        gap = p2.geometry.y - (p1.geometry.y + p1.geometry.height)
+                    
+                    if gap > 0.05: gaps.append(gap)
+            return round(sum(gaps)/len(gaps), 2) if gaps else 0.5
 
-        vertical_gaps = []
-        for col_plots_with_idx in plots_by_col:
-            col_plots_with_idx.sort(
-                key=lambda x: x[1]
-            )  # Sort by row_idx to ensure correct order
-            for i in range(len(col_plots_with_idx) - 1):
-                p1, _ = col_plots_with_idx[i]
-                p2, _ = col_plots_with_idx[i + 1]
-                gap = p2.geometry[1] - (p1.geometry[1] + p1.geometry[3])
-                if gap > 0:  # Only positive gaps contribute
-                    vertical_gaps.append(gap)
+        inferred_hspace = [get_avg_gap(plots_by_col, is_horizontal=False)]
+        inferred_wspace = [get_avg_gap(plots_by_row, is_horizontal=True)]
 
-        # Matplotlib hspace/wspace are relative to subplot width/height.
-        # Estimate average subplot dimensions to normalize gaps.
-        estimated_subplot_width = (
-            (1.0 - inferred_margins.left - inferred_margins.right) / inferred_cols
-            if inferred_cols > 0
-            else 0
-        )
-        estimated_subplot_height = (
-            (1.0 - inferred_margins.top - inferred_margins.bottom) / inferred_rows
-            if inferred_rows > 0
-            else 0
-        )
-
-        inferred_hspace = []
-        if horizontal_gaps and estimated_subplot_width > 0:
-            avg_gap_h = sum(horizontal_gaps) / len(horizontal_gaps)
-            inferred_hspace = [round(avg_gap_h / estimated_subplot_width, 3)]
-        else:  # Default if no gaps or zero width
-            inferred_hspace = [0.02]  # Sensible default
-
-        inferred_wspace = []
-        if vertical_gaps and estimated_subplot_height > 0:
-            avg_gap_v = sum(vertical_gaps) / len(vertical_gaps)
-            inferred_wspace = [round(avg_gap_v / estimated_subplot_height, 3)]
-        else:  # Default if no gaps or zero height
-            inferred_wspace = [0.02]  # Sensible default
-
-        inferred_gutters = Gutters(hspace=inferred_hspace, wspace=inferred_wspace)
-
-        # Return a new GridConfig with inferred values
         new_inferred_grid_config = GridConfig(
-            rows=inferred_rows,
-            cols=inferred_cols,
-            row_ratios=[1.0] * inferred_rows,  # Default ratios for now
-            col_ratios=[1.0] * inferred_cols,  # Default ratios for now
+            rows=rows,
+            cols=cols,
+            row_ratios=[1.0] * rows,
+            col_ratios=[1.0] * cols,
             margins=inferred_margins,
-            gutters=inferred_gutters,
+            gutters=Gutters(hspace=inferred_hspace, wspace=inferred_wspace),
         )
 
         self.logger.debug(f"Inferred GridConfig: {new_inferred_grid_config}")
         return new_inferred_grid_config
 
     def get_active_engine(self) -> LayoutEngine:
-        """Returns the currently active layout engine based on the model's configuration."""
+        """Returns the currently active layout engine."""
         if self._application_model.current_layout_config.mode == LayoutMode.FREE_FORM:
             return self._free_engine
         elif self._application_model.current_layout_config.mode == LayoutMode.GRID:
@@ -305,12 +255,11 @@ class LayoutManager:
             self.logger.error(
                 f"Unknown layout mode: {self._application_model.current_layout_config.mode}"
             )
-            return self._free_engine  # Fallback
+            return self._free_engine
 
     def set_layout_mode(self, mode: LayoutMode):
         """
         Sets the active layout mode in the ApplicationModel.
-        Triggers a layout update if transitioning to grid or from grid.
         """
         current_config = self._application_model.current_layout_config
         current_mode = current_config.mode
@@ -321,15 +270,12 @@ class LayoutManager:
         self.logger.info(
             f"Attempting to switch active layout mode from {current_mode.value} to {mode.value}."
         )
-
-        # Save current config to its respective _last_x_config before switching
         if isinstance(current_config, GridConfig):
             self._last_grid_config = current_config
         elif isinstance(current_config, FreeConfig):
             self._last_free_form_config = current_config
 
         if mode == LayoutMode.GRID:
-            # Transition to GRID: ensure _last_grid_config is initialized before setting as current
             if self._last_grid_config is None:
                 self.logger.debug(
                     "No last grid config found for active mode, creating minimal grid config."
@@ -353,6 +299,7 @@ class LayoutManager:
             Events.LAYOUT_CONFIG_CHANGED, config=current_config
         )  # TODO: Not sure what needs to go in as config
         self.logger.info(f"Active layout mode successfully switched to {mode.value}.")
+
 
     def update_grid_config_and_apply(
         self, new_grid_config: GridConfig
@@ -383,17 +330,11 @@ class LayoutManager:
         if not all_plots:
             return {}
 
-        # Calculate geometries and return Dict[str, Rect]
-        # With _apply_fixed_grid_layout, calculated_margins/gutters will now be the input new_grid_config.margins/gutters
+        # GridEngine returns PHYSICAL (CM) geometries
         plot_geometries, _, _ = self._grid_engine.calculate_geometries(
             all_plots, new_grid_config
         )
-
-        # The new_grid_config already contains the desired margins and gutters,
-        # so we don't need to create a new one using 'calculated' values.
-        # This ensures the user's input margins/gutters are retained in the model.
-        # The _application_model.current_layout_config and _last_grid_config were already set to new_grid_config earlier.
-
+        
         self.logger.debug(
             f"Final updated_grid_config margins: {new_grid_config.margins}"
         )
@@ -560,15 +501,7 @@ class LayoutManager:
             )
             self.set_layout_mode(LayoutMode.GRID)
 
-        # _last_grid_config is guaranteed to be non-None here because set_layout_mode initializes it.
         base_grid_config: GridConfig = self._last_grid_config
-
-        effective_rows = base_grid_config.rows
-        effective_cols = base_grid_config.cols
-        effective_row_ratios = base_grid_config.row_ratios
-        effective_col_ratios = base_grid_config.col_ratios
-
-        # Handle granular margins
         effective_margins = base_grid_config.margins
         final_margins = Margins(
             top=margin_top if margin_top is not None else effective_margins.top,
@@ -579,7 +512,6 @@ class LayoutManager:
             right=margin_right if margin_right is not None else effective_margins.right,
         )
 
-        # Handle granular gutters
         effective_gutters = base_grid_config.gutters
         final_hspace = effective_gutters.hspace
         final_wspace = effective_gutters.wspace
@@ -609,56 +541,69 @@ class LayoutManager:
             self._application_model.scene_root.all_descendants(of_type=PlotNode)
         )
         num_plots = len(all_plots)
-
-        # Infer rows/cols if not provided or set to a special sentinel (e.g., 0)
+        
         if (rows is None or rows == 0) or (cols is None or cols == 0):
-            inferred_rows, inferred_cols = self._infer_grid_dimensions(num_plots)
-            if rows is None or rows == 0:
-                rows = inferred_rows
-            if cols is None or cols == 0:
-                cols = inferred_cols
+            inferred_rows, inferred_cols = self._infer_grid_dimensions(len(all_plots))
+            rows = rows or inferred_rows
+            cols = cols or inferred_cols
             self.logger.debug(
                 f"Inferred grid dimensions: {rows}x{cols} for {num_plots} plots."
             )
 
-        # Apply updates, preferring new values over effective values
-        final_rows = rows if rows is not None else effective_rows
-        final_cols = cols if cols is not None else effective_cols
-
         new_grid_config = GridConfig(
-            rows=final_rows,
-            cols=final_cols,
-            row_ratios=effective_row_ratios,
-            col_ratios=effective_col_ratios,
+            rows=rows or base_grid_config.rows,
+            cols=cols or base_grid_config.cols,
+            row_ratios=base_grid_config.row_ratios,
+            col_ratios=base_grid_config.col_ratios,
             margins=final_margins,
             gutters=final_gutters,
         )
 
-        # Call the new method to update config and apply layout
         return self.update_grid_config_and_apply(new_grid_config)
 
     def get_current_layout_geometries(
         self, plots: list[PlotNode]
     ) -> dict[PlotID, Rect]:
         """
-        Returns the calculated geometries for the given plots based on the
-        currently active layout engine and configuration.
+        Returns the calculated geometries for the given plots in FRACTIONAL space.
+        Translates from the model's PHYSICAL (CM) space.
         """
         active_engine = self.get_active_engine()
-        geometries_dict, _, _ = active_engine.calculate_geometries(
-            plots, self._application_model.current_layout_config
+        # Engines now return PHYSICAL (CM) geometries
+        phys_geometries, _, _ = active_engine.calculate_geometries(
+            plots, 
+            self._application_model.current_layout_config,
+            self._application_model.figure_size
         )
-        return geometries_dict
+        
+        fig_w, fig_h = self._application_model.figure_size
+        fractional_geometries = {}
+        
+        for pid, rect in phys_geometries.items():
+            fx = CoordinateService.transform_value(
+                rect.x, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_w
+            )
+            fy = CoordinateService.transform_value(
+                rect.y, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_h
+            )
+            fw = CoordinateService.transform_value(
+                rect.width, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_w
+            )
+            fh = CoordinateService.transform_value(
+                rect.height, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_h
+            )
+            fractional_geometries[pid] = Rect(fx, fy, fw, fh)
+            
+        return fractional_geometries
 
     def _parse_float_list_from_config(
         self, key: str, default: list[float]
     ) -> list[float]:
-        """Helper to parse a config value that might be a list of floats, a single float, or a string representation."""
+        """Helper to parse a config value."""
         value = self._config_service.get(key, default)
         self.logger.debug(
             f"[_parse_float_list_from_config] Key: {key}, Raw Value: {value}, Type: {type(value)}"
         )
-
         if isinstance(value, str):
             try:
                 # Attempt to parse a string like "[0.1, 0.2]" or "0.1, 0.2"
@@ -734,25 +679,22 @@ class LayoutManager:
             "layout.default_grid_cols", 1
         )  # Default to 1x1 if config missing
 
-        margin_top = self._config_service.get("layout.grid_margin_top", 0.05)
-        margin_bottom = self._config_service.get("layout.grid_margin_bottom", 0.05)
-        margin_left = self._config_service.get("layout.grid_margin_left", 0.05)
-        margin_right = self._config_service.get("layout.grid_margin_right", 0.05)
+        m_top = self._config_service.get("layout.grid_margin_top", 1.5)
+        m_bottom = self._config_service.get("layout.grid_margin_bottom", 1.5)
+        m_left = self._config_service.get("layout.grid_margin_left", 1.5)
+        m_right = self._config_service.get("layout.grid_margin_right", 1.5)
 
-        hspace = self._parse_float_list_from_config("layout.grid_hspace", [])
-        wspace = self._parse_float_list_from_config("layout.grid_wspace", [])
+        hspace = self._parse_float_list_from_config("layout.grid_hspace", [0.5])
+        wspace = self._parse_float_list_from_config("layout.grid_wspace", [0.5])
 
-        # Construct Margins and Gutters, which no longer have internal defaults
-        minimal_margins = Margins(
-            top=margin_top, bottom=margin_bottom, left=margin_left, right=margin_right
-        )
+        minimal_margins = Margins(top=m_top, bottom=m_bottom, left=m_left, right=m_right)
         minimal_gutters = Gutters(hspace=hspace, wspace=wspace)
 
         return GridConfig(
             rows=rows,
             cols=cols,
-            row_ratios=[1.0] * rows,  # Default to equal distribution for minimal config
-            col_ratios=[1.0] * cols,  # Default to equal distribution for minimal config
+            row_ratios=[1.0] * rows,
+            col_ratios=[1.0] * cols,
             margins=minimal_margins,
             gutters=minimal_gutters,
         )

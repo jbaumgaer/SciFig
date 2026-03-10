@@ -17,7 +17,11 @@ class ApplicationModel(ProjectLifecycle):
     holding the state of the scene graph and implementing the ProjectLifecycle protocol.
     """
 
-    def __init__(self, event_aggregator: EventAggregator):
+    def __init__(
+        self,
+        event_aggregator: EventAggregator,
+        figure_size: tuple[float, float],
+    ):
         self.logger = logging.getLogger(self.__class__.__name__)
         self._event_aggregator = event_aggregator
         self.scene_root = GroupNode(name="root")
@@ -26,6 +30,20 @@ class ApplicationModel(ProjectLifecycle):
         self._file_path: Optional[Path] = None
         self._is_dirty: bool = False
         self._current_layout_config: LayoutConfig = FreeConfig()
+        self._figure_size = figure_size
+
+    @property
+    def figure_size(self) -> tuple[float, float]:
+        """Returns the total figure dimensions in centimeters (width, height)."""
+        return self._figure_size
+
+    @figure_size.setter
+    def figure_size(self, size: tuple[float, float]):
+        """Sets the figure size and publishes FIGURE_SIZE_CHANGED."""
+        if self._figure_size != size:
+            self._figure_size = size
+            self._event_aggregator.publish(Events.FIGURE_SIZE_CHANGED, figure_size=size)
+            self.logger.info(f"Figure size changed to: {size} cm")
 
     def set_dirty(self, is_dirty: bool):
         """Public method to set the dirty status of the model."""

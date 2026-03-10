@@ -2,15 +2,16 @@
   "type": "GroupNode",
   "name": "2x2 Layout",
   "id": "layout_root_001",
+  "version": "2.0",
   "visible": true,
-  "geometry": {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0},
+  "geometry": {"x": 0.0, "y": 0.0, "width": 21.59, "height": 15.24},
   "children": [
     {
       "type": "PlotNode",
       "name": "Top-Left Plot",
       "id": "plot_001",
       "visible": true,
-      "geometry": { "x": 0.07, "y": 0.57, "width": 0.4, "height": 0.4 },
+      "geometry": { "x": 1.511, "y": 8.687, "width": 8.636, "height": 6.096 },
       "plot_properties": {
         "coords": {"coord_type": "cartesian_2d"},
         "artists": [{"artist_type": "line"}]
@@ -21,7 +22,7 @@
       "name": "Top-Right Plot",
       "id": "plot_002",
       "visible": true,
-      "geometry": { "x": 0.57, "y": 0.57, "width": 0.4, "height": 0.4 },
+      "geometry": { "x": 12.306, "y": 8.687, "width": 8.636, "height": 6.096 },
       "plot_properties": {
         "coords": {"coord_type": "cartesian_2d"},
         "artists": [{"artist_type": "line"}]
@@ -32,7 +33,7 @@
       "name": "Bottom-Left Plot",
       "id": "plot_003",
       "visible": true,
-      "geometry": { "x": 0.07, "y": 0.08, "width": 0.4, "height": 0.4 },
+      "geometry": { "x": 1.511, "y": 1.219, "width": 8.636, "height": 6.096 },
       "plot_properties": {
         "coords": {"coord_type": "cartesian_2d"},
         "artists": [{"artist_type": "scatter"}]
@@ -43,7 +44,7 @@
       "name": "Bottom-Right Plot",
       "id": "plot_004",
       "visible": true,
-      "geometry": { "x": 0.57, "y": 0.08, "width": 0.4, "height": 0.4 },
+      "geometry": { "x": 12.306, "y": 1.219, "width": 8.636, "height": 6.096 },
       "plot_properties": {
         "coords": {"coord_type": "cartesian_2d"},
         "artists": [{"artist_type": "line"}]

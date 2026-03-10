@@ -39,7 +39,8 @@ class TestOverlayRenderer:
         from src.models.nodes.plot_node import PlotNode
         mock_node = MagicMock(spec=PlotNode)
         mock_node.id = "p1"
-        mock_node.geometry = Rect(0.1, 0.1, 0.5, 0.5)
+        # Physical CM geometry
+        mock_node.geometry = Rect(5.0, 5.0, 10.0, 10.0)
         mock_application_model.scene_root.find_node_by_id.return_value = mock_node
         
         # Trigger event
@@ -51,7 +52,8 @@ class TestOverlayRenderer:
 
     def test_update_previews_event_draws_ghosts(self, renderer, mock_scene, real_event_aggregator):
         """Verifies that publishing UPDATE_INTERACTION_PREVIEW_REQUESTED draws ghosts."""
-        geoms = [Rect(0.1, 0.1, 0.2, 0.2)]
+        # 5cm x 5cm preview
+        geoms = [Rect(2.0, 2.0, 5.0, 5.0)]
         
         real_event_aggregator.publish(
             Events.UPDATE_INTERACTION_PREVIEW_REQUESTED, 
@@ -76,14 +78,18 @@ class TestOverlayRenderer:
         assert len(renderer._ghost_items) == 0
         assert len(mock_scene.items()) == 0
 
-    def test_fig_to_scene_math(self, renderer):
-        """Verifies coordinate translation logic."""
-        # Figure extent is 5*100 x 4*100 = 500x400
-        scene_pos = renderer._fig_to_scene((0.5, 0.5))
+    def test_fig_to_scene_math(self, renderer, mock_application_model):
+        """Verifies coordinate translation logic from CM to Pixels."""
+        # mock_application_model.figure_size is (20.0, 15.0) from conftest
+        # mock_figure extent is 5*100 x 4*100 = 500x400 from fixture
+        
+        # 10.0 cm (Center X) on 20.0 cm figure -> 0.5 fractional -> 250px
+        # 7.5 cm (Center Y) on 15.0 cm figure -> 0.5 fractional -> 200px
+        scene_pos = renderer._fig_to_scene((10.0, 7.5))
         assert scene_pos.x() == pytest.approx(250)
         assert scene_pos.y() == pytest.approx(200)
         
-        # Bottom-Left (0,0) -> Qt (0, 400)
+        # Bottom-Left (0,0) CM -> Qt (0, 400)
         scene_pos = renderer._fig_to_scene((0, 0))
         assert scene_pos.x() == 0
         assert scene_pos.y() == 400

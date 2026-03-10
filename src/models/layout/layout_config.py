@@ -10,7 +10,7 @@ T = TypeVar("T", bound="LayoutConfig")
 
 @dataclass(frozen=True)
 class Margins:
-    """Represents figure margins (in figure fractions)."""
+    """Represents figure margins in physical centimeters (cm)."""
 
     top: float
     bottom: float
@@ -38,7 +38,7 @@ class Margins:
 @dataclass(frozen=True)
 class Gutters:
     """
-    Represents spacing between subplots (in figure fractions).
+    Represents spacing between subplots in physical centimeters (cm).
     Can be single float for global spacing or lists for per-row/column spacing.
     TODO: This makes no sense for a 1x1 grid
     """

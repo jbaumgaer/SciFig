@@ -7,10 +7,12 @@ from PySide6.QtGui import QKeyEvent, QPainter
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
+from src.services.coordinate_service import CoordinateService
 from src.services.tools.base_tool import BaseTool
 from src.shared.constants import IconPath
 from src.shared.events import Events
 from src.shared.geometry import Rect
+from src.shared.types import CoordinateSpace
 
 
 class InteractionMode(Enum):
@@ -38,11 +40,11 @@ class SelectionTool(BaseTool):
         
         # Interaction State
         self._mode = InteractionMode.NONE
-        self._drag_start_fig: Optional[tuple[float, float]] = None
+        self._drag_start_phys: Optional[tuple[float, float]] = None
         self._initial_geometries: dict[str, Rect] = {}
         self._resize_handle: Optional[str] = None
         
-        # Handle hit threshold (in pixels, will be converted to fig units)
+        # Handle hit threshold in CM (calculated from PX)
         self._handle_threshold_px = 12
 
     @property
@@ -56,7 +58,7 @@ class SelectionTool(BaseTool):
     def mouse_press_event(
         self,
         node_id: Optional[str],
-        fig_coords: tuple[float, float],
+        phys_coords: tuple[float, float],
         button: int,
         modifiers: Optional[str] = None,
     ) -> None:
@@ -68,11 +70,11 @@ class SelectionTool(BaseTool):
         if len(self._model.selection) == 1:
             node = self._model.selection[0]
             if isinstance(node, PlotNode):
-                handle_id = self._hit_test_handles(node, fig_coords)
+                handle_id = self._hit_test_handles(node, phys_coords)
                 if handle_id:
                     self._mode = InteractionMode.RESIZING
                     self._resize_handle = handle_id
-                    self._drag_start_fig = fig_coords
+                    self._drag_start_phys = phys_coords
                     self._initial_geometries = {node.id: node.geometry}
                     self.logger.debug(f"SelectionTool: Starting RESIZE with handle {handle_id}")
                     return
@@ -97,7 +99,7 @@ class SelectionTool(BaseTool):
                 # Only initiate MOVING if selection is not empty after click
                 if self._model.selection:
                     self._mode = InteractionMode.MOVING
-                    self._drag_start_fig = fig_coords
+                    self._drag_start_phys = phys_coords
                     self._initial_geometries = {
                         n.id: n.geometry for n in self._model.selection if hasattr(n, "geometry")
                     }
@@ -108,14 +110,14 @@ class SelectionTool(BaseTool):
         self._mode = InteractionMode.NONE
 
     def mouse_move_event(
-        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+        self, phys_coords: tuple[float, float], modifiers: Optional[str] = None
     ) -> None:
         """Publishes preview updates based on current interaction mode."""
-        if self._mode == InteractionMode.NONE or not self._drag_start_fig:
+        if self._mode == InteractionMode.NONE or not self._drag_start_phys:
             return
 
-        dx = fig_coords[0] - self._drag_start_fig[0]
-        dy = fig_coords[1] - self._drag_start_fig[1]
+        dx = phys_coords[0] - self._drag_start_phys[0]
+        dy = phys_coords[1] - self._drag_start_phys[1]
         
         previews = []
         
@@ -124,9 +126,7 @@ class SelectionTool(BaseTool):
                 previews.append(initial_rect.moved_by(dx, dy))
                 
         elif self._mode == InteractionMode.RESIZING:
-            # We only support single-node resize
             node_id, initial_rect = list(self._initial_geometries.items())[0]
-            # Use the specialized scaling math in Rect
             previews.append(initial_rect.scaled_by(self._resize_handle, dx, dy))
             
         self._event_aggregator.publish(
@@ -136,19 +136,19 @@ class SelectionTool(BaseTool):
         )
 
     def mouse_release_event(
-        self, fig_coords: tuple[float, float], modifiers: Optional[str] = None
+        self, phys_coords: tuple[float, float], modifiers: Optional[str] = None
     ) -> None:
         """Finalizes the interaction and applies changes."""
-        if self._mode == InteractionMode.NONE or not self._drag_start_fig:
+        if self._mode == InteractionMode.NONE or not self._drag_start_phys:
             return
 
         self._event_aggregator.publish(Events.CLEAR_INTERACTION_PREVIEW_REQUESTED)
 
-        dx = fig_coords[0] - self._drag_start_fig[0]
-        dy = fig_coords[1] - self._drag_start_fig[1]
+        dx = phys_coords[0] - self._drag_start_phys[0]
+        dy = phys_coords[1] - self._drag_start_phys[1]
         
-        # Apply changes if delta is significant (noise reduction)
-        if abs(dx) > 0.0005 or abs(dy) > 0.0005:
+        # Noise reduction (significant if delta > 0.01 cm)
+        if abs(dx) > 0.01 or abs(dy) > 0.01:
             new_geoms = {}
             if self._mode == InteractionMode.MOVING:
                 for node_id, initial_rect in self._initial_geometries.items():
@@ -164,7 +164,7 @@ class SelectionTool(BaseTool):
 
         # Reset State
         self._mode = InteractionMode.NONE
-        self._drag_start_fig = None
+        self._drag_start_phys = None
         self._initial_geometries = {}
         self._resize_handle = None
 
@@ -182,13 +182,11 @@ class SelectionTool(BaseTool):
     def paint_event(self, painter: QPainter) -> None:
         pass
 
-    def _hit_test_handles(self, node: PlotNode, fig_coords: tuple[float, float]) -> Optional[str]:
+    def _hit_test_handles(self, node: PlotNode, phys_coords: tuple[float, float]) -> Optional[str]:
         """
         Checks if the click was on one of the 8 resize handles.
-        Returns the handle identifier (e.g., 'top-left') or None.
         """
         geom = node.geometry
-        # Define handle positions in figure coordinates (consistent with OverlayRenderer)
         handle_map = {
             "bottom-left": (geom.x, geom.y),
             "bottom": (geom.x + geom.width / 2, geom.y),
@@ -200,13 +198,21 @@ class SelectionTool(BaseTool):
             "left": (geom.x, geom.y + geom.height / 2),
         }
         
-        # Calculate dynamic threshold based on figure pixels
-        # TODO: Get actual canvas size for precise 12px thresholding
-        # For now, use a reasonable figure-unit approximation (0.02)
-        threshold = 0.02 
+        # Convert 12px threshold to CM using current context
+        # We need the canvas width in px and figure width in cm
+        canvas_w = self._canvas_widget.width()
+        fig_w, _ = self._model.figure_size
+        
+        threshold_cm = CoordinateService.transform_value(
+            self._handle_threshold_px,
+            from_space=CoordinateSpace.DISPLAY_PX,
+            to_space=CoordinateSpace.PHYSICAL,
+            figure_size_cm=fig_w,
+            canvas_size_px=float(canvas_w)
+        )
         
         for handle_id, pos in handle_map.items():
-            dist = ((pos[0] - fig_coords[0])**2 + (pos[1] - fig_coords[1])**2)**0.5
-            if dist < threshold:
+            dist = ((pos[0] - phys_coords[0])**2 + (pos[1] - phys_coords[1])**2)**0.5
+            if dist < threshold_cm:
                 return handle_id
         return None

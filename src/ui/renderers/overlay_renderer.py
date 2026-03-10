@@ -13,9 +13,11 @@ from matplotlib.figure import Figure
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
+from src.services.coordinate_service import CoordinateService
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
 from src.shared.geometry import Rect
+from src.shared.types import CoordinateSpace
 
 
 class OverlayRenderer:
@@ -181,15 +183,33 @@ class OverlayRenderer:
             scene_p = self._fig_to_scene(p)
             self._add_handle(scene_p)
 
-    def _fig_to_scene(self, fig_pos: tuple[float, float]) -> QPointF:
-        """Maps 0-1 figure coordinates to scene pixels."""
-        width, height = self._figure.canvas.get_width_height()
-        px_x = fig_pos[0] * width
-        px_y = (1.0 - fig_pos[1]) * height
+    def _fig_to_scene(self, phys_pos: tuple[float, float]) -> QPointF:
+        """Maps physical CM figure coordinates to scene pixels."""
+        fig_w_cm, fig_h_cm = self._model.figure_size
+        canvas_w, canvas_h = self._figure.canvas.get_width_height()
+        
+        px_x = CoordinateService.transform_value(
+            phys_pos[0],
+            from_space=CoordinateSpace.PHYSICAL,
+            to_space=CoordinateSpace.DISPLAY_PX,
+            figure_size_cm=fig_w_cm,
+            canvas_size_px=float(canvas_w)
+        )
+        # Matplotlib Y is bottom-up (0 at bottom), 
+        # Qt Scene Y is top-down (0 at top).
+        px_y_bottom_up = CoordinateService.transform_value(
+            phys_pos[1],
+            from_space=CoordinateSpace.PHYSICAL,
+            to_space=CoordinateSpace.DISPLAY_PX,
+            figure_size_cm=fig_h_cm,
+            canvas_size_px=float(canvas_h)
+        )
+        px_y = canvas_h - px_y_bottom_up
+        
         return QPointF(px_x, px_y)
 
     def _fig_rect_to_scene(self, fig_rect: Rect) -> QRectF:
-        """Maps a figure Rect to a Qt Scene QRectF."""
+        """Maps a physical figure Rect to a Qt Scene QRectF."""
         p1 = self._fig_to_scene((fig_rect.x, fig_rect.y))
         p2 = self._fig_to_scene((fig_rect.x + fig_rect.width, fig_rect.y + fig_rect.height))
         return QRectF(p1, p2).normalized()

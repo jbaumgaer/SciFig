@@ -33,7 +33,7 @@ class TestFreeLayoutEngine:
 
     def test_calculate_geometries_passthrough(self, free_engine, defined_plots, free_config):
         """Verifies that FreeLayoutEngine returns original geometries and None for margins/gutters."""
-        geometries, margins, gutters = free_engine.calculate_geometries(defined_plots, free_config)
+        geometries, margins, gutters = free_engine.calculate_geometries(defined_plots, free_config, (20, 15))
         
         assert len(geometries) == 2
         assert geometries["p1"] == Rect(0.1, 0.1, 0.2, 0.2)
@@ -44,7 +44,7 @@ class TestFreeLayoutEngine:
     def test_calculate_geometries_incompatible_config(self, free_engine, defined_plots):
         """Verifies error handling for incompatible config types."""
         invalid_config = GridConfig(1, 1, [1], [1], NO_MARGINS, NO_GUTTERS)
-        geometries, margins, gutters = free_engine.calculate_geometries(defined_plots, invalid_config)
+        geometries, margins, gutters = free_engine.calculate_geometries(defined_plots, invalid_config, (20, 15))
         
         assert geometries == {}
         assert margins is None

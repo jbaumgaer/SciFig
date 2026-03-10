@@ -22,20 +22,34 @@ from src.shared.events import Events
 @pytest.fixture
 def application_model_with_mocks(mock_event_aggregator):
     """Provides an ApplicationModel instance with a mocked EventAggregator."""
-    return ApplicationModel(event_aggregator=mock_event_aggregator)
+    return ApplicationModel(event_aggregator=mock_event_aggregator, figure_size=(20.0, 15.0))
 
 
 class TestApplicationModel:
 
     def test_initialization(self, mock_event_aggregator):
         """Verifies initial state of ApplicationModel."""
-        model = ApplicationModel(event_aggregator=mock_event_aggregator)
+        model = ApplicationModel(event_aggregator=mock_event_aggregator, figure_size=(25.0, 20.0))
         assert isinstance(model.scene_root, GroupNode)
         assert model.scene_root.name == "root"
         assert model.selection == []
         assert isinstance(model.current_layout_config, FreeConfig)
         assert model.is_dirty is False
         assert model.file_path is None
+        assert model.figure_size == (25.0, 20.0)
+
+    def test_figure_size_setter(self, application_model_with_mocks, mock_event_aggregator):
+        """Tests setting figure size and event emission."""
+        model = application_model_with_mocks
+        new_size = (30.0, 20.0)
+        
+        mock_event_aggregator.publish.reset_mock()
+        model.figure_size = new_size
+        
+        assert model.figure_size == new_size
+        mock_event_aggregator.publish.assert_called_once_with(
+            Events.FIGURE_SIZE_CHANGED, figure_size=new_size
+        )
 
     # --- State Management Tests ---
 
@@ -302,7 +316,7 @@ class TestApplicationModel:
 
     def test_serialization_round_trip(self, real_event_aggregator, mocker):
         """Tests a full serialization and deserialization round trip with complex data."""
-        model = ApplicationModel(event_aggregator=real_event_aggregator)
+        model = ApplicationModel(event_aggregator=real_event_aggregator, figure_size=(20.0, 15.0))
         
         node1 = SceneNode(name="Node1")
         model.add_node(node1)
@@ -320,7 +334,7 @@ class TestApplicationModel:
         
         serialized = model.as_dict()
         
-        new_model = ApplicationModel(event_aggregator=real_event_aggregator)
+        new_model = ApplicationModel(event_aggregator=real_event_aggregator, figure_size=(20.0, 15.0))
         new_model.load_from_state(serialized, temp_dir=Path("."))
         
         assert new_model.as_dict() == serialized

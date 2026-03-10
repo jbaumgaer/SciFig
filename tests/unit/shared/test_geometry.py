@@ -38,10 +38,11 @@ class TestRect:
         assert r2.height == pytest.approx(0.25)
 
     def test_scaling_min_threshold(self):
-        """Ensures rectangles cannot be scaled to negative or zero dimensions."""
-        r = Rect(0.1, 0.1, 0.2, 0.2)
-        r2 = r.scaled_by("right", -0.5, 0)
-        assert r2.width == pytest.approx(0.01)
+        """Ensures rectangles cannot be scaled below the 0.1 cm threshold."""
+        r = Rect(10.0, 10.0, 1.0, 1.0)
+        # Scaling right by -2.0 would result in -1.0 width
+        r2 = r.scaled_by("right", -2.0, 0)
+        assert r2.width == pytest.approx(0.1)
 
     def test_contains(self):
         """Verifies point-in-rect hit testing."""

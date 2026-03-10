@@ -50,6 +50,7 @@ class Events(Enum):
 
     # --- Layout Changes ---
     LAYOUT_CONFIG_CHANGED = auto()  # Payload: new_config: dict
+    FIGURE_SIZE_CHANGED = auto()  # New: Figure dimensions in physical CM changed
     ACTIVE_LAYOUT_MODE_CHANGED = auto()  # Payload: mode: str (LayoutMode.value)
     UI_LAYOUT_MODE_CHANGED = auto()  # Payload: mode: str (LayoutMode.value)
 
