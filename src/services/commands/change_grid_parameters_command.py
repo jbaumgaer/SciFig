@@ -47,7 +47,9 @@ class ChangeGridParametersCommand(BaseCommand):
                 plot_node = self.model.scene_root.find_node_by_id(plot_id)
                 if plot_node:
                     plot_node.geometry = rect
-            self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED)
+            self._event_aggregator.publish(
+                Events.LAYOUT_CONFIG_CHANGED, config=self.new_grid_config
+            )
             self.logger.debug(
                 "New grid parameters applied and plot geometries updated."
             )
@@ -68,7 +70,9 @@ class ChangeGridParametersCommand(BaseCommand):
                 plot_node = self.model.scene_root.find_node_by_id(plot_id)
                 if plot_node:
                     plot_node.geometry = rect
-            self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED)
+            self._event_aggregator.publish(
+                Events.LAYOUT_CONFIG_CHANGED, config=self.old_grid_config
+            )
             self.logger.debug(
                 "Old grid parameters restored and plot geometries reverted."
             )

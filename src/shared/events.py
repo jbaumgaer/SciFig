@@ -52,6 +52,7 @@ class Events(Enum):
     LAYOUT_CONFIG_CHANGED = auto()  # Payload: new_config: dict
     FIGURE_SIZE_CHANGED = auto()  # New: Figure dimensions in physical CM changed
     ACTIVE_LAYOUT_MODE_CHANGED = auto()  # Payload: mode: str (LayoutMode.value)
+    APPLY_GRID_REQUESTED = auto()  # New: Request to apply a GridConfig to the model
     UI_LAYOUT_MODE_CHANGED = auto()  # Payload: mode: str (LayoutMode.value)
 
     # --- Other Notification Events ---

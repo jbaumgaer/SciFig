@@ -118,7 +118,7 @@ class TestLayoutManager:
         
         assert geoms["p1"].x == pytest.approx(0.25)
         mock_free_layout_engine.calculate_geometries.assert_called_once_with(
-            [plot], mock_application_model.current_layout_config
+            [plot], mock_application_model.current_layout_config, (20.0, 15.0)
         )
 
     # --- Inference Logic Tests ---
@@ -142,6 +142,33 @@ class TestLayoutManager:
         assert config.margins.left == pytest.approx(2.0)
         assert config.margins.right == pytest.approx(8.0)
         assert config.gutters.wspace[0] == pytest.approx(2.0)
+
+    def test_infer_grid_config_from_2x2_template(self, layout_manager, mock_application_model):
+        """Verifies that the engine can perfectly recover grid parameters from the 2x2 template."""
+        # 2x2 template values (CM) on 21.59 x 15.24 figure
+        # Top-Left: x=1.511, y=8.687, w=8.636, h=6.096
+        # Top-Right: x=12.306, y=8.687, w=8.636, h=6.096
+        # Bottom-Left: x=1.511, y=1.219, w=8.636, h=6.096
+        # Bottom-Right: x=12.306, y=1.219, w=8.636, h=6.096
+        
+        mock_application_model.figure_size = (21.59, 15.24)
+        
+        p1 = PlotNode(id="tl"); p1.geometry = Rect(1.511, 8.687, 8.636, 6.096)
+        p2 = PlotNode(id="tr"); p2.geometry = Rect(12.306, 8.687, 8.636, 6.096)
+        p3 = PlotNode(id="bl"); p3.geometry = Rect(1.511, 1.219, 8.636, 6.096)
+        p4 = PlotNode(id="br"); p4.geometry = Rect(12.306, 1.219, 8.636, 6.096)
+        
+        config = layout_manager.infer_grid_config_from_plots([p1, p2, p3, p4], None)
+        
+        # Margins check
+        assert config.margins.left == pytest.approx(1.51, abs=0.01)
+        assert config.margins.bottom == pytest.approx(1.22, abs=0.01)
+        
+        # Gutter check
+        # Horizontal gap: 12.306 - (1.511 + 8.636) = 2.159
+        # Vertical gap: 8.687 - (1.219 + 6.096) = 1.372
+        assert config.gutters.wspace[0] == pytest.approx(2.16, abs=0.01)
+        assert config.gutters.hspace[0] == pytest.approx(1.37, abs=0.01)
 
     # --- Grid Parameter Updates ---
 

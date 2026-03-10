@@ -227,8 +227,9 @@ class LayoutManager:
                     else:
                         gap = p2.geometry.y - (p1.geometry.y + p1.geometry.height)
                     
-                    if gap > 0.05: gaps.append(gap)
-            return round(sum(gaps)/len(gaps), 2) if gaps else 0.5
+                    # Use smaller threshold for precision (0.1mm)
+                    if gap > 0.01: gaps.append(gap)
+            return sum(gaps)/len(gaps) if gaps else 0.5
 
         inferred_hspace = [get_avg_gap(plots_by_col, is_horizontal=False)]
         inferred_wspace = [get_avg_gap(plots_by_row, is_horizontal=True)]
@@ -332,7 +333,7 @@ class LayoutManager:
 
         # GridEngine returns PHYSICAL (CM) geometries
         plot_geometries, _, _ = self._grid_engine.calculate_geometries(
-            all_plots, new_grid_config
+            all_plots, new_grid_config, self._application_model.figure_size
         )
         
         self.logger.debug(
@@ -386,19 +387,10 @@ class LayoutManager:
 
     def infer_grid_parameters(self):
         """
-        Infers sensible grid parameters (rows, cols, margins, gutters) from the current
-        free-form plot positions and updates the model.
-        This does NOT apply the layout to the canvas immediately but updates the UI fields.
-        # TODO: The method name is kind of confusing when we already have infer_grid_config_from_plots
+        Infers grid parameters and notifies the UI.
+        Does NOT update the model's active config or switch modes.
         """
         self.logger.info("LayoutManager received request to infer grid parameters.")
-
-        # Ensure active layout mode is GRID
-        if self._application_model.current_layout_config.mode != LayoutMode.GRID:
-            self.logger.debug(
-                "Active layout mode not GRID, switching to GRID before inferring parameters."
-            )
-            self.set_layout_mode(LayoutMode.GRID)
 
         all_plots = list(
             self._application_model.scene_root.all_descendants(of_type=PlotNode)
@@ -407,13 +399,12 @@ class LayoutManager:
             self.logger.warning("No plots in scene to infer grid from.")
             return
 
-        # Infer a new GridConfig based on geometric analysis of free-form plots
-        # _last_grid_config is guaranteed to be non-None here because set_layout_mode initializes it.
+        # Infer from current positions
         new_inferred_grid_config = self.infer_grid_config_from_plots(
             all_plots, self._last_grid_config
         )
 
-        # Update _last_grid_config with the inferred config
+        # Update cache so UI fields can retrieve these values
         self._last_grid_config = new_inferred_grid_config
 
         # Emit signal to update UI fields
@@ -449,7 +440,10 @@ class LayoutManager:
         # Use calculate_geometries with constrained optimization
         _, calculated_margins, calculated_gutters = (
             self._grid_engine.calculate_geometries(
-                all_plots, current_grid_config, use_constrained_optimization=True
+                all_plots, 
+                current_grid_config, 
+                self._application_model.figure_size,
+                use_constrained_optimization=True
             )
         )
 

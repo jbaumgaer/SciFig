@@ -5,8 +5,10 @@ from src.models.application_model import ApplicationModel
 from src.models.layout.layout_config import (
     GridConfig,
     Margins,
+    Gutters
 )
 from src.models.nodes.plot_node import PlotNode
+from src.services.commands.apply_grid_command import ApplyGridCommand
 from src.services.commands.batch_change_plot_geometry_command import (
     BatchChangePlotGeometryCommand,
 )
@@ -64,6 +66,9 @@ class LayoutController:
             self._handle_infer_grid_parameters_request,
         )
         self._event_aggregator.subscribe(
+            Events.APPLY_GRID_REQUESTED, self._handle_apply_grid_request
+        )
+        self._event_aggregator.subscribe(
             Events.OPTIMIZE_LAYOUT_REQUESTED, self._handle_optimize_layout_request
         )
         self._event_aggregator.subscribe(
@@ -74,6 +79,20 @@ class LayoutController:
             Events.BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED,
             self._on_batch_change_geometry_request,
         )
+
+    def _handle_apply_grid_request(self, grid_config: GridConfig):
+        """
+        Applies a specific GridConfig to the model via an undoable command.
+        """
+        self.logger.info("LayoutController received request to apply grid.")
+        command = ApplyGridCommand(
+            model=self.model,
+            event_aggregator=self._event_aggregator,
+            layout_manager=self._layout_manager,
+            new_grid_config=grid_config
+        )
+        self.command_manager.execute_command(command)
+        self.logger.debug("Executed ApplyGridCommand.")
 
     def _on_batch_change_geometry_request(self, geometries: dict[str, Rect]):
         """
@@ -239,8 +258,8 @@ class LayoutController:
         elif param_name.startswith("margin_"):
             try:
                 margin_value = float(value)
-                if not (0.0 <= margin_value <= 0.5):
-                    raise ValueError("Margin must be between 0.0 and 0.5")
+                if not (0.0 <= margin_value <= 5.0): # TODO: This makes no sense and should be in relative coordinates
+                    raise ValueError("Margin must be between 0.0 and 5.0 cm")
 
                 # Create a new Margins object for immutability
                 temp_margins_dict = new_margins.to_dict()
@@ -260,8 +279,8 @@ class LayoutController:
                     if value
                     else []
                 )
-                new_gutters = new_gutters.from_dict(
-                    {"hspace": new_hspace, "wspace": new_gutters.wspace}
+                new_gutters = Gutters(
+                    hspace=new_hspace, wspace=new_gutters.wspace
                 )
 
             except ValueError:
@@ -279,8 +298,8 @@ class LayoutController:
                     if value
                     else []
                 )
-                new_gutters = new_gutters.from_dict(
-                    {"hspace": new_gutters.hspace, "wspace": new_wspace}
+                new_gutters = Gutters(
+                    hspace=new_gutters.hspace, wspace=new_wspace
                 )
 
             except ValueError:

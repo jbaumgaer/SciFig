@@ -241,10 +241,7 @@ class LayoutUIFactory:
     def _build_grid_layout_controls(self, parent: QObject) -> QWidget:
         """
         Builds UI controls for Grid layout mode (e.g., set grid size, adjust ratios).
-        Uses QLineEdit for rows and columns, QDoubleSpinBoxes for granular margins,
-        and QLineEdits for list-based hspace and wspace.
         Initializes values from the current LayoutManager's last grid config.
-        Returns a QWidget containing these controls.
         """
         container = QWidget(parent)
 
@@ -307,7 +304,7 @@ class LayoutUIFactory:
         )
         form_layout.addRow("Margin Right:", line_margin_right)
 
-        # Gutters (list-based input)
+        # Gutters
         line_hspace = self._create_parameter_line_edit(
             "hspace",
             current_grid_config.gutters.hspace if current_grid_config else None,
@@ -330,6 +327,9 @@ class LayoutUIFactory:
 
         overall_container_layout.addLayout(form_layout)
 
+        # Button Row: Infer and Apply
+        btn_layout = QHBoxLayout()
+        
         # Infer Grid Button
         btn_infer_grid = QPushButton("Infer Grid", container)
         btn_infer_grid.setIcon(QIcon(IconPath.get_path("properties.infer_grid")))
@@ -340,10 +340,23 @@ class LayoutUIFactory:
             lambda: self._event_aggregator.publish(
                 Events.INFER_GRID_PARAMETERS_REQUESTED
             )
-        )  # Event publish
-        overall_container_layout.addWidget(btn_infer_grid)
+        )
+        btn_layout.addWidget(btn_infer_grid)
 
-        # Optimize Layout Button (formerly Snap to Grid)
+        # Apply Grid Button
+        btn_apply_grid = QPushButton("Apply Grid", container)
+        btn_apply_grid.setIcon(QIcon(IconPath.get_path("properties.optimize_layout"))) 
+        btn_apply_grid.setToolTip(
+            "Apply the current grid parameters to all plots."
+        )
+        btn_apply_grid.clicked.connect(
+            lambda: self._handle_apply_grid_click()
+        )
+        btn_layout.addWidget(btn_apply_grid)
+        
+        overall_container_layout.addLayout(btn_layout)
+
+        # Optimize Layout Button
         btn_optimize_layout = QPushButton("Optimize Layout", container)
         btn_optimize_layout.setIcon(
             QIcon(IconPath.get_path("properties.optimize_layout"))
@@ -353,12 +366,21 @@ class LayoutUIFactory:
         )
         btn_optimize_layout.clicked.connect(
             lambda: self._event_aggregator.publish(Events.OPTIMIZE_LAYOUT_REQUESTED)
-        )  # Event publish
+        )
         overall_container_layout.addWidget(btn_optimize_layout)
 
         overall_container_layout.addStretch()
 
         return container
+
+    def _handle_apply_grid_click(self):
+        """
+        Gathers current values from UI fields and requests an undoable Apply Grid operation.
+        """
+        current_config = self._layout_manager.get_last_grid_config()
+        if current_config:
+            self.logger.info("LayoutUIFactory: Requesting APPLY_GRID_REQUESTED.")
+            self._event_aggregator.publish(Events.APPLY_GRID_REQUESTED, grid_config=current_config)
 
     def _handle_line_edit_change(self, param_name: str, line_edit: QLineEdit):
         raw_value = line_edit.text()

@@ -139,17 +139,19 @@ class LayoutTab(QWidget):
         self.logger.debug(
             f"LayoutTab: Grid parameters inferred. Updating UI with {grid_config}."
         )
-        # Force update the grid view if the current UI mode is GRID
-        if self.layout_controller.get_ui_selected_layout_mode() == LayoutMode.GRID:
-            self._update_content(LayoutMode.GRID)
+        # Decoupling fix: Automatically switch the UI view to GRID mode so fields are visible,
+        # but don't toggle the application's actual active layout mode yet.
+        self.layout_controller.set_layout_mode(LayoutMode.GRID)
+        self._update_content(LayoutMode.GRID)
+        # Note: This updates the UI toggle button state as well via subscription
 
-    def _handle_layout_config_changed(self, new_config: LayoutConfig):
+    def _handle_layout_config_changed(self, config: LayoutConfig):
         """Handler for when the application's active layout config changes."""
         self.logger.debug(
-            f"LayoutTab: Active layout config changed to {new_config.mode}. Updating content."
+            f"LayoutTab: Active layout config changed to {config.mode}. Updating content."
         )
         # Rebuild content for the active mode, which will then reflect the new config
-        self._update_content(new_config.mode)
+        self._update_content(config.mode)
 
     def _handle_active_layout_mode_changed(self, mode: LayoutMode):
         """Handler for when the application's active layout mode changes."""
