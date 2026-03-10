@@ -1,119 +1,108 @@
-from unittest.mock import Mock
-
-import pandas as pd
 import pytest
+import pandas as pd
+import numpy as np
+from unittest.mock import MagicMock, Mock
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 
 from src.ui.renderers.plotting_strategies import (
-    LinePlotStrategy,
-    ScatterPlotStrategy,
+    Cartesian2DStrategy,
+    LineSyncStrategy,
+    ScatterSyncStrategy,
+    ImageSyncStrategy,
+    MeshSyncStrategy
 )
-
 
 @pytest.fixture
 def sample_data():
     """Create a sample Pandas DataFrame for testing."""
-    return pd.DataFrame(
-        {
-            "x": [1, 2, 3, 4, 5],
-            "y1": [2, 3, 5, 7, 11],
-            "y2": [1, 4, 9, 16, 25],
-        }
-    )
+    return pd.DataFrame({
+        "x": [1, 2, 3],
+        "y": [10, 20, 30],
+        "z": [100, 200, 300]
+    })
 
+class TestCoordinateStrategies:
+    """Tests for CoordSyncStrategy implementations."""
 
-def test_line_plot_strategy(sample_data):
-    """Test that the LinePlotStrategy calls ax.plot with the correct data."""
-    # 1. Arrange
-    mock_ax = Mock()
-    strategy = LinePlotStrategy()
-    x_col = "x"
-    y_cols = ["y1", "y2"]
+    def test_cartesian_2d_creates_axes(self):
+        figure = MagicMock(spec=Figure)
+        strategy = Cartesian2DStrategy()
+        rect = [0.1, 0.1, 0.8, 0.8]
+        
+        strategy.create_axes(figure, rect)
+        
+        figure.add_axes.assert_called_once_with(rect)
 
-    # 2. Act
-    strategy.plot(mock_ax, sample_data, x_col, y_cols)
+    def test_cartesian_2d_syncs_components(self):
+        strategy = Cartesian2DStrategy()
+        mock_ax = MagicMock() # Removed spec=Axes
+        mock_props = MagicMock()
+        mock_syncer = MagicMock()
+        
+        strategy.sync(mock_ax, mock_props, "path", mock_syncer)
+        
+        mock_syncer.assert_any_call(mock_ax.xaxis, mock_props.xaxis, "path.xaxis")
+        mock_syncer.assert_any_call(mock_ax.yaxis, mock_props.yaxis, "path.yaxis")
 
-    # 3. Assert
-    assert mock_ax.plot.call_count == 2
-    # Check the first call
-    call_args_1 = mock_ax.plot.call_args_list[0]
-    pd.testing.assert_series_equal(
-        call_args_1[0][0], sample_data[x_col], check_names=False
-    )
-    pd.testing.assert_series_equal(
-        call_args_1[0][1], sample_data[y_cols[0]], check_names=False
-    )
-    assert call_args_1[1]["label"] == y_cols[0]
+class TestArtistSyncStrategies:
+    """Tests for ArtistSyncStrategy implementations."""
 
-    # Check the second call
-    call_args_2 = mock_ax.plot.call_args_list[1]
-    pd.testing.assert_series_equal(
-        call_args_2[0][0], sample_data[x_col], check_names=False
-    )
-    pd.testing.assert_series_equal(
-        call_args_2[0][1], sample_data[y_cols[1]], check_names=False
-    )
-    assert call_args_2[1]["label"] == y_cols[1]
+    def test_line_sync_strategy_creates_artist(self):
+        strategy = LineSyncStrategy()
+        mock_ax = MagicMock(spec=Axes)
+        mock_ax.get_lines.return_value = []
+        mock_ax.plot.return_value = [MagicMock()]
+        
+        artist = strategy.get_or_create_artist(mock_ax, None, 0)
+        
+        mock_ax.plot.assert_called_once_with([], [])
+        assert artist is not None
 
-    mock_ax.legend.assert_called_once()
+    def test_line_sync_data(self, sample_data):
+        strategy = LineSyncStrategy()
+        mock_artist = MagicMock()
+        mock_props = MagicMock()
+        mock_props.x_column = "x"
+        mock_props.y_column = "y"
+        
+        strategy.sync_data(mock_artist, mock_props, sample_data)
+        
+        args, _ = mock_artist.set_data.call_args
+        pd.testing.assert_series_equal(args[0], sample_data["x"])
+        pd.testing.assert_series_equal(args[1], sample_data["y"])
 
+    def test_scatter_sync_data(self, sample_data):
+        strategy = ScatterSyncStrategy()
+        mock_artist = MagicMock()
+        mock_props = MagicMock()
+        mock_props.x_column = "x"
+        mock_props.y_column = "y"
+        
+        strategy.sync_data(mock_artist, mock_props, sample_data)
+        
+        args, _ = mock_artist.set_offsets.call_args
+        expected_offsets = np.column_stack((sample_data["x"], sample_data["y"]))
+        np.testing.assert_array_equal(args[0], expected_offsets)
 
-def test_scatter_plot_strategy(sample_data):
-    """Test that the ScatterPlotStrategy calls ax.scatter with the correct data."""
-    # 1. Arrange
-    mock_ax = Mock()
-    strategy = ScatterPlotStrategy()
-    x_col = "x"
-    y_cols = ["y1", "y2"]
+    def test_image_sync_data(self, sample_data):
+        strategy = ImageSyncStrategy()
+        mock_artist = MagicMock()
+        mock_props = MagicMock()
+        mock_props.data_column = "z"
+        
+        strategy.sync_data(mock_artist, mock_props, sample_data)
+        
+        args, _ = mock_artist.set_data.call_args
+        pd.testing.assert_series_equal(args[0], sample_data["z"])
 
-    # 2. Act
-    strategy.plot(mock_ax, sample_data, x_col, y_cols)
-
-    # 3. Assert
-    assert mock_ax.scatter.call_count == 2
-    # Check the first call
-    call_args_1 = mock_ax.scatter.call_args_list[0]
-    pd.testing.assert_series_equal(
-        call_args_1[0][0], sample_data[x_col], check_names=False
-    )
-    pd.testing.assert_series_equal(
-        call_args_1[0][1], sample_data[y_cols[0]], check_names=False
-    )
-    assert call_args_1[1]["label"] == y_cols[0]
-
-    # Check the second call
-    call_args_2 = mock_ax.scatter.call_args_list[1]
-    pd.testing.assert_series_equal(
-        call_args_2[0][0], sample_data[x_col], check_names=False
-    )
-    pd.testing.assert_series_equal(
-        call_args_2[0][1], sample_data[y_cols[1]], check_names=False
-    )
-    assert call_args_2[1]["label"] == y_cols[1]
-
-    mock_ax.legend.assert_called_once()
-
-
-def test_line_plot_strategy_single_y(sample_data):
-    """Test line plot with a single Y column does not call legend."""
-    mock_ax = Mock()
-    strategy = LinePlotStrategy()
-    x_col = "x"
-    y_cols = ["y1"]
-
-    strategy.plot(mock_ax, sample_data, x_col, y_cols)
-
-    assert mock_ax.plot.call_count == 1
-    mock_ax.legend.assert_not_called()
-
-
-def test_scatter_plot_strategy_single_y(sample_data):
-    """Test scatter plot with a single Y column does not call legend."""
-    mock_ax = Mock()
-    strategy = ScatterPlotStrategy()
-    x_col = "x"
-    y_cols = ["y1"]
-
-    strategy.plot(mock_ax, sample_data, x_col, y_cols)
-
-    assert mock_ax.scatter.call_count == 1
-    mock_ax.legend.assert_not_called()
+    def test_mesh_sync_data(self, sample_data):
+        strategy = MeshSyncStrategy()
+        mock_artist = MagicMock()
+        mock_props = MagicMock()
+        mock_props.z_column = "z"
+        
+        strategy.sync_data(mock_artist, mock_props, sample_data)
+        
+        args, _ = mock_artist.set_array.call_args
+        np.testing.assert_array_equal(args[0], sample_data["z"].values.flatten())

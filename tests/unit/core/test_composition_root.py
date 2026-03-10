@@ -33,15 +33,13 @@ def composition_root(mock_qapplication, mock_config_service, mocker):
     
     mock_rn = MagicMock()
     mock_rn.handle_node_removal.__name__ = "removal"
-    mocker.patch("src.core.composition_root.Renderer", return_value=mock_rn)
+    # Refactored: Renderer -> FigureRenderer
+    mocker.patch("src.core.composition_root.FigureRenderer", return_value=mock_rn)
     
     mock_lm = MagicMock()
     mock_lm.on_model_reset.__name__ = "reset"
     mocker.patch("src.core.composition_root.LayoutManager", return_value=mock_lm)
 
-    # Note: We let ApplicationModel and EventAggregator be real for easier identity checks
-    # or we can mock them but we must ensure consistency.
-    
     mock_mw = MagicMock()
     mock_mw._prompt_for_open_path_for_node_data.__name__ = "mock_prompt"
     mocker.patch("src.core.composition_root.MainWindow", return_value=mock_mw)
@@ -92,31 +90,30 @@ class TestCompositionRoot:
 
     def test_dependency_sharing(self, composition_root, mocker):
         """Verifies that assembled components share the same model and event aggregator."""
-        # Use real objects for identity check to avoid mock-name confusion
         from src.services.event_aggregator import EventAggregator
         from src.models.application_model import ApplicationModel
         
         real_ea = EventAggregator()
         mocker.patch("src.core.composition_root.EventAggregator", return_value=real_ea)
         
-        # We need to ensure models are also shared
+        # Figure size is required now
+        real_model = ApplicationModel(event_aggregator=real_ea, figure_size=(20.0, 15.0))
+        mocker.patch("src.core.composition_root.ApplicationModel", return_value=real_model)
+        
         components = composition_root.assemble()
             
         ea = components.event_aggregator
         model = components.application_model
         
         assert ea is real_ea
+        assert model is real_model
         
-        # Verify linkage using the return_values of the class mocks
         from src.core.composition_root import ProjectController, LayoutManager
         
-        # ProjectController(lifecycle=self._application_model, ..., event_aggregator=self._event_aggregator)
-        # We check that the mock was CALLED with the right objects
         args, kwargs = ProjectController.call_args
         assert kwargs["lifecycle"] is model
         assert kwargs["event_aggregator"] is ea
         
-        # LayoutManager(..., event_aggregator=self._event_aggregator)
         args, kwargs = LayoutManager.call_args
         assert kwargs["event_aggregator"] is ea
 
@@ -164,12 +161,13 @@ class TestCompositionRoot:
 
     def test_redraw_canvas_callback(self, composition_root):
         """Verifies that the redraw callback orchestrates the renderer and canvas widget."""
+        # Use FigureRenderer mock name
         mock_renderer = MagicMock()
         mock_canvas_widget = MagicMock()
         mock_figure = MagicMock()
         mock_model = MagicMock()
         
-        composition_root._renderer = mock_renderer
+        composition_root._figure_renderer = mock_renderer
         composition_root._canvas_widget = mock_canvas_widget
         composition_root._figure = mock_figure
         composition_root._application_model = mock_model
@@ -184,7 +182,7 @@ class TestCompositionRoot:
     def test_redraw_canvas_callback_syncs_limits(self, composition_root):
         """Verifies that redraw callback triggers limit sync if node_id is provided."""
         mock_renderer = MagicMock()
-        composition_root._renderer = mock_renderer
+        composition_root._figure_renderer = mock_renderer
         composition_root._canvas_widget = MagicMock()
         composition_root._application_model = MagicMock()
         composition_root._figure = MagicMock()

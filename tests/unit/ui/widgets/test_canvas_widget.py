@@ -115,23 +115,23 @@ class TestCanvasWidget:
         """Verifies translation from scene coordinates to normalized figure coordinates."""
         scene_pos = QPointF(10, 10)
         
-        with patch.object(canvas_widget.figure_canvas.figure.transFigure, "inverted") as mock_inv_cls:
-            mock_inv = MagicMock()
-            mock_inv_cls.return_value = mock_inv
-            mock_inv.transform.return_value = [0.5, 0.5]
+        # Patch CoordinateService to return a known normalized value
+        with patch("src.ui.widgets.canvas_widget.CoordinateService.transform_value") as mock_transform:
+            mock_transform.return_value = 0.5
             
             coords = canvas_widget.map_to_figure(scene_pos)
             
             assert coords == (0.5, 0.5)
-            # Verify the transform was called
-            assert mock_inv.transform.called
+            # Verify the service was called
+            assert mock_transform.called
 
     def test_map_from_figure_logic(self, canvas_widget):
         """Verifies translation from figure coordinates back to scene coordinates."""
         fig_pos = (0.5, 0.5)
         
-        with patch.object(canvas_widget.figure_canvas.figure.transFigure, "transform") as mock_transform:
-            mock_transform.return_value = [200, 200] # dummy pixels
+        # Patch CoordinateService to return known pixel values
+        with patch("src.ui.widgets.canvas_widget.CoordinateService.transform_value") as mock_transform:
+            mock_transform.return_value = 200.0
             
             scene_pos = canvas_widget.map_from_figure(fig_pos)
             

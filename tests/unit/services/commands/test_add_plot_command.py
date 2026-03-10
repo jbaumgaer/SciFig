@@ -7,7 +7,7 @@ from src.shared.events import Events
 
 @pytest.fixture
 def app_model(mock_event_aggregator):
-    return ApplicationModel(event_aggregator=mock_event_aggregator)
+    return ApplicationModel(event_aggregator=mock_event_aggregator, figure_size=(20.0, 15.0))
 
 
 class TestAddPlotCommand:

@@ -37,6 +37,7 @@ from src.models.plots.plot_types import (
 )
 from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
+from src.shared.geometry import Rect
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.services.property_service import PropertyService

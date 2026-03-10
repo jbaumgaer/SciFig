@@ -87,18 +87,19 @@ class TestToolService:
         tool_service.set_active_tool("t1")
         
         coords = (0.5, 0.5)
+        mods = "shift"
         
         # Mouse Press
-        tool_service.dispatch_mouse_press_event("node1", coords, 1)
-        tool.mouse_press_event.assert_called_once_with("node1", coords, 1)
+        tool_service.dispatch_mouse_press_event("node1", coords, 1, modifiers=mods)
+        tool.mouse_press_event.assert_called_once_with("node1", coords, 1, mods)
         
         # Mouse Move
-        tool_service.dispatch_mouse_move_event(coords)
-        tool.mouse_move_event.assert_called_once_with(coords)
+        tool_service.dispatch_mouse_move_event(coords, modifiers=mods)
+        tool.mouse_move_event.assert_called_once_with(coords, mods)
         
         # Mouse Release
-        tool_service.dispatch_mouse_release_event(coords)
-        tool.mouse_release_event.assert_called_once_with(coords)
+        tool_service.dispatch_mouse_release_event(coords, modifiers=mods)
+        tool.mouse_release_event.assert_called_once_with(coords, mods)
 
     def test_dispatch_events_no_active_tool_is_safe(self, tool_service):
         """Ensures no crash if events are dispatched without an active tool."""

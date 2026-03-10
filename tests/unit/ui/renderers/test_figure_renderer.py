@@ -5,6 +5,7 @@ import matplotlib.axes
 import matplotlib.axis
 from src.ui.renderers.figure_renderer import FigureRenderer
 from src.models.nodes.plot_node import PlotNode
+from src.shared.geometry import Rect
 from src.models.nodes.scene_node import SceneNode
 from src.shared.events import Events
 
@@ -39,7 +40,7 @@ class TestFigureRenderer:
         mock_application_model.scene_root.all_descendants.return_value = [node]
         
         # Setup: Layout
-        mock_layout_manager.get_current_layout_geometries.return_value = {"p1": (0,0,1,1)}
+        mock_layout_manager.get_current_layout_geometries.return_value = {"p1": Rect(0,0,1,1)}
         
         # Mock Strategies
         mock_coord_strategy = MagicMock()
@@ -68,7 +69,7 @@ class TestFigureRenderer:
         
         # Identity is critical here: return the EXACT node instance
         mock_application_model.scene_root.all_descendants.return_value = [node]
-        mock_layout_manager.get_current_layout_geometries.return_value = {"p1": (0,0,1,1)}
+        mock_layout_manager.get_current_layout_geometries.return_value = {"p1": Rect(0,0,1,1)}
         
         # last_synced >= current_version should trigger the skip in _sync_plot_node
         renderer._last_synced_versions["p1"] = 5
@@ -126,7 +127,7 @@ class TestFigureRenderer:
         mock_xaxis.axes = mock_ax
         
         # We must ensure type(mock_xaxis).__name__ is "XAxis"
-        mocker.patch("src.ui.renderers.renderer.type", return_value=MagicMock(__name__="XAxis"))
+        mocker.patch("src.ui.renderers.figure_renderer.type", return_value=MagicMock(__name__="XAxis"))
         
         # Limits is a translated property in _SETTER_MAP for XAxis
         renderer._apply_property(mock_xaxis, "limits", (10, 20))
@@ -149,20 +150,3 @@ class TestFigureRenderer:
         assert "p1" not in renderer._axes_registry
         assert "p1" not in renderer._last_synced_versions
         mock_fig.delaxes.assert_called_once_with(mock_ax)
-
-    # --- Highlights ---
-
-    def test_render_highlights_selection(self, renderer, mock_application_model):
-        """Tests drawing blue selection rectangle around selected nodes."""
-        mock_fig = MagicMock()
-        mock_fig.artists = []
-        
-        node = PlotNode(name="Selected")
-        node.geometry = (0.1, 0.1, 0.2, 0.2)
-        
-        renderer.render(mock_fig, mock_application_model.scene_root, [node])
-        
-        # Verify that a Rectangle was added to the figure artists
-        mock_fig.add_artist.assert_called_once()
-        highlight = mock_fig.add_artist.call_args[0][0]
-        assert highlight.get_gid() == "selection_highlight"
