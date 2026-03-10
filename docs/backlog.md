@@ -2486,14 +2486,226 @@ Fix and refactor the layout engine to use numpy for calculations, and check whet
 Config_service is passed around a lot. I should rather inject the important sections during initialization
 Make the event aggregator a singleton because I need it literally everywhere, so I can just assume its dependence, and I'm not hiding anything with that
 
+# Technical Design Document 3: Themed Layout Orchestration
+
+## Epic: Themed Figure and Grid Layout
+
+This epic focuses on centralizing the source of truth for figure-level layout defaults (margins, gutters, and padding) within the `StyleService`. By treating layout configuration as a themeable property, we ensure consistency across different journal styles and remove service-level coupling between the layout and style systems.
+
+---
+
+### Feature 1: StyleService Expansion for Figure Layout
+**Description:** Extend the `StyleService` to act as the "Mandatory Factory" for layout-related dataclasses. This removes redundant configuration in `ConfigService` and ensures that switching themes (e.g., from Nature to Science) automatically updates figure margins and plot spacing.
+
+**Planned Implementation:**
+
+1.  **Modify `StyleService` (`src/services/style_service.py`):**
+    *   **Task:** Add figure layout keys to `REQUIRED_KEYS`:
+        *   `figure.subplot.left`, `figure.subplot.right`, `figure.subplot.bottom`, `figure.subplot.top` (Absolute Margins).
+        *   `figure.subplot.wspace`, `figure.subplot.hspace` (Absolute Gutters).
+        *   `figure.constrained_layout.h_pad`, `figure.constrained_layout.w_pad`, `figure.constrained_layout.hspace`, `figure.constrained_layout.wspace` (Constrained Pads).
+    *   **Task:** Implement `create_themed_grid_config(rows, cols) -> GridConfig`:
+        *   Resolves the above keys from `_current_style`.
+        *   Returns a fully populated `GridConfig` with nested `Margins` and `Gutters` objects.
+    *   **Task:** Subscribe to `Events.INITIALIZE_LAYOUT_THEME_REQUESTED`.
+    *   **Task:** Implement `_on_initialize_layout_theme_requested`:
+        *   Generates the themed `GridConfig` and publishes `Events.LAYOUT_CONFIG_CHANGED`.
+
+2.  **Enrich `GridConfig` Dataclass (`src/models/layout/layout_config.py`):**
+    *   **Task:** Add fields for constrained layout parameters: `h_pad: float`, `w_pad: float`, `constrained_hspace: float`, `constrained_wspace: float`.
+    *   **Task:** Update `to_dict` and `from_dict` to include these new fields.
+
+**Testing Plan:**
+*   **Unit Tests (`tests/unit/services/test_style_service.py`):** Verify `create_themed_grid_config` correctly maps `.mplstyle` keys to the `GridConfig` hierarchy.
+*   **Integration Tests:** Load a custom style and verify that the layout-related events carry the correct themed values.
+
+---
+
+### Feature 2: Stateless Grid Engine with Absolute-to-Relative Conversion
+**Description:** Refactor the `GridLayoutEngine` to be strictly stateless and mathematically correct. The engine will no longer pull from services; it will rely entirely on the provided `GridConfig` and perform internal conversion of absolute figure fractions to Matplotlib-relative values.
+
+**Planned Implementation:**
+
+1.  **Modify `GridLayoutEngine` (`src/models/layout/grid_layout_engine.py`):**
+    *   **Task:** Remove `config_service` from `__init__`.
+    *   **Task:** Implement absolute-to-relative conversion logic in `_apply_fixed_layout`:
+        *   `avg_subplot_w = (plot_area_width - (cols-1)*abs_gutter_w) / cols`.
+        *   `gs_wspace = abs_gutter_w / avg_subplot_w`.
+    *   **Task:** Update `_apply_constrained_layout` to use pads provided in the `GridConfig` instead of pulling from `ConfigService`.
+    *   **Task:** Fix the "Zero Plot" bug: Return `grid_config.margins` and `grid_config.gutters` when the plot list is empty.
+
+2.  **Update `LayoutManager` (`src/services/layout_manager.py`):**
+    *   **Task:** Refactor `_create_minimal_grid_config` to publish `INITIALIZE_LAYOUT_THEME_REQUESTED` instead of manually constructing a config from `ConfigService`.
+
+**Testing Plan:**
+*   **Unit Tests (`tests/unit/models/layout/test_grid_layout_engine.py`):** 
+    *   Verify that absolute gutters in `GridConfig` result in correct `0.375` (not `0.390`) plot widths in a 2x2 grid.
+    *   Verify that empty plot lists preserve the input margins.
+*   **Regression Tests:** Run existing `FreeLayoutEngine` tests to ensure no impact on other layout modes.
+
+---
+
+### Feature 3: Event-Driven Layout Initialization
+**Description:** Standardize how layouts are initialized and reset using the event system, matching the pattern used for `PlotProperties`.
+
+**Planned Implementation:**
+
+1.  **Modify `src/shared/events.py`:**
+    *   **Task:** Register `INITIALIZE_LAYOUT_THEME_REQUESTED`.
+
+2.  **Update `ProjectController` / `LayoutController`:**
+    *   **Task:** Use the initialization event when creating a new project or switching to grid mode for the first time.
+
+**Risks & Mitigations:**
+*   **Risk:** `GridSpec` behavior when `avg_subplot_width` is near zero.
+*   **Mitigation:** Add guard clauses in the conversion logic to return `0.0` or a safe minimum if denominators are too small.
+*   **Risk:** Backward compatibility with old project files.
+*   **Mitigation:** `GridConfig.from_dict` will provide defaults for the new constrained padding fields if they are missing from older serialized dictionaries.
+
+
+# Technical Design Document 5: Absolute Physical Coordinate System as Source of Truth
+
+## 1. Introduction & Objectives
+
+### 1.1. The Problem
+Currently, SciFig uses **Normalized Figure Coordinates (0.0–1.0)** as the absolute source of truth for plot geometries and layout constraints. This creates a "Leaky Abstraction":
+1.  **Non-Deterministic Sizing**: Resizing the figure window silently changes the physical size of all plots.
+2.  **Logic Duplication**: The conversion math (`pixels / width` or `cm / fig_width`) is scattered across `CanvasController`, `LayoutManager`, and `OverlayRenderer`.
+3.  **Rounding Drift**: Repetitive back-and-forth conversions between spaces during UI interactions lead to floating-point errors where plots "shift" by sub-pixels.
+
+### 1.2. The Objective
+To introduce a centralized **`CoordinateService`** and a **`CoordinateSpace`** enum to manage all transformations. We will move the **Absolute Source of Truth** to **Centimeters (cm)** within the Headless Model.
+
+---
+
+## 2. Architectural Components
+
+### 2.1. The `CoordinateSpace` Enum
+A new enum in `src/shared/types.py` to explicitly tag the **Reference Basis** of a value:
+*   `PHYSICAL`: Absolute distance in Centimeters (The Model's Canonical Truth).
+*   `FRACTIONAL_FIG`: 0.0 to 1.0 relative to the total Figure size.
+*   `FRACTIONAL_LOCAL`: 0.0 to 1.0 relative to the **immediate parent** (e.g., subplot spacing).
+*   `DISPLAY_PX`: Device pixels relative to the Canvas viewport.
+
+### 2.2. The `CoordinateService`
+A central, stateless service that provides a unified API for transformations and unit mapping.
+**Core Responsibilities**:
+*   **Space Translation**: Converts values between `PHYSICAL`, `FRACTIONAL_FIG`, `FRACTIONAL_LOCAL`, and `DISPLAY_PX`.
+*   **Canonical Mapping**: Acts as the system "Gateway". Converts inbound user units (inches, mm) to the internal `PHYSICAL` (CM) standard.
+*   **Display Formatting**: Converts internal CM to requested display units (e.g., for UI Spinboxes) with scientific rounding to prevent floating-point artifacts.
+
+---
+
+## 3. Data Structures & Model Updates
+
+### 3.1. `ApplicationModel`
+*   **New Property**: `figure_size: tuple[float, float]` (Width in cm, Height in cm).
+*   **Initialization**: Sourced from `ConfigService` (converting default inches to cm).
+*   **Event**: `Events.FIGURE_SIZE_CHANGED` published when changed.
+
+### 3.2. `Rect` (Physical cm)
+*   The `Rect` class in `src/shared/geometry.py` now strictly represents **Centimeters**. 
+*   **Validation**: Methods like `scaled_by` will use a minimum threshold of `0.1 cm`.
+
+---
+
+## 4. Component Responsibilities
+
+### 4.1. `CanvasController` (Input)
+*   **Current**: Converts pixels to 0-1 using Matplotlib's `transFigure`.
+*   **New**: Uses `CoordinateService` to convert that 0-1 value immediately into **Centimeters** using the `ApplicationModel.figure_size`.
+*   **Impact**: Tools (`SelectionTool`, `AddPlotTool`) now receive and emit deltas in `cm`.
+
+### 4.2. `LayoutManager` (Translation)
+*   **Responsibility**: The sole provider of fractional geometries to the Renderer.
+*   **Logic**: It queries the Layout Engines (which work in `cm`), then uses `CoordinateService` to scale them by the `figure_size` before publishing them to the `FigureRenderer`.
+
+### 4.3. `GridLayoutEngine` (GridSpec Bridge)
+*   **Margins**: Handled as absolute subtractions from the physical `figure_size`.
+*   **Gutters**: Converts physical `cm` gaps into the relative `hspace/wspace` fractions expected by Matplotlib.
+    *   `hspace = gutter_cm / average_subplot_height_cm`.
+
+### 4.4. `OverlayRenderer` (View Feedback)
+*   **Logic**: Uses `CoordinateService` to map the physical `Rect` from the model directly to `DISPLAY` pixels for drawing handles and ghosts.
+
+---
+
+## 5. Implementation & Migration Steps
+
+### Phase 1: Foundation (Enums & Service)
+1.  Define `CoordinateSpace` Enum.
+2.  Implement `CoordinateService` in `src/services/coordinate_service.py`.
+3.  **Test**: Add unit tests verifying `CM <-> Fractional <-> Pixel` math with various DPIs and figure sizes.
+
+### Phase 2: Model & Event Update
+1.  Add `figure_size` to `ApplicationModel`.
+2.  Update `Rect` docstrings and verify `src/shared/geometry.py` logic works with absolute floats.
+3.  Add `Events.FIGURE_SIZE_CHANGED`.
+4.  **Test**: Verify Model state and event publication.
+
+### Phase 3: The Interaction Bridge
+1.  Refactor `CanvasController` to use `CoordinateService`.
+2.  Update `SelectionTool` logic to handle `cm` deltas.
+3.  **Test**: Verify a "1cm drag" on screen results in a `+1.0` change in the `Rect` model regardless of figure size.
+
+### Phase 4: The Layout Bridge
+1.  Refactor `LayoutManager.get_current_layout_geometries` to use `CoordinateService` for physical->fractional mapping.
+2.  Refactor `GridLayoutEngine` to handle physical margins and relative `GridSpec` gaps.
+3.  **Test**: Verify that a 10cm wide plot on a 20cm figure renders at `0.5` position.
+
+### Phase 5: View & Persistence
+1.  Update `OverlayRenderer` to use the service for ghost drawing.
+2.  Do NOT implement a versioning step. Backwards compatibility does not need to be maintained
+
+
+---
+
+## 6. Edge Cases & Constraints
+
+*   **Zero or Negative Sizes**: When subtracting cm margins from the figure size, the available plot area could become `<= 0`. The engines must fallback to a minimum plot size (e.g., 0.2 cm).
+*   **Precision**: Using CM as truth eliminates rounding drift during UI interactions.
+*   **File I/O (Legacy)**: Existing saved projects assumption: normalized `0.5` becomes `0.5 cm`. There is no need to keep backwards compatibility to the legacy notation.
+
+---
+
+## 7. Affected Files Audit
+
+To ensure a comprehensive migration, the following files must be reviewed and updated according to their coordinate space role:
+
+### 7.1. Group A: Design Space (Primary Truth)
+*These files currently store "Truth" as normalized values; they must shift to Physical Inches.*
+*   `src/models/nodes/plot_node.py`: `self.geometry` storage and initialization.
+*   `src/models/layout/layout_config.py`: `Margins` and `Gutters` data structures.
+*   `src/shared/geometry.py`: `Rect` logic (docstrings and methods like `moved_by`).
+*   `src/services/commands/add_plot_command.py`: Geometry passing for new nodes.
+*   `src/services/commands/batch_change_plot_geometry_command.py`: Geometry updates.
+*   `src/services/commands/change_grid_parameters_command.py`: `GridConfig` updates.
+
+### 7.2. Group B: Fractional Space (The Translators)
+*These files perform the math to convert Physical Model values into Matplotlib-ready fractions.*
+*   `src/services/layout_manager.py`: Core translation logic in `get_current_layout_geometries` and grid heuristics.
+*   `src/models/layout/free_layout_engine.py`: Math for `perform_align` and `perform_distribute`.
+*   `src/models/layout/grid_layout_engine.py`: Conversion of physical margins/gutters to `GridSpec` relative values.
+*   `src/ui/renderers/figure_renderer.py`: Version gating and comparison of MPL vs Model limits.
+
+### 7.3. Group C: Viewport Space (Display & Interaction)
+*These files bridge the screen pixels to the model.*
+*   `src/ui/widgets/canvas_widget.py`: Pixel-to-Normalized mappings.
+*   `src/controllers/canvas_controller.py`: Input capture scaling (Pixels -> Normalized -> Physical).
+*   `src/ui/renderers/overlay_renderer.py`: Handle/Ghost drawing logic.
+*   `src/services/tools/selection_tool.py`: Hit-test thresholds (currently hardcoded px).
+*   `src/services/tools/add_plot_tool.py`: Click-vs-Drag thresholds.
+
+### 7.4. Configuration & Utilities
+*The source of constants.*
+*   `configs/default_config.yaml`: `default_dpi`.
+*   `configs/default.mplstyle`: `figure.figsize` and `figure.dpi`.
+*   `src/services/config_service.py`: Provider of these constants.
+
 
 Remaining Features
 - Delete plot in free form with select/right_click/delete
 - Make the add plot dialog similar to the shape dialog of adobe illustrator
-- Complete the test coverage
-- I have a weird logic with the GridMode: Some things like the infer grid button shouldn't require a Grid Mode, so this is ambiguous
-## Unit conversion
-- Have internal representation in fractional figure coordinates (mpl), canvas coordinates (Qt?), pixels, centimeters and inches (which other coordinate systems are currently used?)
 ## New Grid Layout Manager
 - Note: Before implementing this, we might have to refactor the layout controller, layout manager, free layout engine, grid layout engine and grid config to make space for these capabilities
 - Ability to display grid layout lines with hspace, wspace, and gutters as grid lines and on top of the existing matplotlib figure
@@ -2506,7 +2718,7 @@ Remaining Features
 - I need to think about a suitable internal representation and data structure for this with the recursive splitting into subplots
     - The internal data and the renderer need to be synced at all times
     - The representation needs to be serializable for saving and loading
-    - Is there any inspiration that I can take from PlotProperties?
+    - Is there any inspiration that I can take from how I represent PlotProperties?
     - Maybe I can have an internal representation with a Figure, gutters, and a gridspec
     - The gridspec then fills up recursively with subplotgridspecs, and for each level, we can also hold information for hspace and wspace
     - The data structure potentially needs to support arbitrary level of nesting, but we should for safety put a limit at a depth of 10 layers
@@ -2519,6 +2731,8 @@ Remaining Features
         - Upon clicking, the cell, a dialog should open to ask for how many rows and columns we want, and what their height and width ratios should be
         - If the cell is empty, the action is easy. If the cell contains a subplot, the existing subplot should automatically be moved into the upper left quadrant of the new grid
     - There should be delete and move actions for deleting subplots from the grid, moving hspace and gutters
+    - There should be the option to move subplots from one "grid cell" to another
+    - There should be the option to resize subplots, and the resized plot should intelligently snap to the existing grid (we'll have to think of an intelligent algorithm here)
     - there needs to be some sort of smart grid allocation because moving subplots will have to find the nearest subplot to land in
     - When hovering at the sides over one of the divider grid lines, a plus symbol should pop up and the divider line should be highlighted by a thicker linewidth, to add a new row or column at this point. I should check in word about the possible redistribution options like intelligent redistribute etc.
         - One option would be to take the middle value of the relative subplot fractions of the two adjacent lines. By using the relative fractions, we make sure that when the new row/column is added, and the adjacent ones are shrunk down, that the newly added column isn't actually bigger than the adjacent ones (e.g. if we have a 10cm figure with two columns, 5 cm each: In absolute terms, the new column would have to be also 5 cm but because the total width of the figure is 10 cm, the existing columns would now have to be 2.5 cm. By using relative fractions (1:1 -> 1:1:1, everything gets scaled correctly))
