@@ -59,6 +59,8 @@ class FigureRenderer:
             else (
                 obj.axes.set_autoscalex_on(True),
                 obj.axes.relim(),
+                # Add collection bounds (Scatter) after relim()
+                [obj.axes.update_datalim(c.get_datalim(obj.axes.transData)) for c in obj.axes.collections],
                 obj.axes.autoscale_view(scalex=True, scaley=False),
             )
         ),
@@ -68,6 +70,8 @@ class FigureRenderer:
             else (
                 obj.axes.set_autoscaley_on(True),
                 obj.axes.relim(),
+                # Add collection bounds (Scatter) after relim()
+                [obj.axes.update_datalim(c.get_datalim(obj.axes.transData)) for c in obj.axes.collections],
                 obj.axes.autoscale_view(scalex=False, scaley=True),
             )
         ),
@@ -347,10 +351,11 @@ class FigureRenderer:
         props = node.plot_properties
         last_version = self._last_synced_versions.get(node.id, -1)
 
-        if props._version <= last_version:
+        # Domain Handshake: Use the node's property_version (Aesthetic truth)
+        if node._property_version <= last_version:
             return
 
-        self.logger.debug(f"Syncing PlotNode {node.id} (v{props._version})")
+        self.logger.debug(f"Syncing PlotNode {node.id} (v{node._property_version})")
 
         # 1. Sync Titles (left, center, right)
         for key, text_props in props.titles.items():
@@ -370,7 +375,7 @@ class FigureRenderer:
         coord_strategy.sync(ax, props.coords, "coords", self._sync_component)
 
         # Update the sync version
-        self._last_synced_versions[node.id] = props._version
+        self._last_synced_versions[node.id] = node._property_version
 
     def _sync_artists(self, ax: Axes, props: Any, node: PlotNode):
         """Syncs the list of data artists by delegating to type-specific strategies."""

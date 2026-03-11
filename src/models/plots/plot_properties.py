@@ -273,7 +273,6 @@ class PlotProperties:
     artists: list[Any] = field(
         default_factory=list
     )  # TODO: There needs to be some sort of gate_keeping to ensure that we don't accidentally mix incompatible artist types in one plot
-    _version: int = 0
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -223,9 +223,6 @@ class StyleService:
             else:
                 self._apply_leaf(base_obj, key, value)
 
-        if hasattr(base_obj, "_version"):
-            base_obj._version += 1
-
     def _resolve_key_type(self, dict_type: Any, key: str) -> Any:
         try:
             return SpinePosition(key)
@@ -317,16 +314,24 @@ class StyleService:
 
     def _on_hydrate_properties_requested(self, node_id: str, overrides: dict):
         try:
-            artist_list = overrides.get("artists", [{}])
-            artist_data = artist_list[0] if artist_list else {}
-            artist_type_raw = artist_data.get("artist_type", ArtistType.LINE)
-            try:
-                artist_type = ArtistType(artist_type_raw) if not isinstance(artist_type_raw, ArtistType) else artist_type_raw
-            except ValueError:
-                artist_type = ArtistType.LINE
+            # 1. Check for 'Full Property Tree' (Project Load case)
+            core_keys = ("titles", "coords", "legend", "artists")
+            if all(k in overrides for k in core_keys):
+                self.logger.debug(f"StyleService: Full property tree detected for {node_id}. Reconstructing.")
+                props = PlotProperties.from_dict(overrides)
+            else:
+                # 2. 'Sparse Template' (Template case)
+                artist_list = overrides.get("artists", [{}])
+                artist_data = artist_list[0] if artist_list else {}
+                artist_type_raw = artist_data.get("artist_type", ArtistType.LINE)
+                try:
+                    artist_type = ArtistType(artist_type_raw) if not isinstance(artist_type_raw, ArtistType) else artist_type_raw
+                except ValueError:
+                    artist_type = ArtistType.LINE
 
-            props = self.create_themed_properties(artist_type)
-            self.hydrate(props, overrides)
+                props = self.create_themed_properties(artist_type)
+                self.hydrate(props, overrides)
+            
             self._event_aggregator.publish(Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED, node_id=node_id, path="plot_properties", value=props)
         except Exception as e:
             self.logger.error(f"StyleService: Hydration failed for node {node_id}: {e}", exc_info=True)

@@ -95,21 +95,13 @@ class PlotNode(SceneNode):
         )
         # TODO: This should never have default values, but throw an error if it cannot get recovered
 
-        # 2. Hierarchical PlotProperties reconstruction
-        props_data = data.get("plot_properties")
-        if props_data:
-            # Check if it's a complete tree (with versioning) or a sparse dict (template)
-            if isinstance(props_data, dict) and "_version" in props_data:
-                node.plot_properties = PlotProperties.from_dict(props_data)
-                node.logger.debug(
-                    f"PlotNode '{node.name}': Strict property reconstruction complete."
-                )
-            else:
-                # Store as sparse dict for deferred reactive hydration
-                node.plot_properties = props_data
-                node.logger.debug(
-                    f"PlotNode '{node.name}': Sparse property dict stored for deferred hydration."
-                )
+        # 2. Lazy Property storage
+        # Responsibility for hydration (Sparse vs Full) is moved to StyleService.
+        node.plot_properties = data.get("plot_properties")
+        if node.plot_properties:
+            node.logger.debug(
+                f"PlotNode '{node.name}': Properties stored for deferred hydration."
+            )
 
         # 3. Data loading
         path_str = data.get("data_file_path")

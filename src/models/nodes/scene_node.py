@@ -30,7 +30,8 @@ class SceneNode:
         self.name = name
         self.visible = True
         self.locked = False  # New attribute
-        self._geometry_version = 0  # Version-gating for surgical rendering sync
+        self._geometry_version = 0  # Version-gating for structural sync
+        self._property_version = 0  # Version-gating for aesthetic sync
         self.grid_position: Optional[GridPosition] = None  # Position within a GridNode
         
         # Geometry in physical centimeters (cm).
@@ -87,6 +88,13 @@ class SceneNode:
             self.logger.debug(
                 f"Removed child {node.name} (ID: {node.id}) from {self.name} (ID: {self.id})."
             )
+
+    def increment_property_version(self):
+        """Increments the node's aesthetic property version to trigger re-rendering."""
+        self._property_version += 1
+        self.logger.debug(
+            f"Node '{self.name}' (ID: {self.id}) property version incremented to {self._property_version}."
+        )
 
     def hit_test(self, position: tuple[float, float]) -> Optional[SceneNode]:
         """
@@ -147,6 +155,7 @@ class SceneNode:
             "visible": self.visible,
             "locked": self.locked,  # New attribute
             "geometry_version": self._geometry_version,
+            "property_version": self._property_version,
             "grid_position": self.grid_position.to_dict() if self.grid_position else None,
             "geometry": {
                 "x": self.geometry.x,
@@ -168,6 +177,7 @@ class SceneNode:
         node.visible = data["visible"]
         node.locked = data.get("locked", False)  # New attribute with default
         node._geometry_version = data.get("geometry_version", 0)
+        node._property_version = data.get("property_version", 0)
         
         # Geometry reconstruction (Physical CM)
         geom_data = data.get("geometry", {})

@@ -48,28 +48,32 @@ class PropertyService:
         # Recursive case: navigate and replace if needed
         parent_path = ".".join(parts[:-1])
         leaf_name = parts[-1]
-        
         parent = self.get_value(obj, parent_path)
-        
+
         try:
             self._set_direct_value(parent, leaf_name, value)
+            # Automatic Versioning: If the base object is a node, bump its version
+            if hasattr(obj, "increment_property_version"):
+                obj.increment_property_version()
         except Exception:
             # If direct set fails (e.g. FrozenInstanceError), we must replace the parent 
             # object on ITS parent.
             if is_dataclass(parent):
-                
+
                 # 1. Coerce value for the leaf
                 field_map = {f.name: f.type for f in fields(parent)}
                 target_type = field_map.get(leaf_name)
                 final_value = self._coerce_value(value, target_type)
-                
+
                 # 2. Create new parent instance
                 new_parent = replace(parent, **{leaf_name: final_value})
-                
+
                 # 3. Recursively set the new parent on the original object
+                # This recursion will eventually hit the node and increment version
                 self.set_value(obj, parent_path, new_parent)
             else:
                 raise
+
 
     def _set_direct_value(self, target: Any, attr: str, value: Any):
         """Applies value with coercion to a direct attribute/key/index."""

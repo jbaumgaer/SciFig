@@ -37,35 +37,38 @@ class ChangeNodePropertyCommand(BaseCommand):
         self._expansion_map: dict[str, Any] = {}
 
     def execute(self, publish: bool = True):
-        """Resolves path and applies change via PropertyService."""
-        root = self._get_root()
-        concrete_paths = self._property_service.resolve_concrete_paths(root, self.path)
+        """Resolves path and applies change via PropertyService rooted at the node."""
+        # Fix: Always root the path calculation from the node to ensure the 
+        # PropertyService can find the 'increment_property_version' method.
+        first_part = self.path.split(".")[0]
+        full_path = self.path
+        if hasattr(self.node, "plot_properties") and self.node.plot_properties:
+            if hasattr(self.node.plot_properties, first_part) or first_part == "artists":
+                full_path = f"plot_properties.{self.path}"
+
+        concrete_paths = self._property_service.resolve_concrete_paths(self.node, full_path)
 
         if not concrete_paths:
-            raise PropertyPathError(f"Path '{self.path}' not found on {self.node}")
+            raise PropertyPathError(f"Path '{full_path}' not found on {self.node}")
 
         self._expansion_map.clear()
         for path in concrete_paths:
-            old_val = self._property_service.get_value(root, path)
+            old_val = self._property_service.get_value(self.node, path)
             self._expansion_map[path] = old_val
-            self._property_service.set_value(root, path, self.new_value)
+            self._property_service.set_value(self.node, path, self.new_value)
 
         self._finalize_change(publish=publish)
 
     def undo(self, publish: bool = True):
-        """Restores the original values."""
-        root = self._get_root()
+        """Restores the original values using the expanded paths."""
+        # The expansion map already contains the full paths rooted at the node
         for path, old_value in self._expansion_map.items():
-            self._property_service.set_value(root, path, old_value)
+            self._property_service.set_value(self.node, path, old_value)
 
         self._finalize_change(publish=publish, is_undo=True)
 
     def _finalize_change(self, publish: bool = True, is_undo: bool = False):
         """Publishes domain-specific events based on the modified property path."""
-        # 1. Plot-specific versioning for rendering optimization
-        if hasattr(self.node, "plot_properties") and self.node.plot_properties:
-            self.node.plot_properties._version += 1
-
         if not publish:
             return
 

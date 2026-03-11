@@ -156,22 +156,19 @@ class NodeController(QObject):
         if not node:
             return
 
-        # 1. Determine the root for the path (Node or PlotProperties)
+        # 1. Map the path correctly
+        # If it's a plot property, we prefix it so the PropertyService starts from the Node root
+        full_path = path
         first_part = path.split(".")[0]
-        root = node
         if hasattr(node, "plot_properties") and node.plot_properties:
             if hasattr(node.plot_properties, first_part) or first_part == "artists":
-                root = node.plot_properties
+                full_path = f"plot_properties.{path}"
 
         try:
-            # 2. Update the value silently
-            self._property_service.set_value(root, path, value)
+            # 2. Update the value silently via the Node root to trigger automatic versioning
+            self._property_service.set_value(node, full_path, value)
             
-            # 3. Version bump for sync integrity (Aesthetic changes still need tracking)
-            if hasattr(node, "plot_properties") and node.plot_properties:
-                node.plot_properties._version += 1
-                
-            # 4. Publish specific reconciled event (Property Panel listens, Renderer ignores)
+            # 3. Publish specific reconciled event (Property Panel listens, Renderer ignores)
             self._event_aggregator.publish(
                 Events.PLOT_NODE_PROPERTY_RECONCILED,
                 node_id=node_id,

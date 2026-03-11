@@ -108,6 +108,14 @@ class ScatterSyncStrategy(ArtistSyncStrategy):
         x, y = data[props.x_column], data[props.y_column]
         offsets = np.column_stack((x, y))
         mpl_artist.set_offsets(offsets)
+        
+        # Collections (Scatter) do not trigger ax.relim(). 
+        # We must manually update the axes data limits.
+        if len(x) > 0:
+            mpl_artist.axes.ignore_existing_data_limits = True
+            mpl_artist.axes.update_datalim(mpl_artist.get_datalim(mpl_artist.axes.transData))
+            mpl_artist.axes.autoscale_view()
+
         if hasattr(props, "z_column") and hasattr(mpl_artist, "set_3d_properties"):
             mpl_artist.set_3d_properties(data[props.z_column], "z")
 
