@@ -9,7 +9,6 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.grid_position import GridPosition
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.grid_node import GridNode
-from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.services.coordinate_service import CoordinateService
 from src.services.tools.base_tool import BaseTool
 from src.shared.constants import IconPath, LayoutMode
@@ -191,8 +190,8 @@ class SelectionTool(BaseTool):
                         new_pos = GridPosition(r, c, rs, cs)
                         
                         self._event_aggregator.publish(
-                            Events.BATCH_CHANGE_PLOT_PROPERTY_REQUESTED,
-                            nodes=[node],
+                            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
+                            node_id=node.id,
                             path="grid_position",
                             value=new_pos
                         )
@@ -271,13 +270,14 @@ class SelectionTool(BaseTool):
         return None
 
     def _snap_to_grid(self, node: PlotNode, candidate_rect: Rect) -> Optional[Rect]:
-        """Calculates the spanned grid cell geometry for snapping."""
+        """Calculates the spanned grid cell geometry for snapping using cached geometries."""
         parent = node.parent
         if not isinstance(parent, GridNode):
             return None
 
-        engine = GridLayoutEngine()
-        cells = engine.get_cell_geometries(parent, parent.geometry)
+        cells = parent.cell_geometries
+        if not cells or not cells[0]:
+            return None
 
         # 1. Identify which rows and columns are "touched" by the candidate_rect
         # We use a 25% overlap threshold to consider a cell "touched"

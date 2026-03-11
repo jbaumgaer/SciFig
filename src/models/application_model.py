@@ -146,7 +146,7 @@ class ApplicationModel(ProjectLifecycle):
 
     def load_from_state(self, data: dict[str, Any], temp_dir: Path):
         """Loads the application model from a dictionary."""
-        self.reset_state()  # This will publish PROJECT_WAS_RESET, SELECTION_CHANGED, LAYOUT_CONFIG_CHANGED
+        self.reset_state()  # This will publish PROJECT_WAS_RESET, SELECTION_CHANGED, NODE_LAYOUT_RECONCILED
         self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
 
         mode_str = data.get("layout_mode", "FREE_FORM")

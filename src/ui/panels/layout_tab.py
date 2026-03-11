@@ -85,7 +85,7 @@ class LayoutTab(QWidget):
             Events.GRID_CONFIG_PARAMETERS_CHANGED, self._handle_grid_parameters_inferred
         )
         self._event_aggregator.subscribe(
-            Events.LAYOUT_CONFIG_CHANGED, self._handle_layout_config_changed
+            Events.NODE_LAYOUT_RECONCILED, self._handle_layout_config_changed
         )
         self._event_aggregator.subscribe(
             Events.ACTIVE_LAYOUT_MODE_CHANGED, self._handle_active_layout_mode_changed

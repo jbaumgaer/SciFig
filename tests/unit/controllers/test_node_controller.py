@@ -47,13 +47,13 @@ class TestNodeController:
             Events.APPLY_DATA_TO_NODE_REQUESTED,
             Events.NODE_DATA_LOADED,
             Events.CHANGE_PLOT_TYPE_REQUESTED,
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             Events.CHANGE_NODE_VISIBILITY_REQUESTED,
             Events.RENAME_NODE_REQUESTED,
             Events.CHANGE_NODE_LOCKED_REQUESTED,
             Events.TEMPLATE_LOADED,
             Events.SELECTION_CHANGED,
-            Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
+            Events.PLOT_NODE_PROPERTY_RECONCILIATION_REQUESTED,
             Events.DELETE_NODES_REQUESTED,
             Events.ADD_PLOT_REQUESTED
         ]
@@ -81,7 +81,7 @@ class TestNodeController:
         assert node.plot_properties._version == 11
         # Verify reconciled event (not changed event)
         mock_event_aggregator.publish.assert_called_once_with(
-            Events.PLOT_COMPONENT_RECONCILED, node_id="p1", path="coords.xaxis.margin", new_value=0.1
+            Events.PLOT_NODE_PROPERTY_RECONCILED, node_id="p1", path="coords.xaxis.margin", new_value=0.1
         )
 
     # --- Data Integration Logic ---

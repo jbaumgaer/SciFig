@@ -195,7 +195,7 @@ The `LayoutManager` owns the Matplotlib layout solver (`constrained_layout`). It
     *   **Task:** Return a `LayoutReport` containing absolute `Rects` and effective `Margins/Gutters`.
 
 3.  **Refactor Events:**
-    *   **`Events.LAYOUT_CONFIG_CHANGED`:** Payload: `GridConfig`. Target: `LayoutTab` (UI sync) and `ApplicationModel`.
+    *   **`Events.NODE_LAYOUT_RECONCILED`:** Payload: `GridConfig`. Target: `LayoutTab` (UI sync) and `ApplicationModel`.
     *   **`Events.NODE_GEOMETRY_CHANGED`:** Payload: `dict[node_id, Rect]`. Target: `Renderer` and `ApplicationModel`.
 
 4.  **Modify Application Entry Point (`main.py`):**

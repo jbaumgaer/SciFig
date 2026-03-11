@@ -11,7 +11,8 @@ from src.models.nodes.scene_node import SceneNode
 from src.models.plots.plot_types import ArtistType
 from src.services.commands.apply_data_to_node_command import ApplyDataToNodeCommand
 from src.services.commands.add_plot_command import AddPlotCommand
-from src.services.commands.change_plot_property_command import ChangePlotPropertyCommand
+from src.services.commands.change_node_property_command import ChangeNodePropertyCommand
+from src.services.commands.move_node_command import MoveNodeCommand
 from src.services.commands.command_manager import CommandManager
 from src.services.commands.delete_node_command import DeleteNodeCommand
 from src.services.commands.macro_command import MacroCommand
@@ -66,7 +67,7 @@ class NodeController(QObject):
             Events.CHANGE_PLOT_TYPE_REQUESTED, self._on_plot_type_change_request
         )
         self._event_aggregator.subscribe(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             self._on_generic_property_change_request,
         )
         self._event_aggregator.subscribe(
@@ -85,7 +86,7 @@ class NodeController(QObject):
             Events.SELECTION_CHANGED, self._on_selection_changed_for_ui
         )
         self._event_aggregator.subscribe(
-            Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
+            Events.PLOT_NODE_PROPERTY_RECONCILIATION_REQUESTED,
             self.reconcile_node_property,
         )
         self._event_aggregator.subscribe(
@@ -172,7 +173,7 @@ class NodeController(QObject):
                 
             # 4. Publish specific reconciled event (Property Panel listens, Renderer ignores)
             self._event_aggregator.publish(
-                Events.PLOT_COMPONENT_RECONCILED,
+                Events.PLOT_NODE_PROPERTY_RECONCILED,
                 node_id=node_id,
                 path=path,
                 new_value=value
@@ -235,7 +236,7 @@ class NodeController(QObject):
         if not node:
             return
         
-        cmd = ChangePlotPropertyCommand(
+        cmd = ChangeNodePropertyCommand(
             node=node,
             path="data_file_path",
             new_value=path,
@@ -271,7 +272,7 @@ class NodeController(QObject):
         if data.shape[1] >= 2 and node.plot_properties and node.plot_properties.artists:
             cols = data.columns
             commands.append(
-                ChangePlotPropertyCommand(
+                ChangeNodePropertyCommand(
                     node=node,
                     path="artists.0.x_column",
                     new_value=cols[0],
@@ -280,7 +281,7 @@ class NodeController(QObject):
                 )
             )
             commands.append(
-                ChangePlotPropertyCommand(
+                ChangeNodePropertyCommand(
                     node=node,
                     path="artists.0.y_column",
                     new_value=cols[1],
@@ -290,7 +291,7 @@ class NodeController(QObject):
             )
 
         commands.append(
-            ChangePlotPropertyCommand(
+            ChangeNodePropertyCommand(
                 node=node,
                 path="data",
                 new_value=data,
@@ -299,7 +300,7 @@ class NodeController(QObject):
             )
         )
         commands.append(
-            ChangePlotPropertyCommand(
+            ChangeNodePropertyCommand(
                 node=node,
                 path="data_file_path",
                 new_value=file_path,
@@ -315,7 +316,7 @@ class NodeController(QObject):
             y_path = "coords.r_axis.limits" if is_polar else "coords.yaxis.limits"
 
             commands.append(
-                ChangePlotPropertyCommand(
+                ChangeNodePropertyCommand(
                     node=node,
                     path=x_path,
                     new_value=(None, None),
@@ -324,7 +325,7 @@ class NodeController(QObject):
                 )
             )
             commands.append(
-                ChangePlotPropertyCommand(
+                ChangeNodePropertyCommand(
                     node=node,
                     path=y_path,
                     new_value=(None, None),
@@ -356,7 +357,7 @@ class NodeController(QObject):
         if not node:
             return
         self.command_manager.execute_command(
-            ChangePlotPropertyCommand(
+            ChangeNodePropertyCommand(
                 node=node,
                 path=path,
                 new_value=value,
@@ -368,7 +369,7 @@ class NodeController(QObject):
     def _on_node_visibility_request(self, node_id: str, visible: bool):
         node = self._get_node_by_id(node_id)
         if node and node.visible != visible:
-            cmd = ChangePlotPropertyCommand(
+            cmd = ChangeNodePropertyCommand(
                 node=node,
                 path="visible",
                 new_value=visible,
@@ -380,7 +381,7 @@ class NodeController(QObject):
     def _on_node_locked_request(self, node_id: str, locked: bool):
         node = self._get_node_by_id(node_id)
         if node and node.locked != locked:
-            cmd = ChangePlotPropertyCommand(
+            cmd = ChangeNodePropertyCommand(
                 node=node,
                 path="locked",
                 new_value=locked,
@@ -392,7 +393,7 @@ class NodeController(QObject):
     def _on_rename_node_request(self, node_id: str, new_name: str):
         node = self._get_node_by_id(node_id)
         if node and node.name != new_name:
-            cmd = ChangePlotPropertyCommand(
+            cmd = ChangeNodePropertyCommand(
                 node=node,
                 path="name",
                 new_value=new_name,

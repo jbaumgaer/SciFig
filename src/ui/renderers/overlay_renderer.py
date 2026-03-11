@@ -82,9 +82,12 @@ class OverlayRenderer:
         self._event_aggregator.subscribe(
             Events.CLEAR_INTERACTION_PREVIEW_REQUESTED, self.clear_previews
         )
-        # Refresh overlays on structural or geometry changes
+        # Refresh overlays on structural, geometry, or mode changes
         self._event_aggregator.subscribe(
             Events.SCENE_GRAPH_CHANGED, self._on_scene_graph_changed
+        )
+        self._event_aggregator.subscribe(
+            Events.NODE_LAYOUT_RECONCILED, self._on_scene_graph_changed
         )
 
     def _on_scene_graph_changed(self, *args, **kwargs):
@@ -245,28 +248,18 @@ class OverlayRenderer:
         self._handle_items.append(item)
 
     def _draw_grid_overlay(self, grid_node: GridNode):
-        """Draws the visual lattice, gutter bands, and interactive dividers."""
-        # 1. Determine the reference area for cell calculation
-        # If it's the root grid, its available area is the whole figure.
-        # If it's nested, its available area was assigned by its parent.
-        from src.models.nodes.group_node import GroupNode
-        if isinstance(grid_node.parent, GroupNode) and grid_node.parent.name == "root":
-            fig_w, fig_h = self._model.figure_size
-            available_rect = Rect(0.0, 0.0, fig_w, fig_h)
-        else:
-            available_rect = grid_node.geometry
-
-        from src.models.layout.grid_layout_engine import GridLayoutEngine
-        engine = GridLayoutEngine()
-        cells = engine.get_cell_geometries(grid_node, available_rect)
-        
+        """Draws the visual lattice, gutter bands, and interactive dividers using cached geometries."""
+        cells = grid_node.cell_geometries
         if not cells or not cells[0]:
             return
 
         num_rows = len(cells)
         num_cols = len(cells[0])
+        
+        # Use grid_node geometry as the reference for top-level bounds
+        geom = grid_node.geometry
 
-        # 2. Draw Gutter Zones (Grey Bands)
+        # 1. Draw Gutter Zones (Grey Bands)
         # Vertical Gutters
         for c in range(num_cols - 1):
             left_cell = cells[0][c]
@@ -274,8 +267,8 @@ class OverlayRenderer:
             gutter_x = left_cell.x + left_cell.width
             gutter_w = right_cell.x - gutter_x
             if gutter_w > 0.001:
-                gutter_rect = Rect(gutter_x, available_rect.y, gutter_w, available_rect.height)
-                self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect)), is_gutter=True)
+                gutter_rect = Rect(gutter_x, geom.y, gutter_w, geom.height)
+                self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect).normalized()), is_gutter=True)
 
         # Horizontal Gutters
         for r in range(num_rows - 1):
@@ -284,24 +277,24 @@ class OverlayRenderer:
             gutter_y = bottom_cell.y + bottom_cell.height
             gutter_h = top_cell.y - gutter_y
             if gutter_h > 0.001:
-                gutter_rect = Rect(available_rect.x, gutter_y, available_rect.width, gutter_h)
-                self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect)), is_gutter=True)
+                gutter_rect = Rect(geom.x, gutter_y, geom.width, gutter_h)
+                self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect).normalized()), is_gutter=True)
 
-        # 3. Draw Divider Lines (Center of gutters)
+        # 2. Draw Divider Lines (Center of gutters)
         for c in range(num_cols - 1):
             x = cells[0][c].x + cells[0][c].width + (grid_node.gutters.wspace[c] / 2 if c < len(grid_node.gutters.wspace) else 0.25)
-            p1 = self._fig_to_scene((x, available_rect.y))
-            p2 = self._fig_to_scene((x, available_rect.y + available_rect.height))
+            p1 = self._fig_to_scene((x, geom.y))
+            p2 = self._fig_to_scene((x, geom.y + geom.height))
             self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
 
         for r in range(num_rows - 1):
             y = cells[r+1][0].y + cells[r+1][0].height + (grid_node.gutters.hspace[r] / 2 if r < len(grid_node.gutters.hspace) else 0.25)
-            p1 = self._fig_to_scene((available_rect.x, y))
-            p2 = self._fig_to_scene((available_rect.x + available_rect.width, y))
+            p1 = self._fig_to_scene((geom.x, y))
+            p2 = self._fig_to_scene((geom.x + geom.width, y))
             self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
 
-        # 4. Outer Border
-        scene_rect = self._fig_rect_to_scene(grid_node.geometry)
+        # 3. Outer Border
+        scene_rect = self._fig_rect_to_scene(geom)
         self._add_grid_item(QGraphicsRectItem(scene_rect), is_divider=True)
 
     def _add_grid_item(self, item: QGraphicsItem, is_gutter: bool = False, is_divider: bool = False):

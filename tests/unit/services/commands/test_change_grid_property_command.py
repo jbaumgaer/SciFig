@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from src.services.commands.change_grid_property_command import ChangeGridPropertyCommand
+from src.services.commands.change_grid_config_command import ChangeGridConfigCommand
 from src.models.nodes.grid_node import GridNode
 from src.services.property_service import PropertyService
 from src.shared.events import Events
@@ -18,7 +18,7 @@ def test_change_grid_property_execute(mock_event_aggregator, mock_property_servi
     grid = GridNode(rows=1, cols=1)
     grid.rows = 1
     
-    command = ChangeGridPropertyCommand(
+    command = ChangeGridConfigCommand(
         grid_node=grid,
         path="rows",
         new_value=5,
@@ -40,7 +40,7 @@ def test_change_grid_property_execute(mock_event_aggregator, mock_property_servi
 def test_change_grid_property_undo(mock_event_aggregator, mock_property_service):
     """Verifies that undo restores the previous value."""
     grid = GridNode(rows=2, cols=2)
-    command = ChangeGridPropertyCommand(
+    command = ChangeGridConfigCommand(
         grid, "rows", 5, mock_event_aggregator, mock_property_service
     )
     

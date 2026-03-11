@@ -45,7 +45,7 @@ class TestChangePlotPropertyCommand:
         mock_property_service.set_value.assert_called_with(ANY, "path.to.val", "new")
         assert node.plot_properties._version == 2
         mock_event_aggregator.publish.assert_called_with(
-            Events.PLOT_COMPONENT_CHANGED, node_id="p1", path="path.to.val", new_value="new"
+            Events.PLOT_NODE_PROPERTY_CHANGED, node_id="p1", path="path.to.val", new_value="new"
         )
         
         # Undo
@@ -54,7 +54,7 @@ class TestChangePlotPropertyCommand:
         mock_property_service.set_value.assert_called_with(ANY, "path.to.val", "old")
         assert node.plot_properties._version == 3
         mock_event_aggregator.publish.assert_called_with(
-            Events.PLOT_COMPONENT_CHANGED, node_id="p1", path="path.to.val", new_value=None
+            Events.PLOT_NODE_PROPERTY_CHANGED, node_id="p1", path="path.to.val", new_value=None
         )
 
     def test_execute_multi_path_expansion(self, mock_event_aggregator, mock_property_service):

@@ -155,7 +155,7 @@ class TestPlotPropertiesHelpers:
         # Change X selection
         x_combo.setCurrentText("Voltage")
         mock_event_aggregator.publish.assert_any_call(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             node_id="p1",
             path="artists.0.x_column",
             value="Voltage"
@@ -179,7 +179,7 @@ class TestPlotPropertiesHelpers:
         edit_min.editingFinished.emit()
         
         mock_event_aggregator.publish.assert_any_call(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             node_id="p1",
             path="coords.xaxis.limits",
             value=(10.5, ANY)
@@ -213,7 +213,7 @@ class TestPlotPropertiesHelpers:
         marker_edit.editingFinished.emit()
         
         mock_event_aggregator.publish.assert_any_call(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             node_id="p1",
             path="artists.0.visuals.markersize",
             value="12.0"

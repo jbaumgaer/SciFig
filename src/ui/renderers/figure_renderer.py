@@ -220,7 +220,7 @@ class FigureRenderer:
         if self._limits_differ(mpl_xlim, model_xlim):
             self.logger.debug(f"Requesting back-sync for X-limits of node {node_id}: {mpl_xlim}")
             self._event_aggregator.publish(
-                Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
+                Events.PLOT_NODE_PROPERTY_RECONCILIATION_REQUESTED,
                 node_id=node_id,
                 path="coords.xaxis.limits",
                 value=tuple(mpl_xlim),
@@ -232,7 +232,7 @@ class FigureRenderer:
         if self._limits_differ(mpl_ylim, model_ylim):
             self.logger.debug(f"Requesting back-sync for Y-limits of node {node_id}: {mpl_ylim}")
             self._event_aggregator.publish(
-                Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
+                Events.PLOT_NODE_PROPERTY_RECONCILIATION_REQUESTED,
                 node_id=node_id,
                 path="coords.yaxis.limits",
                 value=tuple(mpl_ylim),

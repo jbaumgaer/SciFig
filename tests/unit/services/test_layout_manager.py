@@ -95,7 +95,7 @@ class TestLayoutManager:
         mock_grid_layout_engine.calculate_geometries.assert_called_once_with(
             mock_grid, (10, 10)
         )
-        mock_event_aggregator.publish.assert_any_call(Events.LAYOUT_CONFIG_CHANGED, config=ANY)
+        mock_event_aggregator.publish.assert_any_call(Events.NODE_LAYOUT_RECONCILED, config=ANY)
 
     # --- Mode Management Tests ---
 

@@ -153,7 +153,7 @@ class TestCompositionRoot:
             Events.NEW_PROJECT_REQUESTED,
             Events.SAVE_PROJECT_REQUESTED,
             Events.SCENE_GRAPH_CHANGED,
-            Events.LAYOUT_CONFIG_CHANGED
+            Events.NODE_LAYOUT_RECONCILED
         ]
         
         for event in expected_events:

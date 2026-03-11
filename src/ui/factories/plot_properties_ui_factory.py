@@ -96,7 +96,7 @@ def _build_column_selectors(
     x_combo.blockSignals(False)
     x_combo.currentTextChanged.connect(
         lambda text: event_aggregator.publish(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             node_id=node.id,
             path="artists.0.x_column",
             value=x_combo.currentText(),
@@ -118,7 +118,7 @@ def _build_column_selectors(
     y_combo.blockSignals(False)
     y_combo.currentTextChanged.connect(
         lambda text: event_aggregator.publish(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             node_id=node.id,
             path="artists.0.y_column",
             value=y_combo.currentText(),
@@ -179,7 +179,7 @@ def _build_limit_selectors(
                 else None
             )
             event_aggregator.publish(
-                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
                 node_id=node.id,
                 path="coords.xaxis.limits",
                 value=(v_min, v_max),
@@ -200,7 +200,7 @@ def _build_limit_selectors(
                 else None
             )
             event_aggregator.publish(
-                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
                 node_id=node.id,
                 path="coords.yaxis.limits",
                 value=(v_min, v_max),
@@ -250,7 +250,7 @@ def _build_base_plot_properties_ui(
     title_edit.setObjectName("title_edit")
     title_edit.editingFinished.connect(
         lambda: event_aggregator.publish(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             node_id=node.id,
             path="titles.center.text",
             value=title_edit.text(),
@@ -270,7 +270,7 @@ def _build_base_plot_properties_ui(
     xlabel_edit.setObjectName("xlabel_edit")
     xlabel_edit.editingFinished.connect(
         lambda: event_aggregator.publish(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             node_id=node.id,
             path="coords.xaxis.label.text",
             value=xlabel_edit.text(),
@@ -284,7 +284,7 @@ def _build_base_plot_properties_ui(
     ylabel_edit.setObjectName("ylabel_edit")
     ylabel_edit.editingFinished.connect(
         lambda: event_aggregator.publish(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
             node_id=node.id,
             path="coords.yaxis.label.text",
             value=ylabel_edit.text(),
@@ -392,7 +392,7 @@ def _build_scatter_plot_ui_widgets(
         marker_size_edit.setObjectName("marker_size_edit")
         marker_size_edit.editingFinished.connect(
             lambda: event_aggregator.publish(
-                Events.CHANGE_PLOT_COMPONENT_REQUESTED,
+                Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
                 node_id=node.id,
                 path="artists.0.visuals.markersize",
                 value=marker_size_edit.text(),

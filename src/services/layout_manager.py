@@ -70,7 +70,7 @@ class LayoutManager:
     def _subscribe_to_events(self):
         """Internal handler for reactive layout updates."""
         self._event_aggregator.subscribe(
-            Events.GRID_COMPONENT_CHANGED, self._on_grid_component_changed
+            Events.NODE_LAYOUT_CHANGED, self.sync_layout
         )
         self._event_aggregator.subscribe(
             Events.PROJECT_WAS_RESET, self.on_model_reset
@@ -78,11 +78,6 @@ class LayoutManager:
         self._event_aggregator.subscribe(
             Events.FIGURE_SIZE_CHANGED, self.sync_layout
         )
-
-    def _on_grid_component_changed(self, node_id: str, path: str, new_value: Any):
-        """Reactive handler for granular grid property changes."""
-        self.logger.info(f"LayoutManager: Grid property changed ({path}). Recalculating...")
-        self.sync_layout()
 
     def sync_layout(self, *args, **kwargs):
         """
@@ -95,7 +90,7 @@ class LayoutManager:
                 grid_node, self._application_model.figure_size
             )
             # Notify the system that geometries have changed, triggering a redraw
-            self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=self.get_last_grid_config())
+            self._event_aggregator.publish(Events.NODE_LAYOUT_RECONCILED, config=self.get_last_grid_config())
 
     @property
     def layout_mode(self) -> LayoutMode:
@@ -322,7 +317,7 @@ class LayoutManager:
                 self.infer_grid_parameters() 
         
         self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=mode)
-        self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=self.get_last_grid_config())
+        self._event_aggregator.publish(Events.NODE_LAYOUT_RECONCILED, config=self.get_last_grid_config())
         self.logger.info(f"Active layout mode successfully switched to {mode.value}.")
 
 

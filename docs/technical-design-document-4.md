@@ -230,6 +230,23 @@ To maintain architectural integrity, **every class** added or refactored during 
     3. Running the `GridLayoutEngine`.
 18. *Milestone*: The Layout Tab UI is fully functional and controls the recursive grid engine via high-signal granular events.
 
+### Phase 3.6: Semantic Cleanup & Domain Handshake
+To prevent redraw cascades and maintain structural clarity, the event pipeline is strictly divided into "Aesthetic", "Layout", and "Geometry" domains using a handshake protocol.
+19. **Event Taxonomy Update**: Refactor `src/shared/events.py` using standardized `PROPERTY` and `CHANGED` language.
+    *   **Aesthetic Domain**: `PLOT_NODE_PROPERTY_CHANGED` (Affects ink/style only; replaces `PLOT_NODE_PROPERTY_CHANGED`).
+    *   **Layout Domain**: `NODE_LAYOUT_CHANGED` (Structural intent: signals that a node has shifted slots or constraints).
+    *   **Geometry Domain**: `NODE_GEOMETRY_CHANGED` (Positional fact: signals that mathematical CM coordinates are finalized; replaces `NODE_LAYOUT_RECONCILED`).
+    *   **Reconciliation**: `PLOT_NODE_PROPERTY_RECONCILED` remains reserved strictly for the Bypass Pattern (back-sync from renderer to model).
+20. **Command Taxonomy Update**:
+    *   **`ChangeNodePropertyCommand`**: A generic updater for non-structural properties. It must be smart enough to publish `PLOT_NODE_PROPERTY_CHANGED` if the target is a `PlotNode`.
+    *   **`MoveNodeCommand`**: A specialized structural command for drag-and-drop or grid reallocation. It must publish `NODE_LAYOUT_CHANGED`.
+21. **Zero-Logic Handshake Implementation**:
+    *   `LayoutManager`: Subscribes only to `NODE_LAYOUT_CHANGED`. Upon receiving, it runs the appropriate engine (Grid or Free-Form) and then publishes `NODE_GEOMETRY_CHANGED`.
+    *   `FigureRenderer`: Subscribes to `PLOT_NODE_PROPERTY_CHANGED` (artist sync) and `NODE_GEOMETRY_CHANGED` (position sync).
+    *   **Free-Form Refactor**: Update `LayoutController` alignment/distribution actions to use the new `MoveNodeCommand` (batch) and publish `NODE_LAYOUT_CHANGED` rather than generic structural changes.
+22. *Milestone*: Clear architectural boundaries established. Responsibilities are strictly decoupled, ensuring atomic redraws and a maintainable, high-signal event bus for both Grid and Free-Form modes.
+
+
 ### Phase 4: Structural Mutations & Ribbon
 13. Implement `InsertGridRowCommand`, `SplitCellCommand`, etc.
 14. Wire these commands to the Ribbon UI (Table Design tab) and Context Menus.

@@ -8,7 +8,7 @@ from src.models.nodes.plot_node import PlotNode
 from src.services.commands.batch_change_plot_geometry_command import BatchChangePlotGeometryCommand
 from src.services.commands.change_grid_parameters_command import ChangeGridParametersCommand
 from src.services.commands.apply_grid_command import ApplyGridCommand
-from src.services.commands.change_grid_property_command import ChangeGridPropertyCommand
+from src.services.commands.change_grid_config_command import ChangeGridConfigCommand
 from src.models.nodes.grid_node import GridNode
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
@@ -95,7 +95,7 @@ class TestLayoutController:
         
         mock_command_manager.execute_command.assert_called_once()
         command = mock_command_manager.execute_command.call_args[0][0]
-        assert isinstance(command, ChangeGridPropertyCommand)
+        assert isinstance(command, ChangeGridConfigCommand)
         assert command.grid_node == mock_grid
         assert command.path == expected_path
         assert command.new_value == expected_val

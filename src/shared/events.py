@@ -4,8 +4,16 @@ from enum import Enum, auto
 class Events(Enum):
     """
     A centralized enumeration of all events used in the application's
-    EventAggregator system. This defines specific, granular events for a
-    robust, decoupled, and event-driven architecture.
+    EventAggregator system. 
+
+    Naming Conventions:
+    - _REQUESTED: (View -> System) Represents a user's intent to perform an action.
+    - _CHANGED:   (System -> View) Signals that a persistent state change has 
+                  already occurred in the Model.
+    - _RECONCILED: (System -> View) Signals that mathematical coordinates or 
+                  engine calculations are finalized and ready for rendering.
+    - _RECONCILIATION_REQUESTED / _RECONCILED: (Bypass) Signals a silent back-sync 
+                  from the renderer to the model (Bypass Pattern).
     """
 
     # === NOTIFICATION EVENTS (System -> View & System -> System) ===
@@ -24,10 +32,10 @@ class Events(Enum):
     NODE_POSITION_CHANGED = auto()  # Payload: node_id: str, new_position: tuple
     NODE_SIZE_CHANGED = auto()  # Payload: node_id: str, new_size: tuple
 
-    # --- Generic Path-Based Property Changes (NEW) ---
-    PLOT_COMPONENT_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: Any
+    # --- Node Property Changes ---
+    PLOT_NODE_PROPERTY_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: Any
     GRID_COMPONENT_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: Any
-    PLOT_COMPONENT_RECONCILED = auto()# Payload: node_id: str, path: str, new_value: Any (Sync only, no redraw)
+    PLOT_NODE_PROPERTY_RECONCILED = auto()# Payload: node_id: str, path: str, new_value: Any (Sync only, no redraw)
 
     SUB_COMPONENT_SELECTED = auto()  # Payload: node_id: str, path: str
     TEMPLATE_LOADED = auto()  # Payload: root_node: SceneNode
@@ -51,8 +59,9 @@ class Events(Enum):
     SWITCH_SIDEPANEL_TAB = auto()  # Payload: tab_key: str
 
     # --- Layout Changes ---
-    LAYOUT_CONFIG_CHANGED = auto()  # Payload: new_config: dict
-    FIGURE_SIZE_CHANGED = auto()  # New: Figure dimensions in physical CM changed
+    NODE_LAYOUT_CHANGED = auto()  # Structural intent: signals shift in constraints
+    NODE_LAYOUT_RECONCILED = auto()  # Positional fact: signals math is done
+    FIGURE_SIZE_CHANGED = auto()  # Figure dimensions in physical CM changed
     ACTIVE_LAYOUT_MODE_CHANGED = auto()  # Payload: mode: str (LayoutMode.value)
     APPLY_GRID_REQUESTED = auto()  # New: Request to apply a GridConfig to the model
     UI_LAYOUT_MODE_CHANGED = auto()  # Payload: mode: str (LayoutMode.value)
@@ -86,13 +95,16 @@ class Events(Enum):
     CHANGE_NODE_SIZE_REQUESTED = auto()  # Payload: node_id: str, new_size: tuple
 
     # --- Generic Path-Based Property Change Requests ---
-    CHANGE_PLOT_COMPONENT_REQUESTED = auto() # Payload: node_id: str, path: str, value: any
-    PLOT_COMPONENT_RECONCILIATION_REQUESTED = auto() # Payload: node_id: str, path: str, value: any
+    CHANGE_PLOT_NODE_PROPERTY_REQUESTED = auto() # Payload: node_id: str, path: str, value: any
+    PLOT_NODE_PROPERTY_RECONCILIATION_REQUESTED = auto() # Payload: node_id: str, path: str, value: any
     INITIALIZE_PLOT_THEME_REQUESTED = auto() # Payload: node_id: str, plot_type: ArtistType
     HYDRATE_PLOT_PROPERTIES_REQUESTED = auto()  # Payload: node_id: str, overrides: dict
 
-    # --- Node Data & Structure Requests ---
+    # --- Layout Change Requests ---
     SELECT_DATA_FILE_FOR_NODE_REQUESTED = auto()  # Payload: node_id: str
+    CHANGE_NODE_LAYOUT_REQUESTED = auto() # Request to move/resize/reallocate
+    CHANGE_GRID_PARAMETER_REQUESTED = auto()  # Payload: param_name: str, new_value: any
+
     APPLY_DATA_TO_NODE_REQUESTED = auto()  # Payload: node_id: str, file_path: Path
     GROUP_NODES_REQUESTED = auto()  # Payload: node_ids: list[str]
     UNGROUP_NODE_REQUESTED = auto()  # Payload: node_id: str
@@ -108,7 +120,6 @@ class Events(Enum):
     TOGGLE_LAYOUT_MODE_REQUESTED = auto()  # Payload: is_grid_mode: bool
     ALIGN_PLOTS_REQUESTED = auto()  # Payload: alignment_mode: str
     DISTRIBUTE_PLOTS_REQUESTED = auto()  # Payload: distribution_mode: str
-    CHANGE_GRID_PARAMETER_REQUESTED = auto()  # Payload: param_name: str, new_value: any
     INFER_GRID_PARAMETERS_REQUESTED = auto()
     OPTIMIZE_LAYOUT_REQUESTED = auto()
 

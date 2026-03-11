@@ -408,13 +408,7 @@ class CompositionRoot:
             Events.NODE_LOCKED_CHANGED, self._redraw_canvas_callback
         )
         self._event_aggregator.subscribe(
-            Events.NODE_POSITION_CHANGED, self._redraw_canvas_callback
-        )
-        self._event_aggregator.subscribe(
-            Events.NODE_SIZE_CHANGED, self._redraw_canvas_callback
-        )
-        self._event_aggregator.subscribe(
-            Events.PLOT_COMPONENT_CHANGED, self._redraw_canvas_callback
+            Events.PLOT_NODE_PROPERTY_CHANGED, self._redraw_canvas_callback
         )
         self._event_aggregator.subscribe(
             Events.NODE_DATA_FILE_PATH_UPDATED, self._redraw_canvas_callback
@@ -432,7 +426,7 @@ class CompositionRoot:
             Events.NODE_ORDER_CHANGED_IN_SCENE, self._redraw_canvas_callback
         )
         self._event_aggregator.subscribe(
-            Events.LAYOUT_CONFIG_CHANGED, self._redraw_canvas_callback
+            Events.NODE_LAYOUT_RECONCILED, self._redraw_canvas_callback
         )
 
     def _redraw_canvas_callback(self, *args, **kwargs):

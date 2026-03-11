@@ -33,7 +33,7 @@ class ApplyDataToNodeCommand(MacroCommand):
         # Publish exactly one event to notify the system (and trigger the renderer)
         if publish:
             self._event_aggregator.publish(
-                Events.PLOT_COMPONENT_CHANGED, 
+                Events.PLOT_NODE_PROPERTY_CHANGED, 
                 node_id=self.node.id,
                 path="data",
                 new_value=self.node.data
@@ -50,7 +50,7 @@ class ApplyDataToNodeCommand(MacroCommand):
         # Trigger a final redraw
         if publish:
             self._event_aggregator.publish(
-                Events.PLOT_COMPONENT_CHANGED, 
+                Events.PLOT_NODE_PROPERTY_CHANGED, 
                 node_id=self.node.id,
                 path="data",
                 new_value=self.node.data

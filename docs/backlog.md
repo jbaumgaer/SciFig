@@ -2305,7 +2305,7 @@ Crucially, this revision addresses the architectural violations currently breaki
 *   **Hierarchical Dataclasses:** `plot_properties.py` atoms (`FontProperties`, `LineProperties`, etc.) are established.
 *   **Style Injection:** `StyleService` is functional, validating against `REQUIRED_KEYS` and acting as the sole factory.
 *   **Path-Based Commands:** `ChangePlotPropertyCommand` correctly handles recursive traversal, wildcards, and versioning.
-*   **Event Infrastructure:** Generic path events (`CHANGE_PLOT_COMPONENT_REQUESTED`, `PLOT_COMPONENT_CHANGED`, `SUB_COMPONENT_SELECTED`) exist in `events.py`.
+*   **Event Infrastructure:** Generic path events (`CHANGE_PLOT_NODE_PROPERTY_REQUESTED`, `PLOT_NODE_PROPERTY_CHANGED`, `SUB_COMPONENT_SELECTED`) exist in `events.py`.
 
 ---
 
@@ -2357,7 +2357,7 @@ Crucially, this revision addresses the architectural violations currently breaki
         *   `build_text_ui(path)`: Yields QLineEdit (text), QComboBox (font), QPushButton (color picker).
         *   `build_line_ui(path)`: Yields QSlider (width), QComboBox (style), QPushButton (color).
     *   **Recursive Dispatch:** Rewrite `build_widgets(node, path)`. It must traverse `node.plot_properties` using the `path`. Using `is_dataclass` and `type()`, it dispatches layout generation to the specific Atom Builder matching that type.
-    *   **Generic Data Binding:** Every generated widget is instantiated with its absolute `path`. On `editingFinished` or `clicked`, it publishes `CHANGE_PLOT_COMPONENT_REQUESTED(node.id, path, new_value)`.
+    *   **Generic Data Binding:** Every generated widget is instantiated with its absolute `path`. On `editingFinished` or `clicked`, it publishes `CHANGE_PLOT_NODE_PROPERTY_REQUESTED(node.id, path, new_value)`.
 
 ### Feature 5: Controller & Event Pruning (Legacy Cleanup)
 **Problem:** The codebase is littered with handlers for granular events that bypass the new architectural systems.
@@ -2368,7 +2368,7 @@ Crucially, this revision addresses the architectural violations currently breaki
     *   This controller should now only handle structural scene requests (Rename, Visibility, Lock, Data Loading).
 2.  **Modify `src/core/composition_root.py`:**
     *   Delete subscriptions to `PLOT_TITLE_CHANGED`, `PLOT_XLABEL_CHANGED`, etc.
-    *   Ensure `SCENE_GRAPH_CHANGED`, `PLOT_COMPONENT_CHANGED`, and `LAYOUT_CONFIG_CHANGED` are the primary triggers for `_redraw_canvas_callback`. (The `Renderer`'s version gating will ensure this is performant).
+    *   Ensure `SCENE_GRAPH_CHANGED`, `PLOT_NODE_PROPERTY_CHANGED`, and `NODE_LAYOUT_RECONCILED` are the primary triggers for `_redraw_canvas_callback`. (The `Renderer`'s version gating will ensure this is performant).
 3.  **Modify `src/shared/events.py`:**
     *   Delete the legacy property Enums (e.g., `PLOT_TITLE_CHANGED`) to finalize the deprecation and prevent future regressions.
 
@@ -2386,7 +2386,7 @@ Crucially, this revision addresses the architectural violations currently breaki
     *   Factory clears UI panel, renders `Text Atom Builder` (Text, Font, Color inputs).
 3.  **User Edits Text:**
     *   User types "Time (s)" into QLineEdit.
-    *   QLineEdit publishes `CHANGE_PLOT_COMPONENT_REQUESTED(node_id, "coords.xaxis.label.text", "Time (s)")`.
+    *   QLineEdit publishes `CHANGE_PLOT_NODE_PROPERTY_REQUESTED(node_id, "coords.xaxis.label.text", "Time (s)")`.
     *   `ChangePlotPropertyCommand` executes, updates nested dataclass, increments `_version`.
     *   `Renderer` detects version bump, syncs the new text to the specific Matplotlib title object.
 
@@ -2423,13 +2423,13 @@ This epic decouples **Structural Logic** (path resolution) from **User Intent** 
 **Planned Implementation:**
 
 1.  **Modify `src/shared/events.py`:**
-    *   **Task:** Add `Events.PLOT_COMPONENT_RECONCILED` (Payload: `node_id: str, path: str, value: Any`). This event signals a "Fact" (state sync) rather than an "Action" (user change).
+    *   **Task:** Add `Events.PLOT_NODE_PROPERTY_RECONCILED` (Payload: `node_id: str, path: str, value: Any`). This event signals a "Fact" (state sync) rather than an "Action" (user change).
 2.  **Update `NodeController` (`src/controllers/node_controller.py`):**
     *   **Task:** Implement `reconcile_node_property(node_id: str, path: str, value: Any)`:
         *   Retrieves the node.
         *   Uses `PropertyService` to update the model value directly (Bypassing the `CommandManager`).
         *   Increments the node's `plot_properties._version` to maintain sync integrity.
-        *   Publishes `Events.PLOT_COMPONENT_RECONCILED`.
+        *   Publishes `Events.PLOT_NODE_PROPERTY_RECONCILED`.
 3.  **Update `Renderer` (`src/ui/renderers/renderer.py`):**
     *   **Task:** Refactor `sync_back_limits(node_id: str)` to use `NodeController.reconcile_node_property()` instead of publishing a `CHANGE_REQUESTED` event. This effectively "closes the loop" silently.
 
@@ -2441,9 +2441,9 @@ This epic decouples **Structural Logic** (path resolution) from **User Intent** 
 **Planned Implementation:**
 
 1.  **Modify `CompositionRoot` (`src/core/composition_root.py`):**
-    *   **Task:** Ensure `_redraw_canvas_callback` is **NOT** subscribed to `Events.PLOT_COMPONENT_RECONCILED`. This is the primary mechanism for breaking the infinite redraw loop.
+    *   **Task:** Ensure `_redraw_canvas_callback` is **NOT** subscribed to `Events.PLOT_NODE_PROPERTY_RECONCILED`. This is the primary mechanism for breaking the infinite redraw loop.
 2.  **Modify `SidePanel` / `PropertiesTab` (`src/ui/panels/properties_tab.py`):**
-    *   **Task:** Update the UI to subscribe to **BOTH** `PLOT_COMPONENT_CHANGED` (User) and `PLOT_COMPONENT_RECONCILED` (System). This ensures the Property Panel always reflects the "real" Matplotlib limits even if they weren't set by the user.
+    *   **Task:** Update the UI to subscribe to **BOTH** `PLOT_NODE_PROPERTY_CHANGED` (User) and `PLOT_NODE_PROPERTY_RECONCILED` (System). This ensures the Property Panel always reflects the "real" Matplotlib limits even if they weren't set by the user.
 
 ---
 
@@ -2462,7 +2462,7 @@ This epic decouples **Structural Logic** (path resolution) from **User Intent** 
 ---
 
 ### Risks & Mitigations
-*   **Risk: Ghost Redraws**: If any component accidentally publishes `PLOT_COMPONENT_CHANGED` during a reconciliation cycle, the loop will return.
+*   **Risk: Ghost Redraws**: If any component accidentally publishes `PLOT_NODE_PROPERTY_CHANGED` during a reconciliation cycle, the loop will return.
     *   **Mitigation**: Enforce strict event naming. Use logging in `EventAggregator` to audit which specific events are triggering `_redraw_canvas_callback`.
 *   **Risk: Architectural Drift**: Direct model updates might be misused for user actions.
     *   **Mitigation**: Standardize the reconciliation path through a single method in `NodeController` that is explicitly named `reconcile_...` to distinguish it from standard commands.
@@ -2509,7 +2509,7 @@ This epic focuses on centralizing the source of truth for figure-level layout de
         *   Returns a fully populated `GridConfig` with nested `Margins` and `Gutters` objects.
     *   **Task:** Subscribe to `Events.INITIALIZE_LAYOUT_THEME_REQUESTED`.
     *   **Task:** Implement `_on_initialize_layout_theme_requested`:
-        *   Generates the themed `GridConfig` and publishes `Events.LAYOUT_CONFIG_CHANGED`.
+        *   Generates the themed `GridConfig` and publishes `Events.NODE_LAYOUT_RECONCILED`.
 
 2.  **Enrich `GridConfig` Dataclass (`src/models/layout/layout_config.py`):**
     *   **Task:** Add fields for constrained layout parameters: `h_pad: float`, `w_pad: float`, `constrained_hspace: float`, `constrained_wspace: float`.
@@ -2779,7 +2779,7 @@ Remaining Features
     - Also, the layouttab updates again after the layout mode got changed to grid with the minimal config, even though at this point, we don't even know about the grid dimensions yet because we haven't even calculated yet. This also triggers a redraw of the canvas with the incorrect default grid layout. This is likely causing the shift
     - I think internally the grid values may not be updated to the correct values, but stay with the default values because when I save the project and open it again, the layout is shifted and the logging shows that the old values are still present
     - Moreover, there is an error after the initialization with the default grid: 
-2026-03-07 08:08:38 - EventAggregator - ERROR - Error in handler _handle_layout_config_changed for event LAYOUT_CONFIG_CHANGED
+2026-03-07 08:08:38 - EventAggregator - ERROR - Error in handler _handle_layout_config_changed for event NODE_LAYOUT_RECONCILED
 Traceback (most recent call last):
   File "d:\Dokumente\Python\Data_Analysis_GUI\src\services\event_aggregator.py", line 70, in publish
     handler(*args, **kwargs)

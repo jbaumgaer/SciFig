@@ -44,10 +44,10 @@ class TestEventAggregator:
         """Verifies correct forwarding of complex payloads to handlers."""
         handler = MagicMock()
         handler.__name__ = "mock_handler"
-        real_event_aggregator.subscribe(Events.CHANGE_PLOT_COMPONENT_REQUESTED, handler)
+        real_event_aggregator.subscribe(Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED, handler)
         
         real_event_aggregator.publish(
-            Events.CHANGE_PLOT_COMPONENT_REQUESTED, 
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED, 
             node_id="p1", 
             path="coords.xaxis.margin", 
             value=0.2

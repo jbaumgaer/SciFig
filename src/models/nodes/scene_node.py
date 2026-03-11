@@ -5,16 +5,14 @@ import uuid
 from pathlib import Path
 from typing import Generator, Optional, Type
 
-from PySide6.QtCore import QObject
-
 from src.models.nodes.grid_position import GridPosition
 from src.shared.geometry import Rect
 
 
-class SceneNode(QObject):
+class SceneNode:
     """
     An abstract base class for all objects in the scene graph.
-    Inherits from QObject to support Qt's signal/slot mechanism in the future.
+    A pure Python data structure with zero dependencies on UI frameworks.
     """
 
     def __init__(
@@ -23,10 +21,9 @@ class SceneNode(QObject):
         name: str = "",
         id: Optional[str] = None,
     ):
-        super().__init__()
         self.logger = logging.getLogger(
             self.__class__.__name__
-        )  # TODO: Somehow this doesn't format correctly.
+        )
         self.id = id or uuid.uuid4().hex
         self._parent = parent
         self._children: list[SceneNode] = []
@@ -34,7 +31,7 @@ class SceneNode(QObject):
         self.visible = True
         self.locked = False  # New attribute
         self._geometry_version = 0  # Version-gating for surgical rendering sync
-        self.grid_position: Optional["GridPosition"] = None  # Position within a GridNode
+        self.grid_position: Optional[GridPosition] = None  # Position within a GridNode
         
         # Geometry in physical centimeters (cm).
         self.geometry: Rect = Rect(0.0, 0.0, 0.0, 0.0)

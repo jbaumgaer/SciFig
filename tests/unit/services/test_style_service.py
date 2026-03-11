@@ -186,7 +186,7 @@ class TestStyleService:
         style_service._on_initialize_theme_requested("node_1", ArtistType.LINE)
         
         mock_event_aggregator.publish.assert_called_once_with(
-            ANY, # Events.CHANGE_PLOT_COMPONENT_REQUESTED
+            ANY, # Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED
             node_id="node_1",
             path="plot_properties",
             value=ANY # PlotProperties

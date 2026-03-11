@@ -213,7 +213,7 @@ class TestPropertiesTab:
         assert mock_update.called
 
     def test_reactive_rebuild_on_external_change(self, properties_tab, mock_application_model, mock_plot_node, sample_plot_properties, mock_event_aggregator, mock_plot_properties_ui_factory, mocker):
-        """Verifies that the UI rebuilds when an external PLOT_COMPONENT_CHANGED event occurs for the selected node."""
+        """Verifies that the UI rebuilds when an external PLOT_NODE_PROPERTY_CHANGED event occurs for the selected node."""
         configure_node(mock_plot_node, sample_plot_properties, "p1", "Plot 1")
         mock_application_model.selection = [mock_plot_node]
         mock_application_model.scene_root.all_descendants.return_value = [mock_plot_node]
@@ -223,10 +223,10 @@ class TestPropertiesTab:
         mock_plot_properties_ui_factory.build_widgets.reset_mock()
         
         # Simulate external change event for THIS node
-        # PropertiesTab subscribed to PLOT_COMPONENT_CHANGED in __init__
+        # PropertiesTab subscribed to PLOT_NODE_PROPERTY_CHANGED in __init__
         callback = None
         for call_args in mock_event_aggregator.subscribe.call_args_list:
-            if call_args[0][0] == Events.PLOT_COMPONENT_CHANGED:
+            if call_args[0][0] == Events.PLOT_NODE_PROPERTY_CHANGED:
                 callback = call_args[0][1]
                 break
         

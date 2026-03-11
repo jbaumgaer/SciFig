@@ -12,11 +12,11 @@ from src.services.commands.apply_grid_command import ApplyGridCommand
 from src.services.commands.batch_change_plot_geometry_command import (
     BatchChangePlotGeometryCommand,
 )
-from src.services.commands.change_grid_parameters_command import (
-    ChangeGridParametersCommand,
+from src.services.commands.change_grid_config_command import (
+    ChangeGridConfigCommand,
 )
-from src.services.commands.change_grid_property_command import (
-    ChangeGridPropertyCommand,
+from src.services.commands.change_node_property_command import (
+    ChangeNodePropertyCommand,
 )
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
@@ -255,15 +255,15 @@ class LayoutController:
                 self.logger.warning(f"Invalid list value for {param_name}: {value}")
                 return
 
-        command = ChangeGridPropertyCommand(
-            grid_node=grid_node,
+        command = ChangeNodePropertyCommand(
+            node=grid_node,
             path=path,
             new_value=value,
             event_aggregator=self._event_aggregator,
             property_service=self._property_service
         )
         self.command_manager.execute_command(command)
-        self.logger.debug(f"Executed ChangeGridPropertyCommand for {path}.")
+        self.logger.debug(f"Executed ChangeNodePropertyCommand for grid structural property {path}.")
 
     def _handle_infer_grid_parameters_request(self):
         """
@@ -288,7 +288,7 @@ class LayoutController:
 
         if new_grid_config:
             # 3. Encapsulate in command
-            command = ChangeGridParametersCommand(
+            command = ChangeGridConfigCommand(
                 self.model,
                 self._event_aggregator,
                 self._layout_manager,
@@ -297,6 +297,6 @@ class LayoutController:
                 description="Optimize Layout",
             )
             self.command_manager.execute_command(command)
-            self.logger.info("Executed ChangeGridParametersCommand for layout optimization.")
+            self.logger.info("Executed ChangeGridConfigCommand for layout optimization.")
         else:
             self.logger.warning("Could not calculate optimized grid config. No command executed.")

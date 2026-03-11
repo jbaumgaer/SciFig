@@ -311,7 +311,7 @@ class StyleService:
     def _on_initialize_theme_requested(self, node_id: str, plot_type: ArtistType):
         try:
             props = self.create_themed_properties(plot_type)
-            self._event_aggregator.publish(Events.CHANGE_PLOT_COMPONENT_REQUESTED, node_id=node_id, path="plot_properties", value=props)
+            self._event_aggregator.publish(Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED, node_id=node_id, path="plot_properties", value=props)
         except Exception as e:
             self.logger.error(f"StyleService: Theme error for node {node_id}: {e}")
 
@@ -327,7 +327,7 @@ class StyleService:
 
             props = self.create_themed_properties(artist_type)
             self.hydrate(props, overrides)
-            self._event_aggregator.publish(Events.CHANGE_PLOT_COMPONENT_REQUESTED, node_id=node_id, path="plot_properties", value=props)
+            self._event_aggregator.publish(Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED, node_id=node_id, path="plot_properties", value=props)
         except Exception as e:
             self.logger.error(f"StyleService: Hydration failed for node {node_id}: {e}", exc_info=True)
 

@@ -111,7 +111,7 @@ class TestFigureRenderer:
         
         # Verify event publication for X only
         mock_event_aggregator.publish.assert_called_once_with(
-            Events.PLOT_COMPONENT_RECONCILIATION_REQUESTED,
+            Events.PLOT_NODE_PROPERTY_RECONCILIATION_REQUESTED,
             node_id="p1",
             path="coords.xaxis.limits",
             value=(0.0, 20.0)

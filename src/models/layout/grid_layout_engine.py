@@ -96,6 +96,7 @@ class GridLayoutEngine:
         Uses Bottom-Up (Matplotlib) coordinates.
         """
         cells = self.get_cell_geometries(grid_node, available_rect)
+        grid_node.cell_geometries = cells # Cache the atomic lattice for UI/Interaction
         
         # Assign Geometries to Children
         for child in grid_node.children:

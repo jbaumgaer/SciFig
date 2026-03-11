@@ -115,10 +115,10 @@ class PropertiesTab(QWidget):
             Events.NODE_LOCKED_CHANGED, self._update_content_if_selected
         )
         self._event_aggregator.subscribe(
-            Events.PLOT_COMPONENT_CHANGED, self._update_content_if_selected
+            Events.PLOT_NODE_PROPERTY_CHANGED, self._update_content_if_selected
         )
         self._event_aggregator.subscribe(
-            Events.PLOT_COMPONENT_RECONCILED, self._update_content_if_selected
+            Events.PLOT_NODE_PROPERTY_RECONCILED, self._update_content_if_selected
         )
         self._event_aggregator.subscribe(
             Events.NODE_DATA_LOADED, self._update_content_if_selected

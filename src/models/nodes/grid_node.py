@@ -5,6 +5,7 @@ from typing import Any, Optional
 from src.models.layout.layout_config import Gutters, Margins
 from src.models.nodes.grid_position import GridPosition
 from src.models.nodes.scene_node import SceneNode
+from src.shared.geometry import Rect
 
 
 class GridNode(SceneNode):
@@ -26,11 +27,15 @@ class GridNode(SceneNode):
 
         self.rows = rows
         self.cols = cols
-        self.row_ratios: list[float] = [1.0] * rows
+        self.row_ratios: list[float] = [1.0] * rows #TODO: DOn't have default values like this
         self.col_ratios: list[float] = [1.0] * cols
         self.gutters = Gutters(hspace=[0.5] * max(0, rows - 1), wspace=[0.5] * max(0, cols - 1))
         #TODO: Where is the 0.5 coming from? We shouldn't hardcode this value
         self.margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
+
+        # Transient storage for the atomic M x N grid lattice.
+        # Populated by GridLayoutEngine; used by SelectionTool and OverlayRenderer.
+        self.cell_geometries: list[list[Rect]] = []
 
     def to_dict(self) -> dict[str, Any]:
         """Serializes the GridNode and its layout parameters."""
