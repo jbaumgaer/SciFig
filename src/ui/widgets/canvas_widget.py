@@ -67,20 +67,22 @@ class CanvasWidget(QGraphicsView):
         Translates a Qt scene position into normalized 0-1 figure coordinates.
         Delegates math to CoordinateService.
         """
-        view_pos = self.mapFromScene(scene_pos)
+        # scene_pos is already in absolute virtual pixels. 
+        # mapFromScene would convert it to current monitor view pixels,
+        # which depends on zoom level. We want to avoid that.
         width, height = self.figure_canvas.get_width_height()
         
         if width == 0 or height == 0:
             return (0.0, 0.0)
 
         fig_x = CoordinateService.transform_value(
-            view_pos.x(),
+            scene_pos.x(),
             from_space=CoordinateSpace.DISPLAY_PX,
             to_space=CoordinateSpace.FRACTIONAL_FIG,
             canvas_size_px=float(width)
         )
         # Convert top-down Qt Y to bottom-up Normalized Y
-        px_y_bottom_up = height - view_pos.y()
+        px_y_bottom_up = height - scene_pos.y()
         fig_y = CoordinateService.transform_value(
             px_y_bottom_up,
             from_space=CoordinateSpace.DISPLAY_PX,

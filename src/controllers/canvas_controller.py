@@ -55,9 +55,7 @@ class CanvasController(QObject):
 
     def _subscribe_to_events(self):
         """Subscribes to application-level events."""
-        self._event_aggregator.subscribe(
-            Events.APPLY_DATA_FILE_REQUESTED, self._on_apply_data_file_request
-        )
+        pass
 
     def _get_physical_coords(self, event) -> tuple[float, float]:
         """
@@ -152,14 +150,6 @@ class CanvasController(QObject):
                 node_id=node.id,
                 file_path=Path(file_path),
             )
-
-    def _on_apply_data_file_request(self, node_id: str, file_path: Path):
-        """Forwards generic load request to specific node-data-apply event."""
-        self._event_aggregator.publish(
-            Events.APPLY_DATA_TO_NODE_REQUESTED,
-            node_id=node_id,
-            file_path=file_path,
-        )
 
     @property
     def view(self):
