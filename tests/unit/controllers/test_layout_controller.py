@@ -8,18 +8,24 @@ from src.models.nodes.plot_node import PlotNode
 from src.services.commands.batch_change_plot_geometry_command import BatchChangePlotGeometryCommand
 from src.services.commands.change_grid_parameters_command import ChangeGridParametersCommand
 from src.services.commands.apply_grid_command import ApplyGridCommand
+from src.services.commands.change_grid_property_command import ChangeGridPropertyCommand
+from src.models.nodes.grid_node import GridNode
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
 from src.shared.geometry import Rect
 
 
 @pytest.fixture
+def mock_property_service():
+    return MagicMock()
+
+@pytest.fixture
 def layout_controller(
-    mock_application_model, mock_command_manager, mock_layout_manager, mock_event_aggregator
+    mock_application_model, mock_command_manager, mock_layout_manager, mock_event_aggregator, mock_property_service
 ):
     """Provides a LayoutController instance with all dependencies mocked."""
     return LayoutController(
-        mock_application_model, mock_command_manager, mock_layout_manager, mock_event_aggregator
+        mock_application_model, mock_command_manager, mock_layout_manager, mock_event_aggregator, mock_property_service
     )
 
 
@@ -28,7 +34,7 @@ class TestLayoutController:
     def test_initialization_subscribes_to_events(self, mock_event_aggregator):
         """Verifies that the controller subscribes to all relevant request events."""
         local_event_mock = MagicMock()
-        LayoutController(MagicMock(), MagicMock(), MagicMock(), local_event_mock)
+        LayoutController(MagicMock(), MagicMock(), MagicMock(), local_event_mock, MagicMock())
         
         expected_events = [
             Events.ALIGN_PLOTS_REQUESTED,
@@ -73,40 +79,31 @@ class TestLayoutController:
         command = mock_command_manager.execute_command.call_args[0][0]
         assert isinstance(command, BatchChangePlotGeometryCommand)
 
-    @pytest.mark.parametrize("param, value, expected_attr, expected_val", [
+    @pytest.mark.parametrize("param, value, expected_path, expected_val", [
         ("rows", 5, "rows", 5),
         ("cols", 3, "cols", 3),
-        ("margin_top", 2.0, "margins.top", 2.0), # Updated for physical CM
+        ("margin_top", 2.0, "margins.top", 2.0),
         ("hspace", "1.5, 2.0", "gutters.hspace", [1.5, 2.0]),
     ])
-    def test_handle_change_grid_parameter_valid(self, layout_controller, mock_layout_manager, 
-                                               mock_command_manager, param, value, expected_attr, expected_val):
-        """Tests valid grid parameter updates and merging."""
-        base = GridConfig(1, 1, [1.0], [1.0], Margins(1.0, 1.0, 1.0, 1.0), Gutters([0.5], [0.5]))
-        mock_layout_manager.get_last_grid_config.return_value = base
+    def test_handle_change_grid_parameter_valid(self, layout_controller, mock_application_model, 
+                                               mock_command_manager, param, value, expected_path, expected_val):
+        """Tests valid grid parameter updates via ChangeGridPropertyCommand."""
+        mock_grid = MagicMock(spec=GridNode)
+        mock_application_model.get_active_grid.return_value = mock_grid
         
         layout_controller._handle_change_grid_parameter_request(param, value)
         
         mock_command_manager.execute_command.assert_called_once()
-        new_config = mock_command_manager.execute_command.call_args[0][0].new_grid_config
-        
-        if "." in expected_attr:
-            obj_name, attr_name = expected_attr.split(".")
-            assert getattr(getattr(new_config, obj_name), attr_name) == expected_val
-        else:
-            assert getattr(new_config, expected_attr) == expected_val
+        command = mock_command_manager.execute_command.call_args[0][0]
+        assert isinstance(command, ChangeGridPropertyCommand)
+        assert command.grid_node == mock_grid
+        assert command.path == expected_path
+        assert command.new_value == expected_val
 
-    def test_handle_change_grid_parameter_invalid_bounds(self, layout_controller, mock_layout_manager, mock_command_manager):
-        """Verifies that invalid values (e.g. negative rows) are rejected."""
-        base = GridConfig(1, 1, [1.0], [1.0], Margins(1.0, 1.0, 1.0, 1.0), Gutters([], []))
-        mock_layout_manager.get_last_grid_config.return_value = base
-        
-        # Boundary: Margin > 5.0 cm is currently rejected in source
-        layout_controller._handle_change_grid_parameter_request("margin_top", 6.0)
-        mock_command_manager.execute_command.assert_not_called()
-        
-        # Boundary: Rows <= 0
-        layout_controller._handle_change_grid_parameter_request("rows", 0)
+    def test_handle_change_grid_parameter_no_active_grid(self, layout_controller, mock_application_model, mock_command_manager):
+        """Ensures no command is executed if no active grid is found."""
+        mock_application_model.get_active_grid.return_value = None
+        layout_controller._handle_change_grid_parameter_request("rows", 5)
         mock_command_manager.execute_command.assert_not_called()
 
     def test_handle_align_no_plots_selected(self, layout_controller, mock_application_model, 
@@ -131,10 +128,9 @@ class TestLayoutController:
         assert isinstance(command, ChangeGridParametersCommand)
         assert command.new_grid_config == new_config
 
-    def test_handle_change_grid_parameter_malformed_string(self, layout_controller, mock_layout_manager, mock_command_manager):
+    def test_handle_change_grid_parameter_malformed_string(self, layout_controller, mock_application_model, mock_command_manager):
         """Ensures malformed hspace strings don't crash the controller."""
-        base = GridConfig(1, 1, [1.0], [1.0], Margins(1,1,1,1), Gutters([], []))
-        mock_layout_manager.get_last_grid_config.return_value = base
+        mock_application_model.get_active_grid.return_value = MagicMock(spec=GridNode)
         
         layout_controller._handle_change_grid_parameter_request("hspace", "0.1, oops, 0.2")
         # Should log warning and not execute command

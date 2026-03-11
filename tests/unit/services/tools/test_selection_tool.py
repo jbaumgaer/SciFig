@@ -3,6 +3,10 @@ from unittest.mock import MagicMock
 from PySide6.QtCore import Qt
 from src.services.tools.selection_tool import SelectionTool
 from src.shared.events import Events
+from src.shared.constants import LayoutMode
+from src.models.nodes.grid_node import GridNode, GridPosition
+from src.models.nodes.plot_node import PlotNode
+from src.shared.geometry import Rect
 
 
 @pytest.fixture
@@ -133,3 +137,54 @@ class TestSelectionTool:
         mock_application_model.selection = [node1, node2]
         tool.mouse_press_event("n1", (0.5, 0.5), Qt.MouseButton.LeftButton, modifiers="shift")
         mock_application_model.set_selection.assert_called_with([node2])
+
+    def test_grid_snapping_and_collision(self, mock_application_model, mock_canvas_widget, mock_event_aggregator):
+        """Verifies snapping and collision handling in GRID mode."""
+        # 1. Setup Grid Environment
+        mock_application_model.current_layout_config.mode = LayoutMode.GRID
+        
+        # Instantiate tool MANUALLY to ensure it sees the updated mock state
+        tool = SelectionTool(
+            model=mock_application_model,
+            canvas_widget=mock_canvas_widget,
+            event_aggregator=mock_event_aggregator
+        )
+        
+        root = GridNode(id="root_grid", parent=mock_application_model.scene_root, rows=2, cols=2)
+        root.geometry = Rect(0, 0, 10, 10)
+        
+        # P1: Occupies (0,0)
+        p1 = PlotNode(id="p1", parent=root)
+        p1.grid_position = GridPosition(0, 0)
+        p1.geometry = Rect(0, 0, 4.5, 4.5)
+        
+        # P2: Occupies (1,1)
+        p2 = PlotNode(id="p2", parent=root)
+        p2.grid_position = GridPosition(1, 1)
+        p2.geometry = Rect(5.5, 5.5, 4.5, 4.5)
+        
+        mock_application_model.scene_root.find_node_by_id.side_effect = lambda id: p1 if id == "p1" else p2
+        mock_application_model.selection = [p1]
+        mock_application_model.figure_size = (10, 10)
+
+        # 2. Start Drag on P1 (mouse down at center of 0,0)
+        tool.mouse_press_event("p1", (2.25, 2.25), Qt.MouseButton.LeftButton)
+        
+        # 3. Move over P2 (center of 1,1 is roughly 7.75, 7.75)
+        # Mouse coords at (7.75, 7.75) should snap P1's ghost to (1,1)
+        tool.mouse_move_event((7.75, 7.75))
+        
+        # Verify preview style is 'blocked' because P2 is there
+        mock_event_aggregator.publish.assert_called_with(
+            Events.UPDATE_INTERACTION_PREVIEW_REQUESTED,
+            geometries=[Rect(5.5, 5.5, 4.5, 4.5)], # Snapped to (1,1)
+            style="blocked"
+        )
+        
+        # 4. Release while blocked
+        tool.mouse_release_event((7, 7))
+        
+        # Verify no property change was published
+        # (It would have been BATCH_CHANGE_PLOT_PROPERTY_REQUESTED)
+        calls = [c for c in mock_event_aggregator.publish.call_args_list if c[0][0] == Events.BATCH_CHANGE_PLOT_PROPERTY_REQUESTED]
+        assert len(calls) == 0

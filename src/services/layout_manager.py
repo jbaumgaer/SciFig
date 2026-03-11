@@ -1,12 +1,15 @@
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from src.models.application_model import ApplicationModel
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
-from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
+from src.models.layout.layout_config import GridConfig, Gutters, Margins
 from src.models.layout.layout_engine import LayoutEngine
+
 from src.models.layout.layout_protocols import FreeFormLayoutCapabilities
+from src.models.nodes.grid_node import GridNode
+from src.models.nodes.grid_position import GridPosition
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_types import ArtistType
 from src.services.config_service import ConfigService
@@ -48,7 +51,6 @@ class LayoutManager:
 
         # Store last used configs for each mode to prevent loss of settings when switching
         self._last_grid_config: Optional[GridConfig] = None
-        self._last_free_form_config: Optional[FreeConfig] = FreeConfig()
 
         # Initialize the UI selected mode and the application model's current_layout_config based on config service
         default_mode_str = self._config_service.get_required("ui.default_layout_mode")
@@ -61,13 +63,45 @@ class LayoutManager:
         self.set_layout_mode(default_mode)
 
         self.logger.info(
-            f"Initial active layout mode set to: {self._application_model.current_layout_config.mode.value}"
+            f"Initial active layout mode set to: {self._application_model.layout_mode.value}"
         )
+        self._subscribe_to_events()
+
+    def _subscribe_to_events(self):
+        """Internal handler for reactive layout updates."""
+        self._event_aggregator.subscribe(
+            Events.GRID_COMPONENT_CHANGED, self._on_grid_component_changed
+        )
+        self._event_aggregator.subscribe(
+            Events.PROJECT_WAS_RESET, self.on_model_reset
+        )
+        self._event_aggregator.subscribe(
+            Events.FIGURE_SIZE_CHANGED, self.sync_layout
+        )
+
+    def _on_grid_component_changed(self, node_id: str, path: str, new_value: Any):
+        """Reactive handler for granular grid property changes."""
+        self.logger.info(f"LayoutManager: Grid property changed ({path}). Recalculating...")
+        self.sync_layout()
+
+    def sync_layout(self, *args, **kwargs):
+        """
+        Orchestrates a full layout recalculation of the Scene Graph.
+        Called reactively when structural or grid properties change.
+        """
+        grid_node = self._application_model.get_active_grid()
+        if grid_node:
+            self._grid_engine.calculate_geometries(
+                grid_node, self._application_model.figure_size
+            )
+            # Notify the system that geometries have changed, triggering a redraw
+            self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=self.get_last_grid_config())
 
     @property
     def layout_mode(self) -> LayoutMode:
         """Returns the current layout mode from the application model."""
-        return self._application_model.current_layout_config.mode
+        return self._application_model.layout_mode
+
 
     @property
     def ui_selected_layout_mode(self) -> LayoutMode:
@@ -86,17 +120,28 @@ class LayoutManager:
 
     def on_model_reset(self) -> None:
         """
-        Public slot to be connected to a signal indicating a major model reset
-        (e.g., loading a new project or template).
+        Public slot to be connected to a signal indicating a major model reset.
         """
-        self.logger.info("Model has been reset, clearing layout caches.")
-        self.reset_cached_configs()
+        self.logger.info("LayoutManager: Model reset, clearing caches.")
+        self._last_grid_config = None
 
     def get_last_grid_config(self) -> Optional[GridConfig]:
         """
-        Returns the last used GridConfig. Can be None if no grid config has been set yet.
+        Dynamic harvester: Constructs a GridConfig DTO from the active GridNode in the Scene Graph.
+        Returns the cached _last_grid_config (inferred) if no live node exists.
         """
-        return self._last_grid_config
+        grid = self._application_model.get_active_grid()
+        if not grid:
+            return self._last_grid_config
+            
+        return GridConfig(
+            rows=grid.rows,
+            cols=grid.cols,
+            row_ratios=list(grid.row_ratios),
+            col_ratios=list(grid.col_ratios),
+            margins=grid.margins,
+            gutters=grid.gutters
+        )
 
     def reset_cached_configs(self):
         """
@@ -248,13 +293,13 @@ class LayoutManager:
 
     def get_active_engine(self) -> LayoutEngine:
         """Returns the currently active layout engine."""
-        if self._application_model.current_layout_config.mode == LayoutMode.FREE_FORM:
+        if self.layout_mode == LayoutMode.FREE_FORM:
             return self._free_engine
-        elif self._application_model.current_layout_config.mode == LayoutMode.GRID:
+        elif self.layout_mode == LayoutMode.GRID:
             return self._grid_engine
         else:
             self.logger.error(
-                f"Unknown layout mode: {self._application_model.current_layout_config.mode}"
+                f"Unknown layout mode: {self.layout_mode}"
             )
             return self._free_engine
 
@@ -262,43 +307,22 @@ class LayoutManager:
         """
         Sets the active layout mode in the ApplicationModel.
         """
-        current_config = self._application_model.current_layout_config
-        current_mode = current_config.mode
+        current_mode = self._application_model.layout_mode
         if current_mode == mode:
-            self.logger.debug(f"Layout mode already {mode.value}. No change needed.")
             return
 
-        self.logger.info(
-            f"Attempting to switch active layout mode from {current_mode.value} to {mode.value}."
-        )
-        if isinstance(current_config, GridConfig):
-            self._last_grid_config = current_config
-        elif isinstance(current_config, FreeConfig):
-            self._last_free_form_config = current_config
+        self.logger.info(f"Switching layout mode from {current_mode.value} to {mode.value}.")
+        self._application_model.layout_mode = mode
 
         if mode == LayoutMode.GRID:
-            if self._last_grid_config is None:
-                self.logger.debug(
-                    "No last grid config found for active mode, creating minimal grid config."
-                )
-                self._last_grid_config = self._create_minimal_grid_config()
-            self._application_model.current_layout_config = self._last_grid_config
-            self.logger.debug(
-                f"Active layout mode set to GRID with config: {self._last_grid_config}."
-            )
-
-        elif mode == LayoutMode.FREE_FORM:
-            # Transition to FREE_FORM: use the last known free form config
-            self._application_model.current_layout_config = self._last_free_form_config
-            self.logger.debug("Active layout mode set to FREE_FORM.")
-
+            # Ensure a grid node exists when entering Grid Mode
+            grid = self._application_model.get_active_grid()
+            if not grid:
+                # Triggers the inference which creates the node
+                self.infer_grid_parameters() 
+        
         self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=mode)
-        self.logger.debug(
-            "Publishing ACTIVE_LAYOUT_MODE_CHANGED event from set_layout_mode."
-        )
-        self._event_aggregator.publish(
-            Events.LAYOUT_CONFIG_CHANGED, config=current_config
-        )  # TODO: Not sure what needs to go in as config
+        self._event_aggregator.publish(Events.LAYOUT_CONFIG_CHANGED, config=self.get_last_grid_config())
         self.logger.info(f"Active layout mode successfully switched to {mode.value}.")
 
 
@@ -306,44 +330,45 @@ class LayoutManager:
         self, new_grid_config: GridConfig
     ) -> dict[PlotID, Rect]:
         """
-        Updates the current GridConfig in the ApplicationModel and LayoutManager,
-        then calculates and returns the new geometries for all plots.
-        This method is intended to be called by commands or other internal mechanisms
-        that directly provide a complete GridConfig object.
+        Updates the current GridConfig and ensures a corresponding GridNode 
+        exists in the Scene Graph for recursive layout.
         """
         self.logger.info(f"LayoutManager updating grid config to: {new_grid_config}")
-        self._application_model.current_layout_config = new_grid_config
-        self._last_grid_config = (
-            new_grid_config  # Update stored last grid config for next time
+        self._last_grid_config = new_grid_config
+
+        grid_node = self._application_model.get_active_grid()
+        if not grid_node:
+            self.logger.info("LayoutManager: No active GridNode found. Creating root grid.")
+            grid_node = GridNode(
+                parent=self._application_model.scene_root,
+                rows=new_grid_config.rows,
+                cols=new_grid_config.cols,
+                name="Main Grid"
+            )
+            # Automatically move all top-level plots into this new grid
+            top_plots = [n for n in self._application_model.scene_root.children if isinstance(n, PlotNode)]
+            for i, p in enumerate(top_plots):
+                p.parent = grid_node
+                r = i // grid_node.cols
+                c = i % grid_node.cols
+                if r < grid_node.rows:
+                    p.grid_position = GridPosition(r, c)
+
+        # Sync UI values to the Scene Graph Node
+        grid_node.rows = new_grid_config.rows
+        grid_node.cols = new_grid_config.cols
+        grid_node.row_ratios = new_grid_config.row_ratios
+        grid_node.col_ratios = new_grid_config.col_ratios
+        grid_node.margins = new_grid_config.margins
+        grid_node.gutters = new_grid_config.gutters
+
+        # Run the new recursive mathematical engine
+        self._grid_engine.calculate_geometries(
+            grid_node, self._application_model.figure_size
         )
 
-        self._event_aggregator.publish(
-            Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID
-        )
-        self.logger.debug("Publishing ACTIVE_LAYOUT_MODE_CHANGED event for GRID mode.")
-        self._event_aggregator.publish(
-            Events.LAYOUT_CONFIG_CHANGED, config=new_grid_config
-        )
-
-        all_plots = list(
-            self._application_model.scene_root.all_descendants(of_type=PlotNode)
-        )
-        if not all_plots:
-            return {}
-
-        # GridEngine returns PHYSICAL (CM) geometries
-        plot_geometries, _, _ = self._grid_engine.calculate_geometries(
-            all_plots, new_grid_config, self._application_model.figure_size
-        )
-        
-        self.logger.debug(
-            f"Final updated_grid_config margins: {new_grid_config.margins}"
-        )
-        self.logger.debug(
-            f"Final updated_grid_config gutters: {new_grid_config.gutters}"
-        )
-
-        return plot_geometries
+        all_plots = list(self._application_model.scene_root.all_descendants(of_type=PlotNode))
+        return {node.id: node.geometry for node in all_plots}
 
     def perform_align(self, plots: list[PlotNode], edge: str) -> dict[PlotID, Rect]:
         """
@@ -422,7 +447,7 @@ class LayoutManager:
         self.logger.info("LayoutManager calculating optimized grid config.")
 
         # Ensure active layout mode is GRID for calculation context
-        if self._application_model.current_layout_config.mode != LayoutMode.GRID:
+        if self.layout_mode != LayoutMode.GRID:
             self.logger.debug(
                 "Active layout mode not GRID, switching to GRID before optimizing layout."
             )
@@ -489,7 +514,7 @@ class LayoutManager:
         )
 
         # Ensure active layout mode is GRID
-        if self._application_model.current_layout_config.mode != LayoutMode.GRID:
+        if self.layout_mode != LayoutMode.GRID:
             self.logger.debug(
                 "Active layout mode not GRID, switching to GRID before updating parameters."
             )
@@ -566,7 +591,6 @@ class LayoutManager:
         # Engines now return PHYSICAL (CM) geometries
         phys_geometries, _, _ = active_engine.calculate_geometries(
             plots, 
-            self._application_model.current_layout_config,
             self._application_model.figure_size
         )
         

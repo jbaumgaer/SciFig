@@ -13,11 +13,13 @@ from matplotlib.figure import Figure
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.grid_node import GridNode
 from src.services.coordinate_service import CoordinateService
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
 from src.shared.geometry import Rect
 from src.shared.types import CoordinateSpace
+from src.shared.constants import LayoutMode
 
 
 class OverlayRenderer:
@@ -45,6 +47,7 @@ class OverlayRenderer:
         self._handle_items: list[QGraphicsRectItem] = []
         self._guide_items: list[QGraphicsLineItem] = []
         self._highlight_items: list[QGraphicsRectItem] = []
+        self._grid_items: list[QGraphicsItem] = []  # Track grid lattice items
         
         # Style Definitions
         #TODO: Move styles to a config or theme system
@@ -55,10 +58,16 @@ class OverlayRenderer:
         self._handle_pen = QPen(QColor(0, 120, 215), 1)
         self._handle_brush = QBrush(Qt.white)
         
-        self._selection_pen = QPen(QColor(100, 149, 237), 4) # Doubled from 2
+        self._selection_pen = QPen(QColor(100, 149, 237), 4)
         self._selection_brush = QBrush(Qt.NoBrush)
         
         self._guide_pen = QPen(QColor(255, 0, 255), 1, Qt.DashLine)
+
+        # Grid Styles (New for Grid 2.0)
+        self._gutter_brush = QBrush(QColor(150, 150, 150, 40))
+        self._gutter_pen = QPen(Qt.NoPen)
+        self._divider_pen = QPen(QColor(100, 100, 100, 150), 3) # Increased to 3px thickness
+        self._ink_box_pen = QPen(QColor(100, 100, 100, 80), 1, Qt.DotLine)
 
         self._subscribe_to_events()
 
@@ -79,10 +88,7 @@ class OverlayRenderer:
         )
 
     def _on_scene_graph_changed(self, *args, **kwargs):
-        """
-        Refreshes all overlays to ensure they align with updated model geometries.
-        """
-        # We use the existing selection handler to perform the redraw
+        """Refreshes all overlays to ensure they align with updated model geometries."""
         selected_ids = [node.id for node in self._model.selection]
         self._on_selection_changed(selected_ids)
 
@@ -90,14 +96,21 @@ class OverlayRenderer:
         """Reactive handler for drawing highlights and handles."""
         self.clear_handles()
         self.clear_highlights()
+        self.clear_grid_items()
         
-        # 1. Draw Highlights for all selected nodes
+        # 1. Recursive Grid Overlay
+        if self._model.layout_mode == LayoutMode.GRID:
+            for node in self._model.scene_root.all_descendants(of_type=GridNode):
+                self._draw_grid_overlay(node)
+
+        # 2. Draw Highlights and Ink-Box Ghosts for selected nodes
         for node_id in selected_node_ids:
             node = self._model.scene_root.find_node_by_id(node_id)
             if isinstance(node, PlotNode):
                 self._draw_highlight_for_node(node)
+                self._draw_ink_box_ghost(node)
         
-        # 2. Draw Handles only for single selection
+        # 3. Draw Handles only for single selection
         if len(selected_node_ids) == 1:
             node = self._model.scene_root.find_node_by_id(selected_node_ids[0])
             if isinstance(node, PlotNode):
@@ -129,6 +142,7 @@ class OverlayRenderer:
         self.clear_highlights()
         self.clear_previews()
         self.clear_guides()
+        self.clear_grid_items()
 
     def clear_handles(self):
         for item in self._handle_items:
@@ -154,11 +168,18 @@ class OverlayRenderer:
                 self._scene.removeItem(item)
         self._guide_items.clear()
 
+    def clear_grid_items(self):
+        """Clears all grid lattice and gutter items."""
+        for item in self._grid_items:
+            if item.scene():
+                self._scene.removeItem(item)
+        self._grid_items.clear()
+
     def _draw_highlight_for_node(self, node: PlotNode):
         """Draws a selection outline around the node."""
         scene_rect = self._fig_rect_to_scene(node.geometry)
         item = QGraphicsRectItem(scene_rect)
-        item.setZValue(990) # Just below ghosts
+        item.setZValue(990)
         item.setPen(self._selection_pen)
         item.setBrush(self._selection_brush)
         item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
@@ -195,8 +216,6 @@ class OverlayRenderer:
             figure_size_cm=fig_w_cm,
             canvas_size_px=float(canvas_w)
         )
-        # Matplotlib Y is bottom-up (0 at bottom), 
-        # Qt Scene Y is top-down (0 at top).
         px_y_bottom_up = CoordinateService.transform_value(
             phys_pos[1],
             from_space=CoordinateSpace.PHYSICAL,
@@ -215,8 +234,7 @@ class OverlayRenderer:
         return QRectF(p1, p2).normalized()
 
     def _add_handle(self, pos: QPointF):
-        #TODO: Move styles to a config or theme system
-        size = 12 # Doubled from 6
+        size = 12
         rect = QRectF(pos.x() - size/2, pos.y() - size/2, size, size)
         item = QGraphicsRectItem(rect)
         item.setZValue(1100)
@@ -225,3 +243,96 @@ class OverlayRenderer:
         item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         self._scene.addItem(item)
         self._handle_items.append(item)
+
+    def _draw_grid_overlay(self, grid_node: GridNode):
+        """Draws the visual lattice, gutter bands, and interactive dividers."""
+        # 1. Determine the reference area for cell calculation
+        # If it's the root grid, its available area is the whole figure.
+        # If it's nested, its available area was assigned by its parent.
+        from src.models.nodes.group_node import GroupNode
+        if isinstance(grid_node.parent, GroupNode) and grid_node.parent.name == "root":
+            fig_w, fig_h = self._model.figure_size
+            available_rect = Rect(0.0, 0.0, fig_w, fig_h)
+        else:
+            available_rect = grid_node.geometry
+
+        from src.models.layout.grid_layout_engine import GridLayoutEngine
+        engine = GridLayoutEngine()
+        cells = engine.get_cell_geometries(grid_node, available_rect)
+        
+        if not cells or not cells[0]:
+            return
+
+        num_rows = len(cells)
+        num_cols = len(cells[0])
+
+        # 2. Draw Gutter Zones (Grey Bands)
+        # Vertical Gutters
+        for c in range(num_cols - 1):
+            left_cell = cells[0][c]
+            right_cell = cells[0][c+1]
+            gutter_x = left_cell.x + left_cell.width
+            gutter_w = right_cell.x - gutter_x
+            if gutter_w > 0.001:
+                gutter_rect = Rect(gutter_x, available_rect.y, gutter_w, available_rect.height)
+                self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect)), is_gutter=True)
+
+        # Horizontal Gutters
+        for r in range(num_rows - 1):
+            top_cell = cells[r][0]
+            bottom_cell = cells[r+1][0]
+            gutter_y = bottom_cell.y + bottom_cell.height
+            gutter_h = top_cell.y - gutter_y
+            if gutter_h > 0.001:
+                gutter_rect = Rect(available_rect.x, gutter_y, available_rect.width, gutter_h)
+                self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect)), is_gutter=True)
+
+        # 3. Draw Divider Lines (Center of gutters)
+        for c in range(num_cols - 1):
+            x = cells[0][c].x + cells[0][c].width + (grid_node.gutters.wspace[c] / 2 if c < len(grid_node.gutters.wspace) else 0.25)
+            p1 = self._fig_to_scene((x, available_rect.y))
+            p2 = self._fig_to_scene((x, available_rect.y + available_rect.height))
+            self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
+
+        for r in range(num_rows - 1):
+            y = cells[r+1][0].y + cells[r+1][0].height + (grid_node.gutters.hspace[r] / 2 if r < len(grid_node.gutters.hspace) else 0.25)
+            p1 = self._fig_to_scene((available_rect.x, y))
+            p2 = self._fig_to_scene((available_rect.x + available_rect.width, y))
+            self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
+
+        # 4. Outer Border
+        scene_rect = self._fig_rect_to_scene(grid_node.geometry)
+        self._add_grid_item(QGraphicsRectItem(scene_rect), is_divider=True)
+
+    def _add_grid_item(self, item: QGraphicsItem, is_gutter: bool = False, is_divider: bool = False):
+        """Helper to style and track grid visual items with high Z-Order."""
+        if is_gutter:
+            item.setPen(self._gutter_pen)
+            item.setBrush(self._gutter_brush)
+            item.setZValue(2000) # Ensure on top
+        elif is_divider:
+            item.setPen(self._divider_pen)
+            item.setZValue(2010) # Ensure dividers are on top of gutters
+            
+        item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        self._scene.addItem(item)
+        self._grid_items.append(item)
+
+    def _draw_ink_box_ghost(self, node: PlotNode):
+        """Draws a faint dotted rectangle representing the total ink extent."""
+        geom = node.geometry
+        ink_geom = Rect(
+            x=geom.x - geom.width * 0.1,
+            y=geom.y - geom.height * 0.1,
+            width=geom.width * 1.2,
+            height=geom.height * 1.2
+        )
+        
+        scene_rect = self._fig_rect_to_scene(ink_geom)
+        item = QGraphicsRectItem(scene_rect)
+        item.setPen(self._ink_box_pen)
+        item.setBrush(Qt.NoBrush)
+        item.setZValue(985)
+        item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        self._scene.addItem(item)
+        self._grid_items.append(item)

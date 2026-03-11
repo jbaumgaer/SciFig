@@ -131,6 +131,7 @@ class CompositionRoot:
             command_manager=self._command_manager,
             layout_manager=self._layout_manager,
             event_aggregator=self._event_aggregator,
+            property_service=self._property_service,
         )
         self._node_controller = NodeController(
             model=self._application_model,
@@ -385,11 +386,6 @@ class CompositionRoot:
         # --- Renderer Subscriptions (Lifecycle) ---
         self._event_aggregator.subscribe(
             Events.NODE_REMOVED_FROM_SCENE, self._figure_renderer.handle_node_removal
-        )
-
-        # --- LayoutManager Subscriptions ---
-        self._event_aggregator.subscribe(
-            Events.PROJECT_WAS_RESET, self._layout_manager.on_model_reset
         )
 
         # --- Redraw Canvas Callbacks (Consolidated Generic Events) ---

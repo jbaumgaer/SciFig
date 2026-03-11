@@ -15,7 +15,6 @@ class LayoutEngineProtocol(Protocol):
     def calculate_geometries(
         self, 
         plots: list[PlotNode], 
-        layout_config: any,
         figure_size_cm: tuple[float, float]
     ) -> tuple[dict[PlotID, Rect], Optional[Margins], Optional[Gutters]]: ...
 

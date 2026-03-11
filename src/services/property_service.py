@@ -1,5 +1,5 @@
 import logging
-from dataclasses import fields, is_dataclass
+from dataclasses import fields, is_dataclass, replace
 from enum import Enum
 from typing import Any, Iterable, Optional
 
@@ -35,39 +35,57 @@ class PropertyService:
 
     def set_value(self, obj: Any, path: str, value: Any):
         """
-        Navigates to the parent of the leaf attribute and sets the new value.
-        Handles basic type coercion for common UI inputs.
+        Sets a value at a path. If an intermediate parent is a frozen dataclass,
+        it performs a replacement higher up the chain.
         """
         parts = path.split(".")
-        target = obj
         
-        # 1. Navigate to the parent of the leaf
-        for part in parts[:-1]:
-            if isinstance(target, dict):
-                target = target[part]
-            elif isinstance(target, list):
-                target = target[int(part)]
-            else:
-                target = getattr(target, part)
+        # Base case: single attribute
+        if len(parts) == 1:
+            self._set_direct_value(obj, parts[0], value)
+            return
 
+        # Recursive case: navigate and replace if needed
+        parent_path = ".".join(parts[:-1])
         leaf_name = parts[-1]
         
-        # 2. Extract type info for coercion if it's a dataclass field
+        parent = self.get_value(obj, parent_path)
+        
+        try:
+            self._set_direct_value(parent, leaf_name, value)
+        except Exception:
+            # If direct set fails (e.g. FrozenInstanceError), we must replace the parent 
+            # object on ITS parent.
+            if is_dataclass(parent):
+                
+                # 1. Coerce value for the leaf
+                field_map = {f.name: f.type for f in fields(parent)}
+                target_type = field_map.get(leaf_name)
+                final_value = self._coerce_value(value, target_type)
+                
+                # 2. Create new parent instance
+                new_parent = replace(parent, **{leaf_name: final_value})
+                
+                # 3. Recursively set the new parent on the original object
+                self.set_value(obj, parent_path, new_parent)
+            else:
+                raise
+
+    def _set_direct_value(self, target: Any, attr: str, value: Any):
+        """Applies value with coercion to a direct attribute/key/index."""
         target_type = None
         if is_dataclass(target):
             field_map = {f.name: f.type for f in fields(target)}
-            if leaf_name in field_map:
-                target_type = field_map[leaf_name]
+            target_type = field_map.get(attr)
 
-        # 3. Apply value with coercion
         final_value = self._coerce_value(value, target_type)
-        
+
         if isinstance(target, dict):
-            target[leaf_name] = final_value
+            target[attr] = final_value
         elif isinstance(target, list):
-            target[int(leaf_name)] = final_value
+            target[int(attr)] = final_value
         else:
-            setattr(target, leaf_name, final_value)
+            setattr(target, attr, final_value)
 
     def resolve_concrete_paths(self, obj: Any, path: str) -> list[str]:
         """Expands wildcards into concrete paths."""

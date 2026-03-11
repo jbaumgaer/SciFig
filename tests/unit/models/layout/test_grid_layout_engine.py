@@ -1,132 +1,123 @@
 import pytest
-from unittest.mock import MagicMock
-
 from src.models.layout.grid_layout_engine import GridLayoutEngine
-from src.models.layout.layout_config import FreeConfig, GridConfig, Gutters, Margins
+from src.models.nodes.grid_node import GridNode, GridPosition
 from src.models.nodes.plot_node import PlotNode
 from src.shared.geometry import Rect
 
-
-@pytest.fixture
-def grid_engine():
-    """Provides a GridLayoutEngine instance."""
-    return GridLayoutEngine()
-
-
-@pytest.fixture
-def simple_grid_config():
-    """Provides a basic 2x2 grid configuration in physical CM."""
-    return GridConfig(
-        rows=2,
-        cols=2,
-        row_ratios=[1.0, 1.0],
-        col_ratios=[1.0, 1.0],
-        margins=Margins(2.0, 2.0, 2.0, 2.0), # 2cm margins all around
-        gutters=Gutters([1.0], [1.0]),       # 1cm gap
-    )
-
-
-@pytest.fixture
-def four_plots():
-    """Provides 4 plots with diverse initial positions for sorting verification."""
-    # Note: Initial positions are in CM now
-    p1 = PlotNode(id="p1", name="p1"); p1.geometry = Rect(2.0, 12.0, 6.0, 6.0)
-    p2 = PlotNode(id="p2", name="p2"); p2.geometry = Rect(10.0, 14.0, 6.0, 4.0)
-    p3 = PlotNode(id="p3", name="p3"); p3.geometry = Rect(1.0, 2.0, 8.0, 8.0)
-    p4 = PlotNode(id="p4", name="p4"); p4.geometry = Rect(12.0, 4.0, 7.0, 7.0)
-    return [p1, p2, p3, p4]
-
-
 class TestGridLayoutEngine:
+    @pytest.fixture
+    def engine(self):
+        return GridLayoutEngine()
 
-    def test_calculate_geometries_fixed_layout(self, grid_engine, four_plots, simple_grid_config):
-        """Verifies geometry calculation for a fixed 2x2 grid in CM space."""
-        # Figure size: 20x15 cm
-        # Plot area: 20 - 2(L) - 2(R) = 16cm. Gutter=1cm. Net plot width = 15cm. Cell=7.5cm
-        # Plot area: 15 - 2(T) - 2(B) = 11cm. Gutter=1cm. Net plot height = 10cm. Cell=5.5cm
+    def test_single_cell_grid(self, engine):
+        """Tests layout for a 1x1 grid with margins."""
+        root = GridNode(rows=1, cols=1)
+        root.margins = root.margins.__class__(top=1.0, bottom=1.0, left=1.0, right=1.0)
+        plot = PlotNode(name="Plot1", parent=root)
+        plot.grid_position = GridPosition(row=0, col=0)
         
-        fig_size = (20.0, 15.0)
-        geometries, margins, gutters = grid_engine.calculate_geometries(
-            four_plots, simple_grid_config, figure_size_cm=fig_size, use_constrained_optimization=False
-        )
+        engine.calculate_geometries(root, (10.0, 10.0))
         
-        assert len(geometries) == 4
-        assert margins == simple_grid_config.margins
-        assert gutters == simple_grid_config.gutters
-        
-        # Sorting (-y, x): 
-        # p2: y=14 -> -14, x=10
-        # p1: y=12 -> -12, x=2
-        # p4: y=4 -> -4, x=12
-        # p3: y=2 -> -2, x=1
-        # Expected order: p2, p1, p4, p3
-        
-        # Verify p2 (Top-Left cell)
-        assert isinstance(geometries["p2"], Rect)
-        assert geometries["p2"].x == pytest.approx(2.0)
-        assert geometries["p2"].width == pytest.approx(7.5) # (16 - 1) / 2
-        assert geometries["p2"].height == pytest.approx(5.0) # (11 - 1) / 2
-        
-        # Verify p1 (Top-Right cell)
-        assert geometries["p1"].x == pytest.approx(2.0 + 7.5 + 1.0) # margin + cell + gutter
+        # Plot should be centered within margins: 10 - 1 - 1 = 8
+        assert plot.geometry == Rect(1.0, 1.0, 8.0, 8.0)
+        assert plot._geometry_version == 1
 
-    def test_calculate_geometries_zero_plots(self, grid_engine, simple_grid_config):
-        """Verifies that empty plot list returns empty dict."""
-        geometries, margins, gutters = grid_engine.calculate_geometries([], simple_grid_config, (20, 15))
-        assert geometries == {}
+    def test_simple_2x2_grid(self, engine):
+        """Tests layout for a 2x2 grid with uniform ratios and gutters."""
+        root = GridNode(rows=2, cols=2)
+        root.gutters = root.gutters.__class__(hspace=[1.0], wspace=[1.0])
+        
+        # Assign 4 plots
+        plots = []
+        for r in range(2):
+            for c in range(2):
+                p = PlotNode(name=f"P{r}{c}", parent=root)
+                p.grid_position = GridPosition(row=r, col=c)
+                plots.append(p)
+        
+        # Fig 11x11cm. Margins 0. 
+        # Gutters take 1cm. Content area = 10x10.
+        # Each cell = 5x5.
+        engine.calculate_geometries(root, (11.0, 11.0))
+        
+        # In Bottom-Up: Row 0 is at Top (High Y), Row 1 is at Bottom (Low Y)
+        # P00: (0, 6, 5, 5) -> Row 0 (Top), Col 0 (Left)
+        assert plots[0].geometry == Rect(0.0, 6.0, 5.0, 5.0)
+        # P01: (6, 6, 5, 5) -> Row 0 (Top), Col 1 (Right)
+        assert plots[1].geometry == Rect(6.0, 6.0, 5.0, 5.0)
+        # P10: (0, 0, 5, 5) -> Row 1 (Bottom), Col 0 (Left)
+        assert plots[2].geometry == Rect(0.0, 0.0, 5.0, 5.0)
+        # P11: (6, 0, 5, 5) -> Row 1 (Bottom), Col 1 (Right)
+        assert plots[3].geometry == Rect(6.0, 0.0, 5.0, 5.0)
 
-    def test_calculate_geometries_incompatible_config(self, grid_engine, four_plots):
-        """Verifies error handling for incompatible config."""
-        geometries, margins, gutters = grid_engine.calculate_geometries(four_plots, FreeConfig(), (20, 15))
-        assert geometries == {}
+    def test_nested_grid(self, engine):
+        """Tests recursive layout for a grid within a grid."""
+        # Root: 2 columns, 1 row. Col Ratios [1, 1]. Fig 21cm wide.
+        # Gutter 1cm. Each root cell = 10cm wide.
+        root = GridNode(rows=1, cols=2)
+        root.gutters = root.gutters.__class__(hspace=[], wspace=[1.0])
+        
+        # Left child: a PlotNode
+        p_left = PlotNode(name="Left", parent=root)
+        p_left.grid_position = GridPosition(row=0, col=0)
+        
+        # Right child: a Nested Grid (2 rows, 1 col)
+        nested = GridNode(name="Nested", parent=root, rows=2, cols=1)
+        nested.grid_position = GridPosition(row=0, col=1)
+        nested.gutters = nested.gutters.__class__(hspace=[2.0], wspace=[])
+        
+        # Nested children
+        p_top = PlotNode(name="Top", parent=nested)
+        p_top.grid_position = GridPosition(row=0, col=0)
+        p_bottom = PlotNode(name="Bottom", parent=nested)
+        p_bottom.grid_position = GridPosition(row=1, col=0)
+        
+        # Execute
+        engine.calculate_geometries(root, (21.0, 12.0))
+        
+        # Verify Left Plot
+        assert p_left.geometry == Rect(0.0, 0.0, 10.0, 12.0)
+        
+        # Verify Nested Grid geometry (assigned by parent)
+        assert nested.geometry == Rect(11.0, 0.0, 10.0, 12.0)
+        
+        # Verify Nested Plots (assigned recursively)
+        # Content area height = 12 - 2 (gutter) = 10. Each cell height = 5.
+        # Top Plot (Row 0) -> y = 5 + 2 = 7
+        assert p_top.geometry == Rect(11.0, 7.0, 10.0, 5.0)
+        # Bottom Plot (Row 1) -> y = 0
+        assert p_bottom.geometry == Rect(11.0, 0.0, 10.0, 5.0)
 
-    def test_calculate_geometries_variable_ratios(self, grid_engine, four_plots):
-        """Tests grid calculation with non-equal ratios in CM."""
-        # Figure: 20x15 cm. Margins: 2cm.
-        # Net Width: 16cm. Gutter: 1cm. Available for plots: 15cm.
-        # Col 0 (0.25): 3.75 cm. Col 1 (0.75): 11.25 cm.
-        config = GridConfig(
-            rows=1, cols=2,
-            row_ratios=[1.0], col_ratios=[0.25, 0.75],
-            margins=Margins(2.0, 2.0, 2.0, 2.0),
-            gutters=Gutters([], [1.0])
-        )
+    def test_spanning_plot(self, engine):
+        """Tests layout for a plot spanning multiple rows/cols."""
+        root = GridNode(rows=2, cols=2)
+        root.gutters = root.gutters.__class__(hspace=[1.0], wspace=[1.0])
         
-        geometries, _, _ = grid_engine.calculate_geometries(
-            four_plots[:2], config, figure_size_cm=(20, 15)
-        )
+        # Plot spanning entire bottom row
+        p_span = PlotNode(name="Span", parent=root)
+        p_span.grid_position = GridPosition(row=1, col=0, rowspan=1, colspan=2)
         
-        # p2 sorted before p1 based on (-y, x) -> p2(14), p1(12)
-        assert isinstance(geometries["p2"], Rect)
-        assert isinstance(geometries["p1"], Rect)
-        assert geometries["p2"].width == pytest.approx(3.75)
-        assert geometries["p1"].width == pytest.approx(11.25)
-        assert geometries["p1"].x == pytest.approx(2.0 + 3.75 + 1.0) # margin + col0 + gutter
+        # Fig 11x11. Cells 5x5.
+        engine.calculate_geometries(root, (11.0, 11.0))
+        
+        # In Bottom-Up: Row 1 is at the bottom (y=0)
+        assert p_span.geometry == Rect(0.0, 0.0, 11.0, 5.0)
 
-    def test_calculate_geometries_excessive_margins(self, grid_engine):
-        """Verifies that engine falls back to minimum 0.2cm plot size when margins exceed figure size."""
-        # Figure: 10x10 cm. Margins: 6cm each (Total 12cm > 10cm)
-        config = GridConfig(
-            rows=1, cols=1,
-            row_ratios=[1.0], col_ratios=[1.0],
-            margins=Margins(6.0, 6.0, 6.0, 6.0),
-            gutters=Gutters([], [])
-        )
-        p1 = PlotNode(id="p1"); p1.geometry = Rect(0,0,1,1)
+    def test_version_gating(self, engine):
+        """Tests that _geometry_version only increments on actual change."""
+        root = GridNode(rows=1, cols=1)
+        plot = PlotNode(parent=root)
+        plot.grid_position = GridPosition(row=0, col=0)
         
-        geometries, _, _ = grid_engine.calculate_geometries([p1], config, figure_size_cm=(10, 10))
+        # Initial calc
+        engine.calculate_geometries(root, (10.0, 10.0))
+        v1 = plot._geometry_version
+        assert v1 == 1
         
-        assert "p1" in geometries
-        assert geometries["p1"].width == pytest.approx(0.2)
-        assert geometries["p1"].height == pytest.approx(0.2)
-
-    def test_apply_constrained_layout_logic(self, grid_engine, four_plots, simple_grid_config, mocker):
-        """Verifies that use_constrained_optimization toggles the correct internal method."""
-        mock_ret = ({}, {"p1": Rect(0,0,1,1)}, Margins(1,1,1,1), Gutters([0.5], [0.5]))
-        mocker.patch.object(grid_engine, "_apply_constrained_layout", return_value=mock_ret)
+        # Re-calc with same parameters
+        engine.calculate_geometries(root, (10.0, 10.0))
+        assert plot._geometry_version == v1
         
-        grid_engine.calculate_geometries(
-            four_plots, simple_grid_config, figure_size_cm=(20, 15), use_constrained_optimization=True
-        )
-        
-        grid_engine._apply_constrained_layout.assert_called_once()
+        # Calc with change
+        engine.calculate_geometries(root, (20.0, 20.0))
+        assert plot._geometry_version == v1 + 1

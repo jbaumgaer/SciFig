@@ -6,10 +6,13 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QKeyEvent, QPainter
 
 from src.models.application_model import ApplicationModel
+from src.models.nodes.grid_position import GridPosition
 from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.grid_node import GridNode
+from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.services.coordinate_service import CoordinateService
 from src.services.tools.base_tool import BaseTool
-from src.shared.constants import IconPath
+from src.shared.constants import IconPath, LayoutMode
 from src.shared.events import Events
 from src.shared.geometry import Rect
 from src.shared.types import CoordinateSpace
@@ -112,7 +115,7 @@ class SelectionTool(BaseTool):
     def mouse_move_event(
         self, phys_coords: tuple[float, float], modifiers: Optional[str] = None
     ) -> None:
-        """Publishes preview updates based on current interaction mode."""
+        """Publishes preview updates with snapping and collision logic."""
         if self._mode == InteractionMode.NONE or not self._drag_start_phys:
             return
 
@@ -120,25 +123,50 @@ class SelectionTool(BaseTool):
         dy = phys_coords[1] - self._drag_start_phys[1]
         
         previews = []
+        style = "ghost"
         
+        is_grid_mode = self._model.layout_mode == LayoutMode.GRID
+
         if self._mode == InteractionMode.MOVING:
             for node_id, initial_rect in self._initial_geometries.items():
-                previews.append(initial_rect.moved_by(dx, dy))
+                node = self._model.scene_root.find_node_by_id(node_id)
+                candidate_rect = initial_rect.moved_by(dx, dy)
+                
+                # GRID LOGIC: Snap to cell
+                if is_grid_mode and node and isinstance(node.parent, GridNode):
+                    snapped_rect = self._snap_to_grid(node, candidate_rect)
+                    if snapped_rect:
+                        candidate_rect = snapped_rect
+                        if self._is_colliding(node, candidate_rect):
+                            style = "blocked" # Red ghost
+                
+                previews.append(candidate_rect)
                 
         elif self._mode == InteractionMode.RESIZING:
             node_id, initial_rect = list(self._initial_geometries.items())[0]
-            previews.append(initial_rect.scaled_by(self._resize_handle, dx, dy))
+            node = self._model.scene_root.find_node_by_id(node_id)
+            candidate_rect = initial_rect.scaled_by(self._resize_handle, dx, dy)
+            
+            # GRID LOGIC: Snap to span
+            if is_grid_mode and node and isinstance(node.parent, GridNode):
+                snapped_rect = self._snap_to_grid(node, candidate_rect)
+                if snapped_rect:
+                    candidate_rect = snapped_rect
+                    if self._is_colliding(node, candidate_rect):
+                        style = "blocked"
+            
+            previews.append(candidate_rect)
             
         self._event_aggregator.publish(
             Events.UPDATE_INTERACTION_PREVIEW_REQUESTED,
             geometries=previews,
-            style="ghost"
+            style=style
         )
 
     def mouse_release_event(
         self, phys_coords: tuple[float, float], modifiers: Optional[str] = None
     ) -> None:
-        """Finalizes the interaction and applies changes."""
+        """Finalizes interaction with Block logic and GridPosition updates."""
         if self._mode == InteractionMode.NONE or not self._drag_start_phys:
             return
 
@@ -147,26 +175,51 @@ class SelectionTool(BaseTool):
         dx = phys_coords[0] - self._drag_start_phys[0]
         dy = phys_coords[1] - self._drag_start_phys[1]
         
+        is_grid_mode = self._model.layout_mode == LayoutMode.GRID
+
         # Noise reduction (significant if delta > 0.01 cm)
         if abs(dx) > 0.01 or abs(dy) > 0.01:
-            new_geoms = {}
-            if self._mode == InteractionMode.MOVING:
-                for node_id, initial_rect in self._initial_geometries.items():
-                    new_geoms[node_id] = initial_rect.moved_by(dx, dy)
-            elif self._mode == InteractionMode.RESIZING:
-                node_id, initial_rect = list(self._initial_geometries.items())[0]
-                new_geoms[node_id] = initial_rect.scaled_by(self._resize_handle, dx, dy)
-            
-            self._event_aggregator.publish(
-                Events.BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED,
-                geometries=new_geoms
-            )
+            if is_grid_mode:
+                # 1. GRID BRANCH: Update GridPosition
+                node = self._model.selection[0]
+                if node and hasattr(self, "_proposed_grid_pos"):
+                    # Recalculate collision one last time for safety
+                    candidate_rect = self._snap_to_grid(node, node.geometry.moved_by(dx, dy) if self._mode == InteractionMode.MOVING else node.geometry.scaled_by(self._resize_handle, dx, dy))
+                    
+                    if candidate_rect and not self._is_colliding(node, candidate_rect):
+                        r, c, rs, cs = self._proposed_grid_pos
+                        new_pos = GridPosition(r, c, rs, cs)
+                        
+                        self._event_aggregator.publish(
+                            Events.BATCH_CHANGE_PLOT_PROPERTY_REQUESTED,
+                            nodes=[node],
+                            path="grid_position",
+                            value=new_pos
+                        )
+                    else:
+                        self.logger.info("SelectionTool: Action blocked by collision.")
+            else:
+                # 2. FREE-FORM BRANCH: Existing geometry logic
+                new_geoms = {}
+                if self._mode == InteractionMode.MOVING:
+                    for node_id, initial_rect in self._initial_geometries.items():
+                        new_geoms[node_id] = initial_rect.moved_by(dx, dy)
+                elif self._mode == InteractionMode.RESIZING:
+                    node_id, initial_rect = list(self._initial_geometries.items())[0]
+                    new_geoms[node_id] = initial_rect.scaled_by(self._resize_handle, dx, dy)
+                
+                self._event_aggregator.publish(
+                    Events.BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED,
+                    geometries=new_geoms
+                )
 
         # Reset State
         self._mode = InteractionMode.NONE
         self._drag_start_phys = None
         self._initial_geometries = {}
         self._resize_handle = None
+        if hasattr(self, "_proposed_grid_pos"):
+            del self._proposed_grid_pos
 
     def key_press_event(self, event: QKeyEvent) -> None:
         """Handles key presses for selection manipulation."""
@@ -216,3 +269,84 @@ class SelectionTool(BaseTool):
             if dist < threshold_cm:
                 return handle_id
         return None
+
+    def _snap_to_grid(self, node: PlotNode, candidate_rect: Rect) -> Optional[Rect]:
+        """Calculates the spanned grid cell geometry for snapping."""
+        parent = node.parent
+        if not isinstance(parent, GridNode):
+            return None
+
+        engine = GridLayoutEngine()
+        cells = engine.get_cell_geometries(parent, parent.geometry)
+
+        # 1. Identify which rows and columns are "touched" by the candidate_rect
+        # We use a 25% overlap threshold to consider a cell "touched"
+        threshold = 0.25
+        
+        covered_rows = []
+        covered_cols = []
+        
+        for r in range(parent.rows):
+            # Check vertical overlap
+            cell_y_top = cells[r][0].y
+            cell_y_bottom = cells[r][0].y + cells[r][0].height
+            
+            overlap_h = min(candidate_rect.y + candidate_rect.height, cell_y_bottom) - max(candidate_rect.y, cell_y_top)
+            if overlap_h > cells[r][0].height * threshold:
+                covered_rows.append(r)
+                
+        for c in range(parent.cols):
+            # Check horizontal overlap
+            cell_x_left = cells[0][c].x
+            cell_x_right = cells[0][c].x + cells[0][c].width
+            
+            overlap_w = min(candidate_rect.x + candidate_rect.width, cell_x_right) - max(candidate_rect.x, cell_x_left)
+            if overlap_w > cells[0][c].width * threshold:
+                covered_cols.append(c)
+
+        if not covered_rows or not covered_cols:
+            return None
+
+        # 2. Calculate the bounding Rect of the touched cells
+        r_start, r_end = min(covered_rows), max(covered_rows)
+        c_start, c_end = min(covered_cols), max(covered_cols)
+        
+        top_left_cell = cells[r_start][c_start]
+        bottom_right_cell = cells[r_end][c_end]
+        
+        snapped_rect = Rect(
+            x=top_left_cell.x,
+            y=top_left_cell.y,
+            width=(bottom_right_cell.x + bottom_right_cell.width) - top_left_cell.x,
+            height=(bottom_right_cell.y + bottom_right_cell.height) - top_left_cell.y
+        )
+        
+        # 3. Store indices
+        self._proposed_grid_pos = (r_start, c_start, (r_end - r_start) + 1, (c_end - c_start) + 1)
+        
+        return snapped_rect
+
+    def _is_colliding(self, node: PlotNode, rect: Rect) -> bool:
+        """Returns True if the proposed grid indices overlap another node's span."""
+        parent = node.parent
+        if not isinstance(parent, GridNode) or not hasattr(self, "_proposed_grid_pos"):
+            return False
+            
+        r_start, c_start, rs, cs = self._proposed_grid_pos
+        r_end = r_start + rs
+        c_end = c_start + cs
+
+        # Iterate siblings and check logical span overlap
+        for sibling in parent.children:
+            if sibling.id == node.id or not sibling.grid_position:
+                continue
+            
+            s = sibling.grid_position
+            # Check if current proposed span intersects sibling's logical span
+            rows_overlap = max(r_start, s.row) < min(r_end, s.row + s.rowspan)
+            cols_overlap = max(c_start, s.col) < min(c_end, s.col + s.colspan)
+            
+            if rows_overlap and cols_overlap:
+                return True
+                
+        return False

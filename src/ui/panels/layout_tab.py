@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.controllers.layout_controller import LayoutController
-from src.models.layout.layout_config import GridConfig, LayoutConfig
+from src.models.layout.layout_config import GridConfig
 from src.services.event_aggregator import EventAggregator
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
@@ -145,7 +145,7 @@ class LayoutTab(QWidget):
         self._update_content(LayoutMode.GRID)
         # Note: This updates the UI toggle button state as well via subscription
 
-    def _handle_layout_config_changed(self, config: LayoutConfig):
+    def _handle_layout_config_changed(self, config: GridConfig):
         """Handler for when the application's active layout config changes."""
         self.logger.debug(
             f"LayoutTab: Active layout config changed to {config.mode}. Updating content."

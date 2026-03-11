@@ -3,11 +3,13 @@ from pathlib import Path
 from typing import Any, Optional
 
 from src.interfaces.project_io import ProjectLifecycle
-from src.models.layout.layout_config import FreeConfig, LayoutConfig
+from src.models.layout.layout_config import GridConfig
+from src.models.nodes.grid_node import GridNode
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode, node_factory
 from src.services.event_aggregator import EventAggregator
+from src.shared.constants import LayoutMode
 from src.shared.events import Events
 
 
@@ -29,7 +31,7 @@ class ApplicationModel(ProjectLifecycle):
         self.selected_path: str = ""  # The path to a sub-component within the selection
         self._file_path: Optional[Path] = None
         self._is_dirty: bool = False
-        self._current_layout_config: LayoutConfig = FreeConfig()
+        self.layout_mode: LayoutMode = LayoutMode.FREE_FORM
         self._figure_size = figure_size
 
     @property
@@ -55,7 +57,7 @@ class ApplicationModel(ProjectLifecycle):
         self.scene_root = GroupNode(name="root")
         self.set_selection([])
         self.file_path = None
-        self.current_layout_config = FreeConfig()
+        self.layout_mode = LayoutMode.FREE_FORM
         self.set_dirty(False)  # Explicitly set to not dirty after a full reset
         self._event_aggregator.publish(Events.PROJECT_WAS_RESET)
 
@@ -98,15 +100,14 @@ class ApplicationModel(ProjectLifecycle):
         if self._file_path != path:
             self._file_path = path
 
-    @property
-    def current_layout_config(self) -> LayoutConfig:
-        return self._current_layout_config
-
-    @current_layout_config.setter
-    def current_layout_config(self, config: LayoutConfig):
-        if self._current_layout_config != config:
-            self._current_layout_config = config
-            self.logger.info(f"Layout config changed to mode: {config.mode.value}")
+    def get_active_grid(self) -> Optional["GridNode"]:
+        """
+        Returns the primary GridNode managing the layout. 
+        In Grid 2.0, this is typically the first GridNode child of the root.
+        """
+        for node in self.scene_root.all_descendants(of_type=GridNode):
+            return node
+        return None
 
     def add_node(self, node: SceneNode, parent: Optional[SceneNode] = None):
         """Adds a node to the scene graph."""
@@ -140,7 +141,7 @@ class ApplicationModel(ProjectLifecycle):
         return {
             "version": "1.0",
             "scene_root": self.scene_root.to_dict(),
-            "layout_config": self.current_layout_config.to_dict(),
+            "layout_mode": self.layout_mode.value,
         }
 
     def load_from_state(self, data: dict[str, Any], temp_dir: Path):
@@ -148,13 +149,8 @@ class ApplicationModel(ProjectLifecycle):
         self.reset_state()  # This will publish PROJECT_WAS_RESET, SELECTION_CHANGED, LAYOUT_CONFIG_CHANGED
         self.scene_root = node_factory(data["scene_root"], temp_dir=temp_dir)
 
-        layout_config_data = data.get("layout_config")
-        if layout_config_data:
-            self.current_layout_config = LayoutConfig.from_dict(
-                layout_config_data
-            )  # Publishes LAYOUT_CONFIG_CHANGED
-        else:
-            self.current_layout_config = FreeConfig()
+        mode_str = data.get("layout_mode", "FREE_FORM")
+        self.layout_mode = LayoutMode(mode_str)
 
         # After loading, the project is considered unmodified until a change is made
         self.set_dirty(False)

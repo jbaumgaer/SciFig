@@ -1,565 +1,148 @@
-import math
+import logging
+from typing import Dict, Optional, Tuple
 
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-from matplotlib.transforms import Bbox
-
-from src.models.layout.layout_config import GridConfig, Gutters, Margins
-from src.models.layout.layout_engine import LayoutEngine
-from src.models.nodes import PlotNode
-from src.services.coordinate_service import CoordinateService
+from src.models.nodes.grid_node import GridNode
+from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.scene_node import SceneNode
 from src.shared.geometry import Rect
-from src.shared.types import CoordinateSpace, PlotID
 
 
-class GridLayoutEngine(LayoutEngine):
+class GridLayoutEngine:
     """
-    A layout engine for grid-based mode.
-    Calculates geometries based on a GridConfig.
+    A recursive mathematical layout engine for GridNodes.
+    Calculates absolute physical geometries (CM) for all children 
+    without relying on Matplotlib's GridSpec.
     """
 
-    def __init__(self):  # Removed config_service
-        super().__init__()
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("GridLayoutEngine initialized.")
 
     def calculate_geometries(
-        self,
-        plots: list[PlotNode],
-        grid_config: GridConfig,
-        figure_size_cm: tuple[float, float],
-        use_constrained_optimization: bool = False,
-    ) -> tuple[dict[PlotID, Rect], Margins, Gutters]:
+        self, 
+        root_grid: GridNode, 
+        figure_size_cm: Tuple[float, float]
+    ) -> None:
         """
-        Calculates and returns the target (left, bottom, width, height) geometry for each PlotNode
-        based on the provided grid_config and chosen layout strategy.
+        Calculates and updates the geometry properties of all descendants 
+        of the root_grid.
         """
-
-        calculated_margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
-        calculated_gutters = Gutters(hspace=[], wspace=[])
-        if not isinstance(grid_config, GridConfig):
-            self.logger.error(
-                f"GridLayoutEngine received incompatible config: {type(grid_config).__name__}"
-            )
-            return {}, calculated_margins, calculated_gutters
-        if not plots:
-            return {}, calculated_margins, calculated_gutters
-
-        # Create temporary figure in inches for math (CM / 2.54)
-        fig_w_cm, fig_h_cm = figure_size_cm
-        temp_fig = plt.figure(figsize=(fig_w_cm / 2.54, fig_h_cm / 2.54))
-        final_plot_geometries: dict[PlotID, Rect] = {}
-
-        try:
-            if use_constrained_optimization:
-                _, final_plot_geometries, calculated_margins, calculated_gutters = (
-                    self._apply_constrained_layout(
-                        temp_fig, plots, grid_config, fig_w_cm, fig_h_cm
-                    )
-                )
-                self.logger.debug(
-                    f"GridLayoutEngine calculated geometries for {len(plots)} plots using constrained layout optimization."
-                )
-            else:
-                _, final_plot_geometries, calculated_margins, calculated_gutters = (
-                    self._apply_fixed_layout(
-                        temp_fig, plots, grid_config, fig_w_cm, fig_h_cm
-                    )
-                )
-                self.logger.debug(
-                    f"GridLayoutEngine calculated geometries for {len(plots)} plots using fixed layout."
-                )
-        except Exception as e:
-            self.logger.error(
-                f"Error calculating geometries using {'constrained' if use_constrained_optimization else 'fixed'} layout: {e}"
-            )
-            # Fallback to current config's margins/gutters if layout calculation fails
-            calculated_margins = grid_config.margins  # Updated to grid_config
-            calculated_gutters = grid_config.gutters  # Updated to grid_config
-        finally:
-            plt.close(temp_fig)  # Ensure the temporary figure is closed
-
-        return final_plot_geometries, calculated_margins, calculated_gutters
-
-    def _apply_constrained_layout(
-        self, figure: Figure, plot_nodes: list[PlotNode], grid_config: GridConfig,
-        fig_w_cm: float, fig_h_cm: float
-    ) -> tuple[dict[PlotID, Axes], dict[PlotID, Rect], Margins, Gutters]:
-        """
-        Applies a grid layout to the given Matplotlib Figure using GridSpec and constrained_layout.
-        It configures the layout based on GridConfig, triggers the layout calculation,
-        and then returns the created Matplotlib Axes objects, their final calculated geometries,
-        and the effective margins/gutters.
-
-        Args:
-            figure: The Matplotlib Figure object to apply the layout to.
-            plot_nodes: A list of PlotNode objects to be arranged within the grid.
-            grid_config: The GridConfig defining the desired layout.
-            fig_w_cm: Physical figure width in cm.
-            fig_h_cm: Physical figure height in cm.
-
-        Returns:
-            A tuple containing:
-                - A dictionary mapping PlotID to the created Matplotlib Axes object.
-                - A dictionary mapping PlotID to its final calculated geometry (Rect in CM).
-                - A Margins object (top, bottom, left, right in CM).
-                - A Gutters object (hspace, wspace in figure fraction).
-        #TODO: This function does way too much right now and not just what the method name says
-        # TODO: This should definitely be unit tested robustly
-        """
-        self.logger.debug(
-            f"Applying Matplotlib grid layout to figure with {len(plot_nodes)} plots."
-        )
-
-        if not isinstance(grid_config, GridConfig):
-            self.logger.error(
-                f"apply_matplotlib_grid_layout received incompatible config: {type(grid_config).__name__}"
-            )
-            raise ValueError("Invalid layout_config type for Matplotlib grid layout.")
-
-        num_plots = len(plot_nodes)
-        rows = (
-            grid_config.rows
-            if grid_config.rows > 0
-            else (math.ceil(num_plots**0.5) if num_plots > 0 else 1)
-        )# TODO: Why is this row and column calculation logic in here? This shouldn't happen
-        cols = (
-            grid_config.cols
-            if grid_config.cols > 0
-            else (math.ceil(num_plots / rows) if num_plots > 0 else 1)
-        )
-
-        if num_plots == 0:
-            return {}, {}, Margins(0.0, 0.0, 0.0, 0.0), Gutters([], [])
-        if rows == 0 or cols == 0:
-            self.logger.warning("Cannot create Matplotlib grid for 0 rows or columns.")
-            raise ValueError(
-                "Rows or columns cannot be zero for Matplotlib grid layout."
-            )
-
-        row_ratios = (
-            grid_config.row_ratios
-            if grid_config.row_ratios and len(grid_config.row_ratios) == rows
-            else [1.0] * rows
-        )
-        col_ratios = (
-            grid_config.col_ratios
-            if grid_config.col_ratios and len(grid_config.col_ratios) == cols
-            else [1.0] * cols
-        )
-
-        constrained_w_space = self._config_service.get(
-            "layout.constrained_w_space", 0.02
-        )
-        constrained_h_space = self._config_service.get(
-            "layout.constrained_h_space", 0.02
-        )
-
-        gs_hspace_val = constrained_h_space
-        gs_wspace_val = constrained_w_space
-
-        gs = gridspec.GridSpec(
-            nrows=rows,
-            ncols=cols,
-            figure=figure,
-            height_ratios=row_ratios,
-            width_ratios=col_ratios,
-            hspace=gs_hspace_val,
-            wspace=gs_wspace_val,
-        )
-
-        figure.clear()
-
-        mpl_axes_map: dict[PlotID, Axes] = {}
-        sorted_plot_nodes = sorted(
-            plot_nodes, key=lambda p: (-p.geometry.y, p.geometry.x)
-        )
-
-        plot_index = 0
-        for r_idx in range(rows):
-            for c_idx in range(cols):
-                if plot_index >= num_plots:
-                    break
-                plot_node = sorted_plot_nodes[plot_index]
-                ax = figure.add_subplot(gs[r_idx, c_idx])
-                mpl_axes_map[plot_node.id] = ax
-                plot_index += 1
-
-        figure_width_in = figure.get_figwidth()
-        figure_height_in = figure.get_figheight()
-
-        constrained_w_space = self._config_service.get_required(
-            "layout.constrained_w_space"
-        )
-        constrained_h_space = self._config_service.get_required(
-            "layout.constrained_h_space"
-        )
-
-        # 3. Apply pads in inches (CM / 2.54)
-        # Use service for canonical to inch translation
-        w_pad_in = CoordinateService.from_canonical(grid_config.margins.left, "inch")
-        h_pad_in = CoordinateService.from_canonical(grid_config.margins.bottom, "inch")
+        fig_w, fig_h = figure_size_cm
+        initial_rect = Rect(0.0, 0.0, fig_w, fig_h)
         
-        constrained_w_space = self._config_service.get_required(
-            "layout.constrained_w_space"
-        )
-        constrained_h_space = self._config_service.get_required(
-            "layout.constrained_h_space"
-        )
-
-        figure.set_constrained_layout_pads(
-            w_pad=w_pad_in,
-            h_pad=h_pad_in,
-            w_space=constrained_w_space * figure_width_in,
-            h_space=constrained_h_space * figure_height_in,
-        )
-        figure.set_layout_engine("constrained")
-
-        # Trigger layout calculation
-        figure.canvas.draw()
-
-        final_plot_geometries: dict[PlotID, Rect] = {}
-        for plot_id, ax in mpl_axes_map.items():
-            bbox = ax.get_position()
-            # Use service to map back to PHYSICAL CM
-            phys_x = CoordinateService.transform_value(bbox.x0, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_w_cm)
-            phys_y = CoordinateService.transform_value(bbox.y0, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_h_cm)
-            phys_w = CoordinateService.transform_value(bbox.width, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_w_cm)
-            phys_h = CoordinateService.transform_value(bbox.height, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_h_cm)
-            final_plot_geometries[plot_id] = Rect(phys_x, phys_y, phys_w, phys_h)
-
-        calculated_margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
-        if all_axes_bboxes := [ax.get_position() for ax in mpl_axes_map.values()]:
-            all_plots_bbox = Bbox.union(all_axes_bboxes)
-
-            # Use service to map margins back to PHYSICAL CM
-            m_left = CoordinateService.transform_value(all_plots_bbox.x0, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_w_cm)
-            m_bottom = CoordinateService.transform_value(all_plots_bbox.y0, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_h_cm)
-            m_right = CoordinateService.transform_value(1.0 - all_plots_bbox.x1, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_w_cm)
-            m_top = CoordinateService.transform_value(1.0 - all_plots_bbox.y1, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_h_cm)
-
-            calculated_margins = Margins(
-                top=m_top,
-                bottom=m_bottom,
-                left=m_left,
-                right=m_right,
-            )
-
-        # Ensure hspace and wspace are always lists
-        if isinstance(gs_hspace_val, float):
-            final_hspace = [gs_hspace_val]
-        elif gs_hspace_val is not None:
-            final_hspace = gs_hspace_val
-        else:
-            final_hspace = []
-
-        if isinstance(gs_wspace_val, float):
-            final_wspace = [gs_wspace_val]
-        elif gs_wspace_val is not None:
-            final_wspace = gs_wspace_val
-        else:
-            final_wspace = []
-        calculated_gutters = Gutters(hspace=final_hspace, wspace=final_wspace)
-
-        self.logger.info(
-            f"Matplotlib constrained_layout applied. Final calculated margins: {calculated_margins}, Gutters: {calculated_gutters}"
-        )
-
-        return (
-            mpl_axes_map,
-            final_plot_geometries,
-            calculated_margins,
-            calculated_gutters,
-        )
-
-    # def _apply_constrained_layout(
-    #     self, figure: Figure, plot_nodes: list[PlotNode], grid_config: GridConfig
-    # ) -> tuple[dict[PlotID, Axes], dict[PlotID, Rect], Margins, Gutters]:
-    #     # ... (unchanged) ...
-
-    #     constrained_w_space = 0.02 # Hardcoded default
-    #     constrained_h_space = 0.02 # Hardcoded default
-
-    #     gs_hspace_val = constrained_h_space
-    #     gs_wspace_val = constrained_w_space
-
-    #     gs = gridspec.GridSpec(
-    #         nrows=rows,
-    #         ncols=cols,
-    #         figure=figure,
-    #         height_ratios=row_ratios,
-    #         width_ratios=col_ratios,
-    #         hspace=gs_hspace_val,
-    #         wspace=gs_wspace_val,
-    #     )
-
-    #     figure.clear()
-
-    #     mpl_axes_map: dict[PlotID, Axes] = {}
-    #     sorted_plot_nodes = sorted(
-    #         plot_nodes, key=lambda p: (-p.geometry[1], p.geometry[0])
-    #     )
-
-    #     plot_index = 0
-    #     for r_idx in range(rows):
-    #         for c_idx in range(cols):
-    #             if plot_index >= num_plots:
-    #                 break
-    #             plot_node = sorted_plot_nodes[plot_index]
-    #             ax = figure.add_subplot(gs[r_idx, c_idx])
-    #             mpl_axes_map[plot_node.id] = ax
-    #             plot_index += 1
-
-    #     figure_width_in = figure.get_figwidth()
-    #     figure_height_in = figure.get_figheight()
-
-    #     constrained_w_space = 0.02 # Hardcoded default
-    #     constrained_h_space = 0.02 # Hardcoded default
-
-    #     figure.set_constrained_layout_pads(
-    #         w_pad=grid_config.margins.left * figure_width_in,
-    #         h_pad=grid_config.margins.bottom * figure_height_in,
-    #         w_space=constrained_w_space * figure_width_in,
-    #         h_space=constrained_h_space * figure_height_in,
-    #     )
-    #     figure.set_layout_engine("constrained")
-
-    #     final_plot_geometries: dict[PlotID, Rect] = {}
-    #     for plot_id, ax in mpl_axes_map.items():
-    #         bbox = ax.get_position()
-    #         final_plot_geometries[plot_id] = (bbox.x0, bbox.y0, bbox.width, bbox.height)
-
-    #     calculated_margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
-    #     if all_axes_bboxes := [ax.get_position() for ax in mpl_axes_map.values()]:
-    #         all_plots_bbox = Bbox.union(all_axes_bboxes)
-
-    #         calculated_margins = Margins(
-    #             top=1.0 - all_plots_bbox.y1,
-    #             bottom=all_plots_bbox.y0,
-    #             left=all_plots_bbox.x0,
-    #             right=1.0 - all_plots_bbox.x1,
-    #         )
-
-    #     # Ensure hspace and wspace are always lists
-    #     if isinstance(gs_hspace_val, float):
-    #         final_hspace = [gs_hspace_val]
-    #     elif gs_hspace_val is not None:
-    #         final_hspace = gs_hspace_val
-    #     else:
-    #         final_hspace = []
-
-    #     if isinstance(gs_wspace_val, float):
-    #         final_wspace = [gs_wspace_val]
-    #     elif gs_wspace_val is not None:
-    #         final_wspace = gs_wspace_val
-    #     else:
-    #         final_wspace = []
-    #     calculated_gutters = Gutters(hspace=final_hspace, wspace=final_wspace)
-
-    #     self.logger.info(
-    #         f"Matplotlib constrained_layout applied. Final calculated margins: {calculated_margins}, Gutters: {calculated_gutters}"
-    #     )
-
-    #     return (
-    #         mpl_axes_map,
-    #         final_plot_geometries,
-    #         calculated_margins,
-    #         calculated_gutters,
-    #     )
-
-    def _apply_fixed_layout(
-        self, figure: Figure, plot_nodes: list[PlotNode], grid_config: GridConfig,
-        fig_w_cm: float, fig_h_cm: float
-    ) -> tuple[dict[PlotID, Axes], dict[PlotID, Rect], Margins, Gutters]:
-        """
-        Applies a grid layout to the given Matplotlib Figure using GridSpec with fixed fractional margins.
-        This method avoids constrained_layout to provide strict adherence to user-defined margins.
-
-        Args:
-            figure: The Matplotlib Figure object to apply the layout to.
-            plot_nodes: A list of PlotNode objects to be arranged within the grid.
-            grid_config: The GridConfig defining the desired layout, with explicit margins and gutters.
-            fig_w_cm: Physical figure width in cm.
-            fig_h_cm: Physical figure height in cm.
-
-        Returns:
-            A tuple containing:
-                - A dictionary mapping PlotID to the created Matplotlib Axes object.
-                - A dictionary mapping PlotID to its final calculated geometry (Rect in CM).
-                - A Margins object (top, bottom, left, right in CM) - these are the input margins.
-                - A Gutters object (hspace, wspace in CM) - these are the input gutters.
-        """
-        self.logger.debug(
-            f"Applying Matplotlib fixed grid layout to figure with {len(plot_nodes)} plots."
-        )
-
-        if not isinstance(grid_config, GridConfig):
-            self.logger.error(
-                f"_apply_fixed_grid_layout received incompatible config: {type(grid_config).__name__}"
-            )
-            raise ValueError(
-                "Invalid layout_config type for Matplotlib fixed grid layout."
-            )
-
-        num_plots = len(plot_nodes)
-        rows = (
-            grid_config.rows
-            if grid_config.rows > 0
-            else (math.ceil(num_plots**0.5) if num_plots > 0 else 1)
-        )
-        cols = (
-            grid_config.cols
-            if grid_config.cols > 0
-            else (math.ceil(num_plots / rows) if num_plots > 0 else 1)
-        ) #TODO: Same logic as above. Can't this be abstracted away?
-
-        if num_plots == 0:
-            return (
-                {},
-                {},
-                grid_config.margins,
-                grid_config.gutters,
-            )  # Return input margins/gutters
-        if rows == 0 or cols == 0:
-            self.logger.warning("Cannot create Matplotlib grid for 0 rows or columns.")
-            raise ValueError(
-                "Rows or columns cannot be zero for Matplotlib grid layout."
-            )
-
-        row_ratios = (
-            grid_config.row_ratios
-            if grid_config.row_ratios and len(grid_config.row_ratios) == rows
-            else [1.0] * rows
-        )
-        col_ratios = (
-            grid_config.col_ratios
-            if grid_config.col_ratios and len(grid_config.col_ratios) == cols
-            else [1.0] * cols
-        )
-
-        # 1. Convert CM Margins to figure-fractions for GridSpec
-        m = grid_config.margins
+        # Ensure the root grid itself knows its bounds
+        root_grid.geometry = initial_rect
+        root_grid._geometry_version += 1
         
-        # Ensure margins don't exceed figure size minus minimum plot area
-        # (Min 0.2cm per plot as per TDD-5)
-        min_total_plot_w = cols * 0.2
-        min_total_plot_h = rows * 0.2
+        self._calculate_recursive(root_grid, initial_rect)
+
+    def get_cell_geometries(self, grid_node: GridNode, available_rect: Rect) -> list[list[Rect]]:
+        """
+        Returns a 2D list [row][col] of Rects representing the individual 
+        cell boundaries (spines) for the given grid_node using Matplotlib (Bottom-Up) Y.
+        """
+        # 1. Deduct Margins (Using Matplotlib Space: Bottom is net_rect.y)
+        m = grid_node.margins
+        net_rect = Rect(
+            x=available_rect.x + m.left,
+            y=available_rect.y + m.bottom, # Start from bottom
+            width=available_rect.width - (m.left + m.right),
+            height=available_rect.height - (m.top + m.bottom)
+        )
+
+        # 2. Calculate Cell Dimensions
+        total_w_space = sum(grid_node.gutters.wspace)
+        total_h_space = sum(grid_node.gutters.hspace)
+        pure_w = net_rect.width - total_w_space
+        pure_h = net_rect.height - total_h_space
+
+        col_widths = [(r / sum(grid_node.col_ratios)) * pure_w for r in grid_node.col_ratios]
+        row_heights = [(r / sum(grid_node.row_ratios)) * pure_h for r in grid_node.row_ratios]
+
+        # 3. Build the Grid
+        # X: Left to Right
+        col_xs = [net_rect.x]
+        current_x = net_rect.x
+        for i in range(len(col_widths) - 1):
+            current_x += col_widths[i] + grid_node.gutters.wspace[i]
+            col_xs.append(current_x)
+
+        # Y: Bottom to Top (Reverse indices so Row 0 is at top)
+        # We calculate row start positions starting from the bottom of net_rect
+        row_ys_bottom_up = [net_rect.y]
+        current_y = net_rect.y
+        for i in range(len(row_heights) - 1, 0, -1):
+            current_y += row_heights[i] + grid_node.gutters.hspace[i-1]
+            row_ys_bottom_up.insert(0, current_y) 
         
-        total_m_w = m.left + m.right
-        if total_m_w > (fig_w_cm - min_total_plot_w):
-            scale = (fig_w_cm - min_total_plot_w) / max(0.01, total_m_w)
-            safe_left, safe_right = m.left * scale, m.right * scale
-        else:
-            safe_left, safe_right = m.left, m.right
+        # At this point row_ys_bottom_up[0] is the Y of Row 0 (the top row)
+        row_ys = row_ys_bottom_up
+
+        # 4. Generate the 2D Rect Array
+        cells = []
+        num_rows = len(row_heights)
+        num_cols = len(col_widths)
+        for r in range(num_rows):
+            row_cells = []
+            for c in range(num_cols):
+                row_cells.append(Rect(col_xs[c], row_ys[r], col_widths[c], row_heights[r]))
+            cells.append(row_cells)
+        
+        return cells
+
+    def _calculate_recursive(self, grid_node: GridNode, available_rect: Rect) -> None:
+        """
+        Recursively calculates geometries for a single GridNode's children.
+        Uses Bottom-Up (Matplotlib) coordinates.
+        """
+        cells = self.get_cell_geometries(grid_node, available_rect)
+        
+        # Assign Geometries to Children
+        for child in grid_node.children:
+            if not child.grid_position:
+                self.logger.warning(f"Child {child.name} in GridNode has no grid_position. Skipping.")
+                continue
+
+            pos = child.grid_position
             
-        total_m_h = m.top + m.bottom
-        if total_m_h > (fig_h_cm - min_total_plot_h):
-            scale = (fig_h_cm - min_total_plot_h) / max(0.01, total_m_h)
-            safe_top, safe_bottom = m.top * scale, m.bottom * scale
-        else:
-            safe_top, safe_bottom = m.top, m.bottom
+            # Boundary checks
+            if pos.row >= grid_node.rows or pos.col >= grid_node.cols:
+                self.logger.error(f"Child {child.name} position {pos} out of bounds for {grid_node.rows}x{grid_node.cols}")
+                continue
 
-        # Use service for fractional translation
-        left_f = CoordinateService.transform_value(
-            safe_left, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_w_cm
-        )
-        right_f = 1.0 - CoordinateService.transform_value(
-            safe_right, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_w_cm
-        )
-        bottom_f = CoordinateService.transform_value(
-            safe_bottom, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_h_cm
-        )
-        top_f = 1.0 - CoordinateService.transform_value(
-            safe_top, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_h_cm
-        )
+            # Calculate child span based on the pre-calculated cell grid
+            top_left_cell = cells[pos.row][pos.col]
+            
+            # Find bottom-right cell of the span
+            last_row = pos.row + pos.rowspan - 1
+            last_col = pos.col + pos.colspan - 1
+            
+            # Clamp span to grid boundaries
+            last_row = min(last_row, len(cells) - 1)
+            last_col = min(last_col, len(cells[0]) - 1)
+            
+            bottom_right_cell = cells[last_row][last_col]
 
-        # 2. Convert CM Gutters to GridSpec relative space
-        # Matplotlib hspace/wspace is a fraction of the AVERAGE subplot size.
-        # To get an EXACT physical gap, we must estimate the average subplot size 
-        # EXCLUDING the gaps themselves.
-        
-        # Net area available for subplots (excluding margins and all gaps)
-        total_gap_w = (cols - 1) * grid_config.gutters.wspace[0] if grid_config.gutters.wspace and cols > 1 else 0
-        total_gap_h = (rows - 1) * grid_config.gutters.hspace[0] if grid_config.gutters.hspace and rows > 1 else 0
-        
-        avg_sub_w_cm = max(0.2, (fig_w_cm - m.left - m.right - total_gap_w) / max(1, cols))
-        avg_sub_h_cm = max(0.2, (fig_h_cm - m.top - m.bottom - total_gap_h) / max(1, rows))
+            child_x = top_left_cell.x
+            # In Bottom-Up, the 'y' of the spanned rect is the 'y' of the BOTTOM-most cell
+            child_y = bottom_right_cell.y
+            
+            child_w = (bottom_right_cell.x + bottom_right_cell.width) - top_left_cell.x
+            child_h = (top_left_cell.y + top_left_cell.height) - bottom_right_cell.y
 
-        gs_hspace_val = None
-        if grid_config.gutters.hspace:
-            if rows > 1:
-                # Use service for local relative mapping
-                gs_hspace_val = CoordinateService.transform_value(
-                    grid_config.gutters.hspace[0], 
-                    CoordinateSpace.PHYSICAL, 
-                    CoordinateSpace.FRACTIONAL_LOCAL, 
-                    parent_size_cm=avg_sub_h_cm
-                )
+            new_geom = Rect(child_x, child_y, child_w, child_h)
 
-        gs_wspace_val = None
-        if grid_config.gutters.wspace:
-            if cols > 1:
-                # Use service for local relative mapping
-                gs_wspace_val = CoordinateService.transform_value(
-                    grid_config.gutters.wspace[0], 
-                    CoordinateSpace.PHYSICAL, 
-                    CoordinateSpace.FRACTIONAL_LOCAL, 
-                    parent_size_cm=avg_sub_w_cm
-                )
+            # 7. Update Geometry and Version if changed
+            if child.geometry != new_geom:
+                child.geometry = new_geom
+                child._geometry_version += 1
+                self.logger.debug(f"Updated geometry for {child.name} to {new_geom} (v{child._geometry_version})")
 
-        gs = gridspec.GridSpec(
-            nrows=rows,
-            ncols=cols,
-            figure=figure,
-            height_ratios=row_ratios,
-            width_ratios=col_ratios,
-            hspace=gs_hspace_val,
-            wspace=gs_wspace_val,
-            left=left_f,
-            right=right_f,
-            top=top_f,
-            bottom=bottom_f,
-        )
-
-        figure.clear()
-
-        mpl_axes_map: dict[PlotID, Axes] = {}
-        # Sorting logic: top-to-bottom, left-to-right (CM Y is bottom-up)
-        sorted_plot_nodes = sorted(
-            plot_nodes, key=lambda p: (-p.geometry.y, p.geometry.x)
-        )
-
-        plot_index = 0
-        for r_idx in range(rows):
-            for c_idx in range(cols):
-                if plot_index >= num_plots:
-                    break
-                plot_node = sorted_plot_nodes[plot_index]
-                ax = figure.add_subplot(gs[r_idx, c_idx])
-                mpl_axes_map[plot_node.id] = ax
-                plot_index += 1
-
-        # No figure.set_constrained_layout_pads or figure.set_layout_engine('constrained') here.
-        # Margins are strictly defined by GridSpec parameters.
-
-        final_plot_geometries: dict[PlotID, Rect] = {}
-        for plot_id, ax in mpl_axes_map.items():
-            bbox = ax.get_position()
-            # Use service to map back to PHYSICAL CM
-            phys_x = CoordinateService.transform_value(bbox.x0, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_w_cm)
-            phys_y = CoordinateService.transform_value(bbox.y0, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_h_cm)
-            phys_w = CoordinateService.transform_value(bbox.width, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_w_cm)
-            phys_h = CoordinateService.transform_value(bbox.height, CoordinateSpace.FRACTIONAL_FIG, CoordinateSpace.PHYSICAL, figure_size_cm=fig_h_cm)
-            final_plot_geometries[plot_id] = Rect(phys_x, phys_y, phys_w, phys_h)
-
-        self.logger.info(
-            f"Matplotlib fixed grid layout applied. Margins: {grid_config.margins}, Gutters: {grid_config.gutters}"
-        )
-
-        return (
-            mpl_axes_map,
-            final_plot_geometries,
-            grid_config.margins,
-            grid_config.gutters,
-        )
+            # 8. Recursion / Specialized Handling
+            if isinstance(child, GridNode):
+                self._calculate_recursive(child, new_geom)
+            elif not isinstance(child, PlotNode):
+                # TDD 4.1: If a ShapeNode or TextNode is assigned to a cell, 
+                # center it horizontally and vertically.
+                # (Placeholder for future implementation)
+                pass

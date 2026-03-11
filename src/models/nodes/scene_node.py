@@ -7,6 +7,9 @@ from typing import Generator, Optional, Type
 
 from PySide6.QtCore import QObject
 
+from src.models.nodes.grid_position import GridPosition
+from src.shared.geometry import Rect
+
 
 class SceneNode(QObject):
     """
@@ -30,6 +33,12 @@ class SceneNode(QObject):
         self.name = name
         self.visible = True
         self.locked = False  # New attribute
+        self._geometry_version = 0  # Version-gating for surgical rendering sync
+        self.grid_position: Optional["GridPosition"] = None  # Position within a GridNode
+        
+        # Geometry in physical centimeters (cm).
+        self.geometry: Rect = Rect(0.0, 0.0, 0.0, 0.0)
+
         self.logger.debug(f"SceneNode initialized: {self.name} (ID: {self.id})")
 
         if parent:
@@ -140,6 +149,14 @@ class SceneNode(QObject):
             "name": self.name,
             "visible": self.visible,
             "locked": self.locked,  # New attribute
+            "geometry_version": self._geometry_version,
+            "grid_position": self.grid_position.to_dict() if self.grid_position else None,
+            "geometry": {
+                "x": self.geometry.x,
+                "y": self.geometry.y,
+                "width": self.geometry.width,
+                "height": self.geometry.height,
+            },
             "children": [child.to_dict() for child in self.children],
         }
         self.logger.debug(
@@ -153,6 +170,22 @@ class SceneNode(QObject):
         node = cls(parent=parent, name=data["name"], id=data["id"])
         node.visible = data["visible"]
         node.locked = data.get("locked", False)  # New attribute with default
+        node._geometry_version = data.get("geometry_version", 0)
+        
+        # Geometry reconstruction (Physical CM)
+        geom_data = data.get("geometry", {})
+        node.geometry = Rect(
+            x=geom_data.get("x", 0.0),
+            y=geom_data.get("y", 0.0),
+            width=geom_data.get("width", 0.0),
+            height=geom_data.get("height", 0.0),
+        )
+
+        # GridPosition reconstruction
+        grid_pos_data = data.get("grid_position")
+        if grid_pos_data:
+            node.grid_position = GridPosition.from_dict(grid_pos_data)
+
         node.logger.debug(
             f"SceneNode.from_dict: Created node {node.name} (ID: {node.id})."
         )
@@ -164,7 +197,9 @@ def node_factory(
     data: dict, parent: Optional[SceneNode] = None, temp_dir: Optional[Path] = None
 ) -> SceneNode:
     """Factory function to create nodes from a dictionary."""
-    from . import GroupNode, PlotNode
+    from .grid_node import GridNode
+    from .group_node import GroupNode
+    from .plot_node import PlotNode
 
     # Use "type" from the JSON data
     node_type_str = data.get("type")
@@ -176,6 +211,7 @@ def node_factory(
     node_class_map = {
         "GroupNode": GroupNode,
         "PlotNode": PlotNode,
+        "GridNode": GridNode,
         "SceneNode": SceneNode,
     }
 

@@ -26,7 +26,9 @@ class Events(Enum):
 
     # --- Generic Path-Based Property Changes (NEW) ---
     PLOT_COMPONENT_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: Any
+    GRID_COMPONENT_CHANGED = auto()  # Payload: node_id: str, path: str, new_value: Any
     PLOT_COMPONENT_RECONCILED = auto()# Payload: node_id: str, path: str, new_value: Any (Sync only, no redraw)
+
     SUB_COMPONENT_SELECTED = auto()  # Payload: node_id: str, path: str
     TEMPLATE_LOADED = auto()  # Payload: root_node: SceneNode
 

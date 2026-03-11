@@ -26,8 +26,8 @@ class PlotNode(SceneNode):
         self.logger.debug(f"PlotNode initialized: {self.name} (ID: {self.id})")
 
         # Geometry in physical centimeters (cm).
-        # TODO: This should never have default values
-        self.geometry: Rect = Rect(2.0, 2.0, 8.0, 8.0)
+        # Initialized to zero; managed by GridLayoutEngine or FreeLayout logic.
+        self.geometry: Rect = Rect(0.0, 0.0, 0.0, 0.0)
         
         self.plot_properties: Optional[PlotProperties] = None
         self.data: Optional[pd.DataFrame] = None

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from src.models.layout.layout_config import FreeConfig, Gutters, LayoutConfig, Margins
+from src.models.layout.layout_config import Gutters, Margins
 from src.models.layout.layout_engine import LayoutEngine
 from src.models.layout.layout_protocols import (
     FreeFormLayoutCapabilities,  # Import the new protocol
@@ -23,20 +23,12 @@ class FreeLayoutEngine(LayoutEngine, FreeFormLayoutCapabilities):  # Inherit fro
     def calculate_geometries(
         self,
         plots: list[PlotNode],
-        layout_config: LayoutConfig,
         figure_size_cm: tuple[float, float],
     ) -> tuple[dict[PlotID, Rect], Optional[Margins], Optional[Gutters]]:
         """
         In free-form mode, plots retain their current geometries unless explicitly moved/resized.
         This method acts as a pass-through, returning the current geometries.
-        It returns None for Margins and Gutters as they are not applicable in Free-Form layout.
         """
-        if not isinstance(layout_config, FreeConfig):
-            self.logger.error(
-                f"FreeLayoutEngine received incompatible config: {type(layout_config).__name__}"
-            )
-            return {}, None, None  # Return None for Margins and Gutters
-
         geometries = {plot.id: plot.geometry for plot in plots}
         self.logger.debug(
             f"FreeLayoutEngine calculated geometries for {len(plots)} plots (pass-through)."

@@ -1,5 +1,6 @@
 # This file makes the 'nodes' directory a Python package.
 
+from .grid_node import GridNode, GridPosition
 from .group_node import GroupNode
 from .plot_node import PlotNode
 from .rectangle_node import RectangleNode
@@ -12,4 +13,6 @@ __all__ = [
     "PlotNode",
     "RectangleNode",
     "TextNode",
+    "GridNode",
+    "GridPosition",
 ]

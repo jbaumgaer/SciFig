@@ -15,9 +15,13 @@ from src.services.commands.batch_change_plot_geometry_command import (
 from src.services.commands.change_grid_parameters_command import (
     ChangeGridParametersCommand,
 )
+from src.services.commands.change_grid_property_command import (
+    ChangeGridPropertyCommand,
+)
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
+from src.services.property_service import PropertyService
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
 from src.shared.geometry import Rect
@@ -43,11 +47,13 @@ class LayoutController:
         command_manager: CommandManager,
         layout_manager: LayoutManager,
         event_aggregator: EventAggregator,
+        property_service: PropertyService,
     ):
         self.model = model
         self.command_manager = command_manager
         self._layout_manager = layout_manager
         self._event_aggregator = event_aggregator
+        self._property_service = property_service
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutController initialized.")
 
@@ -215,127 +221,49 @@ class LayoutController:
     ):
         """
         Handles changes from granular UI controls for grid layout parameters.
-        Collects changes and dispatches a ChangeGridParametersCommand.
+        Dispatches a ChangeGridPropertyCommand targeting the active GridNode.
         """
-        self.logger.debug(f"Grid layout param changed: {param_name} = {value}")
+        self.logger.debug(f"Grid layout param change requested: {param_name} = {value}")
 
-        if self._layout_manager.get_last_grid_config() is None:
-            self.logger.warning(
-                "on_grid_layout_param_changed called when _last_grid_config is None. This should not happen in GRID mode."
-            )
+        grid_node = self.model.get_active_grid()
+        if not grid_node:
+            self.logger.warning("LayoutController: No active GridNode found to update.")
             return
 
-        current_grid_config: GridConfig = self._layout_manager.get_last_grid_config()
-        self.logger.debug(
-            f"on_grid_layout_param_changed: current_grid_config (from _last_grid_config) = {current_grid_config}"
-        )
-        old_grid_config = current_grid_config  # Store for undo
+        # Map UI parameter names to PropertyPaths
+        path_map = {
+            "rows": "rows",
+            "cols": "cols",
+            "margin_top": "margins.top",
+            "margin_bottom": "margins.bottom",
+            "margin_left": "margins.left",
+            "margin_right": "margins.right",
+            "hspace": "gutters.hspace",
+            "wspace": "gutters.wspace"
+        }
 
-        # Initialize new_config_params with current values
-        new_rows = current_grid_config.rows
-        new_cols = current_grid_config.cols
-        new_margins = current_grid_config.margins
-        new_gutters = current_grid_config.gutters
-
-        if param_name == "rows":
-            try:
-                new_rows = int(value)
-                if new_rows <= 0:
-                    raise ValueError("Rows must be positive")
-
-            except ValueError:
-                self.logger.warning(f"Invalid value for rows: {value}")
-                return
-        elif param_name == "cols":
-            try:
-                new_cols = int(value)
-                if new_cols <= 0:
-                    raise ValueError("Cols must be positive")
-
-            except ValueError:
-                self.logger.warning(f"Invalid value for cols: {value}")
-                return
-        elif param_name.startswith("margin_"):
-            try:
-                margin_value = float(value)
-                if not (0.0 <= margin_value <= 5.0): # TODO: This makes no sense and should be in relative coordinates
-                    raise ValueError("Margin must be between 0.0 and 5.0 cm")
-
-                # Create a new Margins object for immutability
-                temp_margins_dict = new_margins.to_dict()
-                temp_margins_dict[param_name.replace("margin_", "")] = margin_value
-                new_margins = Margins.from_dict(temp_margins_dict)
-
-            except ValueError:
-                self.logger.warning(f"Invalid value for {param_name}: {value}")
-                return
-        elif param_name == "hspace":
-            try:
-                # Interpret empty string as empty list for hspace
-                new_hspace = (
-                    [
-                        float(x.strip()) for x in str(value).split(",") if x.strip()
-                    ]  # Cast value to str for split
-                    if value
-                    else []
-                )
-                new_gutters = Gutters(
-                    hspace=new_hspace, wspace=new_gutters.wspace
-                )
-
-            except ValueError:
-                self.logger.warning(
-                    f"Invalid value for hspace: {value}. Must be comma-separated numbers."
-                )
-                return
-        elif param_name == "wspace":
-            try:
-                # Interpret empty string as empty list for wspace
-                new_wspace = (
-                    [
-                        float(x.strip()) for x in str(value).split(",") if x.strip()
-                    ]  # Cast value to str for split
-                    if value
-                    else []
-                )
-                new_gutters = Gutters(
-                    hspace=new_gutters.hspace, wspace=new_wspace
-                )
-
-            except ValueError:
-                self.logger.warning(
-                    f"Invalid value for wspace: {value}. Must be comma-separated numbers."
-                )
-                return
-        else:
+        path = path_map.get(param_name)
+        if not path:
             self.logger.warning(f"Unknown grid parameter: {param_name}")
             return
 
-        new_grid_config = GridConfig(
-            rows=new_rows,
-            cols=new_cols,
-            row_ratios=current_grid_config.row_ratios,
-            col_ratios=current_grid_config.col_ratios,
-            margins=new_margins,
-            gutters=new_gutters,
-        )
-        self.logger.debug(
-            f"Creating ChangeGridParametersCommand with new_grid_config margins: {new_grid_config.margins}"
-        )
-        self.logger.debug(
-            f"Creating ChangeGridParametersCommand with new_grid_config gutters: {new_grid_config.gutters}"
-        )
-        command = ChangeGridParametersCommand(
-            self.model,
-            self._event_aggregator,
-            self._layout_manager,
-            old_grid_config,
-            new_grid_config,
+        # Process comma-separated list parameters
+        if param_name in ("hspace", "wspace"):
+            try:
+                value = [float(x.strip()) for x in str(value).split(",") if x.strip()]
+            except ValueError:
+                self.logger.warning(f"Invalid list value for {param_name}: {value}")
+                return
+
+        command = ChangeGridPropertyCommand(
+            grid_node=grid_node,
+            path=path,
+            new_value=value,
+            event_aggregator=self._event_aggregator,
+            property_service=self._property_service
         )
         self.command_manager.execute_command(command)
-        self.logger.debug(
-            f"Executed ChangeGridParametersCommand for {param_name} change."
-        )
+        self.logger.debug(f"Executed ChangeGridPropertyCommand for {path}.")
 
     def _handle_infer_grid_parameters_request(self):
         """

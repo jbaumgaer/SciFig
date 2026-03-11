@@ -29,18 +29,18 @@ class TestFigureRenderer:
     def test_render_plots_delegates_to_strategies(self, renderer, mock_application_model, mock_layout_manager):
         """Verifies that rendering PlotNodes uses coordinate and artist strategies."""
         mock_fig = MagicMock(spec=matplotlib.figure.Figure)
+        mock_fig.canvas = MagicMock() # Required for draw_idle
         mock_fig.artists = [] # Required for _render_highlights
         
         # Setup: 1 PlotNode
         node = PlotNode(id="p1")
+        node.geometry = Rect(2.0, 2.0, 8.0, 8.0) # Physical CM
         node.plot_properties = MagicMock()
         node.plot_properties._version = 1
         node.plot_properties.coords = MagicMock()
         node.plot_properties.coords.coord_type = "cartesian_2d"
         mock_application_model.scene_root.all_descendants.return_value = [node]
-        
-        # Setup: Layout
-        mock_layout_manager.get_current_layout_geometries.return_value = {"p1": Rect(0,0,1,1)}
+        mock_application_model.figure_size = (20.0, 20.0)
         
         # Mock Strategies
         mock_coord_strategy = MagicMock()
@@ -52,15 +52,20 @@ class TestFigureRenderer:
         renderer.render(mock_fig, mock_application_model.scene_root, [])
         
         # Verify coordination
-        mock_coord_strategy.create_axes.assert_called_once_with(mock_fig, (0,0,1,1))
+        # 2.0 cm / 20.0 cm = 0.1 normalized
+        # 8.0 cm / 20.0 cm = 0.4 normalized
+        expected_rect = (0.1, 0.1, 0.4, 0.4)
+        mock_coord_strategy.create_axes.assert_called_once_with(mock_fig, expected_rect)
         mock_coord_strategy.sync.assert_called_once()
         assert renderer._axes_registry["p1"] is mock_ax
+        mock_fig.canvas.draw_idle.assert_called_once()
 
     # --- Version Gating ---
 
     def test_render_skips_unchanged_versions(self, renderer, mock_application_model, mock_layout_manager):
         """Ensures the renderer doesn't re-sync if the model version hasn't increased."""
         node = PlotNode(id="p1")
+        node.geometry = Rect(0,0,1,1)
         # Ensure _version is a real integer and nested objects exist for the initial checks
         node.plot_properties = MagicMock()
         node.plot_properties._version = 5
@@ -69,14 +74,15 @@ class TestFigureRenderer:
         
         # Identity is critical here: return the EXACT node instance
         mock_application_model.scene_root.all_descendants.return_value = [node]
-        mock_layout_manager.get_current_layout_geometries.return_value = {"p1": Rect(0,0,1,1)}
+        mock_application_model.figure_size = (10, 10)
         
         # last_synced >= current_version should trigger the skip in _sync_plot_node
         renderer._last_synced_versions["p1"] = 5
         renderer._axes_registry["p1"] = MagicMock()
         
-        # Mock Figure to avoid highlight cleanup errors
+        # Mock Figure
         mock_fig = MagicMock()
+        mock_fig.canvas = MagicMock()
         mock_fig.artists = []
 
         # We mock _sync_artists (deeper level) to be absolutely sure we're skipping sync

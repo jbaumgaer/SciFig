@@ -212,6 +212,24 @@ To maintain architectural integrity, **every class** added or refactored during 
 11. Implement Drag-and-Drop reallocation between cells.
 12. *Milestone*: User can reorganize a static grid interactively.
 
+### Phase 3.5: Legacy System Refactor (UI & Commands)
+13. **New `ChangeGridPropertyCommand`**: 
+    *   Implement a specialized command for `GridNode` attributes (rows, cols, row_ratios, col_ratios, gutters, margins).
+    *   This command must publish a new granular event: `Events.GRID_COMPONENT_CHANGED`.
+    *   It must also trigger `Events.SCENE_GRAPH_CHANGED` to notify the rendering pipeline.
+14. **Event Registry Update**: Add `GRID_COMPONENT_CHANGED` to `src/shared/events.py`.
+15. **LayoutController Refactor**: 
+    *   Update `_handle_change_grid_parameter_request` to stop constructing legacy `GridConfig` objects.
+    *   Instead, it must find the active `GridNode` and dispatch `ChangeGridPropertyCommand` for specific paths (e.g., `"rows"`, `"margins.top"`).
+16. **LayoutManager Refactor**:
+    *   Remove legacy `GridConfig` state management. 
+    *   Subscribe to `GRID_COMPONENT_CHANGED`. Upon receiving, trigger the recursive `GridLayoutEngine` using the sender `GridNode`.
+17. **ApplyGridCommand Refactor**: Update this command to handle the transition from Free-Form to Grid by:
+    1. Creating a new root `GridNode`.
+    2. Moving existing `PlotNode` siblings into the grid as children.
+    3. Running the `GridLayoutEngine`.
+18. *Milestone*: The Layout Tab UI is fully functional and controls the recursive grid engine via high-signal granular events.
+
 ### Phase 4: Structural Mutations & Ribbon
 13. Implement `InsertGridRowCommand`, `SplitCellCommand`, etc.
 14. Wire these commands to the Ribbon UI (Table Design tab) and Context Menus.

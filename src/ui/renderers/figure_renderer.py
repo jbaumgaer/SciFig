@@ -12,9 +12,11 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.group_node import GroupNode
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
+from src.services.coordinate_service import CoordinateService
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.shared.events import Events
+from src.shared.types import CoordinateSpace
 from src.ui.renderers.plotting_strategies import (
     CoordSyncStrategy,
     get_artist_strategy_registry,
@@ -192,6 +194,7 @@ class FigureRenderer:
         self._axes_registry: dict[str, Axes] = {}
         # Track versions to avoid redundant reflection
         self._last_synced_versions: dict[str, int] = {}
+        self._last_synced_geom_versions: dict[str, int] = {}  # Version-gating for geometry
         self.logger.info("Renderer initialized.")
 
     def sync_back_limits(self, node_id: str):
@@ -273,6 +276,7 @@ class FigureRenderer:
             if fig:
                 fig.delaxes(ax)
             self._last_synced_versions.pop(removed_node_id, None)
+            self._last_synced_geom_versions.pop(removed_node_id, None)
             self.logger.info(
                 f"Destroyed Matplotlib axes for deleted node {removed_node_id}"
             )
@@ -280,22 +284,16 @@ class FigureRenderer:
     def _render_plots(self, figure: Figure, root_node: SceneNode):
         """Renders PlotNodes using coordinate strategies for projection support."""
         plot_nodes = [n for n in root_node.all_descendants(of_type=PlotNode)]
-        geometries = self._layout_manager.get_current_layout_geometries(plot_nodes)
+        fig_w, fig_h = self._application_model.figure_size
 
         for node in plot_nodes:
             # Defensive check: Skip nodes that haven't been hydrated yet (still dicts from template)
             if (
-                node.id not in geometries
-                or not node.plot_properties
+                not node.plot_properties
                 or isinstance(node.plot_properties, dict)
             ):
                 continue
 
-            rect = geometries[node.id]
-            # Ensure Matplotlib receives a tuple, not a Rect object
-            if hasattr(rect, "to_tuple"):
-                rect = rect.to_tuple()
-                
             props = node.plot_properties
 
             # 1. Coordinate/Axes Retrieval or Creation
@@ -306,21 +304,41 @@ class FigureRenderer:
                 )
                 continue
 
+            # 2. Geometry Synchronization (Surgical)
             ax = self._axes_registry.get(node.id)
-            if ax is None:
-                # Delegate axes creation
-                ax = coord_strategy.create_axes(figure, rect)
-                ax.set_navigate(True)
-                self._axes_registry[node.id] = ax
-                self.logger.debug(
-                    f"Created new axes for PlotNode {node.id} via {type(coord_strategy).__name__}"
-                )
-            else:
-                # Update geometry of existing axes
-                ax.set_position(rect)
+            last_geom_v = self._last_synced_geom_versions.get(node.id, -1)
 
-            # 2. Sync Properties (Version-Gated Orchestration)
+            if node._geometry_version > last_geom_v or ax is None:
+                # Map physical CM to normalized figure space [left, bottom, width, height]
+                # Matplotlib expects fractional coordinates (0 to 1)
+                
+                rect_tuple = (
+                    CoordinateService.transform_value(node.geometry.x, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_w),
+                    CoordinateService.transform_value(node.geometry.y, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_h),
+                    CoordinateService.transform_value(node.geometry.width, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_w),
+                    CoordinateService.transform_value(node.geometry.height, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_h),
+                )
+
+                if ax is None:
+                    # Delegate axes creation
+                    ax = coord_strategy.create_axes(figure, rect_tuple)
+                    ax.set_navigate(True)
+                    self._axes_registry[node.id] = ax
+                    self.logger.debug(
+                        f"Created new axes for PlotNode {node.id} via {type(coord_strategy).__name__}"
+                    )
+                else:
+                    # Update geometry of existing axes
+                    ax.set_position(rect_tuple)
+                
+                self._last_synced_geom_versions[node.id] = node._geometry_version
+
+            # 3. Sync Properties (Version-Gated Orchestration)
             self._sync_plot_node(ax, node, coord_strategy)
+
+        # 4. Atomic Redraw
+        if hasattr(figure.canvas, "draw_idle"):
+            figure.canvas.draw_idle()
 
     def _sync_plot_node(
         self, ax: Axes, node: PlotNode, coord_strategy: CoordSyncStrategy

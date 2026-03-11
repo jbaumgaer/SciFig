@@ -2,8 +2,8 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional  # Added Protocol
 
-from src.models.layout.layout_config import Gutters, LayoutConfig, Margins
-from src.models.layout.layout_protocols import LayoutEngineProtocol  # Added this import
+from src.models.layout.layout_config import Gutters, Margins
+from src.models.layout.layout_protocols import LayoutEngineProtocol
 from src.models.nodes import PlotNode
 from src.shared.geometry import Rect
 from src.shared.types import PlotID
@@ -23,7 +23,6 @@ class LayoutEngine(ABC, LayoutEngineProtocol):  # Inherit from the protocol
     def calculate_geometries(
         self, 
         plots: list[PlotNode], 
-        layout_config: any,
         figure_size_cm: tuple[float, float]
     ) -> tuple[dict[PlotID, Rect], Optional[Margins], Optional[Gutters]]:
 
