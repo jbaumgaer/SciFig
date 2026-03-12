@@ -380,3 +380,4 @@ tests/integration/__pycache__/test_interaction_logic.cpython-313-pytest-9.0.2.py
 tests/integration/__pycache__/test_layout_geometry.cpython-313-pytest-9.0.2.pyc
 tests/integration/__pycache__/test_node_transactions.cpython-313-pytest-9.0.2.pyc
 tests/integration/__pycache__/test_project_persistence.cpython-313-pytest-9.0.2.pyc
+tests/integration/__pycache__/test_style_theming.cpython-313-pytest-9.0.2.pyc

@@ -1,8 +1,8 @@
 import json
 import zipfile
 from pathlib import Path
-import pandas as pd
 import pytest
+import pandas as pd
 from src.shared.events import Events
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.grid_node import GridNode
@@ -62,8 +62,7 @@ def test_project_save_load_cycle(project_stack, hydrated_plot_node, tmp_path):
 def test_data_binding_flow(project_stack, hydrated_plot_node):
     """
     Scenario: Simulate data loading for a specific PlotNode.
-    Verify: NodeController (via DataService) maps the dataframe to the node.
-    Note: Using ProjectStack which has access to DataService.
+    Verify: NodeController maps the dataframe to the node.
     """
     stack = project_stack
     node = hydrated_plot_node
@@ -100,7 +99,6 @@ def test_template_application_data_preservation(project_stack, layout_stack, hyd
     template_root.add_child(new_plot)
     
     # Act: Use LayoutManager to apply template
-    # (ProjectController usually triggers this via UI flow)
     layout_stack.manager.apply_layout_template(template_root)
     
     # Assert: The new scene root is the template
@@ -111,3 +109,42 @@ def test_template_application_data_preservation(project_stack, layout_stack, hyd
     assert restored_plot.data is not None
     assert restored_plot.data.equals(df)
     assert restored_plot.name == "TemplatePlot"
+
+def test_full_data_loading_pipeline(project_stack, node_stack, qtbot):
+    """
+    Scenario: Simulate a user dropping a file.
+    Flow: EA(APPLY_DATA_TO_NODE_REQUESTED) -> DataService -> EA(NODE_DATA_LOADED) -> NodeController -> Model
+    Verify: The entire chain works asynchronously.
+    """
+    # Note: Using qtbot to handle the asynchronous QThread execution in DataService
+    proj_stack = project_stack
+    
+    # 1. Arrange: Create a node and a dummy data file
+    node = PlotNode(name="TargetPlot")
+    proj_stack.model.add_node(node)
+    
+    # Create a real CSV on disk
+    csv_path = Path("tests/integration/dummy_data.csv")
+    df_expected = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+    df_expected.to_csv(csv_path, sep=";", index=False)
+    
+    try:
+        # 2. Act: Trigger the start of the pipeline
+        proj_stack.ea.publish(Events.APPLY_DATA_TO_NODE_REQUESTED, node_id=node.id, file_path=csv_path)
+        
+        # 3. Wait for the pipeline to finish (Asynchronous)
+        # We wait for the final event published by NodeController/DataService
+        def data_is_bound():
+            return node.data is not None and len(node.data) == 2
+            
+        qtbot.waitUntil(data_is_bound, timeout=2000)
+        
+        # 4. Assert: Data is correctly in the model
+        assert node.data is not None
+        assert list(node.data.columns) == ["A", "B"]
+        assert node.data_file_path == csv_path
+        
+    finally:
+        # Cleanup
+        if csv_path.exists():
+            csv_path.unlink()

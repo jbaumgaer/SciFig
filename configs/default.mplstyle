@@ -116,6 +116,7 @@ mathtext.default: regular  # The default font to use for math. Can be any of the
 ## * AXES                                                                    *
 ## ***************************************************************************
 
+axes.facecolor:     white   # axes background color
 axes.edgecolor:     black   # axes edge color
 axes.linewidth:     0.5     # edge line width
 axes.grid:          False   # display grid or not
@@ -163,6 +164,9 @@ xtick.minor.size:    1.5       # minor tick size in points
 xtick.major.width:   0.5     # major tick width in points
 xtick.minor.width:   0.25     # minor tick width in points
 xtick.direction:     out     # direction: {in, out, inout}
+xtick.color:         black
+xtick.labelcolor:    black
+xtick.labelsize:     7
 xtick.minor.visible: False   # visibility of minor ticks on x-axis
 xtick.minor.ndivs:   2    # number of minor ticks between the major ticks on x-axis
 
@@ -173,6 +177,9 @@ ytick.minor.width:   0.25     # minor tick width in points
 ytick.major.pad:     3.5     # distance to major tick label in points
 ytick.minor.pad:     3.4     # distance to the minor tick label in points
 ytick.direction:     out     # direction: {in, out, inout}
+ytick.color:         black
+ytick.labelcolor:    black
+ytick.labelsize:     7
 ytick.minor.visible: False   # visibility of minor ticks on y-axi
 ytick.minor.ndivs:   2    # number of minor ticks between the major ticks on y-axis
 
@@ -247,6 +254,3 @@ hist.bins: 'auto'  # The default number of histogram bins or 'auto'.
 
 scatter.marker: o         # The default marker type for scatter plots.
 scatter.edgecolors: face  # The default edge colors for scatter plots.
-
-
-

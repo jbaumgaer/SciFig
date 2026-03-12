@@ -40,6 +40,7 @@ from src.services.data_service import DataService
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.services.property_service import PropertyService
+from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
 from src.shared.constants import ToolName
@@ -78,6 +79,11 @@ class ProjectStack(TransactionalStack):
     """Handles project lifecycle and I/O."""
     controller: ProjectController
     data_service: DataService
+
+@dataclass
+class StyleStack(CoreStack):
+    """Handles plot theming and property hydration."""
+    service: StyleService
 
 @dataclass
 class InteractionStack(CoreStack):
@@ -268,6 +274,15 @@ def project_stack(transactional_stack):
         **vars(transactional_stack),
         controller=controller,
         data_service=data_service
+    )
+
+@pytest.fixture
+def style_stack(core_stack):
+    """Provides the StyleStack for integration tests."""
+    service = StyleService(event_aggregator=core_stack.ea)
+    return StyleStack(
+        **vars(core_stack),
+        service=service
     )
 
 @pytest.fixture

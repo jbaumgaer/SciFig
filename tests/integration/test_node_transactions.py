@@ -1,6 +1,8 @@
 import pytest
 from src.shared.events import Events
 from src.models.nodes.plot_node import PlotNode
+from src.models.nodes.grid_node import GridNode
+from src.models.nodes.grid_position import GridPosition
 from src.services.commands.group_nodes_command import GroupNodesCommand
 
 """
@@ -19,12 +21,17 @@ def assert_domain_fidelity(node, initial_dict):
     for d in [current_dict, initial_dict]:
         d.pop("property_version", None)
         d.pop("geometry_version", None)
-        # Recursively handle children if needed
+        # Recursively handle children
         for child in d.get("children", []):
-            child.pop("property_version", None)
-            child.pop("geometry_version", None)
+            assert_domain_fidelity_recursive(child)
             
     assert current_dict == initial_dict
+
+def assert_domain_fidelity_recursive(node_dict):
+    node_dict.pop("property_version", None)
+    node_dict.pop("geometry_version", None)
+    for child in node_dict.get("children", []):
+        assert_domain_fidelity_recursive(child)
 
 def test_property_change_transaction(node_stack, hydrated_plot_node):
     """
@@ -128,7 +135,6 @@ def test_group_lifecycle(node_stack):
     Note: Tests the underlying GroupNodesCommand directly as the controller 
     implementation is still a stub.
     """
-    
     stack = node_stack
     p1 = PlotNode(name="P1")
     p2 = PlotNode(name="P2")
@@ -150,3 +156,70 @@ def test_group_lifecycle(node_stack):
     assert len(stack.model.scene_root.children) == 2
     assert p1.parent == stack.model.scene_root
     assert p2.parent == stack.model.scene_root
+
+def test_recursive_structural_undo(node_stack):
+    """
+    Scenario: Create a Grid with children, delete the Grid, and then Undo.
+    Verify: The entire hierarchy (Grid + children) is restored.
+    """
+    stack = node_stack
+    
+    # 1. Arrange: Hierarchy
+    grid = GridNode(name="ParentGrid", rows=2, cols=1)
+    stack.model.add_node(grid)
+    
+    p1 = PlotNode(name="Child1")
+    p1.grid_position = GridPosition(0, 0)
+    grid.add_child(p1)
+    
+    p2 = PlotNode(name="Child2")
+    p2.grid_position = GridPosition(1, 0)
+    grid.add_child(p2)
+    
+    assert len(stack.model.scene_root.children) == 1
+    assert len(grid.children) == 2
+    
+    # 2. Act: Delete the Grid
+    stack.controller._on_delete_nodes_request([grid.id])
+    
+    # 3. Verify: Scene is empty
+    assert len(stack.model.scene_root.children) == 0
+    # Search for children in model - should be gone
+    assert stack.model.scene_root.find_node_by_id(p1.id) is None
+    
+    # 4. Act: Undo
+    stack.command_manager.undo()
+    
+    # 5. Assert: Hierarchy restored
+    assert len(stack.model.scene_root.children) == 1
+    restored_grid = stack.model.scene_root.children[0]
+    assert restored_grid.id == grid.id
+    assert len(restored_grid.children) == 2
+    assert restored_grid.children[0].id == p1.id
+    assert restored_grid.children[1].id == p2.id
+    assert p1.parent == restored_grid
+    assert p1.grid_position.row == 0
+
+def test_batch_node_deletion_transaction(node_stack):
+    """
+    Scenario: Select multiple independent nodes and delete them.
+    Verify: It creates ONE MacroCommand on the undo stack.
+    """
+    stack = node_stack
+    p1 = PlotNode(name="P1")
+    p2 = PlotNode(name="P2")
+    stack.model.add_node(p1)
+    stack.model.add_node(p2)
+    
+    # Act: Delete both
+    stack.controller._on_delete_nodes_request([p1.id, p2.id])
+    
+    # Assert: Only 1 command on the stack
+    assert len(stack.command_manager._undo_stack) == 1
+    assert len(stack.model.scene_root.children) == 0
+    
+    # Act: Undo
+    stack.command_manager.undo()
+    
+    # Assert: BOTH are back in one go
+    assert len(stack.model.scene_root.children) == 2
