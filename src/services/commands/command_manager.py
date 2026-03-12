@@ -19,7 +19,12 @@ class CommandManager:
         self._undo_stack: list[BaseCommand] = []
         self._redo_stack: list[BaseCommand] = []
         self.logger = logging.getLogger(self.__class__.__name__)
+        self._subscribe_to_events()
         self.logger.info("CommandManager initialized.")
+
+    def _subscribe_to_events(self):
+        self._event_aggregator.subscribe(Events.UNDO_REQUESTED, self.undo)
+        self._event_aggregator.subscribe(Events.REDO_REQUESTED, self.redo)
 
     def execute_command(self, command: BaseCommand):
         """

@@ -326,57 +326,6 @@ class CompositionRoot:
         TODO: Unify handle and on naming convention"""
         self.logger.debug("Subscribing to application events.")
 
-        # --- Project Lifecycle Requests ---
-        self._event_aggregator.subscribe(
-            Events.NEW_PROJECT_REQUESTED, self._project_controller.handle_new_project
-        )
-        self._event_aggregator.subscribe(
-            Events.NEW_PROJECT_FROM_TEMPLATE_REQUESTED,
-            self._project_controller.handle_new_from_template_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.OPEN_PROJECT_REQUESTED,
-            self._project_controller.handle_open_project_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.SAVE_PROJECT_REQUESTED, self._project_controller.handle_save_project
-        )
-        self._event_aggregator.subscribe(
-            Events.SAVE_PROJECT_AS_REQUESTED,
-            self._project_controller.handle_save_as_project_request,
-        )
-        self._event_aggregator.subscribe(
-            Events.OPEN_RECENT_PROJECT_REQUESTED,
-            self._project_controller.handle_open_recent_project,
-        )
-
-        # --- UI Dialog Responses ---
-        self._event_aggregator.subscribe(
-            Events.PATH_PROVIDED_FOR_OPEN,
-            self._project_controller.on_open_path_provided,
-        )
-        self._event_aggregator.subscribe(
-            Events.PATH_PROVIDED_FOR_SAVE_AS,
-            self._project_controller.on_save_as_path_provided,
-        )
-        self._event_aggregator.subscribe(
-            Events.TEMPLATE_PROVIDED_FOR_NEW,
-            self._project_controller.on_template_provided,
-        )
-
-        # --- Edit Menu Requests ---
-        self._event_aggregator.subscribe(
-            Events.UNDO_REQUESTED, self._command_manager.undo
-        )
-        self._event_aggregator.subscribe(
-            Events.REDO_REQUESTED, self._command_manager.redo
-        )
-
-        # --- DataService Subscriptions ---
-        self._event_aggregator.subscribe(
-            Events.APPLY_DATA_FILE_REQUESTED, self._data_service.handle_load_request
-        )
-
         # --- MainWindow Subscriptions (for node data dialogs) ---
         self._event_aggregator.subscribe(
             Events.PROMPT_FOR_OPEN_PATH_FOR_NODE_DATA_REQUESTED,
@@ -386,7 +335,7 @@ class CompositionRoot:
         # --- Renderer Subscriptions (Lifecycle) ---
         self._event_aggregator.subscribe(
             Events.NODE_REMOVED_FROM_SCENE, self._figure_renderer.handle_node_removal
-        )
+        ) # TODO: I'm not sure if the figure renderer should handle such a request. After all, it also doesn't handle node addition etc.
 
         # --- Redraw Canvas Callbacks (Consolidated Generic Events) ---
         self._event_aggregator.subscribe(

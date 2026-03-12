@@ -35,12 +35,41 @@ class ProjectController:
         self._max_recent_files = max_recent_files
         self._event_aggregator = event_aggregator
         self.logger = logging.getLogger(self.__class__.__name__)
+        self._subscribe_to_events()
         self.logger.info("ProjectController initialized.")
         # TODO: The QSettings dependency for recent files needs to be handled
         # by a dedicated service or through the View via events.
-        self._subscribe_to_events()
 
     def _subscribe_to_events(self):
+        # --- Project Lifecycle Requests ---
+        self._event_aggregator.subscribe(
+            Events.NEW_PROJECT_REQUESTED, self.handle_new_project
+        )
+        self._event_aggregator.subscribe(
+            Events.NEW_PROJECT_FROM_TEMPLATE_REQUESTED, self.handle_new_from_template_request,
+        )
+        self._event_aggregator.subscribe(
+            Events.OPEN_PROJECT_REQUESTED, self.handle_open_project_request,
+        )
+        self._event_aggregator.subscribe(
+            Events.SAVE_PROJECT_REQUESTED, self.handle_save_project
+        )
+        self._event_aggregator.subscribe(
+            Events.SAVE_PROJECT_AS_REQUESTED, self.handle_save_as_project_request,
+        )
+        self._event_aggregator.subscribe(
+            Events.OPEN_RECENT_PROJECT_REQUESTED, self.handle_open_recent_project,
+        )
+        # --- UI Dialog Responses ---
+        self._event_aggregator.subscribe(
+            Events.PATH_PROVIDED_FOR_OPEN, self.on_open_path_provided,
+        )
+        self._event_aggregator.subscribe(
+            Events.PATH_PROVIDED_FOR_SAVE_AS, self.on_save_as_path_provided,
+        )
+        self._event_aggregator.subscribe(
+            Events.TEMPLATE_PROVIDED_FOR_NEW, self.on_template_provided,
+        )
         self._event_aggregator.subscribe(
             Events.WINDOW_TITLE_REQUESTED, self._provide_window_title_data
         )

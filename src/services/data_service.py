@@ -38,6 +38,13 @@ class DataService(QObject):
         # Since DataService lives in the main thread, any signal emitted from 
         # a background thread will be automatically queued.
         self.data_ready_internal.connect(self._on_data_ready)
+        self._subscribe_to_events()
+        self.logger.info("DataService initialized.")
+
+    def _subscribe_to_events(self):
+        self._event_aggregator.subscribe(
+            Events.APPLY_DATA_FILE_REQUESTED, self.handle_load_request
+        )
 
     def handle_load_request(self, node_id: str, file_path: Path):
         """
