@@ -370,7 +370,7 @@ class LayoutManager:
         Performs alignment operation on selected plots using the FreeLayoutEngine.
         Raises ValueError if not in Free-Form mode.
         """
-        if self._application_model.current_layout_config.mode != LayoutMode.FREE_FORM:
+        if self._application_model.layout_mode != LayoutMode.FREE_FORM:
             self.logger.warning(
                 "Attempted align operation while not in FREE_FORM mode. Returning empty geometries."
             )
@@ -391,7 +391,7 @@ class LayoutManager:
         Performs distribution operation on selected plots using the FreeLayoutEngine.
         Raises ValueError if not in Free-Form mode.
         """
-        if self._application_model.current_layout_config.mode != LayoutMode.FREE_FORM:
+        if self._application_model.layout_mode != LayoutMode.FREE_FORM:
             self.logger.warning(
                 "Attempted distribute operation while not in FREE_FORM mode. Returning empty geometries."
             )

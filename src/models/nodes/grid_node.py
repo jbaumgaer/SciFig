@@ -25,17 +25,62 @@ class GridNode(SceneNode):
         super().__init__(parent, name, id)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.rows = rows
-        self.cols = cols
-        self.row_ratios: list[float] = [1.0] * rows #TODO: DOn't have default values like this
+        self._rows = rows
+        self._cols = cols
+        self.row_ratios: list[float] = [1.0] * rows
         self.col_ratios: list[float] = [1.0] * cols
-        self.gutters = Gutters(hspace=[0.5] * max(0, rows - 1), wspace=[0.5] * max(0, cols - 1))
-        #TODO: Where is the 0.5 coming from? We shouldn't hardcode this value
+        self.gutters = Gutters(
+            hspace=[0.5] * max(0, rows - 1), 
+            wspace=[0.5] * max(0, cols - 1)
+        )
         self.margins = Margins(top=0.0, bottom=0.0, left=0.0, right=0.0)
 
         # Transient storage for the atomic M x N grid lattice.
-        # Populated by GridLayoutEngine; used by SelectionTool and OverlayRenderer.
         self.cell_geometries: list[list[Rect]] = []
+
+    @property
+    def rows(self) -> int:
+        return self._rows
+
+    @rows.setter
+    def rows(self, value: int):
+        """Sets rows and automatically synchronizes ratios and gutters."""
+        if self._rows != value:
+            self._rows = value
+            # Auto-sync ratios
+            if len(self.row_ratios) != value:
+                self.row_ratios = [1.0] * value
+            
+            # Auto-sync gutters (hspace)
+            num_hspace = max(0, value - 1)
+            if len(self.gutters.hspace) != num_hspace:
+                self.gutters = Gutters(
+                    hspace=[0.5] * num_hspace,
+                    wspace=self.gutters.wspace
+                )
+            self.logger.debug(f"GridNode {self.id}: Synchronized rows to {value}")
+
+    @property
+    def cols(self) -> int:
+        return self._cols
+
+    @cols.setter
+    def cols(self, value: int):
+        """Sets cols and automatically synchronizes ratios and gutters."""
+        if self._cols != value:
+            self._cols = value
+            # Auto-sync ratios
+            if len(self.col_ratios) != value:
+                self.col_ratios = [1.0] * value
+                
+            # Auto-sync gutters (wspace)
+            num_wspace = max(0, value - 1)
+            if len(self.gutters.wspace) != num_wspace:
+                self.gutters = Gutters(
+                    hspace=self.gutters.hspace,
+                    wspace=[0.5] * num_wspace
+                )
+            self.logger.debug(f"GridNode {self.id}: Synchronized cols to {value}")
 
     def to_dict(self) -> dict[str, Any]:
         """Serializes the GridNode and its layout parameters."""
@@ -62,9 +107,13 @@ class GridNode(SceneNode):
         )
         node.visible = data.get("visible", True)
         node.locked = data.get("locked", False)
-        node.row_ratios = data.get("row_ratios", [1.0] * node.rows)
-        node.col_ratios = data.get("col_ratios", [1.0] * node.cols)
         
+        # Explicitly set ratios and configs if present, bypassing the auto-sync defaults
+        if "row_ratios" in data:
+            node.row_ratios = data["row_ratios"]
+        if "col_ratios" in data:
+            node.col_ratios = data["col_ratios"]
+            
         gutters_data = data.get("gutters")
         if gutters_data:
             node.gutters = Gutters.from_dict(gutters_data)

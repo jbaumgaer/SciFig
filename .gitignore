@@ -376,3 +376,7 @@ src/services/commands/__pycache__/change_node_property_command.cpython-313.pyc
 .VSCodeCounter/2026-03-11_23-38-10/results.json
 .VSCodeCounter/2026-03-11_23-38-10/results.md
 .VSCodeCounter/2026-03-11_23-38-10/results.txt
+tests/integration/__pycache__/test_interaction_logic.cpython-313-pytest-9.0.2.pyc
+tests/integration/__pycache__/test_layout_geometry.cpython-313-pytest-9.0.2.pyc
+tests/integration/__pycache__/test_node_transactions.cpython-313-pytest-9.0.2.pyc
+tests/integration/__pycache__/test_project_persistence.cpython-313-pytest-9.0.2.pyc
