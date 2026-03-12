@@ -43,6 +43,7 @@ from src.services.property_service import PropertyService
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
+from src.services.tools.add_plot_tool import AddPlotTool
 from src.shared.constants import ToolName
 
 
@@ -292,13 +293,20 @@ def interaction_stack(core_stack):
     coord_service = CoordinateService()
     tool_service = ToolService(event_aggregator=core_stack.ea)
     
-    # Initialize and register the real selection tool
+    # Initialize and register real tools
     selection_tool = SelectionTool(
         model=core_stack.model,
         canvas_widget=None, # Headless
         event_aggregator=core_stack.ea
     )
+    add_plot_tool = AddPlotTool(
+        model=core_stack.model,
+        canvas_widget=None, # Headless
+        event_aggregator=core_stack.ea
+    )
+    
     tool_service.add_tool(selection_tool)
+    tool_service.add_tool(add_plot_tool)
     tool_service.set_active_tool(ToolName.SELECTION.value)
     
     # Mock canvas widget as it requires real Qt/Matplotlib components
@@ -339,7 +347,7 @@ def sample_plot_properties():
         major_width=1.0,
         minor_width=0.5,
         major_pad=3.0,
-        minor_pad=3.0,
+        minor_pad=3.4,
         direction=TickDirection.OUT,
         color="black",
         labelcolor="black",

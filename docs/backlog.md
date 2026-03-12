@@ -2765,40 +2765,17 @@ Remaining Features
 
 - Check for mpl examples for displaying grid lines
 
-## Errors/Bugs
+# Integration Tests
+- Open project, load in 2x2 template, drag and drop data into all four plots
+
+# Errors/Bugs
 - Empty dropdown in the properties tab
 - Do a TODO: search in the code base to find open tickets
 - Back syncing very inefficient, constant rerenders
 - Double and triple logging, e.g. during hydration of plots
-- Somehow the hit test is currently broken because when I drag and drop data into the plot, it doesn't actually plot the data or load it in
-- Infer grid moves plots, but not selection. Although infer grid should move plots if they are not well aligned, it shouldn't do so if the plots are indeed aligned
-    - Upon request, we switch grid layout mode and we try to get the last grid but there is none, but this doesn't make sense. Rather, the grid should be inferred, and then the layout mode should be changed, with the new grid fully initialized
-    - Likewise, to populate the grid we retrieve the default values from the config but this is wrong: Grid parameters for infer grid should really be inferred from the actual plot positions, especially with no knowledge of the rows and column numbers, but maybe the gutters on the side
-    - The side gutters should be read in from the mplstyle sheet, not from the config file
-    - Is it necessary to move the infer grid logic out of the grid layout engine because the grid layout engine always requires a minimal config grid? Maybe we can also do it so that we have multiple initializers for the grid layout engine, depending on what we use as the entry point
-    - Also, the layouttab updates again after the layout mode got changed to grid with the minimal config, even though at this point, we don't even know about the grid dimensions yet because we haven't even calculated yet. This also triggers a redraw of the canvas with the incorrect default grid layout. This is likely causing the shift
-    - I think internally the grid values may not be updated to the correct values, but stay with the default values because when I save the project and open it again, the layout is shifted and the logging shows that the old values are still present
-    - Moreover, there is an error after the initialization with the default grid: 
-2026-03-07 08:08:38 - EventAggregator - ERROR - Error in handler _handle_layout_config_changed for event NODE_LAYOUT_RECONCILED
-Traceback (most recent call last):
-  File "d:\Dokumente\Python\Data_Analysis_GUI\src\services\event_aggregator.py", line 70, in publish
-    handler(*args, **kwargs)
-    ~~~~~~~^^^^^^^^^^^^^^^^^
-TypeError: LayoutTab._handle_layout_config_changed() got an unexpected keyword argument 'config'
-    - After the layout manager has successfully inferred the new grid values, this doesn't trigger a redraw of the canvas anymore, so the order of event publishing is also a bit messed up here, likely because the renderer doesn't listen to GRID_CONFIG_PARAMETERS_CHANGED
-- When a project is saved and reopened, and a plot is selected, the plot properties panel doesn't open up and we get the following error: 
-
-2026-03-07 08:30:00 - EventAggregator - ERROR - Error in handler _update_content for event SELECTION_CHANGED
-Traceback (most recent call last):
-  File "d:\Dokumente\Python\Data_Analysis_GUI\src\services\event_aggregator.py", line 70, in publish
-    handler(*args, **kwargs)
-    ~~~~~~~^^^^^^^^^^^^^^^^^
-  File "d:\Dokumente\Python\Data_Analysis_GUI\src\ui\panels\properties_tab.py", line 186, in _update_content
-    self._update_plot_type_selector_ui(selected_nodes)
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
-  File "d:\Dokumente\Python\Data_Analysis_GUI\src\ui\panels\properties_tab.py", line 276, in _update_plot_type_selector_ui
-    self._plot_type_selector_combo.setCurrentText(current_plot_type.value)
-                                                  ^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'str' object has no attribute 'value'
-    - Could it be that the style service is not correctly invoked when we load a project with open project.
     - Also when 
+
+# Code Smells
+- The "Data-Mapping Leak": The NodeController currently knows too much about how data is mapped to specific plot types (e.g., it knows that a line plot needs an "x_column" and a "y_column"). This should ideally be handled by a specialized MappingService or the PlotNode itself.
+- The "CompositionRoot Orchestrator": The CompositionRoot is doing more than just wiring; it's handling the "Limit Syncing" logic (taking Matplotlib's autoscale results and pushing them back to the Model). This is a cross-cutting concern that makes it hard to test the Model in isolation from the "Redraw Loop."
+- Murky Spot: The LayoutManager is currently the "Muckiest" spot. It directly reaches into the ApplicationModel and rearranges nodes (like creating GridNode containers). This is a strong coupling. Our integration tests here will be vital when we eventually refactor this to be more decoupled.
