@@ -98,9 +98,10 @@ class LayoutTab(QWidget):
             stacked_widget.removeWidget(widget_to_remove)
             widget_to_remove.deleteLater()
 
-    def _update_content(self, ui_layout_mode: Optional[LayoutMode] = None):
+    def _update_content(self, ui_layout_mode: Optional[LayoutMode] = None, config: Optional[GridConfig] = None):
         """
         Updates the dynamic layout controls based on the selected UI layout mode.
+        If a transient config is provided (e.g. from Inference), it is passed to the factory.
         """
         # If ui_layout_mode is not provided (e.g., when called by a signal that doesn't pass args),
         # use the currently active UI selected layout mode from the layout manager.
@@ -116,8 +117,9 @@ class LayoutTab(QWidget):
 
         # Build and add new controls
         layout_controls_widget = self.layout_ui_factory.build_layout_controls(
-            self.layout_controller,
+            # self.layout_controller,
             self._dynamic_layout_controls_stack,  # Parent is the stacked widget
+            initial_config=config
         )
         self._dynamic_layout_controls_stack.addWidget(layout_controls_widget)
         # We only have one widget at a time, so set current index to 0
@@ -142,7 +144,7 @@ class LayoutTab(QWidget):
         # Decoupling fix: Automatically switch the UI view to GRID mode so fields are visible,
         # but don't toggle the application's actual active layout mode yet.
         self.layout_controller.set_layout_mode(LayoutMode.GRID)
-        self._update_content(LayoutMode.GRID)
+        self._update_content(LayoutMode.GRID, config=grid_config)
         # Note: This updates the UI toggle button state as well via subscription
 
     def _handle_layout_config_changed(self, config: GridConfig):
@@ -151,7 +153,7 @@ class LayoutTab(QWidget):
             f"LayoutTab: Active layout config changed to {config.mode}. Updating content."
         )
         # Rebuild content for the active mode, which will then reflect the new config
-        self._update_content(config.mode)
+        self._update_content(config.mode, config=config)
 
     def _handle_active_layout_mode_changed(self, mode: LayoutMode):
         """Handler for when the application's active layout mode changes."""

@@ -14,7 +14,7 @@ from src.shared.geometry import Rect
 from src.shared.types import PlotID
 
 
-class ApplyGridCommand(BaseCommand):
+class ApplyGridLayoutCommand(BaseCommand):
     """
     A command that applies a new GridNode structure to the Scene Graph.
     Encapsulates the transition from FREE_FORM to GRID mode by moving 
@@ -25,13 +25,11 @@ class ApplyGridCommand(BaseCommand):
         self,
         model: ApplicationModel,
         event_aggregator: EventAggregator,
-        layout_manager: LayoutManager,
         new_grid_config: GridConfig,
         description: str = "Apply Grid Layout",
     ):
         super().__init__(description, event_aggregator)
         self._model = model
-        self._layout_manager = layout_manager
         
         self._new_config = new_grid_config
         self._old_mode = model.layout_mode
@@ -80,7 +78,9 @@ class ApplyGridCommand(BaseCommand):
 
         # 4. Finalize
         self._model.layout_mode = LayoutMode.GRID
-        self._layout_manager.sync_layout()
+        # The 'Zero-Logic Handshake': 
+        # Signals the Layout domain to run math, and the UI to update.
+        self._event_aggregator.publish(Events.NODE_LAYOUT_CHANGED, node_id=grid.id)
         self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=LayoutMode.GRID)
         self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)
 
@@ -103,5 +103,6 @@ class ApplyGridCommand(BaseCommand):
 
         # 3. Restore Mode
         self._model.layout_mode = self._old_mode
+        self._event_aggregator.publish(Events.NODE_LAYOUT_CHANGED, node_id=None)
         self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=self._old_mode)
         self._event_aggregator.publish(Events.SCENE_GRAPH_CHANGED)

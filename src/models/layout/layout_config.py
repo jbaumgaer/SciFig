@@ -1,4 +1,5 @@
-from dataclasses import dataclass, field
+from __future__ import annotations
+from dataclasses import dataclass, field, replace
 from src.shared.constants import LayoutMode
 
 
@@ -58,6 +59,20 @@ class GridConfig:
     gutters: Gutters
 
     mode: LayoutMode = field(default=LayoutMode.GRID, init=False)
+
+    def with_rows(self, rows: int) -> GridConfig:
+        return replace(self, rows=rows)
+
+    def with_cols(self, cols: int) -> GridConfig:
+        return replace(self, cols=cols)
+
+    def with_margins(self, **kwargs) -> GridConfig:
+        new_margins = replace(self.margins, **kwargs)
+        return replace(self, margins=new_margins)
+
+    def with_gutters(self, **kwargs) -> GridConfig:
+        new_gutters = replace(self.gutters, **kwargs)
+        return replace(self, gutters=new_gutters)
 
     def to_dict(self) -> dict[str, any]:
         return {

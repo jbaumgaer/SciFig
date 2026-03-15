@@ -60,6 +60,12 @@ Because `GridNode` is part of the Scene Graph, serialization becomes naturally r
 *   The `to_dict` of a `GridNode` serializes its grid parameters, and then calls `to_dict` on all its `children`.
 *   The `node_factory` must be updated to reconstruct `GridNode` instances and correctly restore the `GridPosition` of their children.
 
+### 3.4. Single Source of Truth (SSoT) Mandate
+To ensure architectural integrity and prevent "State Drift," the application enforces a strict Single Source of Truth policy:
+1.  **No Shadow Configs**: The `LayoutManager` and `ApplicationModel` are prohibited from caching `GridConfig` DTOs as persistent state. All layout parameters must be derived directly from the active `GridNode` in the Scene Graph.
+2.  **DTOs as Proposals**: The `GridConfig` dataclass is demoted from a "State Container" to a "Transient Proposal." It is used strictly as a messenger for analysis results (e.g., Inference, Optimization) before being translated into commands.
+3.  **Atomic Property Commands**: A new `BatchChangeNodePropertyCommand` replaces bulk DTO-based updaters. This allows the UI to modify a subset of properties (e.g., `row_ratios` and `margins.top`) via path-based updates without needing a full `GridConfig` object to represent the intent.
+
 ---
 
 ## 4. The Custom CM-Based Layout Engine (`GridLayoutEngine`)

@@ -8,15 +8,58 @@ This document outlines key design principles and strategies for writing effectiv
 
 The Test Pyramid is a metaphorical guide for structuring a test suite, emphasizing the allocation of testing effort at different levels:
 
-*   **Unit Tests (Base of the Pyramid):** These are the most numerous. They are small, fast, and isolated tests that verify individual functions, methods, or classes in isolation. They are cheap to write and provide immediate, precise feedback on where a bug originates.
-*   **Integration Tests (Middle Layer):** Fewer than unit tests. These verify that different components or services work correctly together (e.g., interaction between a module and a database, or two modules communicating). They are slower than unit tests but faster than end-to-end tests.
-*   **End-to-End (E2E) Tests (Apex of the Pyramid):** The least numerous. These simulate real user scenarios, covering the entire application stack (e.g., UI interactions, backend logic, database operations). While providing high confidence in the overall user experience, they are typically slow, brittle, and expensive to maintain.
+*   **Unit Tests (Base of the Pyramid):** These are the most numerous. They are small, fast, and isolated tests that verify individual functions, methods, or classes in isolation.
+*   **Integration Tests (Middle Layer):** Fewer than unit tests. These verify that different components or services work correctly together.
+*   **End-to-End (E2E) Tests (Apex of the Pyramid):** The least numerous. These simulate real user scenarios, covering the entire application stack.
 
-**Strategy:** Prioritize a large number of unit tests, supplement with a reasonable amount of integration tests, and only include a critical, minimal set of E2E tests for essential user flows.
+**Strategy:** Prioritize unit tests for speed and precision, use integration tests for architectural choreography, and use minimal E2E tests for essential user flows.
 
 ---
 
-## 2. FIRST Principles of Unit Testing
+## 2. Solitary vs. Sociable Tests (Integration Standard)
+
+In this project, we distinguish between two styles of testing to manage complexity and failure "blast radius":
+
+*   **Solitary Tests (Unit):** Isolate the System Under Test (SUT) completely. Replace all dependencies with Test Doubles.
+    *   **Mandate:** Unit tests MUST mock the `EventAggregator` to verify intent without triggering side effects in other components.
+*   **Sociable Tests (Integration):** Allow the SUT to interact with its real collaborators.
+    *   **Mandate:** Integration tests SHOULD use real instances of the `ApplicationModel`, `CommandManager`, and `EventAggregator` to verify the "Contract" and "Choreography" between layers.
+
+---
+
+## 3. The "Layered Stack" Harness
+
+To avoid boilerplate and ensure test isolation, integration tests utilize a hierarchy of fixtures called **Stacks**.
+
+*   **CoreStack:** The bare minimum for state and communication (`EA`, `Model`, `Config`).
+*   **TransactionalStack:** Extends the Core with undo/redo capability (`CommandManager`).
+*   **Domain Stacks:** Specialized stacks for specific logic units (e.g., `NodeStack`, `LayoutStack`, `ProjectStack`).
+
+**Guideline:** Tests should always request the *minimum viable stack* required for the scenario.
+
+---
+
+## 4. Test Doubles: Mocking, Stubbing, and Spying
+
+Replace complex dependencies with controlled substitutes to ensure isolation and repeatability.
+
+*   **Mock:** Records calls made to it, allowing assertions about how the dependency was used. (Primary use: Unit Tests).
+*   **Stub:** Provides canned answers to calls made during the test. (Primary use: Unit Tests).
+*   **Spy (Advanced):** Wraps a real object and records interactions while allowing its real logic to execute.
+    *   **Mandate (Integration):** In our integration harness, the `EventAggregator.publish` method is automatically wrapped in a Spy. This allows us to assert communication while ensuring that other services (like the `LayoutManager`) still receive the event and perform their real math.
+
+---
+
+## 5. Deterministic Baselines & Stress Testing
+
+To manage the trade-off between predictable debugging and comprehensive coverage, we use **Indirect Parametrization**.
+
+*   **Standard Tests:** Rely on the `DEFAULT_FIG_SIZE` (20x15cm) baseline defined in `conftest.py`. This ensures a deterministic "Starting Line" for all general logic tests.
+*   **Stress Tests:** Use `@pytest.mark.parametrize("integration_config", [...], indirect=True)` to inject extreme or "weird" configurations (e.g., 1000cm margins, tiny figures) into the entire stack.
+
+---
+
+## 6. FIRST Principles of Unit Testing
 
 These principles guide the creation of high-quality unit tests:
 
@@ -28,7 +71,7 @@ These principles guide the creation of high-quality unit tests:
 
 ---
 
-## 3. Arrange-Act-Assert (AAA) Pattern
+## 7. Arrange-Act-Assert (AAA) Pattern
 
 This is a common and highly recommended pattern for structuring individual test cases:
 
@@ -40,33 +83,19 @@ This is a common and highly recommended pattern for structuring individual test 
 
 ---
 
-## 4. Mocking and Stubbing
+## 8. Readability and Maintainability
 
-**Concept:** Replace external or complex dependencies (like databases, external APIs, network services, file systems, or even complex internal components) with controlled substitutes (mocks, stubs, fakes, or spies) during testing.
+**Strategy:** Treat your test code with the same care as your production code:
 
-*   **Mock:** An object that records calls made to it, allowing assertions about how the dependency was used.
-*   **Stub:** An object that provides canned answers to calls made during the test.
-
-**Strategy:** Use mocking and stubbing tools (e.g., `unittest.mock` or `pytest-mock`) to:
-*   Achieve test isolation, especially for unit tests.
-*   Speed up test execution by removing slow external calls.
-*   Ensure test repeatability by eliminating reliance on unpredictable external systems.
-*   Test specific interaction patterns with dependencies (e.g., ensuring a particular method was called with specific arguments).
+*   **Descriptive Naming:** Clear and concise (e.g., `test_node_deletion_is_undoable`).
+*   **Focused Tests:** Verify a single, specific aspect of behavior.
+*   **DRY (Don't Repeat Yourself):** Utilize `pytest` fixtures and the Stack hierarchy.
+*   **Global Imports:** Use global imports at the top of the test file to ensure consistency and facilitate static analysis.
+*   **Refactor Tests:** Regularly refactor your tests to keep them clean and efficient.
 
 ---
 
-## 5. Readability and Maintainability
-
-**Strategy:** Treat your test code with the same care and discipline as your production code:
-
-*   **Descriptive Naming:** Test names should be clear and concise, explaining what scenario is being tested and what the expected outcome is (e.g., `test_user_login_fails_with_invalid_credentials`).
-*   **Focused Tests:** Each test should ideally verify a single, specific aspect of functionality or behavior.
-*   **DRY (Don't Repeat Yourself):** Utilize `pytest` fixtures, helper functions, and parameterized tests (`@pytest.mark.parametrize`) to avoid duplicating setup logic and test code.
-*   **Refactor Tests:** Regularly refactor your tests to keep them clean, readable, and efficient.
-
----
-
-## 6. Edge Cases and Error Handling
+## 9. Edge Cases and Error Handling
 
 **Strategy:** Beyond the typical "happy path" scenarios, dedicate tests to cover:
 

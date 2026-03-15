@@ -2,21 +2,14 @@ import logging
 from typing import Any
 
 from src.models.application_model import ApplicationModel
-from src.models.layout.layout_config import (
-    GridConfig,
-    Margins,
-    Gutters
-)
+from src.models.layout.layout_config import GridConfig, Gutters, Margins
 from src.models.nodes.plot_node import PlotNode
-from src.services.commands.apply_grid_command import ApplyGridCommand
+from src.services.commands.apply_grid_command import ApplyGridLayoutCommand
 from src.services.commands.batch_change_plot_geometry_command import (
     BatchChangePlotGeometryCommand,
 )
-from src.services.commands.change_grid_config_command import (
-    ChangeGridConfigCommand,
-)
-from src.services.commands.change_node_property_command import (
-    ChangeNodePropertyCommand,
+from src.services.commands.update_grid_parameters_command import (
+    UpdateGridParametersCommand,
 )
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
@@ -86,19 +79,53 @@ class LayoutController:
             self._on_batch_change_geometry_request,
         )
 
-    def _handle_apply_grid_request(self, grid_config: GridConfig):
+    def _handle_apply_grid_request(self, values: dict[str, Any]):
         """
-        Applies a specific GridConfig to the model via an undoable command.
+        Receives pre-parsed values from the UI Factory and applies a new 
+        GridNode structure to the model via an undoable command.
         """
         self.logger.info("LayoutController received request to apply grid.")
-        command = ApplyGridCommand(
-            model=self.model,
-            event_aggregator=self._event_aggregator,
-            layout_manager=self._layout_manager,
-            new_grid_config=grid_config
-        )
-        self.command_manager.execute_command(command)
-        self.logger.debug("Executed ApplyGridCommand.")
+        
+        try:
+            # 1. Get fallback values from a minimal proposal for anything missing
+            fallback = self._layout_manager._create_minimal_grid_config()
+
+            # 2. Construct the Proposal using values directly (already parsed by Factory)
+            rows = values.get("rows", fallback.rows)
+            cols = values.get("cols", fallback.cols)
+            
+            margins = Margins(
+                top=values.get("margin_top", fallback.margins.top),
+                bottom=values.get("margin_bottom", fallback.margins.bottom),
+                left=values.get("margin_left", fallback.margins.left),
+                right=values.get("margin_right", fallback.margins.right)
+            )
+            
+            gutters = Gutters(
+                hspace=values.get("hspace", fallback.gutters.hspace),
+                wspace=values.get("wspace", fallback.gutters.wspace)
+            )
+
+            proposal = GridConfig(
+                rows=rows,
+                cols=cols,
+                row_ratios=[1.0] * rows,
+                col_ratios=[1.0] * cols,
+                margins=margins,
+                gutters=gutters
+            )
+
+            # 3. Execute Command
+            command = ApplyGridLayoutCommand(
+                model=self.model,
+                event_aggregator=self._event_aggregator,
+                new_grid_config=proposal
+            )
+            self.command_manager.execute_command(command)
+            self.logger.debug(f"Executed ApplyGridLayoutCommand with proposal: {proposal}")
+
+        except Exception as e:
+            self.logger.error(f"LayoutController: Failed to parse Apply Grid request: {e}", exc_info=True)
 
     def _on_batch_change_geometry_request(self, geometries: dict[str, Rect]):
         """
@@ -221,49 +248,53 @@ class LayoutController:
     ):
         """
         Handles changes from granular UI controls for grid layout parameters.
-        Dispatches a ChangeGridPropertyCommand targeting the active GridNode.
+        Harvests the current grid state into a proposal, modifies it, and 
+        dispatches a single consolidated UpdateGridParametersCommand.
         """
         self.logger.debug(f"Grid layout param change requested: {param_name} = {value}")
 
-        grid_node = self.model.get_active_grid()
-        if not grid_node:
-            self.logger.warning("LayoutController: No active GridNode found to update.")
+        proposal = self._layout_manager.get_last_grid_config()
+        if not proposal:
+            self.logger.warning("LayoutController: No active grid to update.")
             return
 
-        # Map UI parameter names to PropertyPaths
-        path_map = {
-            "rows": "rows",
-            "cols": "cols",
-            "margin_top": "margins.top",
-            "margin_bottom": "margins.bottom",
-            "margin_left": "margins.left",
-            "margin_right": "margins.right",
-            "hspace": "gutters.hspace",
-            "wspace": "gutters.wspace"
-        }
-
-        path = path_map.get(param_name)
-        if not path:
+        # 2. Modify Proposal via fluent helpers
+        if param_name == "rows":
+            proposal = proposal.with_rows(int(value))
+        elif param_name == "cols":
+            proposal = proposal.with_cols(int(value))
+        elif param_name == "margin_top":
+            proposal = proposal.with_margins(top=float(value))
+        elif param_name == "margin_bottom":
+            proposal = proposal.with_margins(bottom=float(value))
+        elif param_name == "margin_left":
+            proposal = proposal.with_margins(left=float(value))
+        elif param_name == "margin_right":
+            proposal = proposal.with_margins(right=float(value))
+        elif param_name == "hspace":
+            if isinstance(value, str):
+                vals = [float(x.strip()) for x in value.split(",") if x.strip()]
+            else:
+                vals = value
+            proposal = proposal.with_gutters(hspace=vals)
+        elif param_name == "wspace":
+            if isinstance(value, str):
+                vals = [float(x.strip()) for x in value.split(",") if x.strip()]
+            else:
+                vals = value
+            proposal = proposal.with_gutters(wspace=vals)
+        else:
             self.logger.warning(f"Unknown grid parameter: {param_name}")
             return
 
-        # Process comma-separated list parameters
-        if param_name in ("hspace", "wspace"):
-            try:
-                value = [float(x.strip()) for x in str(value).split(",") if x.strip()]
-            except ValueError:
-                self.logger.warning(f"Invalid list value for {param_name}: {value}")
-                return
-
-        command = ChangeNodePropertyCommand(
-            node=grid_node,
-            path=path,
-            new_value=value,
+        command = UpdateGridParametersCommand(
+            model=self.model,
             event_aggregator=self._event_aggregator,
-            property_service=self._property_service
+            new_grid_config=proposal,
+            description=f"Change Grid {param_name}"
         )
         self.command_manager.execute_command(command)
-        self.logger.debug(f"Executed ChangeNodePropertyCommand for grid structural property {path}.")
+        self.logger.debug(f"Executed UpdateGridParametersCommand for {param_name}.")
 
     def _handle_infer_grid_parameters_request(self):
         """
@@ -280,23 +311,18 @@ class LayoutController:
         """
         self.logger.info("LayoutController received request to optimize layout.")
 
-        # 1. Get current (old) grid config
-        old_grid_config = self._layout_manager.get_last_grid_config()
-
-        # 2. Get optimized (new) grid config
+        # 1. Get optimized (new) grid config proposal
         new_grid_config = self._layout_manager.get_optimized_grid_config()
 
         if new_grid_config:
-            # 3. Encapsulate in command
-            command = ChangeGridConfigCommand(
+            # 2. Encapsulate in the consolidated command
+            command = UpdateGridParametersCommand(
                 self.model,
                 self._event_aggregator,
-                self._layout_manager,
-                old_grid_config,
                 new_grid_config,
                 description="Optimize Layout",
             )
             self.command_manager.execute_command(command)
-            self.logger.info("Executed ChangeGridConfigCommand for layout optimization.")
+            self.logger.info("Executed UpdateGridParametersCommand for layout optimization.")
         else:
             self.logger.warning("Could not calculate optimized grid config. No command executed.")

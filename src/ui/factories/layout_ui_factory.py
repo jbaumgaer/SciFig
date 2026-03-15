@@ -13,8 +13,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from src.controllers.layout_controller import LayoutController
+from src.models.layout.layout_config import GridConfig
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
 from src.shared.constants import IconPath, LayoutMode
@@ -92,7 +91,8 @@ class LayoutUIFactory:
         return line_edit
 
     def build_layout_controls(
-        self, layout_controller: LayoutController, parent: Optional[QObject]
+        self, parent: Optional[QObject],
+        initial_config: Optional[GridConfig] = None
     ) -> QWidget:
         """
         Builds and returns a QWidget containing controls relevant to the currently UI-selected layout mode.
@@ -104,7 +104,7 @@ class LayoutUIFactory:
         if ui_mode == LayoutMode.FREE_FORM:
             return self._build_free_form_controls(parent)
         elif ui_mode == LayoutMode.GRID:
-            return self._build_grid_layout_controls(parent)
+            return self._build_grid_layout_controls(parent, initial_config)
         else:
             self.logger.warning(
                 f"Unknown UI selected layout mode '{ui_mode}'. Returning empty widget."
@@ -238,7 +238,9 @@ class LayoutUIFactory:
 
         return container
 
-    def _build_grid_layout_controls(self, parent: QObject) -> QWidget:
+    def _build_grid_layout_controls(
+            self, parent: QObject, initial_config: Optional[GridConfig] = None
+    ) -> QWidget:
         """
         Builds UI controls for Grid layout mode (e.g., set grid size, adjust ratios).
         Initializes values from the current LayoutManager's last grid config.
@@ -251,7 +253,7 @@ class LayoutUIFactory:
         form_layout = QFormLayout()
         form_layout.setContentsMargins(0, 0, 0, 0)
 
-        current_grid_config = self._layout_manager.get_last_grid_config()
+        current_grid_config = initial_config or self._layout_manager.get_last_grid_config()
 
         # Rows
         line_rows = self._create_parameter_line_edit(
@@ -350,7 +352,7 @@ class LayoutUIFactory:
             "Apply the current grid parameters to all plots."
         )
         btn_apply_grid.clicked.connect(
-            lambda: self._handle_apply_grid_click()
+            lambda: self._handle_apply_grid_click(container)
         )
         btn_layout.addWidget(btn_apply_grid)
         
@@ -373,34 +375,46 @@ class LayoutUIFactory:
 
         return container
 
-    def _handle_apply_grid_click(self):
+    def _handle_apply_grid_click(self, container: QWidget):
         """
-        Gathers current values from UI fields and requests an undoable Apply Grid operation.
+        Gathers parsed values from UI fields and requests an Apply Grid operation.
+        The Controller is responsible for the final GridConfig construction.
         """
-        current_config = self._layout_manager.get_last_grid_config()
-        if current_config:
-            self.logger.info("LayoutUIFactory: Requesting APPLY_GRID_REQUESTED.")
-            self._event_aggregator.publish(Events.APPLY_GRID_REQUESTED, grid_config=current_config)
+        values = {}
+        for name in ["rows", "cols", "margin_top", "margin_bottom", "margin_left", "margin_right", "hspace", "wspace"]:
+            widget = container.findChild(QLineEdit, f"{name}_edit")
+            if widget:
+                values[name] = self._parse_line_edit_value(name, widget)
+
+        self.logger.info(f"LayoutUIFactory: Requesting Apply Grid with values: {values}")
+        self._event_aggregator.publish(Events.APPLY_GRID_REQUESTED, values=values)
+
+    def _parse_line_edit_value(self, param_name: str, line_edit: QLineEdit) -> any:
+        """
+        Central parser for all layout text fields. Returns domain-appropriate types.
+        """
+        text = line_edit.text()
+        if param_name in ("hspace", "wspace"):
+            try:
+                return [float(x.strip()) for x in text.split(",") if x.strip()]
+            except ValueError:
+                return text # Fallback to raw string if parsing fails
+        
+        try:
+            # Try float first, then check if it should be int
+            val = float(text)
+            return int(val) if param_name in ("rows", "cols") else val
+        except (ValueError, TypeError):
+            return text
 
     def _handle_line_edit_change(self, param_name: str, line_edit: QLineEdit):
+        """Handles a change in a single QLineEdit, publishing a request event."""
         raw_value = line_edit.text()
-        value_to_pass = raw_value  # Default to passing raw string
-
+        
         validator = line_edit.validator()
         if validator:
             state, _, _ = validator.validate(raw_value, 0)
-            self.logger.debug(
-                f"LayoutUIFactory: Validator state for {param_name} ('{raw_value}'): {state} (0=Invalid, 1=Intermediate, 2=Acceptable)"
-            )
-            if state == QValidator.Acceptable:
-                # If a validator is present and accepts the input, try converting to float if applicable
-                try:
-                    value_to_pass = float(raw_value)
-                except ValueError:
-                    self.logger.debug(
-                        f"LayoutUIFactory: Could not convert '{raw_value}' to float for {param_name}, passing as string."
-                    )
-            else:
+            if state != QValidator.Acceptable:
                 self.logger.warning(
                     f"LayoutUIFactory: Input for {param_name} ('{raw_value}') is not acceptable (state: {state}). Not processing."
                 )
@@ -428,19 +442,9 @@ class LayoutUIFactory:
                         line_edit.setText(
                             ", ".join(map(str, current_grid_config.gutters.wspace))
                         )
-                else:
-                    line_edit.setText(
-                        ""
-                    )  # Clear the field if no current grid config to restore from
-                return  # Do not process invalid input if a validator is present and rejects it.
-        else:
-            # If no validator, attempt conversion to float, otherwise pass as string
-            try:
-                value_to_pass = float(raw_value)
-            except ValueError:
-                self.logger.debug(
-                    f"LayoutUIFactory: No validator for {param_name} and could not convert '{raw_value}' to float, passing as string."
-                )
+                return
+
+        value_to_pass = self._parse_line_edit_value(param_name, line_edit)
 
         self.logger.debug(
             f"LayoutUIFactory: Publishing CHANGE_GRID_PARAMETER_REQUESTED for {param_name}. Value: {value_to_pass}"

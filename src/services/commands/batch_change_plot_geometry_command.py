@@ -11,6 +11,7 @@ class BatchChangePlotGeometryCommand(BaseCommand):
     """
     Command to change the geometries of multiple PlotNodes in a single operation,
     supporting undo/redo.
+    TODO: It shouldn't be called a batch command if it doesn't implement the MacroCommand
     """
 
     def __init__(

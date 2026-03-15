@@ -1,24 +1,20 @@
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from src.models.application_model import ApplicationModel
 from src.models.layout.free_layout_engine import FreeLayoutEngine
 from src.models.layout.grid_layout_engine import GridLayoutEngine
 from src.models.layout.layout_config import GridConfig, Gutters, Margins
 from src.models.layout.layout_engine import LayoutEngine
-
 from src.models.layout.layout_protocols import FreeFormLayoutCapabilities
-from src.models.nodes.grid_node import GridNode
-from src.models.nodes.grid_position import GridPosition
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_types import ArtistType
 from src.services.config_service import ConfigService
-from src.services.coordinate_service import CoordinateService
 from src.services.event_aggregator import EventAggregator
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
 from src.shared.geometry import Rect
-from src.shared.types import CoordinateSpace, PlotID
+from src.shared.types import PlotID
 
 
 class LayoutManager:
@@ -49,9 +45,6 @@ class LayoutManager:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("LayoutManager initialized.")
 
-        # Store last used configs for each mode to prevent loss of settings when switching
-        self._last_grid_config: Optional[GridConfig] = None
-
         # Initialize the UI selected mode and the application model's current_layout_config based on config service
         default_mode_str = self._config_service.get_required("ui.default_layout_mode")
         default_mode = LayoutMode(default_mode_str)
@@ -73,9 +66,6 @@ class LayoutManager:
             Events.NODE_LAYOUT_CHANGED, self.sync_layout
         )
         self._event_aggregator.subscribe(
-            Events.PROJECT_WAS_RESET, self.on_model_reset
-        )
-        self._event_aggregator.subscribe(
             Events.FIGURE_SIZE_CHANGED, self.sync_layout
         )
 
@@ -91,6 +81,24 @@ class LayoutManager:
             )
             # Notify the system that geometries have changed, triggering a redraw
             self._event_aggregator.publish(Events.NODE_LAYOUT_RECONCILED, config=self.get_last_grid_config())
+
+    def get_last_grid_config(self) -> Optional[GridConfig]:
+        """
+        Dynamic Harvester: Constructs a GridConfig DTO from the active GridNode in the Scene Graph.
+        Returns None if no GridNode exists (Free-Form mode).
+        """
+        grid = self._application_model.get_active_grid()
+        if not grid:
+            return None
+            
+        return GridConfig(
+            rows=grid.rows,
+            cols=grid.cols,
+            row_ratios=list(grid.row_ratios),
+            col_ratios=list(grid.col_ratios),
+            margins=grid.margins,
+            gutters=grid.gutters
+        )
 
     @property
     def layout_mode(self) -> LayoutMode:
@@ -112,41 +120,6 @@ class LayoutManager:
             self._event_aggregator.publish(
                 Events.UI_LAYOUT_MODE_CHANGED, ui_layout_mode=mode
             )
-
-    def on_model_reset(self) -> None:
-        """
-        Public slot to be connected to a signal indicating a major model reset.
-        """
-        self.logger.info("LayoutManager: Model reset, clearing caches.")
-        self._last_grid_config = None
-
-    def get_last_grid_config(self) -> Optional[GridConfig]:
-        """
-        Dynamic harvester: Constructs a GridConfig DTO from the active GridNode in the Scene Graph.
-        Returns the cached _last_grid_config (inferred) if no live node exists.
-        """
-        grid = self._application_model.get_active_grid()
-        if not grid:
-            return self._last_grid_config
-            
-        return GridConfig(
-            rows=grid.rows,
-            cols=grid.cols,
-            row_ratios=list(grid.row_ratios),
-            col_ratios=list(grid.col_ratios),
-            margins=grid.margins,
-            gutters=grid.gutters
-        )
-
-    def reset_cached_configs(self):
-        """
-        Resets any cached layout configurations to ensure that when a new project
-        is loaded, or a new layout is created, previous settings do not persist
-        incorrectly.
-        """
-        self.logger.info("LayoutManager: Resetting cached layout configurations.")
-        self._last_grid_config = None
-        self._last_free_form_config = None
 
     def apply_layout_template(self, template_root) -> None:
         """
@@ -318,52 +291,6 @@ class LayoutManager:
         
         self._event_aggregator.publish(Events.ACTIVE_LAYOUT_MODE_CHANGED, mode=mode)
         self._event_aggregator.publish(Events.NODE_LAYOUT_RECONCILED, config=self.get_last_grid_config())
-        self.logger.info(f"Active layout mode successfully switched to {mode.value}.")
-
-
-    def update_grid_config_and_apply(
-        self, new_grid_config: GridConfig
-    ) -> dict[PlotID, Rect]:
-        """
-        Updates the current GridConfig and ensures a corresponding GridNode 
-        exists in the Scene Graph for recursive layout.
-        """
-        self.logger.info(f"LayoutManager updating grid config to: {new_grid_config}")
-        self._last_grid_config = new_grid_config
-
-        grid_node = self._application_model.get_active_grid()
-        if not grid_node:
-            self.logger.info("LayoutManager: No active GridNode found. Creating root grid.")
-            grid_node = GridNode(
-                parent=self._application_model.scene_root,
-                rows=new_grid_config.rows,
-                cols=new_grid_config.cols,
-                name="Main Grid"
-            )
-            # Automatically move all top-level plots into this new grid
-            top_plots = [n for n in self._application_model.scene_root.children if isinstance(n, PlotNode)]
-            for i, p in enumerate(top_plots):
-                p.parent = grid_node
-                r = i // grid_node.cols
-                c = i % grid_node.cols
-                if r < grid_node.rows:
-                    p.grid_position = GridPosition(r, c)
-
-        # Sync UI values to the Scene Graph Node
-        grid_node.rows = new_grid_config.rows
-        grid_node.cols = new_grid_config.cols
-        grid_node.row_ratios = new_grid_config.row_ratios
-        grid_node.col_ratios = new_grid_config.col_ratios
-        grid_node.margins = new_grid_config.margins
-        grid_node.gutters = new_grid_config.gutters
-
-        # Run the new recursive mathematical engine
-        self._grid_engine.calculate_geometries(
-            grid_node, self._application_model.figure_size
-        )
-
-        all_plots = list(self._application_model.scene_root.all_descendants(of_type=PlotNode))
-        return {node.id: node.geometry for node in all_plots}
 
     def perform_align(self, plots: list[PlotNode], edge: str) -> dict[PlotID, Rect]:
         """
@@ -421,11 +348,9 @@ class LayoutManager:
 
         # Infer from current positions
         new_inferred_grid_config = self.infer_grid_config_from_plots(
-            all_plots, self._last_grid_config
+            all_plots, self.get_last_grid_config()
         )
 
-        # Update cache so UI fields can retrieve these values
-        self._last_grid_config = new_inferred_grid_config
 
         # Emit signal to update UI fields
         self._event_aggregator.publish(
@@ -448,7 +373,7 @@ class LayoutManager:
             )
             self.set_layout_mode(LayoutMode.GRID)
 
-        current_grid_config: GridConfig = self._last_grid_config
+        current_grid_config = self.get_last_grid_config()
 
         all_plots = list(
             self._application_model.scene_root.all_descendants(of_type=PlotNode)
@@ -477,137 +402,6 @@ class LayoutManager:
             gutters=calculated_gutters,
         )
         return optimized_grid_config
-
-    def update_grid_layout_parameters(
-        self,
-        rows: Optional[int] = None,
-        cols: Optional[int] = None,
-        margin: Optional[float] = None,
-        gutter: Optional[float] = None,
-        margin_top: Optional[float] = None,
-        margin_bottom: Optional[float] = None,
-        margin_left: Optional[float] = None,
-        margin_right: Optional[float] = None,
-        hspace_str: Optional[str] = None,
-        wspace_str: Optional[str] = None,
-    ) -> dict[PlotID, Rect]:
-        """
-        Updates the current GridConfig with new parameters and applies the layout.
-        If rows or cols are None, they will be inferred from the number of plots.
-        This method always uses the last known GridConfig as its base for updates.
-        It can update old single margin/gutter values or new granular margin/gutter values.
-        """
-        self.logger.info(
-            f"Updating grid layout parameters: rows={rows}, cols={cols}, "
-            f"margin_old={margin}, gutter_old={gutter}, "
-            f"margin_top={margin_top}, margin_bottom={margin_bottom}, "
-            f"margin_left={margin_left}, margin_right={margin_right}, "
-            f"hspace_str='{hspace_str}', wspace_str='{wspace_str}'"
-        )
-        self.logger.debug(
-            f"Current _last_grid_config before update: {self._last_grid_config}"
-        )
-
-        # Ensure active layout mode is GRID
-        if self.layout_mode != LayoutMode.GRID:
-            self.logger.debug(
-                "Active layout mode not GRID, switching to GRID before updating parameters."
-            )
-            self.set_layout_mode(LayoutMode.GRID)
-
-        base_grid_config: GridConfig = self._last_grid_config
-        effective_margins = base_grid_config.margins
-        final_margins = Margins(
-            top=margin_top if margin_top is not None else effective_margins.top,
-            bottom=(
-                margin_bottom if margin_bottom is not None else effective_margins.bottom
-            ),
-            left=margin_left if margin_left is not None else effective_margins.left,
-            right=margin_right if margin_right is not None else effective_margins.right,
-        )
-
-        effective_gutters = base_grid_config.gutters
-        final_hspace = effective_gutters.hspace
-        final_wspace = effective_gutters.wspace
-
-        if hspace_str is not None:
-            try:
-                final_hspace = [
-                    float(x.strip()) for x in hspace_str.split(",") if x.strip()
-                ]
-            except ValueError:
-                self.logger.warning(
-                    f"Invalid hspace_str format: '{hspace_str}'. Keeping old hspace."
-                )
-        if wspace_str is not None:
-            try:
-                final_wspace = [
-                    float(x.strip()) for x in wspace_str.split(",") if x.strip()
-                ]
-            except ValueError:
-                self.logger.warning(
-                    f"Invalid wspace_str format: '{wspace_str}'. Keeping old wspace."
-                )
-
-        final_gutters = Gutters(hspace=final_hspace, wspace=final_wspace)
-
-        all_plots = list(
-            self._application_model.scene_root.all_descendants(of_type=PlotNode)
-        )
-        num_plots = len(all_plots)
-        
-        if (rows is None or rows == 0) or (cols is None or cols == 0):
-            inferred_rows, inferred_cols = self._infer_grid_dimensions(len(all_plots))
-            rows = rows or inferred_rows
-            cols = cols or inferred_cols
-            self.logger.debug(
-                f"Inferred grid dimensions: {rows}x{cols} for {num_plots} plots."
-            )
-
-        new_grid_config = GridConfig(
-            rows=rows or base_grid_config.rows,
-            cols=cols or base_grid_config.cols,
-            row_ratios=base_grid_config.row_ratios,
-            col_ratios=base_grid_config.col_ratios,
-            margins=final_margins,
-            gutters=final_gutters,
-        )
-
-        return self.update_grid_config_and_apply(new_grid_config)
-
-    def get_current_layout_geometries(
-        self, plots: list[PlotNode]
-    ) -> dict[PlotID, Rect]:
-        """
-        Returns the calculated geometries for the given plots in FRACTIONAL space.
-        Translates from the model's PHYSICAL (CM) space.
-        """
-        active_engine = self.get_active_engine()
-        # Engines now return PHYSICAL (CM) geometries
-        phys_geometries, _, _ = active_engine.calculate_geometries(
-            plots, 
-            self._application_model.figure_size
-        )
-        
-        fig_w, fig_h = self._application_model.figure_size
-        fractional_geometries = {}
-        
-        for pid, rect in phys_geometries.items():
-            fx = CoordinateService.transform_value(
-                rect.x, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_w
-            )
-            fy = CoordinateService.transform_value(
-                rect.y, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_h
-            )
-            fw = CoordinateService.transform_value(
-                rect.width, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_w
-            )
-            fh = CoordinateService.transform_value(
-                rect.height, CoordinateSpace.PHYSICAL, CoordinateSpace.FRACTIONAL_FIG, figure_size_cm=fig_h
-            )
-            fractional_geometries[pid] = Rect(fx, fy, fw, fh)
-            
-        return fractional_geometries
 
     def _parse_float_list_from_config(
         self, key: str, default: list[float]
