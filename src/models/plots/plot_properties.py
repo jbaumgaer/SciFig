@@ -51,9 +51,15 @@ def _from_dict_recursive(cls: Type[T], data: Any) -> T:
                     args = get_args(field_type)
                     success = False
                     for possible_type in args:
+                        # Skip None type in Union
+                        if possible_type is type(None):
+                            continue
+                        
+                        # Only attempt dataclass reconstruction if we have a dict
+                        if is_dataclass(possible_type) and not isinstance(field_value, dict):
+                            continue
+
                         try:
-                            if possible_type is type(None):
-                                continue
                             kwargs[f.name] = _from_dict_recursive(
                                 possible_type, field_value
                             )
@@ -74,6 +80,17 @@ def _from_dict_recursive(cls: Type[T], data: Any) -> T:
                         k: _from_dict_recursive(val_type, v)
                         for k, v in field_value.items()
                     }
+                elif origin is tuple:
+                    # Coerce list to tuple and recursively hydrate elements
+                    args = get_args(field_type)
+                    if isinstance(field_value, (list, tuple)):
+                        # Handle fixed-size tuples or homogeneous variable-size tuples
+                        kwargs[f.name] = tuple([
+                            _from_dict_recursive(args[i] if i < len(args) else args[0], item)
+                            for i, item in enumerate(field_value)
+                        ])
+                    else:
+                        kwargs[f.name] = field_value
                 else:
                     kwargs[f.name] = _from_dict_recursive(field_type, field_value)
         return cls(**kwargs)

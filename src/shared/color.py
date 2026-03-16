@@ -24,8 +24,20 @@ class Color:
     def from_mpl(cls, val: Any) -> Color:
         """
         Factory method to create a Color from any format Matplotlib accepts 
-        (named colors, hex strings, RGB/RGBA tuples).
+        (named colors, hex strings, RGB/RGBA tuples, or a dictionary from asdict()).
         """
+        if isinstance(val, dict):
+            # Support reconstruction from dataclasses.asdict()
+            try:
+                return cls(
+                    r=float(val["r"]),
+                    g=float(val["g"]),
+                    b=float(val["b"]),
+                    a=float(val["a"])
+                )
+            except (KeyError, ValueError, TypeError) as e:
+                raise ValueError(f"Invalid Color dictionary format: {val}. Error: {e}")
+
         try:
             rgba = mcolors.to_rgba(val)
             return cls(r=rgba[0], g=rgba[1], b=rgba[2], a=rgba[3])

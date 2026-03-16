@@ -5,6 +5,7 @@ from dataclasses import is_dataclass, replace, fields
 from typing import Any, Union, get_type_hints
 
 import matplotlib as mpl
+from matplotlib import font_manager
 
 from src.models.plots.plot_properties import (
     AxisProperties,
@@ -170,13 +171,10 @@ class StyleService:
     def load_style(self, style_path: str):
         """Loads a new .mplstyle file and validates its completeness before applying."""
         try:
-            # 1. Strict Validation: Check for explicit key presence in the raw file
-            # This avoids Matplotlib's default-population behavior.
             with open(style_path, "r", encoding="utf-8") as f:
                 raw_content = f.read()
             self._validate_style_raw(raw_content)
             
-            # 2. Matplotlib Parsing: Handle normalization and complex types
             new_style = mpl.RcParams()
             new_style.update(mpl.rc_params_from_file(style_path))
             self._current_style = dict(new_style)
@@ -337,12 +335,16 @@ class StyleService:
     def _on_hydrate_properties_requested(self, node_id: str, overrides: dict):
         try:
             # 1. Check for 'Full Property Tree' (Project Load case)
+            if "plot_properties" in overrides: # A common pattern for full project state
+                overrides = overrides["plot_properties"]
+                
             core_keys = ("titles", "coords", "legend", "artists")
             if all(k in overrides for k in core_keys):
                 self.logger.debug(f"StyleService: Full property tree detected for {node_id}. Reconstructing.")
                 props = PlotProperties.from_dict(overrides)
             else:
-                # 2. 'Sparse Template' (Template case)
+                # 2. 'Sparse Template' (Template case) -> Create, then Override
+                self.logger.debug(f"StyleService: Sparse template detected for {node_id}. Hydrating.")
                 artist_list = overrides.get("artists", [{}])
                 artist_data = artist_list[0] if artist_list else {}
                 artist_type_raw = artist_data.get("artist_type", ArtistType.LINE)
@@ -351,8 +353,9 @@ class StyleService:
                 except ValueError:
                     artist_type = ArtistType.LINE
 
-                props = self.create_themed_properties(artist_type)
-                self.hydrate(props, overrides)
+                # Correct "Create -> Override -> Return New" pattern
+                base_props = self.create_themed_properties(artist_type)
+                props = self.hydrate(base_props, overrides)
             
             self._event_aggregator.publish(Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED, node_id=node_id, path="plot_properties", value=props)
         except Exception as e:
@@ -363,6 +366,17 @@ class StyleService:
             return float(val)
         except (ValueError, TypeError):
             return val
+
+    def _convert_font_size(self, size_value: Any) -> float:
+        """Converts Matplotlib font size keywords (e.g., 'medium') to points.
+        TODO: Probably we can make a value object out of this"""
+        if isinstance(size_value, str):
+            # Look up keyword in Matplotlib's own scaling dictionary
+            scale = font_manager.font_scalings[size_value.lower()]
+            # Apply scale to the base font size from the theme
+            base_size = float(self._current_style['font.size'])
+            return base_size * scale
+        return float(size_value)
 
     # --- Factories ---
 
@@ -395,13 +409,15 @@ class StyleService:
     def _create_font(self) -> FontProperties:
         s = self._current_style
         family = s["font.family"]
+        font_size_pt = self._convert_font_size(s["font.size"])
+        
         return FontProperties(
             family=str(family[0] if isinstance(family, list) else family),
             style=str(s["font.style"]),
             variant=str(s["font.variant"]),
             weight=str(s["font.weight"]),
             stretch=str(s["font.stretch"]),
-            size=Dimension(float(s["font.size"]), Unit.PT)
+            size=Dimension(font_size_pt, Unit.PT)
         )
 
     def _create_text(self, content: str) -> TextProperties:
@@ -410,13 +426,24 @@ class StyleService:
 
     def _create_line(self) -> LineProperties:
         s = self._current_style
+        
+        line_color = Color.from_mpl(s["lines.color"])
+        
+        # Handle 'auto' for marker face color (inherits line color)
+        mfc_val = s["lines.markerfacecolor"]
+        markerfacecolor = line_color if mfc_val == "auto" else Color.from_mpl(mfc_val)
+
+        # Handle 'auto' for marker edge color (inherits line color)
+        mec_val = s["lines.markeredgecolor"]
+        markeredgecolor = line_color if mec_val == "auto" else Color.from_mpl(mec_val)
+
         return LineProperties(
             linewidth=Dimension(float(s["lines.linewidth"]), Unit.PT),
             linestyle=s["lines.linestyle"],
-            color=Color.from_mpl(s["lines.color"]),
+            color=line_color,
             marker=str(s["lines.marker"]),
-            markerfacecolor=Color.from_mpl(s["lines.markerfacecolor"]),
-            markeredgecolor=Color.from_mpl(s["lines.markeredgecolor"]),
+            markerfacecolor=markerfacecolor,
+            markeredgecolor=markeredgecolor,
             markeredgewidth=Dimension(float(s["lines.markeredgewidth"]), Unit.PT),
             markersize=Dimension(float(s["lines.markersize"]), Unit.PT)
         )
@@ -437,6 +464,19 @@ class StyleService:
     def _create_ticks(self, axis_key: AxisKey) -> TickProperties:
         s = self._current_style
         prefix = axis_key.value if f"{axis_key.value}tick.major.size" in s else "x"
+
+        # Get raw values
+        tick_color_val = s[f"{prefix}tick.color"]
+        label_color_val = s[f"{prefix}tick.labelcolor"]
+        raw_labelsize = s[f"{prefix}tick.labelsize"]
+
+        self.logger.debug(f"Creating ticks for '{prefix}'. Raw 'labelcolor': '{label_color_val}', Raw 'labelsize': '{raw_labelsize}'")
+
+        # Convert values, handling keywords
+        tick_color = Color.from_mpl(tick_color_val)
+        label_color = tick_color if label_color_val == 'inherit' else Color.from_mpl(label_color_val)
+        final_labelsize_pt = self._convert_font_size(raw_labelsize)
+        
         return TickProperties(
             major_size=Dimension(float(s[f"{prefix}tick.major.size"]), Unit.PT),
             minor_size=Dimension(float(s[f"{prefix}tick.minor.size"]), Unit.PT),
@@ -445,11 +485,11 @@ class StyleService:
             major_pad=Dimension(float(s.get(f"{prefix}tick.major.pad", 3.5)), Unit.PT),
             minor_pad=Dimension(float(s.get(f"{prefix}tick.minor.pad", 3.4)), Unit.PT),
             direction=TickDirection.from_str(s[f"{prefix}tick.direction"]),
-            color=Color.from_mpl(s[f"{prefix}tick.color"]),
-            labelcolor=Color.from_mpl(s[f"{prefix}tick.labelcolor"]),
-            labelsize=Dimension(float(s[f"{prefix}tick.labelsize"]), Unit.PT),
+            color=tick_color,
+            labelcolor=label_color,
+            labelsize=Dimension(final_labelsize_pt, Unit.PT),
             minor_visible=bool(s[f"{prefix}tick.minor.visible"]),
-            minor_ndivs=s.get(f"{prefix}tick.minor.ndivs", 2),
+            minor_ndivs=s[f"{prefix}tick.minor.ndivs"],
         )
 
     def _create_spine(self, position: SpinePosition, is_visible: bool) -> SpineProperties:

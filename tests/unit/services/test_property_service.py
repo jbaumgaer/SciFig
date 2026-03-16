@@ -122,3 +122,49 @@ class TestPropertyService:
         """Verifies that the service can set values directly into dictionary leaves."""
         new_root = service.set_value(sample_plot_properties, "titles.left.text", "New Left Title")
         assert new_root.titles["left"].text == "New Left Title"
+
+    # --- Regression Tests (Recursion & Tuples) ---
+
+    def test_set_value_recurses_into_standard_objects(self, service):
+        """Regression test for the 'tuple overwrite' bug. Verifies recursion into standard attributes."""
+        from src.models.nodes.plot_node import PlotNode
+        from src.models.plots.plot_properties import PlotProperties
+        from unittest.mock import MagicMock
+        
+        node = PlotNode(name="Test Plot")
+        # Manually assign a PlotProperties mock (acts as a standard object)
+        mock_props = MagicMock(spec=PlotProperties)
+        mock_props.coords = MagicMock()
+        mock_props.coords.xaxis = MagicMock()
+        mock_props.coords.xaxis.limits = (None, None)
+        node.plot_properties = mock_props
+
+        # Update a deep nested attribute
+        new_value = (0.0, 10.0)
+        new_node = service.set_value(node, "plot_properties.coords.xaxis.limits", new_value)
+        
+        # VERIFY: The property tree should be updated, NOT overwritten by the value
+        assert isinstance(new_node.plot_properties, MagicMock)
+        assert new_node.plot_properties.coords.xaxis.limits == new_value
+
+    def test_set_value_updates_tuple_elements_immutably(self, service, sample_plot_properties):
+        """Verifies that specific elements of a tuple can be updated functionally."""
+        # path: coords -> xaxis -> limits: tuple[Optional[float], Optional[float]]
+        new_root = service.set_value(sample_plot_properties, "coords.xaxis.limits.0", 10.0)
+        
+        assert isinstance(new_root.coords.xaxis.limits, tuple)
+        assert new_root.coords.xaxis.limits[0] == 10.0
+        assert new_root.coords.xaxis.limits[1] is None
+
+    def test_coerce_value_converts_list_to_tuple_when_hinted(self, service):
+        """Verifies that lists are coerced to tuples during assignment if the type hint expects a tuple."""
+        from typing import get_type_hints
+        from src.models.plots.plot_properties import AxisProperties
+        
+        type_hints = get_type_hints(AxisProperties)
+        target_type = type_hints["limits"] # tuple[Optional[float], Optional[float]]
+        
+        val = service._coerce_value([0.0, 5.0], target_type)
+        
+        assert isinstance(val, tuple)
+        assert val == (0.0, 5.0)

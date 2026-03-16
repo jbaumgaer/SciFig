@@ -85,6 +85,18 @@ class PropertyService:
             new_list[idx] = self._update_recursive(obj[idx], remaining, value)
             return new_list
 
+        # 2.5 Tuple Path (Immutable)
+        if isinstance(obj, tuple):
+            try:
+                idx = int(part)
+                temp_list = list(obj)
+                temp_list[idx] = self._update_recursive(obj[idx], remaining, value)
+                return tuple(temp_list)
+            except (ValueError, IndexError):
+                # Fallback: maybe it's an attribute of a namedtuple? 
+                # (Though we don't use them currently)
+                pass
+
         # 3. Dataclass Path
         if is_dataclass(obj):
             # Resolve target type for coercion at the leaf
@@ -111,6 +123,13 @@ class PropertyService:
                 return replace(obj, **{part: new_child})
 
         # 4. Standard Attribute Path (Fallback)
+        if remaining:
+            # Recurse into standard object attributes
+            current_child = getattr(obj, part)
+            new_child = self._update_recursive(current_child, remaining, value)
+            setattr(obj, part, new_child)
+            return obj
+
         setattr(obj, part, value)
         return obj
 
@@ -199,7 +218,12 @@ class PropertyService:
         if target_type is ZOrder:
             return ZOrder(int(value))
 
-        # 5. Standard Numeric Fallback
+        # 5. Handle Tuple coercion
+        if get_origin(target_type) is tuple:
+            if isinstance(value, (list, tuple)):
+                return tuple(value)
+
+        # 6. Standard Numeric Fallback
         if isinstance(value, str):
             try:
                 if target_type is float:

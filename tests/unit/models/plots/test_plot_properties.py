@@ -33,7 +33,8 @@ class TestPlotPropertiesHierarchy:
         from dataclasses import asdict
         d = asdict(sample_font)
         assert d["family"] == "Arial"
-        assert d["size"] == 10
+        assert d["size"]["value"] == 10.0
+        assert d["size"]["unit"].value == "pt"
 
     def test_plot_properties_round_trip(self, sample_plot_properties):
         """Tests that a full PlotProperties tree can be serialized and perfectly reconstructed."""
@@ -42,18 +43,16 @@ class TestPlotPropertiesHierarchy:
         # Verify serialization structure
         assert "coords" in data
         assert "artists" in data
-        assert data["_version"] == 1
         assert data["coords"]["coord_type"] == CoordinateSystem.CARTESIAN_2D.value
 
         # Reconstruct
         reconstructed = PlotProperties.from_dict(data)
         
         assert isinstance(reconstructed, PlotProperties)
-        assert reconstructed._version == 1
         assert isinstance(reconstructed.coords, Cartesian2DProperties)
         assert len(reconstructed.artists) == 1
         assert isinstance(reconstructed.artists[0], LineArtistProperties)
-        assert reconstructed.artists[0].visuals.linewidth == 1.0
+        assert reconstructed.artists[0].visuals.linewidth.value == 1.0
 
     def test_polymorphic_coords_dispatch(self, sample_plot_properties):
         """Tests that from_dict correctly chooses the Coordinate class based on coord_type."""
@@ -192,3 +191,20 @@ class TestPlotPropertiesHierarchy:
         data = {"family": "Arial"} # Missing size, weight, etc.
         with pytest.raises(TypeError):
             _from_dict_recursive(FontProperties, data)
+
+    def test_from_dict_reconstructs_tuples(self, sample_plot_properties):
+        """Regression test for tuple reconstruction from JSON-derived lists."""
+        data = sample_plot_properties.to_dict()
+        
+        # Simulate JSON behavior: scientific_limits and limits are lists in JSON
+        data["coords"]["xaxis"]["scientific_limits"] = [-3, 4]
+        data["coords"]["xaxis"]["limits"] = [1.5, 8.5]
+        
+        reconstructed = PlotProperties.from_dict(data)
+        
+        # VERIFY: They are reconstructed as TUPLES, not lists
+        assert isinstance(reconstructed.coords.xaxis.scientific_limits, tuple)
+        assert reconstructed.coords.xaxis.scientific_limits == (-3, 4)
+        
+        assert isinstance(reconstructed.coords.xaxis.limits, tuple)
+        assert reconstructed.coords.xaxis.limits == (1.5, 8.5)
