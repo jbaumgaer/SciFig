@@ -37,33 +37,44 @@ class ChangeNodePropertyCommand(BaseCommand):
         self._expansion_map: dict[str, Any] = {}
 
     def execute(self, publish: bool = True):
-        """Resolves path and applies change via PropertyService rooted at the node."""
-        # Fix: Always root the path calculation from the node to ensure the 
-        # PropertyService can find the 'increment_property_version' method.
+        """Resolves path and applies functional change via PropertyService."""
+        # Root calculation remains same
         first_part = self.path.split(".")[0]
         full_path = self.path
+        is_plot_prop = False
         if hasattr(self.node, "plot_properties") and self.node.plot_properties:
             if hasattr(self.node.plot_properties, first_part) or first_part == "artists":
                 full_path = f"plot_properties.{self.path}"
+                is_plot_prop = True
 
         concrete_paths = self._property_service.resolve_concrete_paths(self.node, full_path)
-
         if not concrete_paths:
             raise PropertyPathError(f"Path '{full_path}' not found on {self.node}")
 
+        # Capture old values and apply new ones functionally
         self._expansion_map.clear()
         for path in concrete_paths:
             old_val = self._property_service.get_value(self.node, path)
             self._expansion_map[path] = old_val
-            self._property_service.set_value(self.node, path, self.new_value)
+            
+            # Use return-based set_value
+            new_root = self._property_service.set_value(self.node, path, self.new_value)
+            # If the path was within plot_properties, re-assign the new tree to the node
+            if is_plot_prop:
+                self.node.plot_properties = new_root.plot_properties
+            # (SceneNode itself is mutable for now, but its children properties are frozen)
 
         self._finalize_change(publish=publish)
 
     def undo(self, publish: bool = True):
-        """Restores the original values using the expanded paths."""
-        # The expansion map already contains the full paths rooted at the node
+        """Restores original values using expansion map and re-assignment."""
+        first_part = self.path.split(".")[0]
+        is_plot_prop = hasattr(self.node, "plot_properties") and (hasattr(self.node.plot_properties, first_part) or first_part == "artists")
+
         for path, old_value in self._expansion_map.items():
-            self._property_service.set_value(self.node, path, old_value)
+            new_root = self._property_service.set_value(self.node, path, old_value)
+            if is_plot_prop:
+                self.node.plot_properties = new_root.plot_properties
 
         self._finalize_change(publish=publish, is_undo=True)
 

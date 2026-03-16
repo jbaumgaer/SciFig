@@ -39,35 +39,52 @@ class TestPropertyService:
 
     def test_set_value_updates_primitive_attributes(self, service, sample_plot_properties):
         """Tests direct updates to primitive fields (int, float, bool, str)."""
-        service.set_value(sample_plot_properties, "coords.xaxis.margin", 0.15)
-        assert sample_plot_properties.coords.xaxis.margin == 0.15
+        new_root = service.set_value(sample_plot_properties, "coords.xaxis.margin", 0.15)
+        assert new_root.coords.xaxis.margin == 0.15
         
-        service.set_value(sample_plot_properties, "artists.0.visible", False)
-        assert sample_plot_properties.artists[0].visible is False
+        new_root = service.set_value(new_root, "artists.0.visible", False)
+        assert new_root.artists[0].visible is False
 
     def test_set_value_with_float_coercion(self, service, sample_plot_properties):
         """Verifies that string inputs from UI are coerced to float where expected."""
         # margin is a float in AxisProperties
-        service.set_value(sample_plot_properties, "coords.xaxis.margin", "0.25")
-        assert sample_plot_properties.coords.xaxis.margin == 0.25
-        assert isinstance(sample_plot_properties.coords.xaxis.margin, float)
+        new_root = service.set_value(sample_plot_properties, "coords.xaxis.margin", "0.25")
+        assert new_root.coords.xaxis.margin == 0.25
+        assert isinstance(new_root.coords.xaxis.margin, float)
 
     def test_set_value_with_enum_coercion(self, service, sample_plot_properties):
         """Verifies that string inputs are coerced to the correct Enum member."""
         # direction is a TickDirection Enum in TickProperties
-        service.set_value(sample_plot_properties, "coords.xaxis.ticks.direction", "in")
-        assert sample_plot_properties.coords.xaxis.ticks.direction == TickDirection.IN
+        new_root = service.set_value(sample_plot_properties, "coords.xaxis.ticks.direction", "in")
+        assert new_root.coords.xaxis.ticks.direction == TickDirection.IN
 
     # --- Wildcard Resolution (resolve_concrete_paths) ---
 
     def test_resolve_concrete_paths_with_list_wildcard(self, service, sample_plot_properties):
         """Tests expanding '*' wildcards in lists (e.g., all artists)."""
-        # Add a second artist for testing
-        sample_plot_properties.artists.append(ScatterArtistProperties(
-            visible=True, zorder=2, visuals=LineProperties(1.0, "-", "red", "o", "red", "black", 0.5, 5.0)
-        ))
+        from dataclasses import replace
+        from src.shared.units import Unit, Dimension
+        from src.shared.color import Color
+        from src.shared.primitives import ZOrder
         
-        paths = service.resolve_concrete_paths(sample_plot_properties, "artists.*.visible")
+        # Add a second artist for testing (immutable replacement)
+        new_artist = ScatterArtistProperties(
+            visible=True, 
+            zorder=ZOrder(2), 
+            visuals=LineProperties(
+                linewidth=Dimension(1.0, Unit.PT), 
+                linestyle="-", 
+                color=Color.from_mpl("red"), 
+                marker="o", 
+                markerfacecolor=Color.from_mpl("red"), 
+                markeredgecolor=Color.from_mpl("black"), 
+                markeredgewidth=Dimension(0.5, Unit.PT), 
+                markersize=Dimension(5.0, Unit.PT)
+            )
+        )
+        test_root = replace(sample_plot_properties, artists=sample_plot_properties.artists + [new_artist])
+        
+        paths = service.resolve_concrete_paths(test_root, "artists.*.visible")
         
         assert len(paths) == 2
         assert "artists.0.visible" in paths
@@ -103,5 +120,5 @@ class TestPropertyService:
 
     def test_set_value_on_dictionary_leaf(self, service, sample_plot_properties):
         """Verifies that the service can set values directly into dictionary leaves."""
-        service.set_value(sample_plot_properties, "titles.left.text", "New Left Title")
-        assert sample_plot_properties.titles["left"].text == "New Left Title"
+        new_root = service.set_value(sample_plot_properties, "titles.left.text", "New Left Title")
+        assert new_root.titles["left"].text == "New Left Title"

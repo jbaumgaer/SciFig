@@ -1,7 +1,8 @@
+from enum import Enum
 import logging
 import re
-from dataclasses import is_dataclass
-from typing import Any, Union
+from dataclasses import is_dataclass, replace, fields
+from typing import Any, Union, get_type_hints
 
 import matplotlib as mpl
 
@@ -37,6 +38,9 @@ from src.models.plots.plot_types import (
 )
 from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
+from src.shared.color import Color
+from src.shared.units import Dimension, Unit
+from src.shared.primitives import Alpha, ZOrder
 
 
 class ThemeIncompleteError(Exception):
@@ -200,11 +204,11 @@ class StyleService:
             p_type = ArtistType.LINE
 
         base_props = self.create_themed_properties(p_type)
-        self.hydrate(base_props, overrides)
-        return base_props
+        return self.hydrate(base_props, overrides)
 
-    def hydrate(self, base_obj: Any, overrides: dict):
-        """Recursively merges a sparse dictionary into a typed dataclass tree."""
+    def hydrate(self, base_obj: Any, overrides: dict) -> Any:
+        """Functional Hydration: Returns a NEW immutable tree with merged overrides."""
+        changes = {}
         for key, value in overrides.items():
             if not hasattr(base_obj, key) or key.startswith("_"):
                 continue
@@ -212,16 +216,20 @@ class StyleService:
             current_attr = getattr(base_obj, key)
 
             if isinstance(value, dict) and is_dataclass(current_attr):
-                self.hydrate(current_attr, value)
+                changes[key] = self.hydrate(current_attr, value)
             elif isinstance(value, dict) and isinstance(current_attr, dict):
+                new_dict = dict(current_attr)
                 for sub_key, sub_value in value.items():
                     resolved_key = self._resolve_key_type(type(current_attr), sub_key)
-                    if resolved_key in current_attr:
-                        self.hydrate(current_attr[resolved_key], sub_value)
+                    if resolved_key in new_dict:
+                        new_dict[resolved_key] = self.hydrate(new_dict[resolved_key], sub_value)
+                changes[key] = new_dict
             elif isinstance(value, list) and isinstance(current_attr, list):
-                self._hydrate_list(base_obj, key, current_attr, value)
+                changes[key] = self._hydrate_list(base_obj, key, current_attr, value)
             else:
-                self._apply_leaf(base_obj, key, value)
+                changes[key] = self._coerce_leaf(base_obj, key, value)
+
+        return replace(base_obj, **changes) if changes else base_obj
 
     def _resolve_key_type(self, dict_type: Any, key: str) -> Any:
         try:
@@ -230,7 +238,7 @@ class StyleService:
             pass
         return key
 
-    def _hydrate_list(self, parent: Any, attr_name: str, base_list: list, overrides: list):
+    def _hydrate_list(self, parent: Any, attr_name: str, base_list: list, overrides: list) -> list:
         if attr_name == "artists":
             new_artists = []
             for a_overrides in overrides:
@@ -243,22 +251,29 @@ class StyleService:
                 factory = self._ARTIST_FACTORIES.get(a_type)
                 if factory:
                     base_artist = factory()
-                    self.hydrate(base_artist, a_overrides)
-                    new_artists.append(base_artist)
-            setattr(parent, attr_name, new_artists)
-        else:
-            setattr(parent, attr_name, overrides)
+                    new_artists.append(self.hydrate(base_artist, a_overrides))
+            return new_artists
+        return overrides
 
-    def _apply_leaf(self, obj: Any, key: str, value: Any):
-        from enum import Enum
-        from typing import get_type_hints
+    def _coerce_leaf(self, obj: Any, key: str, value: Any) -> Any:
 
         type_hints = get_type_hints(type(obj))
-        expected_type = type_hints.get(key)
+        target_type = type_hints.get(key)
 
-        if expected_type:
-            origin = getattr(expected_type, "__origin__", None)
-            args = getattr(expected_type, "__args__", ())
+        if target_type:
+            # 1. Handle Value Objects
+            if target_type is Color:
+                return value if isinstance(value, Color) else Color.from_mpl(value)
+            if target_type is Dimension:
+                return value if isinstance(value, Dimension) else Dimension(float(value), Unit.CM)
+            if target_type is Alpha:
+                return Alpha(float(value))
+            if target_type is ZOrder:
+                return ZOrder(int(value))
+
+            # 2. Handle Enums
+            origin = getattr(target_type, "__origin__", None)
+            args = getattr(target_type, "__args__", ())
 
             enum_cls = None
             if origin is Union:
@@ -266,22 +281,29 @@ class StyleService:
                     if isinstance(arg, type) and issubclass(arg, Enum):
                         enum_cls = arg
                         break
-            elif isinstance(expected_type, type) and issubclass(expected_type, Enum):
-                enum_cls = expected_type
+            elif isinstance(target_type, type) and issubclass(target_type, Enum):
+                enum_cls = target_type
 
             if enum_cls and isinstance(value, str):
                 try:
                     if hasattr(enum_cls, "from_str"):
-                        value = enum_cls.from_str(value)
+                        return enum_cls.from_str(value)
                     else:
-                        value = enum_cls(value)
+                        return enum_cls(value)
                 except ValueError:
                     pass
 
-        try:
-            setattr(obj, key, value)
-        except Exception as e:
-            self.logger.error(f"Hydration: Failed to set {key} on {type(obj).__name__}: {e}")
+            # 3. Handle Numeric Types
+            if isinstance(value, str):
+                try:
+                    if target_type is float:
+                        return float(value)
+                    if target_type is int:
+                        return int(value)
+                except ValueError:
+                    pass
+
+        return value
 
     def create_themed_properties(self, plot_type: ArtistType) -> PlotProperties:
         """Factory method to create a fully initialized PlotProperties tree from the current theme."""
@@ -345,47 +367,68 @@ class StyleService:
     # --- Factories ---
 
     def _create_line_artist(self) -> LineArtistProperties:
-        return LineArtistProperties(visible=True, zorder=1, visuals=self._create_line())
+        return LineArtistProperties(visible=True, zorder=ZOrder(1), visuals=self._create_line())
 
     def _create_scatter_artist(self) -> ScatterArtistProperties:
-        return ScatterArtistProperties(visible=True, zorder=1, visuals=self._create_line())
+        return ScatterArtistProperties(visible=True, zorder=ZOrder(1), visuals=self._create_line())
 
     def _create_bar_artist(self) -> BarArtistProperties:
-        return BarArtistProperties(visible=True, zorder=1, visuals=self._create_patch(), width=0.8, align="center")
+        return BarArtistProperties(visible=True, zorder=ZOrder(1), visuals=self._create_patch(), width=0.8, align="center")
 
     def _create_image_artist(self) -> ImageArtistProperties:
-        return ImageArtistProperties(visible=True, zorder=1, visuals=self._create_mappable())
+        return ImageArtistProperties(visible=True, zorder=ZOrder(1), visuals=self._create_mappable())
 
     def _create_mesh_artist(self) -> MeshArtistProperties:
-        return MeshArtistProperties(visible=True, zorder=1, visuals=self._create_mappable())
+        return MeshArtistProperties(visible=True, zorder=ZOrder(1), visuals=self._create_mappable())
 
     def _create_contour_artist(self) -> ContourArtistProperties:
         s = self._current_style
-        return ContourArtistProperties(visible=True, zorder=1, visuals=self._create_mappable(), linewidth=self._parse_numeric_or_str(s["contour.linewidth"]), levels=10, filled=True)
+        return ContourArtistProperties(visible=True, zorder=ZOrder(1), visuals=self._create_mappable(), linewidth=Dimension(float(s["contour.linewidth"]), Unit.PT), levels=10, filled=True)
 
     def _create_histogram_artist(self) -> HistogramArtistProperties:
         s = self._current_style
-        return HistogramArtistProperties(visible=True, zorder=1, visuals=self._create_patch(), bins=s.get("hist.bins", "auto"), density=False, cumulative=False)
+        return HistogramArtistProperties(visible=True, zorder=ZOrder(1), visuals=self._create_patch(), bins=s.get("hist.bins", "auto"), density=False, cumulative=False)
 
     def _create_stair_artist(self) -> StairArtistProperties:
-        return StairArtistProperties(visible=True, zorder=1, visuals=self._create_line(), baseline=0.0, fill=False)
+        return StairArtistProperties(visible=True, zorder=ZOrder(1), visuals=self._create_line(), baseline=0.0, fill=False)
 
     def _create_font(self) -> FontProperties:
         s = self._current_style
         family = s["font.family"]
-        return FontProperties(family=str(family[0] if isinstance(family, list) else family), style=str(s["font.style"]), variant=str(s["font.variant"]), weight=str(s["font.weight"]), stretch=str(s["font.stretch"]), size=self._parse_numeric_or_str(s["font.size"]))
+        return FontProperties(
+            family=str(family[0] if isinstance(family, list) else family),
+            style=str(s["font.style"]),
+            variant=str(s["font.variant"]),
+            weight=str(s["font.weight"]),
+            stretch=str(s["font.stretch"]),
+            size=Dimension(float(s["font.size"]), Unit.PT)
+        )
 
     def _create_text(self, content: str) -> TextProperties:
         s = self._current_style
-        return TextProperties(text=content, color=s["text.color"], font=self._create_font())
+        return TextProperties(text=content, color=Color.from_mpl(s["text.color"]), font=self._create_font())
 
     def _create_line(self) -> LineProperties:
         s = self._current_style
-        return LineProperties(linewidth=self._parse_numeric_or_str(s["lines.linewidth"]), linestyle=s["lines.linestyle"], color=s["lines.color"], marker=str(s["lines.marker"]), markerfacecolor=s["lines.markerfacecolor"], markeredgecolor=s["lines.markeredgecolor"], markeredgewidth=self._parse_numeric_or_str(s["lines.markeredgewidth"]), markersize=self._parse_numeric_or_str(s["lines.markersize"]))
+        return LineProperties(
+            linewidth=Dimension(float(s["lines.linewidth"]), Unit.PT),
+            linestyle=s["lines.linestyle"],
+            color=Color.from_mpl(s["lines.color"]),
+            marker=str(s["lines.marker"]),
+            markerfacecolor=Color.from_mpl(s["lines.markerfacecolor"]),
+            markeredgecolor=Color.from_mpl(s["lines.markeredgecolor"]),
+            markeredgewidth=Dimension(float(s["lines.markeredgewidth"]), Unit.PT),
+            markersize=Dimension(float(s["lines.markersize"]), Unit.PT)
+        )
 
     def _create_patch(self) -> PatchProperties:
         s = self._current_style
-        return PatchProperties(facecolor=s["patch.facecolor"], edgecolor=s["patch.edgecolor"], linewidth=self._parse_numeric_or_str(s["patch.linewidth"]), force_edgecolor=bool(s["patch.force_edgecolor"]))
+        return PatchProperties(
+            facecolor=Color.from_mpl(s["patch.facecolor"]),
+            edgecolor=Color.from_mpl(s["patch.edgecolor"]),
+            linewidth=Dimension(float(s["patch.linewidth"]), Unit.PT),
+            force_edgecolor=bool(s["patch.force_edgecolor"])
+        )
 
     def _create_mappable(self) -> ScalarMappableProperties:
         s = self._current_style
@@ -393,39 +436,45 @@ class StyleService:
 
     def _create_ticks(self, axis_key: AxisKey) -> TickProperties:
         s = self._current_style
-        # Path B: Smart Inheritance
-        # If ztick keys are missing (non-standard), inherit from xtick within the same theme.
         prefix = axis_key.value if f"{axis_key.value}tick.major.size" in s else "x"
-        
         return TickProperties(
-            major_size=self._parse_numeric_or_str(s[f"{prefix}tick.major.size"]),
-            minor_size=self._parse_numeric_or_str(s[f"{prefix}tick.minor.size"]),
-            major_width=self._parse_numeric_or_str(s[f"{prefix}tick.major.width"]),
-            minor_width=self._parse_numeric_or_str(s[f"{prefix}tick.minor.width"]),
-            major_pad=self._parse_numeric_or_str(s.get(f"{prefix}tick.major.pad", 3.5)),
-            minor_pad=self._parse_numeric_or_str(s.get(f"{prefix}tick.minor.pad", 3.4)),
+            major_size=Dimension(float(s[f"{prefix}tick.major.size"]), Unit.PT),
+            minor_size=Dimension(float(s[f"{prefix}tick.minor.size"]), Unit.PT),
+            major_width=Dimension(float(s[f"{prefix}tick.major.width"]), Unit.PT),
+            minor_width=Dimension(float(s[f"{prefix}tick.minor.width"]), Unit.PT),
+            major_pad=Dimension(float(s.get(f"{prefix}tick.major.pad", 3.5)), Unit.PT),
+            minor_pad=Dimension(float(s.get(f"{prefix}tick.minor.pad", 3.4)), Unit.PT),
             direction=TickDirection.from_str(s[f"{prefix}tick.direction"]),
-            color=s[f"{prefix}tick.color"],
-            labelcolor=s[f"{prefix}tick.labelcolor"],
-            labelsize=self._parse_numeric_or_str(s[f"{prefix}tick.labelsize"]),
+            color=Color.from_mpl(s[f"{prefix}tick.color"]),
+            labelcolor=Color.from_mpl(s[f"{prefix}tick.labelcolor"]),
+            labelsize=Dimension(float(s[f"{prefix}tick.labelsize"]), Unit.PT),
             minor_visible=bool(s[f"{prefix}tick.minor.visible"]),
             minor_ndivs=s.get(f"{prefix}tick.minor.ndivs", 2),
         )
 
     def _create_spine(self, position: SpinePosition, is_visible: bool) -> SpineProperties:
         s = self._current_style
-        return SpineProperties(visible=is_visible, color=s["axes.edgecolor"], linewidth=self._parse_numeric_or_str(s["axes.linewidth"]), position=position)
+        return SpineProperties(
+            visible=is_visible,
+            color=Color.from_mpl(s["axes.edgecolor"]),
+            linewidth=Dimension(float(s["axes.linewidth"]), Unit.PT),
+            position=position
+        )
 
     def _create_grid(self) -> GridProperties:
         s = self._current_style
-        return GridProperties(visible=bool(s["axes.grid"]), color=s["grid.color"], linestyle=s["grid.linestyle"], linewidth=self._parse_numeric_or_str(s["grid.linewidth"]), alpha=self._parse_numeric_or_str(s["grid.alpha"]))
+        return GridProperties(
+            visible=bool(s["axes.grid"]),
+            color=Color.from_mpl(s["grid.color"]),
+            linestyle=s["grid.linestyle"],
+            linewidth=Dimension(float(s["grid.linewidth"]), Unit.PT),
+            alpha=Alpha(float(s["grid.alpha"]))
+        )
 
     def _create_axis(self, axis_key: AxisKey) -> AxisProperties:
         s = self._current_style
-        # Path B: Inherit missing zmargin from xmargin if not explicitly in theme
         margin_key = f"axes.{axis_key.value}margin"
-        margin = self._parse_numeric_or_str(s.get(margin_key, s.get("axes.xmargin", 0.0)))
-        
+        margin = float(s.get(margin_key, s.get("axes.xmargin", 0.0)))
         return AxisProperties(
             ticks=self._create_ticks(axis_key),
             margin=margin,
@@ -448,9 +497,9 @@ class StyleService:
                 SpinePosition.TOP: self._create_spine(SpinePosition.TOP, bool(s["axes.spines.top"])),
                 SpinePosition.RIGHT: self._create_spine(SpinePosition.RIGHT, bool(s["axes.spines.right"])),
             },
-            facecolor=str(s["axes.facecolor"]),
+            facecolor=Color.from_mpl(s["axes.facecolor"]),
             axis_below=s["axes.axisbelow"],
-            prop_cycle=list(s["axes.prop_cycle"].by_key()["color"]),
+            prop_cycle=[Color.from_mpl(c) for c in s["axes.prop_cycle"].by_key()["color"]],
         )
 
     def _create_cartesian_3d(self) -> Cartesian3DProperties:
@@ -465,9 +514,9 @@ class StyleService:
             axis_below=base.axis_below,
             prop_cycle=base.prop_cycle,
             pane_colors={
-                AxisKey.X: self._parse_rgba(s["axes3d.xaxis.panecolor"]),
-                AxisKey.Y: self._parse_rgba(s["axes3d.yaxis.panecolor"]),
-                AxisKey.Z: self._parse_rgba(s["axes3d.zaxis.panecolor"]),
+                AxisKey.X: Color.from_mpl(s["axes3d.xaxis.panecolor"]),
+                AxisKey.Y: Color.from_mpl(s["axes3d.yaxis.panecolor"]),
+                AxisKey.Z: Color.from_mpl(s["axes3d.zaxis.panecolor"]),
             },
         )
 

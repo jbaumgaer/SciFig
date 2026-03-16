@@ -1,7 +1,11 @@
 import logging
 from dataclasses import fields, is_dataclass, replace
 from enum import Enum
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Union, get_origin, get_args
+
+from src.shared.color import Color
+from src.shared.units import Dimension, Unit
+from src.shared.primitives import Alpha, ZOrder
 
 
 class PropertyService:
@@ -11,8 +15,9 @@ class PropertyService:
     
     Supports:
     - Nested dataclasses, dictionaries, and lists.
-    - Wildcard expansion (e.g., 'artists.*.visible').
-    - Type-safe leaf setting (Enums, numeric conversion).
+    - Functional, immutable updates for frozen dataclasses.
+    - Wildcard expansion (e.g., 'artists.*.visuals.color').
+    - Primitive Projection for UI integration.
     """
 
     def __init__(self):
@@ -33,63 +38,81 @@ class PropertyService:
                 curr = getattr(curr, part)
         return curr
 
-    def set_value(self, obj: Any, path: str, value: Any):
+    def get_projected_value(self, obj: Any, path: str) -> Any:
         """
-        Sets a value at a path. If an intermediate parent is a frozen dataclass,
-        it performs a replacement higher up the chain.
+        Navigates to the leaf and 'unwraps' Value Objects for UI consumption.
+        (e.g., Dimension -> float, Color -> hex string).
+        """
+        val = self.get_value(obj, path)
+        
+        if isinstance(val, Dimension):
+            return val.value
+        if isinstance(val, Color):
+            return val.to_hex()
+        if isinstance(val, Alpha):
+            return float(val)
+        if isinstance(val, ZOrder):
+            return int(val)
+            
+        return val
+
+    def set_value(self, obj: Any, path: str, value: Any) -> Any:
+        """
+        Functional update. Navigates the path and returns a NEW object tree
+        with the value applied at the leaf.
         """
         parts = path.split(".")
-        
-        # Base case: single attribute
-        if len(parts) == 1:
-            self._set_direct_value(obj, parts[0], value)
-            return
+        return self._update_recursive(obj, parts, value)
 
-        # Recursive case: navigate and replace if needed
-        parent_path = ".".join(parts[:-1])
-        leaf_name = parts[-1]
-        parent = self.get_value(obj, parent_path)
+    def _update_recursive(self, obj: Any, parts: list[str], value: Any) -> Any:
+        """Helper for immutable recursive replacement."""
+        if not parts:
+            return value
 
-        try:
-            self._set_direct_value(parent, leaf_name, value)
-            # Automatic Versioning: If the base object is a node, bump its version
-            if hasattr(obj, "increment_property_version"):
-                obj.increment_property_version()
-        except Exception:
-            # If direct set fails (e.g. FrozenInstanceError), we must replace the parent 
-            # object on ITS parent.
-            if is_dataclass(parent):
+        part = parts[0]
+        remaining = parts[1:]
 
-                # 1. Coerce value for the leaf
-                field_map = {f.name: f.type for f in fields(parent)}
-                target_type = field_map.get(leaf_name)
-                final_value = self._coerce_value(value, target_type)
+        # 1. Dictionary Path
+        if isinstance(obj, dict):
+            new_dict = dict(obj)
+            new_dict[part] = self._update_recursive(obj[part], remaining, value)
+            return new_dict
 
-                # 2. Create new parent instance
-                new_parent = replace(parent, **{leaf_name: final_value})
+        # 2. List Path
+        if isinstance(obj, list):
+            idx = int(part)
+            new_list = list(obj)
+            new_list[idx] = self._update_recursive(obj[idx], remaining, value)
+            return new_list
 
-                # 3. Recursively set the new parent on the original object
-                # This recursion will eventually hit the node and increment version
-                self.set_value(obj, parent_path, new_parent)
-            else:
-                raise
+        # 3. Dataclass Path
+        if is_dataclass(obj):
+            # Resolve target type for coercion at the leaf
+            target_type = None
+            if not remaining:
+                field_map = {f.name: f.type for f in fields(obj)}
+                target_type = field_map.get(part)
 
+            # Recursive step
+            current_child = getattr(obj, part)
+            new_child = self._update_recursive(current_child, remaining, value)
 
-    def _set_direct_value(self, target: Any, attr: str, value: Any):
-        """Applies value with coercion to a direct attribute/key/index."""
-        target_type = None
-        if is_dataclass(target):
-            field_map = {f.name: f.type for f in fields(target)}
-            target_type = field_map.get(attr)
+            # Final leaf coercion
+            if not remaining:
+                new_child = self._coerce_value(new_child, target_type)
 
-        final_value = self._coerce_value(value, target_type)
+            # Immutable replacement
+            try:
+                # Try direct mutation first if it's not frozen (for hybrid support during migration)
+                setattr(obj, part, new_child)
+                return obj
+            except Exception:
+                # Fallback to immutable replace
+                return replace(obj, **{part: new_child})
 
-        if isinstance(target, dict):
-            target[attr] = final_value
-        elif isinstance(target, list):
-            target[int(attr)] = final_value
-        else:
-            setattr(target, attr, final_value)
+        # 4. Standard Attribute Path (Fallback)
+        setattr(obj, part, value)
+        return obj
 
     def resolve_concrete_paths(self, obj: Any, path: str) -> list[str]:
         """Expands wildcards into concrete paths."""
@@ -135,11 +158,20 @@ class PropertyService:
                 pass
 
     def _coerce_value(self, value: Any, target_type: Optional[Any]) -> Any:
-        """Helper to convert raw input (often strings from UI) to the expected type."""
+        """Helper to convert raw input to the expected Value Object or Primitive."""
         if target_type is None or value is None:
             return value
 
-        # Handle Enums
+        # Unwrap Union types
+        if get_origin(target_type) is Union:
+            args = get_args(target_type)
+            # Find the most specific non-None type
+            for arg in args:
+                if arg is not type(None):
+                    target_type = arg
+                    break
+
+        # 1. Handle Enums
         if isinstance(target_type, type) and issubclass(target_type, Enum):
             if isinstance(value, str):
                 try:
@@ -148,7 +180,26 @@ class PropertyService:
                     return value
             return value
 
-        # Handle numeric conversion for strings from UI
+        # 2. Handle Color VO
+        if target_type is Color:
+            if isinstance(value, Color):
+                return value
+            return Color.from_mpl(value)
+
+        # 3. Handle Dimension VO
+        if target_type is Dimension:
+            if isinstance(value, Dimension):
+                return value
+            # Assume UI spoken units are CM if raw float provided
+            return Dimension(float(value), Unit.CM)
+
+        # 4. Handle Refined Primitives
+        if target_type is Alpha:
+            return Alpha(float(value))
+        if target_type is ZOrder:
+            return ZOrder(int(value))
+
+        # 5. Standard Numeric Fallback
         if isinstance(value, str):
             try:
                 if target_type is float:

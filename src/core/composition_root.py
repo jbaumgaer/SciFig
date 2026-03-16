@@ -251,12 +251,14 @@ class CompositionRoot:
         )
         self._plot_properties_ui_factory = PlotPropertiesUIFactory(
             event_aggregator=self._event_aggregator,
+            property_service=self._property_service,
         )
         self._side_panel = SidePanel(event_aggregator=self._event_aggregator)
         properties_tab = PropertiesTab(
             model=self._application_model,
             event_aggregator=self._event_aggregator,
             plot_properties_ui_factory=self._plot_properties_ui_factory,
+            property_service=self._property_service,
             parent=self._side_panel,
         )
         layout_tab = LayoutTab(

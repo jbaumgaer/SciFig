@@ -30,6 +30,9 @@ from src.models.plots.plot_properties import (
     LineProperties,
     SpineProperties,
 )
+from src.shared.color import Color
+from src.shared.units import Dimension, Unit
+from src.shared.primitives import Alpha, ZOrder
 from src.models.plots.plot_types import (
     AutolimitMode,
     SpinePosition,
@@ -352,28 +355,33 @@ def minimal_plot_dict():
 @pytest.fixture
 def sample_font():
     return FontProperties(
-        family="Arial", style="normal", variant="normal", weight="normal", stretch="normal", size=10
+        family="Arial", 
+        style="normal", 
+        variant="normal", 
+        weight="normal", 
+        stretch="normal", 
+        size=Dimension(10.0, Unit.PT)
     )
 
 
 @pytest.fixture
 def sample_text(sample_font):
-    return TextProperties(text="Test", color="black", font=sample_font)
+    return TextProperties(text="Test", color=Color.from_mpl("black"), font=sample_font)
 
 
 @pytest.fixture
 def sample_ticks():
     return TickProperties(
-        major_size=5,
-        minor_size=2,
-        major_width=1,
-        minor_width=0.5,
-        major_pad=3,
-        minor_pad=3,
+        major_size=Dimension(5.0, Unit.PT),
+        minor_size=Dimension(2.0, Unit.PT),
+        major_width=Dimension(1.0, Unit.PT),
+        minor_width=Dimension(0.5, Unit.PT),
+        major_pad=Dimension(3.0, Unit.PT),
+        minor_pad=Dimension(3.0, Unit.PT),
         direction=TickDirection.OUT,
-        color="black",
-        labelcolor="black",
-        labelsize=10,
+        color=Color.from_mpl("black"),
+        labelcolor=Color.from_mpl("black"),
+        labelsize=Dimension(10.0, Unit.PT),
         minor_visible=True,
         minor_ndivs=2,
     )
@@ -406,20 +414,28 @@ def sample_plot_properties(sample_axis, sample_text):
             xaxis=sample_axis,
             yaxis=sample_axis,
             spines={
-                "left": SpineProperties(True, "black", 1.0, SpinePosition.LEFT),
-                "bottom": SpineProperties(True, "black", 1.0, SpinePosition.BOTTOM),
+                "left": SpineProperties(True, Color.from_mpl("black"), Dimension(1.0, Unit.PT), SpinePosition.LEFT),
+                "bottom": SpineProperties(True, Color.from_mpl("black"), Dimension(1.0, Unit.PT), SpinePosition.BOTTOM),
             },
-            facecolor="white",
+            facecolor=Color.from_mpl("white"),
             axis_below=True,
-            prop_cycle=["C0", "C1"],
+            prop_cycle=[Color.from_mpl("C0"), Color.from_mpl("C1")],
         ),
         legend={},
         artists=[
             LineArtistProperties(
                 visible=True,
-                zorder=1,
-                visuals=LineProperties(1.0, "-", "C0", "None", "C0", "black", 0.5, 5.0),
+                zorder=ZOrder(1),
+                visuals=LineProperties(
+                    linewidth=Dimension(1.0, Unit.PT), 
+                    linestyle="-", 
+                    color=Color.from_mpl("C0"), 
+                    marker="None", 
+                    markerfacecolor=Color.from_mpl("C0"), 
+                    markeredgecolor=Color.from_mpl("black"), 
+                    markeredgewidth=Dimension(0.5, Unit.PT), 
+                    markersize=Dimension(5.0, Unit.PT)
+                ),
             )
         ],
-        _version=1,
     )

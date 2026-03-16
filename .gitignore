@@ -383,3 +383,9 @@ tests/integration/__pycache__/test_project_persistence.cpython-313-pytest-9.0.2.
 tests/integration/__pycache__/test_style_theming.cpython-313-pytest-9.0.2.pyc
 tests/integration/__pycache__/test_workflows.cpython-313-pytest-9.0.2.pyc
 src/services/commands/__pycache__/update_grid_parameters_command.cpython-313.pyc
+tests/unit/shared/__pycache__/test_color.cpython-313-pytest-9.0.2.pyc
+tests/unit/shared/__pycache__/test_primitives.cpython-313-pytest-9.0.2.pyc
+tests/unit/shared/__pycache__/test_units.cpython-313-pytest-9.0.2.pyc
+src/shared/__pycache__/color.cpython-313.pyc
+src/shared/__pycache__/primitives.cpython-313.pyc
+src/shared/__pycache__/units.cpython-313.pyc

@@ -1,5 +1,5 @@
-from dataclasses import asdict, dataclass, field, fields, is_dataclass
-from typing import Any, Optional, Type, TypeVar, Union, get_type_hints
+from dataclasses import asdict, dataclass, field, fields, is_dataclass, replace
+from typing import Any, Optional, Type, TypeVar, Union, get_type_hints, get_origin, get_args
 
 from src.models.plots.plot_types import (
     ArtistType,
@@ -8,6 +8,9 @@ from src.models.plots.plot_types import (
     SpinePosition,
     TickDirection,
 )
+from src.shared.color import Color
+from src.shared.units import Dimension, Unit
+from src.shared.primitives import Alpha, ZOrder
 
 T = TypeVar("T")
 
@@ -25,9 +28,27 @@ def _from_dict_recursive(cls: Type[T], data: Any) -> T:
                 field_value = data[f.name]
                 field_type = type_hints[f.name]
 
-                origin = getattr(field_type, "__origin__", None)
+                # Special Case: Coerce Color and Dimension from primitives during deserialization
+                if field_type is Color:
+                    kwargs[f.name] = Color.from_mpl(field_value)
+                    continue
+                if field_type is Dimension:
+                    # Default to CM if unit missing in dict (usually raw float)
+                    if isinstance(field_value, (int, float)):
+                        kwargs[f.name] = Dimension(float(field_value), Unit.CM)
+                    else:
+                        kwargs[f.name] = Dimension(field_value["value"], Unit(field_value["unit"]))
+                    continue
+                if field_type is Alpha:
+                    kwargs[f.name] = Alpha(float(field_value))
+                    continue
+                if field_type is ZOrder:
+                    kwargs[f.name] = ZOrder(int(field_value))
+                    continue
+
+                origin = get_origin(field_type)
                 if origin is Union:
-                    args = field_type.__args__
+                    args = get_args(field_type)
                     success = False
                     for possible_type in args:
                         try:
@@ -43,12 +64,12 @@ def _from_dict_recursive(cls: Type[T], data: Any) -> T:
                     if not success:
                         kwargs[f.name] = field_value
                 elif origin is list:
-                    item_type = field_type.__args__[0]
+                    item_type = get_args(field_type)[0]
                     kwargs[f.name] = [
                         _from_dict_recursive(item_type, item) for item in field_value
                     ]
                 elif origin is dict:
-                    val_type = field_type.__args__[1]
+                    val_type = get_args(field_type)[1]
                     kwargs[f.name] = {
                         k: _from_dict_recursive(val_type, v)
                         for k, v in field_value.items()
@@ -59,21 +80,21 @@ def _from_dict_recursive(cls: Type[T], data: Any) -> T:
     return data
 
 
-@dataclass
+@dataclass(frozen=True)
 class FontProperties:
     family: str
     style: str
     variant: str
     weight: str
     stretch: str
-    size: Union[float, str]  # Supports aliases like 'medium'
+    size: Dimension  # Supports conversion from points
     # TODO: Inject not only the font family, but the actual font, maybe via a double enum?
 
 
-@dataclass
+@dataclass(frozen=True)
 class TextProperties:
     text: str
-    color: Union[str, tuple, list]  # TODO: Make a color type or class
+    color: Color
     font: FontProperties
     # rotation: float = field(init=False)
     # va: str = field(init=False)
@@ -82,60 +103,60 @@ class TextProperties:
     # alpha: float = field(init=False)
 
 
-@dataclass
+@dataclass(frozen=True)
 class LineProperties:
-    linewidth: float
+    linewidth: Dimension
     linestyle: Union[str, tuple]
-    color: Union[str, tuple, list]
+    color: Color
     marker: str
-    markerfacecolor: Union[str, tuple, list]
-    markeredgecolor: Union[str, tuple, list]
-    markeredgewidth: float
-    markersize: float
+    markerfacecolor: Color
+    markeredgecolor: Color
+    markeredgewidth: Dimension
+    markersize: Dimension
 
 
-@dataclass
+@dataclass(frozen=True)
 class PatchProperties:
-    facecolor: Union[str, tuple, list]
-    edgecolor: Union[str, tuple, list]
-    linewidth: float
+    facecolor: Color
+    edgecolor: Color
+    linewidth: Dimension
     force_edgecolor: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class TickProperties:
-    major_size: float
-    minor_size: float
-    major_width: float
-    minor_width: float
-    major_pad: float
-    minor_pad: float
+    major_size: Dimension
+    minor_size: Dimension
+    major_width: Dimension
+    minor_width: Dimension
+    major_pad: Dimension
+    minor_pad: Dimension
     direction: TickDirection
-    color: Union[str, tuple, list]
-    labelcolor: Union[str, tuple, list]
-    labelsize: Union[float, str]
+    color: Color
+    labelcolor: Color
+    labelsize: Dimension
     minor_visible: bool
     minor_ndivs: Union[str, int]
 
 
-@dataclass
+@dataclass(frozen=True)
 class SpineProperties:
     visible: bool
-    color: Union[str, tuple, list]
-    linewidth: float
+    color: Color
+    linewidth: Dimension
     position: SpinePosition
 
 
-@dataclass
+@dataclass(frozen=True)
 class GridProperties:
     visible: bool
-    color: Union[str, tuple, list]
+    color: Color
     linestyle: Union[str, tuple]
-    linewidth: float
-    alpha: float
+    linewidth: Dimension
+    alpha: Alpha
 
 
-@dataclass
+@dataclass(frozen=True)
 class ScalarMappableProperties:
     cmap: str
     norm_min: Optional[float]
@@ -143,10 +164,10 @@ class ScalarMappableProperties:
     has_colorbar: bool
 
 
-@dataclass
+@dataclass(frozen=True)
 class AxisProperties:
     ticks: TickProperties
-    margin: float
+    margin: float # Unitless ratio
     autolimit_mode: AutolimitMode
     use_offset: bool
     offset_threshold: int
@@ -156,37 +177,37 @@ class AxisProperties:
     # scale: str = field(init=False)
 
 
-@dataclass
+@dataclass(frozen=True)
 class CoordinateProperties:
     # coord_type: CoordinateSystem
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Cartesian2DProperties(CoordinateProperties):
     xaxis: AxisProperties
     yaxis: AxisProperties
     spines: dict[str, SpineProperties]
-    facecolor: Union[str, tuple, list]
+    facecolor: Color
     axis_below: Union[bool, str]
-    prop_cycle: list[str]
+    prop_cycle: list[Color]
     coord_type: CoordinateSystem = CoordinateSystem.CARTESIAN_2D
 
 
-@dataclass
+@dataclass(frozen=True)
 class Cartesian3DProperties(CoordinateProperties):
     xaxis: AxisProperties
     yaxis: AxisProperties
     zaxis: AxisProperties
     spines: dict[str, SpineProperties]
-    facecolor: Union[str, tuple, list]
+    facecolor: Color
     axis_below: Union[bool, str]
-    prop_cycle: list[str]
-    pane_colors: dict[str, tuple[float, float, float, float]]
+    prop_cycle: list[Color]
+    pane_colors: dict[str, Color]
     coord_type: CoordinateSystem = CoordinateSystem.CARTESIAN_3D
 
 
-@dataclass
+@dataclass(frozen=True)
 class PolarProperties(CoordinateProperties):
     theta_axis: AxisProperties
     r_axis: AxisProperties
@@ -194,14 +215,13 @@ class PolarProperties(CoordinateProperties):
     coord_type: CoordinateSystem = CoordinateSystem.POLAR
 
 
-@dataclass
+@dataclass(frozen=True)
 class BaseArtistProperties:
     visible: bool
-    zorder: int
-    # artist_type: ArtistType
+    zorder: ZOrder
 
 
-@dataclass
+@dataclass(frozen=True)
 class LineArtistProperties(BaseArtistProperties):
     visuals: LineProperties
     x_column: Optional[str] = None
@@ -209,7 +229,7 @@ class LineArtistProperties(BaseArtistProperties):
     artist_type: ArtistType = ArtistType.LINE
 
 
-@dataclass
+@dataclass(frozen=True)
 class ScatterArtistProperties(BaseArtistProperties):
     visuals: LineProperties
     x_column: Optional[str] = None
@@ -217,7 +237,7 @@ class ScatterArtistProperties(BaseArtistProperties):
     artist_type: ArtistType = ArtistType.SCATTER
 
 
-@dataclass
+@dataclass(frozen=True)
 class BarArtistProperties(BaseArtistProperties):
     visuals: PatchProperties
     width: float
@@ -225,28 +245,28 @@ class BarArtistProperties(BaseArtistProperties):
     artist_type: ArtistType = ArtistType.BAR
 
 
-@dataclass
+@dataclass(frozen=True)
 class ImageArtistProperties(BaseArtistProperties):
     visuals: ScalarMappableProperties
     artist_type: ArtistType = ArtistType.IMAGE
 
 
-@dataclass
+@dataclass(frozen=True)
 class MeshArtistProperties(BaseArtistProperties):
     visuals: ScalarMappableProperties
     artist_type: ArtistType = ArtistType.MESH
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContourArtistProperties(BaseArtistProperties):
     visuals: ScalarMappableProperties
-    linewidth: float
+    linewidth: Dimension
     levels: Union[int, list[float]]
     filled: bool
     artist_type: ArtistType = ArtistType.CONTOUR
 
 
-@dataclass
+@dataclass(frozen=True)
 class HistogramArtistProperties(BaseArtistProperties):
     visuals: PatchProperties
     bins: Union[int, str, list]
@@ -255,7 +275,7 @@ class HistogramArtistProperties(BaseArtistProperties):
     artist_type: ArtistType = ArtistType.HISTOGRAM
 
 
-@dataclass
+@dataclass(frozen=True)
 class StairArtistProperties(BaseArtistProperties):
     visuals: LineProperties
     baseline: float
@@ -263,7 +283,7 @@ class StairArtistProperties(BaseArtistProperties):
     artist_type: ArtistType = ArtistType.STAIR
 
 
-@dataclass
+@dataclass(frozen=True)
 class PlotProperties:
     """The root property tree for a single PlotNode."""
 

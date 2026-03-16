@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-@dataclass
+@dataclass(frozen=True)
 class GridPosition:
     """Defines the location and span of a node within a GridNode."""
     row: int

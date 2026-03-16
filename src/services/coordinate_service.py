@@ -2,6 +2,7 @@ import logging
 from typing import Optional, Union
 
 from src.shared.types import CoordinateSpace
+from src.shared.units import Dimension, Unit
 
 
 class CoordinateService:
@@ -10,8 +11,6 @@ class CoordinateService:
     and unit mapping. 
     Canonical Unit: Centimeters (cm).
     """
-
-    CM_PER_INCH = 2.54
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -77,31 +76,44 @@ class CoordinateService:
         return physical_cm
 
     @classmethod
-    def to_canonical(cls, value: float, from_unit: str) -> float:
-        """Converts any physical unit to the internal CM standard."""
-        unit = from_unit.lower().strip()
-        if unit in ("inch", "inches", "in", "\""):
-            return value * cls.CM_PER_INCH
-        if unit in ("mm", "millimeter", "millimeters"):
-            return value / 10.0
-        if unit in ("pt", "point", "points"):
-            return value * (cls.CM_PER_INCH / 72.0)
-        return value
+    def to_canonical(cls, value: float, from_unit: Union[str, Unit]) -> float:
+        """Converts any physical unit to the internal CM standard via Dimension VO."""
+        if isinstance(from_unit, str):
+            # Map legacy string units to Unit Enum
+            unit_map = {
+                "inch": Unit.INCH, "inches": Unit.INCH, "in": Unit.INCH, "\"": Unit.INCH,
+                "pt": Unit.PT, "point": Unit.PT, "points": Unit.PT,
+                "cm": Unit.CM, "centimeter": Unit.CM,
+                "mm": Unit.CM, # Handled below
+            }
+            unit = unit_map.get(from_unit.lower().strip(), Unit.CM)
+            if from_unit.lower() == "mm":
+                return value / 10.0
+        else:
+            unit = from_unit
+
+        return Dimension(value, unit).cm
 
     @classmethod
-    def from_canonical(cls, value_cm: float, to_unit: str) -> float:
-        """Converts internal CM to a target physical unit."""
-        unit = to_unit.lower().strip()
-        if unit in ("inch", "inches", "in", "\""):
-            return value_cm / cls.CM_PER_INCH
-        if unit in ("mm", "millimeter", "millimeters"):
-            return value_cm * 10.0
-        if unit in ("pt", "point", "points"):
-            return value_cm / (cls.CM_PER_INCH / 72.0)
-        return value_cm
+    def from_canonical(cls, value_cm: float, to_unit: Union[str, Unit]) -> float:
+        """Converts internal CM to a target physical unit via Dimension VO."""
+        if isinstance(to_unit, str):
+            unit_map = {
+                "inch": Unit.INCH, "inches": Unit.INCH, "in": Unit.INCH, "\"": Unit.INCH,
+                "pt": Unit.PT, "point": Unit.PT, "points": Unit.PT,
+                "cm": Unit.CM,
+                "mm": Unit.CM,
+            }
+            unit = unit_map.get(to_unit.lower().strip(), Unit.CM)
+            if to_unit.lower() == "mm":
+                return value_cm * 10.0
+        else:
+            unit = to_unit
+
+        return Dimension(value_cm, Unit.CM).to_unit(unit)
 
     @classmethod
-    def format_for_display(cls, value_cm: float, unit: str, precision: int = 3) -> str:
+    def format_for_display(cls, value_cm: float, unit: Union[str, Unit], precision: int = 3) -> str:
         """Converts to target unit and returns a formatted string."""
         val = cls.from_canonical(value_cm, unit)
         return f"{val:.{precision}f}"

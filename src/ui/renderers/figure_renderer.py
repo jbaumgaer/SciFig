@@ -15,8 +15,11 @@ from src.models.nodes.scene_node import SceneNode
 from src.services.coordinate_service import CoordinateService
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_manager import LayoutManager
+from src.shared.color import Color
 from src.shared.events import Events
+from src.shared.primitives import Alpha, ZOrder
 from src.shared.types import CoordinateSpace
+from src.shared.units import Dimension
 from src.ui.renderers.plotting_strategies import (
     CoordSyncStrategy,
     get_artist_strategy_registry,
@@ -418,8 +421,18 @@ class FigureRenderer:
                 continue
 
             val = getattr(props_obj, field.name)
-            # Resolve Enum to its value string for Matplotlib compatibility
-            if isinstance(val, Enum):
+            
+            # --- Value Object Unwrapping (Projection) ---
+            if isinstance(val, Color):
+                val = val.to_mpl()
+            elif isinstance(val, Dimension):
+                # Matplotlib backend expects float values (usually in points for styling)
+                val = val.value
+            elif isinstance(val, Alpha):
+                val = float(val)
+            elif isinstance(val, ZOrder):
+                val = int(val)
+            elif isinstance(val, Enum):
                 val = val.value
 
             # Recursive case for nested dataclasses
@@ -434,6 +447,10 @@ class FigureRenderer:
 
     def _resolve_mpl_child(self, mpl_obj: Any, field_name: str) -> Optional[Any]:
         """Resolves a SciFig field to a Matplotlib child object using translation overrides."""
+        # Fix for Text -> Font (which is now just a property of the Text object)
+        if type(mpl_obj).__name__ == "Text" and field_name == "font":
+            return mpl_obj
+
         obj_type = type(mpl_obj).__name__
 
         # 1. Check for explicit translation
@@ -471,7 +488,12 @@ class FigureRenderer:
                 return
 
         # 2. Generic fallback: set_<field_name>
-        setter_name = f"set_{field_name}"
+        # Special Case: Font properties on Text objects (set_fontfamily, set_fontsize, etc.)
+        if obj_type == "Text" and field_name in ("family", "style", "variant", "weight", "stretch", "size"):
+            setter_name = f"set_font{field_name}"
+        else:
+            setter_name = f"set_{field_name}"
+
         if hasattr(mpl_obj, setter_name):
             try:
                 getattr(mpl_obj, setter_name)(value)

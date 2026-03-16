@@ -19,6 +19,7 @@ from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_types import ArtistType
 from src.services.event_aggregator import EventAggregator
+from src.services.property_service import PropertyService
 from src.shared.events import Events
 from src.ui.factories.plot_properties_ui_factory import PlotPropertiesUIFactory
 
@@ -29,12 +30,14 @@ class PropertiesTab(QWidget):
         model: ApplicationModel,
         event_aggregator: EventAggregator,
         plot_properties_ui_factory: PlotPropertiesUIFactory,
+        property_service: PropertyService,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.model = model
         self._event_aggregator = event_aggregator
         self._plot_properties_ui_factory = plot_properties_ui_factory
+        self._property_service = property_service
         self.logger = logging.getLogger(self.__class__.__name__)
 
         self._main_layout = QVBoxLayout(self)

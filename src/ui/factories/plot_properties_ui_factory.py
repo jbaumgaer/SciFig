@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 from src.models.nodes.plot_node import PlotNode
 from src.models.plots.plot_types import ArtistType
 from src.services.event_aggregator import EventAggregator
+from src.services.property_service import PropertyService
 from src.shared.events import Events
 
 
@@ -132,12 +133,13 @@ def _build_limit_selectors(
     layout: QFormLayout,
     limit_edits: dict,
     event_aggregator: EventAggregator,
+    property_service: PropertyService,
 ):
     assert node.plot_properties is not None
     validator = QDoubleValidator()
 
-    # Mapping: Use axis-specific limits
-    xlim = node.plot_properties.coords.xaxis.limits
+    # Use projected values (will return floats for the tuple elements)
+    xlim = property_service.get_projected_value(node, "plot_properties.coords.xaxis.limits")
     limit_edits["xlim_min"] = QLineEdit(str(xlim[0] if xlim[0] is not None else ""))
     limit_edits["xlim_min"].setObjectName("xlim_min_edit")
     limit_edits["xlim_max"] = QLineEdit(str(xlim[1] if xlim[1] is not None else ""))
@@ -151,7 +153,7 @@ def _build_limit_selectors(
     lim_layout_x.addWidget(limit_edits["xlim_max"])
     layout.addRow("X-Axis Limits:", lim_layout_x)
 
-    ylim = node.plot_properties.coords.yaxis.limits
+    ylim = property_service.get_projected_value(node, "plot_properties.coords.yaxis.limits")
     limit_edits["ylim_min"] = QLineEdit(str(ylim[0] if ylim[0] is not None else ""))
     limit_edits["ylim_min"].setObjectName("ylim_min_edit")
     limit_edits["ylim_max"] = QLineEdit(str(ylim[1] if ylim[1] is not None else ""))
@@ -219,6 +221,7 @@ def _build_base_plot_properties_ui(
     layout: QVBoxLayout,
     parent: QWidget,
     event_aggregator: EventAggregator,
+    property_service: PropertyService,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -238,15 +241,13 @@ def _build_base_plot_properties_ui(
     )
     layout.addWidget(data_source_group)
 
-    props = node.plot_properties
-
     # General Properties Group
     general_group = QGroupBox("General Properties", parent)
     general_layout = QFormLayout(general_group)
 
     # Mapping: Title -> titles.center.text
-    title_text = props.titles.get("center").text if props.titles.get("center") else ""
-    title_edit = QLineEdit(title_text, parent)
+    title_text = property_service.get_projected_value(node, "plot_properties.titles.center.text")
+    title_edit = QLineEdit(str(title_text), parent)
     title_edit.setObjectName("title_edit")
     title_edit.editingFinished.connect(
         lambda: event_aggregator.publish(
@@ -265,8 +266,8 @@ def _build_base_plot_properties_ui(
     axis_layout = QFormLayout(axis_group)
 
     # Mapping: X Label -> coords.xaxis.label.text
-    xlabel_text = props.coords.xaxis.label.text
-    xlabel_edit = QLineEdit(xlabel_text, parent)
+    xlabel_text = property_service.get_projected_value(node, "plot_properties.coords.xaxis.label.text")
+    xlabel_edit = QLineEdit(str(xlabel_text), parent)
     xlabel_edit.setObjectName("xlabel_edit")
     xlabel_edit.editingFinished.connect(
         lambda: event_aggregator.publish(
@@ -279,8 +280,8 @@ def _build_base_plot_properties_ui(
     axis_layout.addRow("X-Axis Label:", xlabel_edit)
 
     # Mapping: Y Label -> coords.yaxis.label.text
-    ylabel_text = props.coords.yaxis.label.text
-    ylabel_edit = QLineEdit(ylabel_text, parent)
+    ylabel_text = property_service.get_projected_value(node, "plot_properties.coords.yaxis.label.text")
+    ylabel_edit = QLineEdit(str(ylabel_text), parent)
     ylabel_edit.setObjectName("ylabel_edit")
     ylabel_edit.editingFinished.connect(
         lambda: event_aggregator.publish(
@@ -314,7 +315,7 @@ def _build_base_plot_properties_ui(
     # Axis Limits Group
     limits_group = QGroupBox("Axis Limits", parent)
     limits_layout = QFormLayout(limits_group)
-    _build_limit_selectors(node, limits_layout, limit_edits, event_aggregator)
+    _build_limit_selectors(node, limits_layout, limit_edits, event_aggregator, property_service)
     layout.addWidget(limits_group)
 
 
@@ -323,6 +324,7 @@ def _build_line_plot_ui_widgets(
     layout: QVBoxLayout,
     parent: QWidget,
     event_aggregator: EventAggregator,
+    property_service: PropertyService,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -334,23 +336,18 @@ def _build_line_plot_ui_widgets(
     base_form_layout = QFormLayout()
     _build_base_plot_properties_ui(
         node=node,
-        layout=base_form_layout,
+        layout=layout, # Note: Pass main layout to base
         parent=parent,
         event_aggregator=event_aggregator,
+        property_service=property_service,
         limit_edits=limit_edits,
         x_combo=x_combo,
         y_combo=y_combo,
     )
-    layout.addLayout(
-        base_form_layout
-    )  # Add the base form layout to the main QVBoxLayout
 
     # Line-specific properties group
     line_specific_group = QGroupBox("Line Properties", parent)
-    line_specific_layout = QFormLayout(
-        line_specific_group
-    )  # TODO: This doesn't do anything right now
-    # Line-specific properties will go here later
+    line_specific_layout = QFormLayout(line_specific_group)
     layout.addWidget(line_specific_group)
 
 
@@ -359,6 +356,7 @@ def _build_scatter_plot_ui_widgets(
     layout: QVBoxLayout,
     parent: QWidget,
     event_aggregator: EventAggregator,
+    property_service: PropertyService,
     limit_edits: dict,
     x_combo: QComboBox,
     y_combo: QComboBox,
@@ -366,39 +364,33 @@ def _build_scatter_plot_ui_widgets(
     """
     Builds UI widgets specific to Scatter plots.
     """
-    # Create a QFormLayout for the base properties
-    base_form_layout = QFormLayout()
     _build_base_plot_properties_ui(
         node=node,
-        layout=base_form_layout,
+        layout=layout,
         parent=parent,
         event_aggregator=event_aggregator,
+        property_service=property_service,
         limit_edits=limit_edits,
         x_combo=x_combo,
         y_combo=y_combo,
     )
-    layout.addLayout(
-        base_form_layout
-    )  # Add the base form layout to the main QVBoxLayout
 
     # Scatter-specific properties group
     scatter_specific_group = QGroupBox("Scatter Properties", parent)
     scatter_specific_layout = QFormLayout(scatter_specific_group)
 
-    props = node.plot_properties
-    if props.artists and props.artists[0].artist_type == ArtistType.SCATTER:
-        artist = props.artists[0]
-        marker_size_edit = QLineEdit(str(artist.visuals.markersize), parent)
-        marker_size_edit.setObjectName("marker_size_edit")
-        marker_size_edit.editingFinished.connect(
-            lambda: event_aggregator.publish(
-                Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
-                node_id=node.id,
-                path="artists.0.visuals.markersize",
-                value=marker_size_edit.text(),
-            )
+    markersize = property_service.get_projected_value(node, "plot_properties.artists.0.visuals.markersize")
+    marker_size_edit = QLineEdit(str(markersize), parent)
+    marker_size_edit.setObjectName("marker_size_edit")
+    marker_size_edit.editingFinished.connect(
+        lambda: event_aggregator.publish(
+            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
+            node_id=node.id,
+            path="artists.0.visuals.markersize",
+            value=marker_size_edit.text(),
         )
-        scatter_specific_layout.addRow("Marker Size:", marker_size_edit)
+    )
+    scatter_specific_layout.addRow("Marker Size:", marker_size_edit)
 
     layout.addWidget(scatter_specific_group)
 
@@ -409,9 +401,10 @@ class PlotPropertiesUIFactory:
     based on the type of the plot.
     """
 
-    def __init__(self, event_aggregator: EventAggregator):
+    def __init__(self, event_aggregator: EventAggregator, property_service: PropertyService):
         self._builders = {}
         self._event_aggregator = event_aggregator
+        self._property_service = property_service # TODO: I don't like this coupling to the propery service
 
     def register_builder(self, plot_type: ArtistType, builder_func: callable):
         self._builders[plot_type] = builder_func
@@ -427,42 +420,32 @@ class PlotPropertiesUIFactory:
     ):
         """
         Builds the UI for the given plot node by dispatching to a registered builder.
-        If no builder is registered for the plot type, no plot-specific UI elements will be built beyond the default.
-        This now expects a QVBoxLayout as the main layout, and will add QGroupBoxes to it.
         """
         props = node.plot_properties
         if not props:
-            # Handle case where plot_properties is None
             layout.addWidget(QLabel("No plot properties available for selected node."))
             return
 
-        # Derive plot type from the first artist, defaulting to LINE
         plot_type = ArtistType.LINE
         if hasattr(props, "artists") and props.artists:
             plot_type = props.artists[0].artist_type
 
         builder = self._builders.get(plot_type)
 
+        builder_args = {
+            "node": node,
+            "layout": layout,
+            "parent": parent,
+            "event_aggregator": self._event_aggregator,
+            "property_service": self._property_service,
+            "limit_edits": limit_edits,
+            "x_combo": x_combo,
+            "y_combo": y_combo,
+        }
+
         if builder:
-            # Call the registered builder, passing all necessary arguments
-            builder(
-                node=node,
-                layout=layout,
-                parent=parent,
-                event_aggregator=self._event_aggregator,
-                limit_edits=limit_edits,
-                x_combo=x_combo,
-                y_combo=y_combo,
-            )
-        else:  # Explicitly call base builder if no specific builder is found
+            builder(**builder_args)
+        else:
             base_form_layout = QFormLayout()
-            _build_base_plot_properties_ui(
-                node=node,
-                layout=base_form_layout,
-                parent=parent,
-                event_aggregator=self._event_aggregator,
-                limit_edits=limit_edits,
-                x_combo=x_combo,
-                y_combo=y_combo,
-            )
+            _build_base_plot_properties_ui(**builder_args)
             layout.addLayout(base_form_layout)

@@ -12,7 +12,6 @@ from src.shared.geometry import Rect
 class SceneNode:
     """
     An abstract base class for all objects in the scene graph.
-    A pure Python data structure with zero dependencies on UI frameworks.
     """
 
     def __init__(

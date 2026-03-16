@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, ANY
 import matplotlib as mpl
+from src.shared.color import Color
 from src.services.style_service import StyleService, ThemeIncompleteError
 from src.models.plots.plot_types import ArtistType, TickDirection, SpinePosition, AxisKey
 from src.models.plots.plot_properties import PlotProperties, LineArtistProperties, Cartesian3DProperties, PolarProperties
@@ -104,9 +105,9 @@ class TestStyleService:
         assert isinstance(props.coords, Cartesian3DProperties)
         assert props.coords.zaxis is not None
         # Verify Z pane color was parsed correctly
-        assert props.coords.pane_colors[AxisKey.Z] == (0.1, 0.1, 0.1, 0.5)
+        assert props.coords.pane_colors[AxisKey.Z] == Color(0.1, 0.1, 0.1, 0.5)
         # Verify inheritance: ztick should have inherited from xtick in fixture
-        assert props.coords.zaxis.ticks.major_size == 1.0
+        assert props.coords.zaxis.ticks.major_size.value == 1.0
 
     def test_create_themed_properties_polar(self, style_service, valid_style_file):
         """Tests generation of a Polar themed property tree."""
@@ -128,11 +129,10 @@ class TestStyleService:
             }
         }
         
-        style_service.hydrate(sample_plot_properties, overrides)
+        new_props = style_service.hydrate(sample_plot_properties, overrides)
         
-        assert sample_plot_properties.coords.xaxis.margin == 0.2
-        assert sample_plot_properties.coords.spines[SpinePosition.LEFT].visible is False
-        assert sample_plot_properties._version == 2 # Initial was 1 in fixture
+        assert new_props.coords.xaxis.margin == 0.2
+        assert new_props.coords.spines[SpinePosition.LEFT].visible is False
 
     def test_hydrate_resolves_enums(self, style_service, sample_plot_properties):
         """Tests that hydration correctly resolves Enum members from strings."""
@@ -142,8 +142,8 @@ class TestStyleService:
             }
         }
         
-        style_service.hydrate(sample_plot_properties, overrides)
-        assert sample_plot_properties.coords.xaxis.ticks.direction == TickDirection.IN
+        new_props = style_service.hydrate(sample_plot_properties, overrides)
+        assert new_props.coords.xaxis.ticks.direction == TickDirection.IN
 
     def test_hydrate_list_of_artists(self, style_service, sample_plot_properties, valid_style_file):
         """Tests that hydrating 'artists' list re-initializes themed bases."""
@@ -155,12 +155,12 @@ class TestStyleService:
             ]
         }
         
-        style_service.hydrate(sample_plot_properties, overrides)
+        new_props = style_service.hydrate(sample_plot_properties, overrides)
         
-        assert len(sample_plot_properties.artists) == 2
-        assert sample_plot_properties.artists[0].artist_type == ArtistType.SCATTER
-        assert sample_plot_properties.artists[0].zorder == 10
-        assert sample_plot_properties.artists[1].visuals.color == "red"
+        assert len(new_props.artists) == 2
+        assert new_props.artists[0].artist_type == ArtistType.SCATTER
+        assert new_props.artists[0].zorder == 10
+        assert new_props.artists[1].visuals.color == Color.from_mpl("red")
 
     # --- Factory Methods ---
 
