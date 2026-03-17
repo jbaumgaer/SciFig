@@ -51,7 +51,8 @@ All actions reflecting user intent that modify the state of the `ApplicationMode
 *   **Encapsulation**: Each command object contains all information required to perform an action and, crucially, to undo it.
 *   **Undo/Redo**: A central `CommandManager` service executes these commands and maintains undo and redo stacks. This provides a robust, application-wide history mechanism.
 *   **Decoupling**: This pattern decouples the UI components that initiate actions (e.g., menu items, buttons) from the objects that perform the work.
-*   **Reconciliation Bypass**: Routine background updates (e.g., syncing back Matplotlib autoscale results) bypass the `CommandManager`. This ensures that the undo history reflects only deliberate user choices and prevents recursive redraw loops by publishing _RECONCILED events.
+*   **Macro Orchestration**: Complex actions involving multiple nodes (e.g., Alignment, Distribution, Batch Deletion) utilize the `MacroCommand` pattern. This ensures atomicity and allows the system to publish a single "Completion Event" (e.g., `NODE_LAYOUT_CHANGED`) at the end of the batch, preventing redundant UI refreshes.
+*   **Reconciliation Bypass**: Routine background updates (e.g., syncing back Matplotlib autoscale results) bypass the `CommandManager`. This ensures that the undo history reflects only deliberate user choices and prevents recursive redraw loops by publishing `_RECONCILED` events.
 
 ## 3.5. Assembly and Dependency Pattern: The Composition Root
 
@@ -86,6 +87,11 @@ This section details the key components that make up the application's core doma
     *   **`PlottingStrategy`**: An interface for different plot types (e.g., line plot, scatter plot).
     *   **`PlotProperties`**: Data objects that hold the specific properties for each plot type (e.g., line color, marker style). The main `FigureRenderer` uses the appropriate strategy to draw the plot based on its properties.
 
+*   **4.1.4. Domain Value Objects (`src/shared/`)**: To prevent "Primitive Obsession," the domain model utilizes type-safe, immutable Value Objects for core scientific and aesthetic properties.
+    *   **`Color`**: Encapsulates RGBA components and provides seamless conversion to Matplotlib formats.
+    *   **`Dimension`**: Represents physical measurements (e.g., 10pt font, 1.5cm width) with automatic unit conversion.
+    *   **Refined Primitives**: Specialized types like `Alpha` and `ZOrder` enforce domain-specific constraints (e.g., [0.0, 1.0] range) at the type level.
+
 ### 4.2. Core Application Services (`src/services/`)
 
 This group includes services that provide fundamental, application-wide capabilities.
@@ -94,9 +100,9 @@ This group includes services that provide fundamental, application-wide capabili
 *   **`ToolService`**: Manages the collection of interactive canvas tools (e.g., `SelectionTool`) and is responsible for dispatching UI events to the currently active tool.
 *   **`CommandManager`**: The concrete implementation of the Command Pattern. It executes all state-changing actions and manages the undo/redo stacks.
 *   **`CoordinateService`**: The centralized mathematical authority for the application. It provides a unified API for transforming coordinates between Physical (CM), Fractional (Figure/Local), and Display (Pixel) spaces. It also acts as the system's "unit gateway," converting inbound user units (e.g., inches, mm) into the Model's canonical centimeter standard.
-*   **`StyleService`**: The centralized factory for aesthetic properties. It transforms high-level style configurations (from .mplstyle files) into concrete `PlotProperties` objects. This ensures that all new nodes are initialized with scientific defaults while keeping the Model and Controllers free from hardcoded styling logic.
+*   **`StyleService`**: The centralized factory for aesthetic properties. It transforms high-level style configurations into concrete `PlotProperties` objects. It follows a functional **Hydrate** pattern (Create -> Override -> Return New) to ensure state immutability.
 *   **`DataService`**: Manages asynchronous data I/O. It orchestrates the loading of scientific data files (using Pandas and specialized loaders) in dedicated background threads. This prevents the UI from freezing during heavy file processing and provides a decoupled path for mapping raw data into the Model.
-*   **`PropertyService`**: A stateless domain utility responsible for structural navigation. it maps string paths (e.g., "coords.xaxis.limits") to specific leaf attributes within the hierarchical Model. This service decouples both Controllers and Commands from the internal nesting of the scene graph.
+*   **`PropertyService`**: A stateless domain utility responsible for structural navigation. It supports **Functional Updates** via recursive replacement and handles **Automatic Versioning** by incrementing `_property_version` on `SceneNode`s whenever aesthetic properties are modified. This service decouples both Controllers and Commands from the internal nesting of the scene graph.
 
 ### 4.3. Configuration-Driven Design
 
@@ -115,5 +121,5 @@ This group of components separates the complex task of UI creation from applicat
 
 The rendering pipeline is split into two specialized components to balance scientific precision with interactive responsiveness.
 
-*   **`FigureRenderer`**: Responsible for the high-fidelity translation of the `ApplicationModel` onto the Matplotlib `Figure`. It manages the lifecycle of Axes and scientific artists (Lines, Scatters, Meshes), ensuring that every property in the Model is accurately reflected in the final output.
-*   **`OverlayRenderer`**: A reactive interaction engine. It independently subscribes to the `EventAggregator` to draw transient UI affordances (selection highlights, resize handles, alignment guides, and movement ghosts). By operating exclusively in the Qt Graphics Scene space, it provides smooth, real-time feedback without burdening the scientific plotting backend.
+*   **`FigureRenderer`**: Responsible for the high-fidelity translation of the `ApplicationModel` onto the Matplotlib `Figure`. It manages the lifecycle of Axes and scientific artists (Lines, Scatters, Meshes), ensuring that every property in the Model is accurately reflected in the final output. It uses a version-gate (`_property_version`) to ensure it only performs expensive Matplotlib updates when state actually changes.
+*   **`OverlayRenderer`**: A reactive interaction engine. It independently subscribes to the `EventAggregator` to draw transient UI affordances (selection highlights, resize handles, alignment guides, and movement ghosts). It provides enhanced grid visualization, including segmented gutters that respect plot spans, smooth intersection rendering, and margin visualization. By operating exclusively in the Qt Graphics Scene space, it provides smooth, real-time feedback without burdening the scientific plotting backend.

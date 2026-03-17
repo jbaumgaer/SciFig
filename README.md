@@ -1,42 +1,78 @@
-# Data Analysis and Figure Preparation GUI
+# SciFig
 
-This project is a scientific graphics application designed to combine the intuitive, fluid design capabilities of a vector graphics editor with the powerful data analysis and plotting features of scientific software.
+![SciFig Interface](./examples/UI/Screenshot%202026-03-17%20182839.png)
 
-The goal is to provide a seamless, interactive, and non-modal user experience where data visualization, analysis, and the creation of publication-quality figures are part of a single workflow.
+SciFig is a scientific graphics application for Python that combines data plotting with vector-style layout management. It provides a non-modal environment where scientific plots (Matplotlib) can be manipulated with the same spatial flexibility as objects in a vector graphics editor, while maintaining full data-linkage and reproducibility.
 
-## Core Technologies
+## Key Features
 
-*   **Python 3.10+**
-*   **PySide6 (Qt 6)** for the user interface.
-*   **Matplotlib** for the plotting canvas.
-*   **Pandas** for data manipulation.
+### Layout & Scene Management
+*   **Hybrid Layouts:** Supports both structured $M \times N$ grids (with cell merging/spanning) and free-form coordinate-based placement.
+*   **Hierarchical Scene Graph:** Elements are managed in a tree structure allowing for grouping, layering (Z-order), and visibility toggling.
+*   **Real-time Overlays:** An interaction layer provides visual guides for grid gutters, margins, and alignment without triggering expensive scientific re-renders.
 
-## Current State
+### Data & Plotting
+*   **Artist Support:** Native implementations for Line, Scatter, Bar, Image (Imshow), and Contour plots.
+*   **Coordinate Systems:** Support for Cartesian and Polar coordinate spaces.
+*   **Theming Engine:** Centralized service for applying journal-specific styles (e.g., Nature, Science) via `.mplstyle` and YAML configurations.
+*   **Type Safety:** Core properties like colors and physical dimensions are managed as immutable value objects to prevent state corruption.
 
-The application is built on a "v2" architecture centered around a **scene graph** model, a **tool-based controller system**, a non-modal **properties inspector**, and a **command system** with full undo/redo support.
+### State & Performance
+*   **Command Pattern:** All user actions are encapsulated as undoable commands, maintaining a consistent history.
+*   **Dual-Layer Rendering:** Uses a lightweight Qt Interaction Layer for immediate feedback during mouse operations, syncing with the high-fidelity Matplotlib layer only on completion.
+*   **Asynchronous I/O:** File loading and data processing are handled in background threads to maintain UI responsiveness.
 
-## Getting Started
+## Architecture
 
-### Python Executable Path
-This project is configured to run with a specific Python interpreter located at:
-`C:\Users\julia\.conda\envs\data_analysis_gui\python.exe`
+The project follows a **Passive View MVP (Model-View-Presenter)** architecture. For a detailed breakdown of the system design and design decisions, see the **[Architecture Design Document](./docs/architecture-design-document.md)**.
 
-### Setup and Execution
+*   **Model:** A headless scene graph containing the application state and scientific data.
+*   **View:** A passive PySide6 interface that forwards events and displays data.
+*   **Controller:** Orchestrates logic between the model and view, using an `EventAggregator` for decoupled communication.
 
-1.  **Install dependencies:**
-    Use the specified Python executable to install the required packages.
-    ```bash
-    C:\Users\julia\.conda\envs\data_analysis_gui\python.exe -m pip install -r requirements.txt
-    ```
+## Project Status
+SciFig is currently in active development.
+*   **Current Version:** Phase 3 (Structured Grids, Spanning, and Unified Spatial Transforms) is complete.
+*   **Next Milestone:** Phase 4 (Advanced Annotations and Data Callouts) is currently in the planning stage.
 
-2.  **Run the application:**
-    ```bash
-    C:\Users\julia\.conda\envs\data_analysis_gui\python.exe main.py
-    ```
+## Installation
 
-### Running Tests
-To verify the application's correctness, run the test suite using `pytest`. It is crucial to use the project-specific Python executable to ensure tests run in the correct environment with all necessary dependencies.
+### Prerequisites
+*   Python 3.11+
+*   Conda or venv
 
-```bash
-C:\Users\julia\.conda\envs\data_analysis_gui\python.exe -m pytest
-```
+### Setup
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/sci-fig.git
+   cd data-analysis-gui
+   ```
+2. Install dependencies:
+   ```bash
+   pip install .
+   ```
+   Or for development (including test dependencies):
+   ```bash
+   pip install -e ".[dev]"
+   ```
+3. Run the application:
+   ```bash
+   python main.py
+   ```
+
+## Project Structure
+
+*   [`src/models/`](./src/models/): Scene graph nodes and plot property definitions.
+*   [`src/services/`](./src/services/): Core domain logic (Layout, Style, Coordinate transforms, Commands).
+*   [`src/controllers/`](./src/controllers/): Presenters managing the flow between UI and Model.
+*   [`src/ui/`](./src/ui/): View components and the specialized Figure/Overlay renderers.
+*   [`src/shared/`](./src/shared/): Value objects (Color, Dimension) and common types.
+*   [`configs/`](./configs/): Application settings and Matplotlib styles.
+*   [`templates/`](./templates/): JSON definitions for standard figure layouts.
+
+## Documentation
+Additional technical documentation is available in the `/docs` directory:
+*   [Product Requirements](./docs/product-requirements-document.md)
+*   [Software Requirements](./docs/software-requirements-specification.md)
+*   [Features Overview](./docs/features.md)
+

@@ -5,13 +5,11 @@ description = "A GUI for data analysis application"
 authors = [
     { name = "Julian Baumgärtner", email = "julian.f.baumgaertner@gmail.com" },
 ]
-license = { text = "MIT" } # Assuming MIT, update if different
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["data-analysis", "gui", "python"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
