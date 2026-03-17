@@ -8,8 +8,8 @@ from src.services.commands.apply_grid_command import ApplyGridLayoutCommand
 from src.services.commands.batch_change_plot_geometry_command import (
     BatchChangePlotGeometryCommand,
 )
-from src.services.commands.update_grid_parameters_command import (
-    UpdateGridParametersCommand,
+from src.services.commands.change_grid_parameters_command import (
+    ChangeGridParametersCommand,
 )
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
@@ -287,7 +287,7 @@ class LayoutController:
             self.logger.warning(f"Unknown grid parameter: {param_name}")
             return
 
-        command = UpdateGridParametersCommand(
+        command = ChangeGridParametersCommand(
             model=self.model,
             event_aggregator=self._event_aggregator,
             new_grid_config=proposal,
@@ -316,7 +316,7 @@ class LayoutController:
 
         if new_grid_config:
             # 2. Encapsulate in the consolidated command
-            command = UpdateGridParametersCommand(
+            command = ChangeGridParametersCommand(
                 self.model,
                 self._event_aggregator,
                 new_grid_config,

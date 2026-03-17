@@ -2917,3 +2917,6 @@ Remaining Features
 - The "Data-Mapping Leak": The NodeController currently knows too much about how data is mapped to specific plot types (e.g., it knows that a line plot needs an "x_column" and a "y_column"). This should ideally be handled by a specialized MappingService or the PlotNode itself.
 - The "CompositionRoot Orchestrator": The CompositionRoot is doing more than just wiring; it's handling the "Limit Syncing" logic (taking Matplotlib's autoscale results and pushing them back to the Model). This is a cross-cutting concern that makes it hard to test the Model in isolation from the "Redraw Loop."
 - Murky Spot: The LayoutManager is currently the "Muckiest" spot. It directly reaches into the ApplicationModel and rearranges nodes (like creating GridNode containers). This is a strong coupling. Our integration tests here will be vital when we eventually refactor this to be more decoupled.
+- Both renderers currently hold knowledge about the application model which they shouldn't need. At most, they should communicate with the controller, but even that should happen with events and commands
+- Pull methods apart to make them more readable
+- I have constant type checks everywhere, especially in the property service, the figure renderer

@@ -6,7 +6,7 @@ from src.services.event_aggregator import EventAggregator
 from src.shared.events import Events
 
 
-class UpdateGridParametersCommand(BaseCommand):
+class ChangeGridParametersCommand(BaseCommand):
     """
     A consolidated command to update all structural parameters of a GridNode
     (rows, cols, ratios, margins, gutters) using a GridConfig proposal.
@@ -19,7 +19,7 @@ class UpdateGridParametersCommand(BaseCommand):
         model: ApplicationModel,
         event_aggregator: EventAggregator,
         new_grid_config: GridConfig,
-        description: str = "Update Grid Parameters",
+        description: str = "Change Grid Parameters",
     ):
         super().__init__(description, event_aggregator)
         self._model = model
@@ -30,7 +30,7 @@ class UpdateGridParametersCommand(BaseCommand):
         self.logger.info(f"Executing: {self.description}")
         grid = self._model.get_active_grid()
         if not grid:
-            self.logger.warning("UpdateGridParametersCommand: No active GridNode found.")
+            self.logger.warning("ChangeGridParametersCommand: No active GridNode found.")
             return
 
         # 1. Capture backup for undo

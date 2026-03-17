@@ -251,7 +251,15 @@ class FigureRenderer:
         model_limits: tuple[Optional[float], Optional[float]],
         tol: float = 1e-5,
     ) -> bool:
-        """Checks if two sets of limits differ significantly."""
+        """
+        Checks if two sets of limits differ significantly.
+        Returns False (no sync needed) if the model already has explicit user-defined limits.
+        """
+        # If BOTH limits are explicitly set in the model, we trust the model and skip back-sync.
+        # This prevents Matplotlib's autoscale padding from overwriting user input.
+        if model_limits[0] is not None and model_limits[1] is not None:
+            return False
+
         for m_lim, model_lim in zip(mpl_limits, model_limits):
             if model_lim is None:
                 return True

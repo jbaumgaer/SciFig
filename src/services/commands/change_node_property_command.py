@@ -53,16 +53,17 @@ class ChangeNodePropertyCommand(BaseCommand):
 
         # Capture old values and apply new ones functionally
         self._expansion_map.clear()
+        updated_root = self.node
         for path in concrete_paths:
             old_val = self._property_service.get_value(self.node, path)
             self._expansion_map[path] = old_val
             
             # Use return-based set_value
-            new_root = self._property_service.set_value(self.node, path, self.new_value)
-            # If the path was within plot_properties, re-assign the new tree to the node
-            if is_plot_prop:
-                self.node.plot_properties = new_root.plot_properties
-            # (SceneNode itself is mutable for now, but its children properties are frozen)
+            updated_root = self._property_service.set_value(updated_root, path, self.new_value)
+        
+        # Final Assignment: Update the node's property reference once after all changes
+        if is_plot_prop:
+            self.node.plot_properties = updated_root.plot_properties
 
         self._finalize_change(publish=publish)
 
@@ -71,36 +72,27 @@ class ChangeNodePropertyCommand(BaseCommand):
         first_part = self.path.split(".")[0]
         is_plot_prop = hasattr(self.node, "plot_properties") and (hasattr(self.node.plot_properties, first_part) or first_part == "artists")
 
+        updated_root = self.node
         for path, old_value in self._expansion_map.items():
-            new_root = self._property_service.set_value(self.node, path, old_value)
-            if is_plot_prop:
-                self.node.plot_properties = new_root.plot_properties
+            updated_root = self._property_service.set_value(updated_root, path, old_value)
+        
+        if is_plot_prop:
+            self.node.plot_properties = updated_root.plot_properties
 
         self._finalize_change(publish=publish, is_undo=True)
 
     def _finalize_change(self, publish: bool = True, is_undo: bool = False):
-        """Publishes domain-specific events based on the modified property path."""
+        """Publishes aesthetic domain events."""
         if not publish:
             return
 
-        # 2. Determine Domain: Layout (Structural) vs Aesthetic (Ink)
-        structural_paths = ("rows", "cols", "margins", "gutters", "grid_position", "geometry")
-        first_part = self.path.split(".")[0]
-        
-        if first_part in structural_paths:
-            # Domain: Layout (Structural intent)
-            self._event_aggregator.publish(
-                Events.NODE_LAYOUT_CHANGED,
-                node_id=self.node.id
-            )
-        else:
-            # Domain: Aesthetic (ink/style only)
-            self._event_aggregator.publish(
-                Events.PLOT_NODE_PROPERTY_CHANGED,
-                node_id=self.node.id,
-                path=self.path,
-                new_value=self.new_value if not is_undo else None,
-            )
+        # Domain: Aesthetic (ink/style only)
+        self._event_aggregator.publish(
+            Events.PLOT_NODE_PROPERTY_CHANGED,
+            node_id=self.node.id,
+            path=self.path,
+            new_value=self.new_value if not is_undo else None,
+        )
 
     def _get_root(self):
         """Redirection logic for PlotProperties."""

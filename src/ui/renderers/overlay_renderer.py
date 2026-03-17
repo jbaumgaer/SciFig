@@ -27,6 +27,7 @@ class OverlayRenderer:
     The Interaction Layer Renderer.
     Passively listens for selection and tool-interaction events to draw
     transient Qt GraphicsItems (handles, ghosts, guides, highlights) onto a QGraphicsScene.
+    TODO: This needs to become much dumber because we hold a reference to the model and the nodes which we shouldn't have to
     """
 
     def __init__(
@@ -278,43 +279,132 @@ class OverlayRenderer:
             margin_rect = Rect(geom.x + geom.width - m.right, geom.y, m.right, geom.height)
             self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(margin_rect).normalized()), is_gutter=True)
 
-        # 2. Draw Gutter Zones (Grey Bands)
-        # Vertical Gutters
+        # 2. Draw Gutter Zones and Dividers (Segmented)
+        # Vertical Boundaries (Column Dividers)
         for c in range(num_cols - 1):
-            left_cell = cells[0][c]
-            right_cell = cells[0][c+1]
-            gutter_x = left_cell.x + left_cell.width
-            gutter_w = right_cell.x - gutter_x
-            if gutter_w > 0.001:
-                gutter_rect = Rect(gutter_x, geom.y, gutter_w, geom.height)
-                self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect).normalized()), is_gutter=True)
+            wspace = grid_node.gutters.wspace[c] if c < len(grid_node.gutters.wspace) else 0.5
+            divider_x = cells[0][c].x + cells[0][c].width + wspace / 2
 
-        # Horizontal Gutters
+            # Margin Extensions for Vertical Dividers
+            if not self._is_vertical_boundary_covered(grid_node, c, 0) and m.top > 0.001:
+                p1 = self._fig_to_scene((divider_x, geom.y + geom.height - m.top))
+                p2 = self._fig_to_scene((divider_x, geom.y + geom.height))
+                self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
+            
+            if not self._is_vertical_boundary_covered(grid_node, c, num_rows - 1) and m.bottom > 0.001:
+                p1 = self._fig_to_scene((divider_x, geom.y))
+                p2 = self._fig_to_scene((divider_x, geom.y + m.bottom))
+                self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
+
+            # Segmented Gutters and Dividers within the grid area
+            for r in range(num_rows):
+                if self._is_vertical_boundary_covered(grid_node, c, r):
+                    continue
+                
+                left_cell = cells[r][c]
+                right_cell = cells[r][c+1]
+                
+                # Determine vertical extension for smooth intersections
+                # In Bottom-Up: hspace[r-1] is ABOVE row r, hspace[r] is BELOW row r
+                hspace_above = (grid_node.gutters.hspace[r-1] / 2) if r > 0 else 0
+                hspace_below = (grid_node.gutters.hspace[r] / 2) if r < num_rows - 1 else 0
+
+                # Gutter Segment
+                gutter_x = left_cell.x + left_cell.width
+                gutter_w = right_cell.x - gutter_x
+                if gutter_w > 0.001:
+                    gutter_rect = Rect(
+                        gutter_x, 
+                        left_cell.y - hspace_below, 
+                        gutter_w, 
+                        left_cell.height + hspace_above + hspace_below
+                    )
+                    self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect).normalized()), is_gutter=True)
+                
+                # Divider Segment
+                p1 = self._fig_to_scene((divider_x, left_cell.y - hspace_below))
+                p2 = self._fig_to_scene((divider_x, left_cell.y + left_cell.height + hspace_above))
+                self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
+
+        # Horizontal Boundaries (Row Dividers)
         for r in range(num_rows - 1):
-            top_cell = cells[r][0]
-            bottom_cell = cells[r+1][0]
-            gutter_y = bottom_cell.y + bottom_cell.height
-            gutter_h = top_cell.y - gutter_y
-            if gutter_h > 0.001:
-                gutter_rect = Rect(geom.x, gutter_y, geom.width, gutter_h)
-                self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect).normalized()), is_gutter=True)
+            hspace = grid_node.gutters.hspace[r] if r < len(grid_node.gutters.hspace) else 0.5
+            # In Bottom-Up: boundary r is between row r (above) and r+1 (below)
+            # divider_y = cells[r+1][0].y + cells[r+1][0].height + hspace / 2
+            divider_y = cells[r+1][0].y + cells[r+1][0].height + hspace / 2
 
-        # 2. Draw Divider Lines (Center of gutters)
-        for c in range(num_cols - 1):
-            x = cells[0][c].x + cells[0][c].width + (grid_node.gutters.wspace[c] / 2 if c < len(grid_node.gutters.wspace) else 0.25)
-            p1 = self._fig_to_scene((x, geom.y))
-            p2 = self._fig_to_scene((x, geom.y + geom.height))
-            self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
+            # Margin Extensions for Horizontal Dividers
+            if not self._is_horizontal_boundary_covered(grid_node, r, 0) and m.left > 0.001:
+                p1 = self._fig_to_scene((geom.x, divider_y))
+                p2 = self._fig_to_scene((geom.x + m.left, divider_y))
+                self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
 
-        for r in range(num_rows - 1):
-            y = cells[r+1][0].y + cells[r+1][0].height + (grid_node.gutters.hspace[r] / 2 if r < len(grid_node.gutters.hspace) else 0.25)
-            p1 = self._fig_to_scene((geom.x, y))
-            p2 = self._fig_to_scene((geom.x + geom.width, y))
-            self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
+            if not self._is_horizontal_boundary_covered(grid_node, r, num_cols - 1) and m.right > 0.001:
+                p1 = self._fig_to_scene((geom.x + geom.width - m.right, divider_y))
+                p2 = self._fig_to_scene((geom.x + geom.width, divider_y))
+                self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
+
+            for c in range(num_cols):
+                if self._is_horizontal_boundary_covered(grid_node, r, c):
+                    continue
+                
+                top_cell = cells[r][c]
+                bottom_cell = cells[r+1][c]
+                
+                # Determine horizontal extension for smooth intersections
+                wspace_left = (grid_node.gutters.wspace[c-1] / 2) if c > 0 else 0
+                wspace_right = (grid_node.gutters.wspace[c] / 2) if c < num_cols - 1 else 0
+
+                # Gutter Segment
+                gutter_y = bottom_cell.y + bottom_cell.height
+                gutter_h = top_cell.y - gutter_y
+                if gutter_h > 0.001:
+                    gutter_rect = Rect(
+                        top_cell.x - wspace_left, 
+                        gutter_y, 
+                        top_cell.width + wspace_left + wspace_right, 
+                        gutter_h
+                    )
+                    self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(gutter_rect).normalized()), is_gutter=True)
+                
+                # Divider Segment
+                p1 = self._fig_to_scene((top_cell.x - wspace_left, divider_y))
+                p2 = self._fig_to_scene((top_cell.x + top_cell.width + wspace_right, divider_y))
+                self._add_grid_item(QGraphicsLineItem(p1.x(), p1.y(), p2.x(), p2.y()), is_divider=True)
 
         # 3. Outer Border
         scene_rect = self._fig_rect_to_scene(geom)
         self._add_grid_item(QGraphicsRectItem(scene_rect), is_divider=True)
+
+    def _is_vertical_boundary_covered(self, grid_node: GridNode, col_idx: int, row_idx: int) -> bool:
+        """Returns True if any child spans across the boundary between col_idx and col_idx + 1 at row_idx."""
+        for child in grid_node.children:
+            pos = child.grid_position
+            if not pos:
+                continue
+            
+            # Check if row matches
+            if pos.row <= row_idx < pos.row + pos.rowspan:
+                # Check if it spans across the column boundary
+                if pos.col <= col_idx < pos.col + pos.colspan - 1:
+                    return True
+        return False
+
+    def _is_horizontal_boundary_covered(self, grid_node: GridNode, row_idx: int, col_idx: int) -> bool:
+        """Returns True if any child spans across the boundary between row_idx and row_idx + 1 at col_idx."""
+        # Note: row_idx is the index of the row ABOVE the boundary (top row index)
+        for child in grid_node.children:
+            pos = child.grid_position
+            if not pos:
+                continue
+            
+            # Check if column matches
+            if pos.col <= col_idx < pos.col + pos.colspan:
+                # Check if it spans across the row boundary
+                # In our model, row 0 is top, so row_idx boundary is between row_idx and row_idx + 1
+                if pos.row <= row_idx < pos.row + pos.rowspan - 1:
+                    return True
+        return False
 
     def _add_grid_item(self, item: QGraphicsItem, is_gutter: bool = False, is_divider: bool = False):
         """Helper to style and track grid visual items with high Z-Order."""

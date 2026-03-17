@@ -3,6 +3,7 @@ from dataclasses import fields, is_dataclass, replace
 from enum import Enum
 from typing import Any, Iterable, Optional, Union, get_origin, get_args
 
+from src.models.nodes.scene_node import SceneNode
 from src.shared.color import Color
 from src.shared.units import Dimension, Unit
 from src.shared.primitives import Alpha, ZOrder
@@ -60,9 +61,16 @@ class PropertyService:
         """
         Functional update. Navigates the path and returns a NEW object tree
         with the value applied at the leaf.
+        Automatically increments _property_version if the target is a SceneNode.
         """
         parts = path.split(".")
-        return self._update_recursive(obj, parts, value)
+        updated_obj = self._update_recursive(obj, parts, value)
+
+        # Automatic Version Management for SceneNodes
+        if isinstance(updated_obj, SceneNode):
+            updated_obj.increment_property_version()
+        
+        return updated_obj
 
     def _update_recursive(self, obj: Any, parts: list[str], value: Any) -> Any:
         """Helper for immutable recursive replacement."""

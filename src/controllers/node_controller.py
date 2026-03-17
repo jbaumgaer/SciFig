@@ -169,7 +169,7 @@ class NodeController(QObject):
             # 2. Update functionally and re-assign
             new_root = self._property_service.set_value(node, full_path, value)
             if is_plot_prop:
-                self.logger.debug(f"DEBUG: NodeController.reconcile_node_property: node_id={node_id}, path={path}, type(new_root.plot_properties)={type(new_root.plot_properties)}, value={new_root.plot_properties}")
+                self.logger.debug(f"DEBUG: NodeController.reconcile_node_property: node_id={node_id}, path={path}, reconciled_leaf_value={value}, new_plot_properties_tree={new_root.plot_properties}")
                 node.plot_properties = new_root.plot_properties
             
             # 3. Publish specific reconciled event (Property Panel listens, Renderer ignores)
