@@ -258,8 +258,27 @@ class OverlayRenderer:
         
         # Use grid_node geometry as the reference for top-level bounds
         geom = grid_node.geometry
+        m = grid_node.margins
 
-        # 1. Draw Gutter Zones (Grey Bands)
+        # 1. Draw Margin Zones (Grey Bands)
+        # Bottom Margin
+        if m.bottom > 0.001:
+            margin_rect = Rect(geom.x, geom.y, geom.width, m.bottom)
+            self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(margin_rect).normalized()), is_gutter=True)
+        # Top Margin
+        if m.top > 0.001:
+            margin_rect = Rect(geom.x, geom.y + geom.height - m.top, geom.width, m.top)
+            self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(margin_rect).normalized()), is_gutter=True)
+        # Left Margin
+        if m.left > 0.001:
+            margin_rect = Rect(geom.x, geom.y, m.left, geom.height)
+            self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(margin_rect).normalized()), is_gutter=True)
+        # Right Margin
+        if m.right > 0.001:
+            margin_rect = Rect(geom.x + geom.width - m.right, geom.y, m.right, geom.height)
+            self._add_grid_item(QGraphicsRectItem(self._fig_rect_to_scene(margin_rect).normalized()), is_gutter=True)
+
+        # 2. Draw Gutter Zones (Grey Bands)
         # Vertical Gutters
         for c in range(num_cols - 1):
             left_cell = cells[0][c]
