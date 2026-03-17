@@ -1,4 +1,0 @@
-conda activate data_analysis_gui
-D:
-cd D:\Dokumente\Python\Data_Analysis_GUI
-gemini
