@@ -42,7 +42,7 @@ from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.shared.geometry import Rect
 from src.services.event_aggregator import EventAggregator
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.services.property_service import PropertyService
 from src.services.tool_service import ToolService
 from src.services.tools.selection_tool import SelectionTool
@@ -164,7 +164,7 @@ def mock_project_controller():
 def mock_layout_controller():
     """Fixture for a mock LayoutController."""
     controller = MagicMock(spec=LayoutController)
-    controller._layout_manager = MagicMock(spec=LayoutManager)
+    controller._layout_manager = MagicMock(spec=LayoutService)
     controller._layout_manager.apply_default_grid_layout = MagicMock()
     return controller
 
@@ -238,7 +238,7 @@ def mock_grid_layout_engine():
 @pytest.fixture
 def mock_layout_manager():
     """Fixture for a mock LayoutManager."""
-    manager = MagicMock(spec=LayoutManager)
+    manager = MagicMock(spec=LayoutService)
     manager.layoutModeChanged = MagicMock()
     return manager
 

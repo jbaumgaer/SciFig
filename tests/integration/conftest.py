@@ -38,7 +38,7 @@ from src.services.config_service import ConfigService
 from src.services.coordinate_service import CoordinateService
 from src.services.data_service import DataService
 from src.services.event_aggregator import EventAggregator
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.services.property_service import PropertyService
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
@@ -70,7 +70,7 @@ class NodeStack(TransactionalStack):
 @dataclass
 class LayoutStack(TransactionalStack):
     """Handles recursive grid and free-form layout logic."""
-    manager: LayoutManager
+    manager: LayoutService
     controller: LayoutController
     grid_engine: GridLayoutEngine
     free_engine: FreeLayoutEngine
@@ -227,7 +227,7 @@ def layout_stack(transactional_stack):
     free_engine = FreeLayoutEngine()
     prop_service = PropertyService()
     
-    manager = LayoutManager(
+    manager = LayoutService(
         application_model=transactional_stack.model,
         free_engine=free_engine,
         grid_engine=grid_engine,

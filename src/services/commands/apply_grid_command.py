@@ -7,7 +7,7 @@ from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.grid_node import GridNode, GridPosition
 from src.services.commands.base_command import BaseCommand
 from src.services.event_aggregator import EventAggregator
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
 from src.shared.geometry import Rect

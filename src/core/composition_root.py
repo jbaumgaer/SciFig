@@ -17,7 +17,7 @@ from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.services.data_service import DataService
 from src.services.event_aggregator import EventAggregator
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.services.property_service import PropertyService
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
@@ -66,7 +66,7 @@ class CompositionRoot:
         self._canvas_controller: Optional[CanvasController] = None
         self._property_service: Optional[PropertyService] = None
         self._command_manager: Optional[CommandManager] = None
-        self._layout_manager: Optional[LayoutManager] = None
+        self._layout_manager: Optional[LayoutService] = None
         self._event_aggregator: Optional[EventAggregator] = None
         self._menu_bar: Optional[QMenuBar] = None
         self._main_menu_actions: Optional[MainMenuActions] = None
@@ -119,7 +119,7 @@ class CompositionRoot:
         self._data_service = DataService(
             model=self._application_model, event_aggregator=self._event_aggregator
         )
-        self._layout_manager = LayoutManager(
+        self._layout_manager = LayoutService(
             application_model=self._application_model,
             free_engine=FreeLayoutEngine(),
             grid_engine=GridLayoutEngine(),

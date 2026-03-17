@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 from src.models.layout.layout_config import GridConfig
 from src.services.event_aggregator import EventAggregator
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.shared.constants import IconPath, LayoutMode
 from src.shared.events import Events
 
@@ -28,7 +28,7 @@ class LayoutUIFactory:
     """
 
     def __init__(
-        self, layout_manager: LayoutManager, event_aggregator: EventAggregator
+        self, layout_manager: LayoutService, event_aggregator: EventAggregator
     ):
         self._layout_manager = layout_manager
         self._event_aggregator = event_aggregator

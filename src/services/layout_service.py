@@ -17,7 +17,7 @@ from src.shared.geometry import Rect
 from src.shared.types import PlotID
 
 
-class LayoutManager:
+class LayoutService:
     """
     Orchestrates the layout engines, manages the active layout mode,
     and provides the interface for main application components to
@@ -43,7 +43,7 @@ class LayoutManager:
         self._config_service = config_service
         self._event_aggregator = event_aggregator
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info("LayoutManager initialized.")
+        self.logger.info("LayoutService initialized.")
 
         # Initialize the UI selected mode and the application model's current_layout_config based on config service
         default_mode_str = self._config_service.get_required("ui.default_layout_mode")

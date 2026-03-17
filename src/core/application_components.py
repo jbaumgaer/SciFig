@@ -12,7 +12,7 @@ from src.services.commands.command_manager import CommandManager
 from src.services.config_service import ConfigService
 from src.services.data_service import DataService
 from src.services.event_aggregator import EventAggregator
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.services.property_service import PropertyService
 from src.services.style_service import StyleService
 from src.services.tool_service import ToolService
@@ -55,7 +55,7 @@ class ApplicationComponents:
     config_service: "ConfigService"
     style_service: "StyleService"
     data_service: "DataService"
-    layout_manager: "LayoutManager"
+    layout_manager: "LayoutService"
     layout_ui_factory: "LayoutUIFactory"
     figure_renderer: "FigureRenderer"
     overlay_renderer: "OverlayRenderer"

@@ -13,7 +13,7 @@ from src.services.commands.change_grid_parameters_command import (
 )
 from src.services.commands.command_manager import CommandManager
 from src.services.event_aggregator import EventAggregator
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.services.property_service import PropertyService
 from src.shared.constants import LayoutMode
 from src.shared.events import Events
@@ -38,7 +38,7 @@ class LayoutController:
         self,
         model: ApplicationModel,
         command_manager: CommandManager,
-        layout_manager: LayoutManager,
+        layout_manager: LayoutService,
         event_aggregator: EventAggregator,
         property_service: PropertyService,
     ):

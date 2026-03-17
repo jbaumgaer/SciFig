@@ -14,7 +14,7 @@ from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.scene_node import SceneNode
 from src.services.coordinate_service import CoordinateService
 from src.services.event_aggregator import EventAggregator
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.shared.color import Color
 from src.shared.events import Events
 from src.shared.primitives import Alpha, ZOrder
@@ -184,7 +184,7 @@ class FigureRenderer:
 
     def __init__(
         self,
-        layout_manager: LayoutManager,
+        layout_manager: LayoutService,
         application_model: ApplicationModel,
         event_aggregator: EventAggregator,
     ):

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, call, ANY
 from pathlib import Path
 
-from src.services.layout_manager import LayoutManager
+from src.services.layout_service import LayoutService
 from src.models.layout.layout_config import GridConfig, Gutters, Margins
 from src.models.nodes.plot_node import PlotNode
 from src.models.nodes.grid_node import GridNode
@@ -26,7 +26,7 @@ def layout_manager(
     mock_application_model.layout_mode = LayoutMode.FREE_FORM
     mock_application_model.figure_size = (20.0, 15.0)
     
-    return LayoutManager(
+    return LayoutService(
         application_model=mock_application_model,
         free_engine=mock_free_layout_engine,
         grid_engine=mock_grid_layout_engine,
@@ -45,7 +45,7 @@ class TestLayoutManager:
         mock_application_model.layout_mode = LayoutMode.FREE_FORM
         mock_application_model.figure_size = (20.0, 15.0)
         
-        manager = LayoutManager(
+        manager = LayoutService(
             mock_application_model, MagicMock(), MagicMock(), mock_config_service, MagicMock()
         )
         
@@ -57,7 +57,7 @@ class TestLayoutManager:
         mock_application_model.layout_mode = LayoutMode.FREE_FORM
         mock_application_model.figure_size = (20.0, 15.0)
         
-        manager = LayoutManager(
+        manager = LayoutService(
             mock_application_model, MagicMock(), MagicMock(), mock_config_service, MagicMock()
         )
         

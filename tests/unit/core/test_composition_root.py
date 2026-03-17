@@ -108,13 +108,13 @@ class TestCompositionRoot:
         assert ea is real_ea
         assert model is real_model
         
-        from src.core.composition_root import ProjectController, LayoutManager
+        from src.core.composition_root import ProjectController, LayoutService
         
         args, kwargs = ProjectController.call_args
         assert kwargs["lifecycle"] is model
         assert kwargs["event_aggregator"] is ea
         
-        args, kwargs = LayoutManager.call_args
+        args, kwargs = LayoutService.call_args
         assert kwargs["event_aggregator"] is ea
 
     def test_assemble_core_components_figure_config(self, composition_root, mock_config_service, mocker):
