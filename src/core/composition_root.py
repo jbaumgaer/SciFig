@@ -379,6 +379,9 @@ class CompositionRoot:
         self._event_aggregator.subscribe(
             Events.NODE_LAYOUT_RECONCILED, self._redraw_canvas_callback
         )
+        self._event_aggregator.subscribe(
+            Events.NODE_LAYOUT_CHANGED, self._redraw_canvas_callback
+        )
 
     def _redraw_canvas_callback(self, *args, **kwargs):
         """Callback to trigger canvas redraw."""

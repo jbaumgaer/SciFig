@@ -47,7 +47,7 @@ The Presenter layer. These classes orchestrate workflows and translate user inte
 *   **`__init__.py`**: Marks the directory as a Python package.
 *   **`project_controller.py`**: Manages the high-level project lifecycle. It handles requests for new projects, opening templates, and saving/loading the `.sci` ZIP-based project format. It coordinates with the `ApplicationModel`'s lifecycle interface.
 *   **`node_controller.py`**: The primary orchestrator for scene graph nodes. It handles property changes (renaming, visibility, locking), data assignment via `DataService`, and structural changes like plot deletion (using `MacroCommand` and `DeleteNodeCommand`). It also implements the "Bypass Pattern" for silent model reconciliation.
-*   **`layout_controller.py`**: Manages figure-level layout operations. It translates UI requests for alignment, distribution, and grid parameter changes into executable commands. It acts as the mediator between the `LayoutUIFactory` and the `LayoutManager`.
+*   **`layout_controller.py`**: Manages figure-level layout operations. It translates UI requests for alignment, distribution, and grid parameter changes into executable commands. It acts as the mediator between the `LayoutUIFactory` and the `LayoutService`.
 *   **`canvas_controller.py`**: Acts as a "sanitizer" and orchestrator for the canvas. It translates raw Matplotlib backend events (button clicks, motion) into normalized figure coordinates and dispatches them to the `ToolService`. It also orchestrates the rendering of interaction previews (ghosts, handles) in the View.
 
 ### `src/interfaces/`
@@ -93,7 +93,7 @@ Infrastructure and specialized domain services.
 *   **`config_service.py`**: Manages the loading and retrieval of application-wide settings from YAML files. Supports dot-notated key access.
 *   **`coordinate_service.py`**: The centralized mathematical authority. Provides a unified API for transforming coordinates between Physical (CM), Fractional, and Display (Pixel) spaces.
 *   **`data_service.py`**: Orchestrates asynchronous data loading tasks by managing background threads and workers (`DataLoader`).
-*   **`layout_manager.py`**: A domain-specific service that orchestrates layout calculations by delegating to specialized engines (`FreeLayoutEngine`, `GridLayoutEngine`).
+*   **`layout_service.py`**: A domain-specific service that orchestrates layout calculations by delegating to specialized engines (`FreeLayoutEngine`, `GridLayoutEngine`).
 *   **`property_service.py`**: A stateless utility for navigating and modifying nested Model attributes via string paths. Supports wildcards and type-safe coercion.
 *   **`style_service.py`**: A factory that resolves flat theme keys from `.mplstyle` files into deep, hierarchical `PlotProperties` dataclass trees.
 *   **`tool_service.py`**: Manages the registry of interactive canvas tools and dispatches UI events to the currently active tool.

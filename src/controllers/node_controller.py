@@ -12,7 +12,6 @@ from src.models.plots.plot_types import ArtistType
 from src.services.commands.apply_data_to_node_command import ApplyDataToNodeCommand
 from src.services.commands.add_plot_command import AddPlotCommand
 from src.services.commands.change_node_property_command import ChangeNodePropertyCommand
-from src.services.commands.move_node_command import MoveNodeCommand
 from src.services.commands.command_manager import CommandManager
 from src.services.commands.delete_node_command import DeleteNodeCommand
 from src.services.commands.macro_command import MacroCommand

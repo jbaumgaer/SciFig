@@ -178,8 +178,11 @@ class SelectionTool(BaseTool):
 
         # Noise reduction (significant if delta > 0.01 cm)
         if abs(dx) > 0.01 or abs(dy) > 0.01:
+            description = "Move" if self._mode == InteractionMode.MOVING else "Resize"
+            spatial_data = {}
+
             if is_grid_mode:
-                # 1. GRID BRANCH: Update GridPosition
+                # 1. GRID BRANCH: Propose GridPosition
                 node = self._model.selection[0]
                 if node and hasattr(self, "_proposed_grid_pos"):
                     # Recalculate collision one last time for safety
@@ -187,29 +190,24 @@ class SelectionTool(BaseTool):
                     
                     if candidate_rect and not self._is_colliding(node, candidate_rect):
                         r, c, rs, cs = self._proposed_grid_pos
-                        new_pos = GridPosition(r, c, rs, cs)
-                        
-                        self._event_aggregator.publish(
-                            Events.CHANGE_PLOT_NODE_PROPERTY_REQUESTED,
-                            node_id=node.id,
-                            path="grid_position",
-                            value=new_pos
-                        )
+                        spatial_data[node.id] = GridPosition(r, c, rs, cs)
                     else:
                         self.logger.info("SelectionTool: Action blocked by collision.")
             else:
                 # 2. FREE-FORM BRANCH: Existing geometry logic
-                new_geoms = {}
                 if self._mode == InteractionMode.MOVING:
                     for node_id, initial_rect in self._initial_geometries.items():
-                        new_geoms[node_id] = initial_rect.moved_by(dx, dy)
+                        spatial_data[node_id] = initial_rect.moved_by(dx, dy)
                 elif self._mode == InteractionMode.RESIZING:
                     node_id, initial_rect = list(self._initial_geometries.items())[0]
-                    new_geoms[node_id] = initial_rect.scaled_by(self._resize_handle, dx, dy)
-                
+                    spatial_data[node_id] = initial_rect.scaled_by(self._resize_handle, dx, dy)
+            
+            # Dispatch unified request
+            if spatial_data:
                 self._event_aggregator.publish(
-                    Events.BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED,
-                    geometries=new_geoms
+                    Events.TRANSFORM_NODES_REQUESTED,
+                    spatial_data=spatial_data,
+                    description=description
                 )
 
         # Reset State

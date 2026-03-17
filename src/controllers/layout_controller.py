@@ -5,13 +5,14 @@ from src.models.application_model import ApplicationModel
 from src.models.layout.layout_config import GridConfig, Gutters, Margins
 from src.models.nodes.plot_node import PlotNode
 from src.services.commands.apply_grid_command import ApplyGridLayoutCommand
-from src.services.commands.batch_change_plot_geometry_command import (
-    BatchChangePlotGeometryCommand,
+from src.services.commands.transform_node_command import (
+    TransformNodeCommand,
 )
 from src.services.commands.change_grid_parameters_command import (
     ChangeGridParametersCommand,
 )
 from src.services.commands.command_manager import CommandManager
+from src.services.commands.macro_command import MacroCommand
 from src.services.event_aggregator import EventAggregator
 from src.services.layout_service import LayoutService
 from src.services.property_service import PropertyService
@@ -75,8 +76,8 @@ class LayoutController:
             self._handle_change_grid_parameter_request,
         )
         self._event_aggregator.subscribe(
-            Events.BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED,
-            self._on_batch_change_geometry_request,
+            Events.TRANSFORM_NODES_REQUESTED,
+            self._on_transform_nodes_request,
         )
 
     def _handle_apply_grid_request(self, values: dict[str, Any]):
@@ -127,22 +128,39 @@ class LayoutController:
         except Exception as e:
             self.logger.error(f"LayoutController: Failed to parse Apply Grid request: {e}", exc_info=True)
 
-    def _on_batch_change_geometry_request(self, geometries: dict[str, Rect]):
+    def _on_transform_nodes_request(self, spatial_data: dict[str, Any], description: str):
         """
-        Handles requests to change the geometries of multiple plots at once.
-        Encapsulates the changes in a single undoable command.
+        Handles unified spatial transformation requests (Move, Resize, Grid Span).
+        Wraps individual TransformNodeCommands into a single atomic MacroCommand.
         """
-        if not geometries:
+        if not spatial_data:
             return
 
-        command = BatchChangePlotGeometryCommand(
-            model=self.model,
-            event_aggregator=self._event_aggregator,
-            new_geometries=geometries,
-            description="Move Plots"
-        )
-        self.command_manager.execute_command(command)
-        self.logger.info(f"Executed BatchChangePlotGeometryCommand for {len(geometries)} plots.")
+        commands = []
+        for node_id, new_value in spatial_data.items():
+            node = self.model.scene_root.find_node_by_id(node_id)
+            if node:
+                commands.append(
+                    TransformNodeCommand(
+                        node=node,
+                        new_spatial_value=new_value,
+                        event_aggregator=self._event_aggregator,
+                        description=description
+                    )
+                )
+
+        if not commands:
+            return
+
+        if len(commands) == 1:
+            self.command_manager.execute_command(commands[0])
+        else:
+            macro_cmd = MacroCommand(
+                description=description,
+                commands=commands,
+                event_aggregator=self._event_aggregator
+            )
+            self.command_manager.execute_command(macro_cmd)
 
     def set_layout_mode(self, mode: LayoutMode):
         """
@@ -190,13 +208,11 @@ class LayoutController:
         # Delegate to LayoutManager to calculate new geometries
         new_geometries = self._layout_manager.perform_align(selected_plots, edge)
         if new_geometries:
-            # Wrap changes in a command for undo/redo
-            command = BatchChangePlotGeometryCommand(
-                self.model, self._event_aggregator, new_geometries, "Align Plots"
-            )
-            self.command_manager.execute_command(command)
-            self.logger.debug(
-                f"Executed BatchChangePlotGeometryCommand for aligning plots to {edge}."
+            # Publish unified transform request
+            self._event_aggregator.publish(
+                Events.TRANSFORM_NODES_REQUESTED,
+                spatial_data=new_geometries,
+                description=f"Align Plots ({edge})"
             )
         else:
             self.logger.info("No geometry changes after alignment calculation.")
@@ -218,12 +234,11 @@ class LayoutController:
         # Delegate to LayoutManager to calculate new geometries
         new_geometries = self._layout_manager.perform_distribute(selected_plots, axis)
         if new_geometries:
-            command = BatchChangePlotGeometryCommand(
-                self.model, self._event_aggregator, new_geometries, "Distribute Plots"
-            )
-            self.command_manager.execute_command(command)
-            self.logger.debug(
-                f"Executed BatchChangePlotGeometryCommand for distributing plots along {axis}."
+            # Publish unified transform request
+            self._event_aggregator.publish(
+                Events.TRANSFORM_NODES_REQUESTED,
+                spatial_data=new_geometries,
+                description=f"Distribute Plots ({axis})"
             )
         else:
             self.logger.info("No geometry changes after distribution calculation.")

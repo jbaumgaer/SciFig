@@ -112,7 +112,7 @@ class Events(Enum):
     DATA_FILE_SELECT_REQUESTED = auto()  # Payload: node_id: str
     APPLY_DATA_FILE_REQUESTED = auto()  # Payload: node_id: str, file_path: Path
     ADD_PLOT_REQUESTED = auto()  # Payload: geometry: Rect
-    BATCH_CHANGE_PLOT_GEOMETRY_REQUESTED = auto()  # Payload: geometries: dict[str, Rect]
+    TRANSFORM_NODES_REQUESTED = auto()  # Payload: spatial_data: dict[str, Any], description: str
     UPDATE_INTERACTION_PREVIEW_REQUESTED = auto()  # Payload: geometries: list[Rect], style: str
     CLEAR_INTERACTION_PREVIEW_REQUESTED = auto()
 

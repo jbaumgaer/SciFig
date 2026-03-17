@@ -78,8 +78,8 @@ This section details the key components that make up the application's core doma
 
 *   **4.1.1. Node Structure (`src/models/nodes/`)**: The building blocks of the scene graph. All objects on the canvas (plots, shapes, text) inherit from a common `SceneNode` base class. Key concrete implementations include `PlotNode`, `GroupNode`, `RectangleNode`, and `TextNode`. This provides a unified, hierarchical way to manage all visual elements.
 
-*   **4.1.2. Layout Logic (`src/models/layout/`, `src/services/layout_manager.py`)**: The system for arranging nodes on the canvas. It is a concrete example of the Strategy Pattern.
-    *   **`LayoutManager`**: A domain service that orchestrates layout calculations.
+*   **4.1.2. Layout Logic (`src/models/layout/`, `src/services/layout_service.py`)**: The system for arranging nodes on the canvas. It is a concrete example of the Strategy Pattern.
+    *   **`LayoutService`**: A domain service that orchestrates layout calculations.
     *   **`LayoutEngine`**: Swappable strategies (`GridLayoutEngine`, `FreeLayoutEngine`) that contain the specific mathematical logic for each layout mode.
 
 *   **4.1.3. Plotting System (`src/ui/renderers/plotting_strategies.py`, `src/models/plots/`)**: The system for drawing data within a `PlotNode`. This is another application of the Strategy Pattern.

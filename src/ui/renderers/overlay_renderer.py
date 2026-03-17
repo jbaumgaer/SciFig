@@ -90,6 +90,9 @@ class OverlayRenderer:
         self._event_aggregator.subscribe(
             Events.NODE_LAYOUT_RECONCILED, self._on_scene_graph_changed
         )
+        self._event_aggregator.subscribe(
+            Events.NODE_LAYOUT_CHANGED, self._on_scene_graph_changed
+        )
 
     def _on_scene_graph_changed(self, *args, **kwargs):
         """Refreshes all overlays to ensure they align with updated model geometries."""
