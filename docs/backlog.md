@@ -2843,7 +2843,9 @@ Remaining Features
 - Make the add plot dialog similar to the shape dialog of adobe illustrator
 - Copy and paste plots
 - Cut and paste plots
-- Rect should use a Dimensions object internally as well
+- Other value objects
+    - Rect should use a Dimensions object internally as well
+    - Node id
 ## New Grid Layout Manager
 - Note: Before implementing this, we might have to refactor the layout controller, layout manager, free layout engine, grid layout engine and grid config to make space for these capabilities
 - Ability to display grid layout lines with hspace, wspace, and gutters as grid lines and on top of the existing matplotlib figure
@@ -2912,6 +2914,9 @@ Remaining Features
 - Back syncing very inefficient, constant rerenders
 - Double and triple logging, e.g. during hydration of plots
     - Also when 
+- Uniform way to initialize the logger
+- Reconcile when SceneGraphChanged and When NodeLayoutChanged is used
+
 
 # Code Smells
 - The "Data-Mapping Leak": The NodeController currently knows too much about how data is mapped to specific plot types (e.g., it knows that a line plot needs an "x_column" and a "y_column"). This should ideally be handled by a specialized MappingService or the PlotNode itself.

@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pandas as pd
-from PySide6.QtCore import QObject
 
 from src.models.application_model import ApplicationModel
 from src.models.nodes.plot_node import PlotNode
@@ -21,7 +20,7 @@ from src.shared.events import Events
 from src.shared.geometry import Rect
 
 
-class NodeController(QObject):
+class NodeController:
     """
     TODO: In the future, there will be different node controllers, e.g. PlotNodeController.
     Orchestrates high-level node operations (Structure, Data, and High-Level properties).
@@ -142,6 +141,7 @@ class NodeController(QObject):
                 description=f"Delete {len(node_ids)} nodes",
                 commands=commands,
                 event_aggregator=self._event_aggregator,
+                completion_event=Events.SCENE_GRAPH_CHANGED
             )
             self.command_manager.execute_command(macro_cmd)
 

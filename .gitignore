@@ -390,3 +390,4 @@ src/shared/__pycache__/color.cpython-313.pyc
 src/shared/__pycache__/primitives.cpython-313.pyc
 src/shared/__pycache__/units.cpython-313.pyc
 src/services/__pycache__/layout_service.cpython-313.pyc
+src/services/commands/__pycache__/transform_node_command.cpython-313.pyc

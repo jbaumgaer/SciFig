@@ -158,7 +158,8 @@ class LayoutController:
             macro_cmd = MacroCommand(
                 description=description,
                 commands=commands,
-                event_aggregator=self._event_aggregator
+                event_aggregator=self._event_aggregator,
+                completion_event=Events.NODE_LAYOUT_CHANGED
             )
             self.command_manager.execute_command(macro_cmd)
 

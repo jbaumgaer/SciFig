@@ -36,22 +36,25 @@ class TransformNodeCommand(BaseCommand):
 
         self.old_value = getattr(node, self.path, None)
 
-    def execute(self):
+    def execute(self, publish: bool = True):
         """Applies the spatial change and increments geometry version."""
         setattr(self.node, self.path, self.new_value)
-        self._finalize()
+        self._finalize(publish=publish)
 
-    def undo(self):
+    def undo(self, publish: bool = True):
         """Restores the original spatial state and increments geometry version."""
         setattr(self.node, self.path, self.old_value)
-        self._finalize()
+        self._finalize(publish=publish)
 
-    def _finalize(self):
+    def _finalize(self, publish: bool = True):
         """Increments version and signals the Layout Domain."""
         # Increment version to pass the FigureRenderer version-gate
         self.node._geometry_version += 1
         
         self.logger.debug(f"TransformNodeCommand: '{self.node.name}' {self.path} updated. Version: {self.node._geometry_version}")
+
+        if not publish:
+            return
 
         # Signal LayoutManager to recalculate or acknowledge the shift
         self._event_aggregator.publish(
