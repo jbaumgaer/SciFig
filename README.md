@@ -1,6 +1,8 @@
 # SciFig
 
-![SciFig Interface](./examples/UI/Screenshot%202026-03-17%20182839.png)
+<p align="center">
+  <img src="examples/UI/Screenshot%202026-03-17%20182839.png" alt="SciFig Interface" width="800">
+</p>
 
 SciFig is a scientific graphics application for Python that combines data plotting with vector-style layout management. It provides a non-modal environment where scientific plots (Matplotlib) can be manipulated with the same spatial flexibility as objects in a vector graphics editor, while maintaining full data-linkage and reproducibility.
 
